@@ -396,3 +396,18 @@ Next action: continue Creator Store batches; prefer queries less likely to dupli
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch005 with lower-duplicate asset queries.
+
+## Run G016-R027 — Creator Store import Batch005 — 2026-05-27T14:48Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch005; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`.
+Passed: inserted/tagged/placed five unique Creator Store assets: fallen log `5918172036`, ruins pillar `136549935878342`, mushroom `51449606`, dead swamp tree `543827347`, cave crystals `139252642326961`. Import quarantine removed `18` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=49`, `releaseReadyVisibleAssets=49`, `placedVisibleAssets=49`, `taggedImportedAssets=49`, `auditedImportedAssets=49`.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=49`, `releaseReadyVisibleAssets=49`, expected at least `500`. Remaining gap is `451` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch005.
+Root cause: the real import lane is progressing, but 49 release-ready assets is still not enough for the 500-asset release oracle.
+Patch applied: no source patch; Studio place state received Batch005 imported assets under `Workspace.Map.ImportedAssets.G016Batch005` with release/audit attributes.
+Retest result: Batch005 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; preserve script quarantine and duplicate filtering.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch006 and keep `scriptObjectsFound=0`.
