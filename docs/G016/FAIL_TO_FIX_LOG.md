@@ -621,3 +621,18 @@ Next action: continue Creator Store batches; avoid rock/cairn stack queries that
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch019 with performance-safe tagging and keep `scriptObjectsFound=0`.
+
+## Run G016-R042 — Creator Store import Batch019 — 2026-05-27T17:20Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch019 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: payphone `11904667889`, satellite dish `57198236`, marsh grass duplicate `5682333697`, desert skull `12229387904`, water tower `2545443773`. Import quarantine removed `3` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=113`, `releaseReadyVisibleAssets=113`, `placedVisibleAssets=113`, `taggedImportedAssets=113`, `auditedImportedAssets=113`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=113`, `releaseReadyVisibleAssets=113`, expected at least `500`. Remaining gap is `387` release-ready assets plus RBXL save/reopen and fresh all-category proof. Marsh grass reused SourceAssetId `5682333697` and was correctly not counted twice.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch019.
+Root cause: four unique assets landed this batch; one duplicate was excluded from unique release count.
+Patch applied: no source patch; Studio place state received Batch019 imported assets under `Workspace.Map.ImportedAssets.G016Batch019` with release/audit/performance-safe attributes.
+Retest result: Batch019 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; avoid grass/tuft queries that repeat SourceAssetId `5682333697`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch020 with performance-safe tagging and keep `scriptObjectsFound=0`.
