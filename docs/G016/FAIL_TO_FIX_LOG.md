@@ -501,3 +501,18 @@ Next action: continue Creator Store batches; avoid ruins/pillar queries that rep
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch012 with lower duplicate risk and keep `scriptObjectsFound=0`.
+
+## Run G016-R034 — Creator Store import Batch012 — 2026-05-27T15:57Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch012 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: vending machine `14453753439`, dead bush `13776550029`, tire pile `12751351942`, cliff rock `128623868963921`, flower plant `4123940176`. Import quarantine removed `6` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=81`, `releaseReadyVisibleAssets=81`, `placedVisibleAssets=81`, `taggedImportedAssets=81`, `auditedImportedAssets=81`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=81`, `releaseReadyVisibleAssets=81`, expected at least `500`. Remaining gap is `419` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch012.
+Root cause: the import lane is adding unique script-clean assets, but the explicit release oracle still requires 500.
+Patch applied: no source patch; Studio place state received Batch012 imported assets under `Workspace.Map.ImportedAssets.G016Batch012` with release/audit attributes.
+Retest result: Batch012 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; keep category-diverse low-duplicate queries.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch013 and keep `scriptObjectsFound=0`.
