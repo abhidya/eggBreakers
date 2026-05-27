@@ -186,3 +186,18 @@ Next action: fresh Studio reload/cleanup, then all-category TestRunner and live 
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: produce fresh reload/live proof; do not mark PASS from targeted clone probes.
+
+## Run G016-R013 — executable core live proof harness — 2026-05-27T12:56Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-live-proof-harness5.rbxl`, `git diff --check`, Studio MCP execution of `G016LiveProofHarness` with fresh service clone, then fresh `G016FinalGateSuite` rerun.
+Passed: harness passed and wrote real proof attributes for US01, US02, US03, US04, US05, US06, US07, US08, and US12. Observed counts: visible dinosaurs `49`, carnivores `18`, trees `20`, food `40`, water `16`.
+Failed: final gate still fails: missing US09 proof, missing action motion proof, missing fresh all-category proof, missing mobile/controller proof, missing RBXL persistence proof, and asset release count remains `30/500` actually imported/release-ready.
+Top failing story: US09 Old Eden/fossils, then US13 mobile/action motion, US14 asset honesty, US15 final QA.
+Failure: before this patch, core playability proof existed only in logs/targeted probes and could not drive `G016FinalGateProof`.
+Root cause: no executable G016 harness translated verified core loop behavior into proof attributes consumed by the final gate.
+Patch applied: added `G016LiveProofHarness` with guarded assertions and optional fresh service clone mode to avoid stale Studio require-cache while still running in Studio.
+Retest result: core harness PASS; final gate still FAIL with exact remaining blockers.
+Next action: implement/prove US09 city/fossil, action motion proof, and fresh reload/full TestRunner; asset/mobile/RBXL gates remain larger blockers.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: add US09/action-motion proof harness or run fresh Play client probe; do not mark final PASS.

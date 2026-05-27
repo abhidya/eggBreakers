@@ -64,3 +64,9 @@ This is stronger source/runtime evidence, but still not final PASS because it is
 Fresh cloned services probe after placement repairs: `underlayOk=true` for `_INVISIBLE_FullMapSafeTerrainUnderlay`; `meatOk=true` for tutorial carnivore meat cache under NurseryGrove with cooldown 90; invisible city triggers are accepted through the approved `InvisibleGameplayVolumes` ancestor; active NPC proof shows prey `Flee`, predator `Chase`, predator `LastBrainAction=Chase`, `BrainMoveCount=1`.
 
 Still not final PASS: placeholder audit still reports stale test artifacts and non-release procedural/tutorial objects in the dirty active Studio workspace; release asset count remains below 500; proof folder/mobile/RBXL/fresh reload remain absent.
+
+## Core Live Proof Harness — 2026-05-27T12:56Z
+
+Added `src/ServerScriptService/Tests/G016/G016LiveProofHarness.lua`. It writes `ReplicatedStorage.G016FinalGateProof` only after real assertions pass. Fresh Studio MCP run with `freshServiceClone=true` passed: hatch completed from five taps; imported dinosaur visual was visible and forward-verified; starter pool includes all four species and both diets; herbivore food and water restored stats/growth; carnivore tutorial meat restored hunger and depleted; combat reduced real target health; death/respawn returned to hatchling egg state; NPC population proof counted `49` visible dinosaurs and `18` carnivores; tree/food/water counts were `20/40/16`. It marked US01, US02, US03, US04, US05, US06, US07, US08, and US12 PASS in the proof folder.
+
+Fresh G016FinalGate rerun improved but still fails honestly: first missing story proof is now US09 Old Eden/fossils; `ActionMotionProofPassed`, `FreshAllCategoryTestRunnerPassed`, `MobileControllerProofPassed`, `RBXLPersistencePassed`, and 500 release-ready imported assets remain missing.
