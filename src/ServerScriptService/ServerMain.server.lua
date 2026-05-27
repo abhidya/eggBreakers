@@ -52,14 +52,26 @@ local function initializePlayer(player)
     sendStats(player)
 end
 
-Players.PlayerAdded:Connect(function(player)
-    initializePlayer(player)
+local function applyCharacterState(player)
+    local state = SurvivalService:GetState(player)
+    MovementLockService:SetHatchedMovement(player, state and state.Hatched == true, state)
+    CharacterVisualService:ApplyForState(player, state)
+end
+
+local function bindPlayer(player)
     player.CharacterAdded:Connect(function()
-        local state = SurvivalService:GetState(player)
-        MovementLockService:SetHatchedMovement(player, state and state.Hatched == true, state)
-        CharacterVisualService:ApplyForState(player, state)
+        applyCharacterState(player)
     end)
-end)
+    initializePlayer(player)
+    if player.Character then
+        applyCharacterState(player)
+    end
+end
+
+Players.PlayerAdded:Connect(bindPlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(bindPlayer, player)
+end
 
 Players.PlayerRemoving:Connect(function(player)
     PlayerDataService:Save(player)
@@ -138,6 +150,3 @@ _G.eggBreakersDiscoverZone = function(player, zoneId)
     return CityDiscoveryService:Discover(player, zoneId)
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    task.defer(initializePlayer, player)
-end
