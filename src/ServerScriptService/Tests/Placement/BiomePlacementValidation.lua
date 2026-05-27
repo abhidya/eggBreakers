@@ -103,6 +103,56 @@ table.insert(suite.tests, { name = "scenic landmarks and flower clusters are mat
     Assert.truthy(counts.waterScenery >= 2, "lake and river scenery exists")
 end })
 
+table.insert(suite.tests, { name = "rich habitats expose swim fish herds and flying prey", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureTerrainContinuity(folders)
+    MapLayoutService:EnsureBiomeDressing(folders)
+    MapLayoutService:EnsureNPCSpawnMarkers(folders)
+
+    local habitatCounts = { Forest = 0, Desert = 0 }
+    for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if instance:IsA("BasePart") and instance:GetAttribute("BiomeDressing") == true then
+            local feature = instance:GetAttribute("HabitatFeature")
+            if feature == "Forest" or feature == "Desert" then
+                habitatCounts[feature] = habitatCounts[feature] + 1
+                Assert.equals(instance:GetAttribute("ScenicLandmark"), true, "habitat feature is visible scenery")
+            end
+        end
+    end
+
+    local swimZones = 0
+    local fishWater = 0
+    for _, water in ipairs(folders.WaterSources:GetChildren()) do
+        if water:IsA("BasePart") then
+            if water:GetAttribute("SwimZone") == true then swimZones = swimZones + 1 end
+            if water:GetAttribute("FishSpawnAllowed") == true then fishWater = fishWater + 1 end
+        end
+    end
+
+    local nestingHerd = 0
+    local flyingPrey = 0
+    local mountainNest = MapLayoutService.ZoneTerrain.MountainNestingCliffs.center
+    for _, marker in ipairs(folders.NPCSpawns:GetChildren()) do
+        if marker:GetAttribute("NestingHerd") == true then
+            nestingHerd = nestingHerd + 1
+            Assert.equals(marker:GetAttribute("NPCKind"), "Prey", "nesting herd markers are herbivore prey")
+            Assert.truthy((marker.Position - mountainNest).Magnitude <= 900 or marker:GetAttribute("ZoneId") ~= "MountainNestingCliffs", "mountain herd remains near nesting cliffs")
+        end
+        if marker:GetAttribute("FlyingPrey") == true then
+            flyingPrey = flyingPrey + 1
+            Assert.equals(marker:GetAttribute("FlightTarget"), true, "flying prey exposes flight target metadata")
+            Assert.truthy(marker.Position.Y >= 60, "flying prey starts at airborne height")
+        end
+    end
+
+    Assert.truthy(habitatCounts.Forest >= 2, "denser forest habitat markers exist")
+    Assert.truthy(habitatCounts.Desert >= 2, "redstone desert habitat markers exist")
+    Assert.truthy(swimZones >= 3, "lakes and rivers expose swim zones")
+    Assert.truthy(fishWater >= 3, "lakes and rivers allow fish spawning")
+    Assert.truthy(nestingHerd >= 4, "nesting sites have nearby herbivore herd markers")
+    Assert.truthy(flyingPrey >= 2, "pterodactyl prey has flying NPC markers")
+end })
+
 table.insert(suite.tests, { name = "asset manifest placement rules keep biome props coherent", run = function()
     local result = AssetManifest.Validate({ minimum = 500 })
     Assert.truthy(result.passed, table.concat(result.failures, "; "))

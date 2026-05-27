@@ -160,6 +160,9 @@ MapLayoutService.ShallowWater = {
     { name = "FernPlainsPond", center = Vector3.new(-1080, 10, 205), size = Vector3.new(190, 5, 120) },
     { name = "SwampDeltaChannel", center = Vector3.new(-80, 8, 950), size = Vector3.new(760, 4, 115) },
     { name = "CityCanalShallow", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
+    { name = "FernLakeSwimZone", center = Vector3.new(-1080, 10, 250), size = Vector3.new(220, 7, 150), swimZone = true, fishSpawnAllowed = true },
+    { name = "SwampRiverFishRun", center = Vector3.new(-70, 8, 970), size = Vector3.new(820, 5, 70), swimZone = true, fishSpawnAllowed = true },
+    { name = "JungleRiverCrossing", center = Vector3.new(-1320, 10, 780), size = Vector3.new(360, 5, 64), swimZone = true, fishSpawnAllowed = true },
 }
 
 MapLayoutService.FoodSourcePlacements = {
@@ -434,6 +437,51 @@ MapLayoutService.BiomeDressingPlacements = {
         material = Enum.Material.Glass,
         scenicLandmark = true,
     },
+    {
+        name = "JungleDenseForestStand_B",
+        zone = "JungleBasin",
+        kind = "ForestStand",
+        position = Vector3.new(-1288, 14, 920),
+        size = Vector3.new(82, 30, 54),
+        color = Color3.fromRGB(30, 92, 48),
+        material = Enum.Material.LeafyGrass,
+        habitatFeature = "Forest",
+        scenicLandmark = true,
+    },
+    {
+        name = "NurseryGroveForestRing_A",
+        zone = "NurseryGrove",
+        kind = "ForestStand",
+        position = Vector3.new(-2135, 10, 172),
+        size = Vector3.new(70, 26, 46),
+        color = Color3.fromRGB(62, 132, 58),
+        material = Enum.Material.LeafyGrass,
+        habitatFeature = "Forest",
+        scenicLandmark = true,
+    },
+    {
+        name = "RedstoneDesertDune_A",
+        zone = "RedstoneCanyon",
+        kind = "DesertDune",
+        position = Vector3.new(-330, 15, -545),
+        size = Vector3.new(96, 16, 38),
+        color = Color3.fromRGB(198, 139, 77),
+        material = Enum.Material.Sand,
+        habitatFeature = "Desert",
+        scenicLandmark = true,
+    },
+    {
+        name = "RedstoneDryScrubCluster_A",
+        zone = "RedstoneCanyon",
+        kind = "DryScrub",
+        position = Vector3.new(-88, 15, -502),
+        size = Vector3.new(42, 8, 28),
+        color = Color3.fromRGB(148, 112, 62),
+        material = Enum.Material.Grass,
+        habitatFeature = "Desert",
+        scenicLandmark = true,
+    },
+
 }
 
 MapLayoutService.NPCSpawnPlacements = {
@@ -449,6 +497,12 @@ MapLayoutService.NPCSpawnPlacements = {
     { name = "FernPredator_01", position = Vector3.new(-980, 14, -260), kind = "Predator", zone = "FernPlains", dangerous = true },
     { name = "JunglePredator_01", position = Vector3.new(-1340, 14, 1110), kind = "Predator", zone = "JungleBasin", dangerous = true },
     { name = "SwampPredator_01", position = Vector3.new(65, 11, 1010), kind = "Predator", zone = "SwampDelta", dangerous = true },
+    { name = "MountainNestHerdPrey_01", position = Vector3.new(-168, 79, -1605), kind = "Prey", zone = "MountainNestingCliffs", nestingHerd = true },
+    { name = "MountainNestHerdPrey_02", position = Vector3.new(-42, 79, -1598), kind = "Prey", zone = "MountainNestingCliffs", nestingHerd = true },
+    { name = "FernNestHerdPrey_01", position = Vector3.new(-1048, 14, 118), kind = "Prey", zone = "FernPlains", nestingHerd = true },
+    { name = "JungleNestHerdPrey_01", position = Vector3.new(-1395, 14, 1002), kind = "Prey", zone = "JungleBasin", nestingHerd = true },
+    { name = "PterodactylFlyingPrey_01", position = Vector3.new(-180, 116, -1540), kind = "FlyingPrey", zone = "MountainNestingCliffs", flyingPrey = true },
+    { name = "PterodactylFlyingPrey_02", position = Vector3.new(-1320, 72, 890), kind = "FlyingPrey", zone = "JungleBasin", flyingPrey = true },
 }
 
 
@@ -607,6 +661,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("ProceduralWaterSource", true)
     marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
+    marker:SetAttribute("SwimZone", water.swimZone == true)
+    marker:SetAttribute("FishSpawnAllowed", water.fishSpawnAllowed == true)
     marker:SetAttribute("InteractionHint", "Drink water")
     marker:SetAttribute("VisibleGameplayAffordance", true)
     marker:SetAttribute("GameplayQuery", true)
@@ -831,6 +887,7 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
     part:SetAttribute("FlowerCluster", spec.flowerCluster == true)
     part:SetAttribute("LavaVisual", spec.lavaVisual == true)
+    part:SetAttribute("HabitatFeature", spec.habitatFeature)
     part:SetAttribute("AvoidRouteCenters", true)
     part:SetAttribute("GroundTopY", self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil)
     part:SetAttribute("FloatingAllowed", role == "VisibleTreeCanopy")
@@ -945,6 +1002,9 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("ZoneId", spec.zone)
         marker:SetAttribute("SafeBabyArea", spec.tutorialSafe == true)
         marker:SetAttribute("DangerousNPC", spec.dangerous == true)
+        marker:SetAttribute("NestingHerd", spec.nestingHerd == true)
+        marker:SetAttribute("FlyingPrey", spec.flyingPrey == true)
+        marker:SetAttribute("FlightTarget", spec.flyingPrey == true)
     end
     return folders.NPCSpawns
 end
