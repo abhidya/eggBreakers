@@ -157,7 +157,7 @@ function NPCSpawnService:StartSpawnLoop(intervalSeconds)
     task.spawn(function()
         while self.SpawnLoopRunning do
             self:MaintainMinimumActive()
-            NPCService:Tick(Players:GetPlayers())
+            NPCService:TickNPCs(Players:GetPlayers())
             task.wait(intervalSeconds or 3)
         end
     end)

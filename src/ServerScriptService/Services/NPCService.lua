@@ -194,7 +194,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
             record.Instance:SetAttribute("Hatched", true)
             record.Instance:SetAttribute("LastAction", "HatchAtNest")
         end
-        return self:Transition(record, "Wander")
+        self:Transition(record, "Wander")
     end
     self:ApplyNeeds(record, deltaSeconds)
 
