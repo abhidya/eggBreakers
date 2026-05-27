@@ -126,3 +126,18 @@ Next action: run or create an authorized live proof harness that verifies and wr
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: resolve missing live food/water tags and active-state proof before any PASS claim.
+
+## Run G016-R009 — worker-3 coordination addendum — 2026-05-27T12:33:00Z
+
+Tests run: mailbox coordination review plus source grep for worker-3 reported L002/L003 gaps.
+Passed: L003 source/test hooks remain present for starter species variety, no-repeat starter selection, forward visual correction, growth visual scaling, and visible action motion wiring.
+Failed: worker-3 reports and source grep confirms likely active NPC proof mismatch: `NPCSpawnValidation.lua` asserts `prey:GetAttribute("ActiveNPCBrain") == true`, but current `NPCService.lua` stamps `LastBrainAction`, `BrainTarget`, and `LastBrainMovedAt` without stamping `ActiveNPCBrain`; Studio proof folder still absent.
+Top failing story: US08 NPC ecosystem + US15 Fresh full QA gate.
+Failure: active NPC brain behavior is partially implemented but lacks the explicit live/source proof marker expected by the validation test and final QA lane.
+Root cause: movement/action attributes and proof attributes are not aligned with the validation contract.
+Patch applied: documentation updated with worker-3 coordination evidence only; no gameplay patch made from QA lane.
+Retest result: NOT DONE / expected gate FAIL until `ActiveNPCBrain` proof and final live proof attrs exist.
+Next action: owner lane for NPC service should align attribute stamping with `NPCSpawnValidation` and then rerun L005 proof harness.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: fix or reassign the `ActiveNPCBrain` proof marker gap before final QA.
