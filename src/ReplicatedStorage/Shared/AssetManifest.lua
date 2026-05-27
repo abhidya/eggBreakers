@@ -51,7 +51,7 @@ local typeCycle = {
 }
 -- Source assets were queried from the Roblox Creator Store Toolbox Service v2 on 2026-05-27.
 AssetManifest.SourceAssets = {
-    { SourceAssetId = "580221169", Name = "Tree", Creator = "SheriffTaco", CreatorRef = "user/24773541", SearchCategoryType = "Model", SearchQuery = "tree", AssetTypeId = 10, HasScripts = false, SourceScriptCount = 0, ShouldSandbox = true, CategoryPath = "3d__nature" },
+    { SourceAssetId = "4596418748", Name = "G011Probe Tree", Creator = "Roblox Creator Store MCP insert", CreatorRef = "studio-mcp/search_creator_store", SearchCategoryType = "Model", SearchQuery = "dinosaur fossil tree rock swamp city ruins car rubble cliff", AssetTypeId = 10, HasScripts = true, SourceScriptCount = 14, ShouldSandbox = true, CategoryPath = "studio_mcp_inserted_probe" },
     { SourceAssetId = "125459331", Name = "Tree House", Creator = "Aurarus", CreatorRef = "user/1826533", SearchCategoryType = "Model", SearchQuery = "tree", AssetTypeId = 10, HasScripts = true, SourceScriptCount = 2, ShouldSandbox = true, CategoryPath = "3d__structures" },
     { SourceAssetId = "3256343670", Name = "Realistic Trees", Creator = "Chr1sDevv", CreatorRef = "user/303373309", SearchCategoryType = "Model", SearchQuery = "tree", AssetTypeId = 10, HasScripts = false, SourceScriptCount = 0, ShouldSandbox = true, CategoryPath = "3d__nature" },
     { SourceAssetId = "3755594081", Name = "tree", Creator = "Astrooworlld", CreatorRef = "user/409208030", SearchCategoryType = "Model", SearchQuery = "tree", AssetTypeId = 10, HasScripts = false, SourceScriptCount = 0, ShouldSandbox = true, CategoryPath = "3d__nature" },
