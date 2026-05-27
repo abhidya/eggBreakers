@@ -219,6 +219,47 @@ table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs ar
     cleanup(player)
 end })
 
+
+table.insert(suite.tests, { name = "carnotaurus imported visual is corrected upright and forward", run = function()
+    local player = MockPlayer.new(11007, "CarnotaurusUprightProbe")
+    local character = makeCharacter()
+    player.Character = character
+    character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+
+    local source = Instance.new("Model")
+    source.Name = "UpsideDownCarnotaurus"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "CarnotaurusBody"
+    body.Size = Vector3.new(2, 2, 4)
+    body.CFrame = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(180), 0, 0)
+    body.Parent = source
+    source.PrimaryPart = body
+    local head = Instance.new("Part")
+    head.Name = "CarnotaurusHead"
+    head.Size = Vector3.new(1, 1, 1)
+    head.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(math.rad(180), 0, 0)
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "CarnotaurusTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(0, 0, 4) * CFrame.Angles(math.rad(180), 0, 0)
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBody", true)
+
+    Assert.notNil(attached, "carnotaurus visual attaches")
+    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "carnotaurus species correction applied")
+    Assert.equals(attached:GetAttribute("OrientationCorrectionPitchDegrees"), 180, "carnotaurus pitch correction recorded")
+    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "carnotaurus body is upright after correction")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "carnotaurus still faces player forward")
+    Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward-facing proof remains verified")
+    source:Destroy()
+    cleanup(player)
+end })
+
 table.insert(suite.tests, { name = "growth progress makes dinosaur visual larger", run = function()
     setupImportedVisuals()
     local player = MockPlayer.new(11005, "GrowthScaleVisualTester")
