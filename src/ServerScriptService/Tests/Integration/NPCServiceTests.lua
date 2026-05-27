@@ -105,6 +105,48 @@ table.insert(suite.tests, { name = "hungry herbivore seeks food with target and 
     npc:Destroy(); food:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "movement step is bounded and stamped", run = function()
+    resetNPCs()
+    local npc = makeNPC("BoundedStepNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+
+    local target = Vector3.new(50, 3, 0)
+    Assert.truthy(NPCService:MoveToward(record, target, NPCService.MoveStep, "SeekFood"), "move toward succeeds")
+    local moved = NPCService:GetRecordPosition(record)
+    Assert.truthy(math.abs(moved.X - NPCService.MoveStep) < 0.01, "move step is capped to configured step")
+    Assert.equals(npc:GetAttribute("BrainMoveCount"), 1, "move count stamped")
+    Assert.equals(npc:GetAttribute("LastBrainAction"), "SeekFood", "last brain action stamped")
+    Assert.equals(npc:GetAttribute("BrainActionTarget"), "50.0,3.0,0.0", "target position stamped")
+    Assert.equals(npc:GetAttribute("LastMoveTarget"), "50.0,3.0,0.0", "last move target stamped")
+
+    npc:Destroy()
+end })
+
+
+table.insert(suite.tests, { name = "brain movement constants keep predator runner bounded", run = function()
+    resetNPCs()
+    local predator = makeNPC("BrainStepPredatorNPC", Vector3.new(0, 3, 0))
+    local root = Instance.new("Part")
+    root.Name = "HumanoidRootPart"
+    root.Position = Vector3.new(40, 3, 0)
+    local character = Instance.new("Model")
+    root.Parent = character
+    local _, record = NPCService:Register(predator, "Predator")
+    record.Hatched = true
+
+    Assert.truthy((NPCService.BrainStepStuds or 0) > 0, "brain step constant is configured")
+    Assert.truthy((NPCService.AttackDistance or 0) > 0, "attack distance constant is configured")
+    Assert.truthy(NPCService:RunPredatorBrain(record, { { Character = character } }), "predator brain runs without nil step")
+    Assert.equals(record.State, "Chase", "distant target triggers chase")
+    Assert.truthy((NPCService:GetRecordPosition(record) - Vector3.new(0, 3, 0)).Magnitude <= NPCService.BrainStepStuds + 0.01, "predator brain movement bounded by BrainStepStuds")
+    Assert.equals(predator:GetAttribute("LastBrainAction"), "Chase", "predator brain chase stamped")
+    Assert.equals(predator:GetAttribute("LastMoveTarget"), "40.0,3.0,0.0", "predator brain target stamped")
+
+    predator:Destroy(); character:Destroy()
+end })
+
 table.insert(suite.tests, { name = "predator chases attacks and prey death leaves carcass", run = function()
     resetNPCs()
     ensureCarcassAsset()
@@ -122,6 +164,42 @@ table.insert(suite.tests, { name = "predator chases attacks and prey death leave
     Assert.equals(preyRecord.State, "Dead", "prey dies from attack")
     Assert.notNil(preyRecord.Carcass, "dead prey leaves carcass")
     Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "FoodSource"), "carcass is food source")
+
+    predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
+end })
+
+
+table.insert(suite.tests, { name = "predator chase attack creates edible carcass loop", run = function()
+    resetNPCs()
+    ensureCarcassAsset()
+    local predator = makeNPC("LoopPredatorNPC", Vector3.new(0, 3, 0))
+    local prey = makeNPC("LoopPreyNPC", Vector3.new(30, 3, 0))
+    local predatorOk, predatorRecord = NPCService:Register(predator, "Predator")
+    local preyOk, preyRecord = NPCService:Register(prey, "Prey")
+    predatorRecord.Hatched = true
+    preyRecord.Hatched = true
+    predatorRecord.Hunger = 90
+    preyRecord.Health = 20
+
+    Assert.truthy(predatorOk and preyOk, "predator and prey register")
+    NPCService:TickBrain(predatorRecord, {}, 1)
+    Assert.equals(predatorRecord.State, "Chase", "predator chases distant prey")
+    Assert.equals(predator:GetAttribute("LastBrainAction"), "Chase", "chase action stamped")
+    Assert.equals(predator:GetAttribute("BrainTargetName"), "LoopPreyNPC", "chase target names prey")
+    Assert.truthy((NPCService:GetRecordPosition(predatorRecord) - Vector3.new(0, 3, 0)).Magnitude <= NPCService.MoveStep + 0.01, "chase movement is bounded")
+
+    prey:PivotTo(CFrame.new(NPCService:GetRecordPosition(predatorRecord) + Vector3.new(5, 0, 0)))
+    NPCService:TickBrain(predatorRecord, {}, 1)
+    Assert.equals(predatorRecord.State, "Attack", "predator attacks close dinosaur prey")
+    Assert.equals(preyRecord.State, "Dead", "prey dies from predator attack")
+    Assert.notNil(preyRecord.Carcass, "dead prey creates carcass food")
+    Assert.equals(preyRecord.Carcass:GetAttribute("Diet"), "Carnivore", "carcass is carnivore food")
+
+    predatorRecord.Hunger = 20
+    NPCService:TickBrain(predatorRecord, {}, 1)
+    Assert.equals(predatorRecord.State, "Eat", "predator eats created carcass")
+    Assert.equals(preyRecord.Carcass:GetAttribute("Depleted"), true, "created carcass depleted by predator")
+    Assert.truthy(predatorRecord.Hunger > 20, "carcass restores predator hunger")
 
     predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
 end })
