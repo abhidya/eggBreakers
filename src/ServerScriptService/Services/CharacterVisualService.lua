@@ -9,8 +9,9 @@ CharacterVisualService.EggVisualName = "EggVisual"
 CharacterVisualService.DinosaurVisualName = "DinosaurVisual"
 CharacterVisualService.MinimumDinosaurHeight = 4
 CharacterVisualService.MinimumDinosaurLength = 7
-CharacterVisualService.DinosaurForwardCorrection = CFrame.Angles(0, math.rad(180), 0)
-CharacterVisualService.DinosaurForwardCorrectionDegrees = 180
+CharacterVisualService.DefaultDinosaurForwardCorrection = CFrame.new()
+CharacterVisualService.DinosaurForwardCorrection = CharacterVisualService.DefaultDinosaurForwardCorrection
+CharacterVisualService.DinosaurForwardCorrectionDegrees = 0
 CharacterVisualService.ReleaseMode = true
 CharacterVisualService.AllowDebugFallback = false
 CharacterVisualService.EggModelCandidatePaths = {
@@ -154,6 +155,63 @@ local function boundsFromParts(parts)
     local min = Vector3.new(minX, minY, minZ)
     local max = Vector3.new(maxX, maxY, maxZ)
     return (min + max) / 2, max - min
+end
+
+local function nameContains(instance, patterns)
+    local name = string.lower(instance.Name or "")
+    for _, pattern in ipairs(patterns) do
+        if string.find(name, pattern, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function averagePartPosition(parts)
+    if #parts == 0 then return nil end
+    local sum = Vector3.new(0, 0, 0)
+    for _, part in ipairs(parts) do
+        sum = sum + part.Position
+    end
+    return sum / #parts
+end
+
+local function namedPartGroups(instance)
+    local heads, tails, bodies = {}, {}, {}
+    for _, part in ipairs(getVisibleParts(instance)) do
+        if nameContains(part, { "head", "skull", "snout", "jaw", "horn", "face" }) then
+            table.insert(heads, part)
+        elseif nameContains(part, { "tail" }) then
+            table.insert(tails, part)
+        else
+            table.insert(bodies, part)
+        end
+    end
+    return heads, tails, bodies
+end
+
+local function horizontalUnit(vector)
+    local flat = Vector3.new(vector.X, 0, vector.Z)
+    if flat.Magnitude < 0.001 then return nil end
+    return flat.Unit
+end
+
+local function signedYawBetween(fromVector, toVector)
+    local from = horizontalUnit(fromVector)
+    local to = horizontalUnit(toVector)
+    if not from or not to then return 0 end
+    return math.atan2(from:Cross(to).Y, from:Dot(to))
+end
+
+local function rotateLooseVisualAroundPivot(instance, pivotCFrame, yawRadians)
+    local rotation = CFrame.Angles(0, yawRadians, 0)
+    if instance:IsA("BasePart") then
+        instance.CFrame = pivotCFrame * rotation * pivotCFrame:ToObjectSpace(instance.CFrame)
+        return
+    end
+    for _, part in ipairs(getVisibleParts(instance)) do
+        part.CFrame = pivotCFrame * rotation * pivotCFrame:ToObjectSpace(part.CFrame)
+    end
 end
 
 function CharacterVisualService:_readableScaleForSize(size)
@@ -321,6 +379,60 @@ function CharacterVisualService:_prepareDinosaurClone(model, state)
     return clone
 end
 
+function CharacterVisualService:_inferDinosaurHeading(model)
+    local heads, tails, bodies = namedPartGroups(model)
+    local headCenter = averagePartPosition(heads)
+    local tailCenter = averagePartPosition(tails)
+    local bodyCenter = averagePartPosition(bodies)
+
+    if headCenter and tailCenter then
+        return horizontalUnit(headCenter - tailCenter), "head_tail"
+    end
+    if tailCenter and bodyCenter then
+        return horizontalUnit(bodyCenter - tailCenter), "body_tail"
+    end
+    if headCenter and bodyCenter then
+        return horizontalUnit(headCenter - bodyCenter), "head_body"
+    end
+
+    local pivot = model:IsA("Model") and model:GetPivot() or (model:IsA("BasePart") and model.CFrame or nil)
+    if pivot then
+        return horizontalUnit(pivot.LookVector), "pivot_look"
+    end
+    return nil, "unknown"
+end
+
+function CharacterVisualService:_orientDinosaurForward(model, root)
+    local heading, source = self:_inferDinosaurHeading(model)
+    local target = horizontalUnit(root.CFrame.LookVector)
+    if not heading or not target then
+        model:SetAttribute("ForwardCorrectionSource", source or "unknown")
+        model:SetAttribute("ForwardCorrectionDegrees", 0)
+        model:SetAttribute("ForwardFacingDot", 0)
+        return 0, 0, source or "unknown"
+    end
+
+    local yaw = signedYawBetween(heading, target)
+    if math.abs(yaw) > 0.001 then
+        if model:IsA("Model") then
+            model:PivotTo(model:GetPivot() * CFrame.Angles(0, yaw, 0))
+        elseif model:IsA("BasePart") then
+            model.CFrame = model.CFrame * CFrame.Angles(0, yaw, 0)
+        else
+            rotateLooseVisualAroundPivot(model, root.CFrame, yaw)
+        end
+    end
+
+    local correctedHeading = self:_inferDinosaurHeading(model)
+    local dot = correctedHeading and correctedHeading:Dot(target) or 0
+    local degrees = math.deg(yaw)
+    model:SetAttribute("ForwardCorrectionSource", source)
+    model:SetAttribute("ForwardCorrectionDegrees", degrees)
+    model:SetAttribute("ForwardFacingDot", dot)
+    model:SetAttribute("ForwardFacingVerified", dot >= 0.92)
+    return degrees, dot, source
+end
+
 function CharacterVisualService:_attachModel(character, root, model)
     local primary = model:IsA("Model") and (model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)) or (model:IsA("BasePart") and model or model:FindFirstChildWhichIsA("BasePart", true))
     if not primary then
@@ -339,10 +451,6 @@ function CharacterVisualService:_attachModel(character, root, model)
     end
     model.Parent = folder
     local attachCFrame = root.CFrame
-    if model:GetAttribute("VisualKind") == "ImportedDinosaur" then
-        attachCFrame = root.CFrame * self.DinosaurForwardCorrection
-        model:SetAttribute("ForwardCorrectionDegrees", self.DinosaurForwardCorrectionDegrees)
-    end
     if model:IsA("Model") then
         model.PrimaryPart = primary
         model:PivotTo(attachCFrame)
@@ -352,6 +460,9 @@ function CharacterVisualService:_attachModel(character, root, model)
         for part, offset in pairs(offsets) do
             part.CFrame = attachCFrame * offset
         end
+    end
+    if model:GetAttribute("VisualKind") == "ImportedDinosaur" then
+        self:_orientDinosaurForward(model, root)
     end
     for _, descendant in ipairs(model:GetDescendants()) do
         if descendant:IsA("BasePart") then

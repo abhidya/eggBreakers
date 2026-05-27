@@ -40,6 +40,11 @@ local function ensureModelPath(path)
                 part.Size = Vector3.new(2, 2, 3)
                 part.Parent = child
                 child.PrimaryPart = part
+                local head = Instance.new("Part")
+                head.Name = segment .. "ReadableHeadMesh"
+                head.Size = Vector3.new(1, 1, 1)
+                head.CFrame = CFrame.new(0, 0, -3)
+                head.Parent = child
                 local tail = Instance.new("Part")
                 tail.Name = segment .. "ReadableTailMesh"
                 tail.Size = Vector3.new(1, 1, 3)
@@ -140,10 +145,48 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     Assert.truthy(visual:GetAttribute("ImportedVisual"), "dinosaur visual is imported asset clone")
     Assert.truthy((visual:GetAttribute("ReadableHeight") or 0) >= CharacterVisualService.MinimumDinosaurHeight, "dinosaur visual height is readable")
     Assert.truthy((visual:GetAttribute("ReadableLength") or 0) >= CharacterVisualService.MinimumDinosaurLength, "dinosaur visual length is readable")
-    Assert.equals(visual:GetAttribute("ForwardCorrectionDegrees"), CharacterVisualService.DinosaurForwardCorrectionDegrees, "imported dinosaur receives forward-facing correction")
+    Assert.truthy((visual:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "imported dinosaur faces the HumanoidRootPart look direction")
+    Assert.truthy(visual:GetAttribute("ForwardFacingVerified"), "forward-facing correction is verified from model geometry")
     local _, size = visual:GetBoundingBox()
     Assert.truthy(math.max(size.X, size.Y, size.Z) >= CharacterVisualService.MinimumDinosaurLength, "attached model preserves readable part offsets")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible dinosaur replacement exists")
+    cleanup(player)
+end })
+
+
+table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs are rotated to face player forward", run = function()
+    local player = MockPlayer.new(11006, "DinosaurForwardProbe")
+    local character = makeCharacter()
+    player.Character = character
+    character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+
+    local source = Instance.new("Model")
+    source.Name = "SidewaysDinosaur"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "SidewaysBody"
+    body.Size = Vector3.new(2, 2, 3)
+    body.Parent = source
+    source.PrimaryPart = body
+    local head = Instance.new("Part")
+    head.Name = "SidewaysHead"
+    head.Size = Vector3.new(1, 1, 1)
+    head.CFrame = CFrame.new(4, 0, 0)
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "SidewaysTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(-4, 0, 0)
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+
+    Assert.notNil(attached, "sideways dinosaur attaches")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "sideways source is rotated to face forward")
+    Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward proof attr set")
+    Assert.truthy(math.abs(attached:GetAttribute("ForwardCorrectionDegrees") or 0) >= 80, "non-zero yaw correction applied")
+    source:Destroy()
     cleanup(player)
 end })
 
