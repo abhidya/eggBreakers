@@ -164,6 +164,28 @@ table.insert(suite.tests, { name = "apex NPC stamps territory event and scares n
     apex:Destroy(); prey:Destroy()
 end })
 
+table.insert(suite.tests, { name = "apex event takes priority over predator chase brain", run = function()
+    resetNPCs()
+    local apex = makeNPC("ApexPriorityNPC", Vector3.new(0, 3, 0))
+    local prey = makeNPC("ApexPriorityPreyNPC", Vector3.new(20, 3, 0))
+    local _, apexRecord = NPCService:Register(apex, "Apex")
+    NPCService:Register(prey, "Prey")
+    apexRecord.Hatched = true
+
+    local playerRoot = Instance.new("Part")
+    playerRoot.Name = "HumanoidRootPart"
+    playerRoot.Position = Vector3.new(10, 3, 0)
+    local character = Instance.new("Model")
+    playerRoot.Parent = character
+
+    NPCService:RunPredatorBrain(apexRecord, { { Character = character } })
+    Assert.equals(apexRecord.State, "ApexEvent", "apex event stays ahead of chase")
+    Assert.equals(apex:GetAttribute("LastBrainAction"), "ApexEvent", "apex action stamped before chase")
+    Assert.falsy(apex:GetAttribute("AttackRangeConfirmed"), "apex event did not fall through to attack")
+
+    apex:Destroy(); prey:Destroy(); character:Destroy()
+end })
+
 table.insert(suite.tests, { name = "herding omnivore eats plant and carcass diets", run = function()
     resetNPCs()
     local omnivore = makeNPC("OviraptorOmnivoreNPC", Vector3.new(0, 3, 0))

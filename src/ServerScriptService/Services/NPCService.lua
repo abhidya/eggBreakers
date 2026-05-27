@@ -580,6 +580,10 @@ function NPCService:RunPreyBrain(record, players)
 end
 
 function NPCService:RunPredatorBrain(record, players)
+    if record and record.Apex == true then
+        local apexEventOk = self:StampApexEvent(record)
+        if apexEventOk then return true end
+    end
     local root, distance = self:FindNearestPlayerRoot(record, players, record.MaxChaseDistance or 120)
     if root and distance then
         record.ChaseTarget = root.Parent
