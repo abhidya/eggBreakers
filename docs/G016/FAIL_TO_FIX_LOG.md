@@ -96,3 +96,18 @@ Next action: after worker lanes merge, run luac, Rojo build, all-category Studio
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: keep collecting exact failing tests/probes; do not mark PASS from docs/source-only evidence.
+
+## Run G016-R007 — L005 latest live-proof reverify — 2026-05-27T12:24:00Z
+
+Tests run: all-source Lua syntax, Rojo build, Studio/MCP read-only live probe for L005 attributes.
+Passed: source syntax passed; Rojo build produced `/tmp/eggBreakers-worker5-l005-reverify.rbxl`; Studio/MCP counted visible dinosaurs `25`, visible carnivores `8`, food `15`, water `5`, trees `9`.
+Failed: `ReplicatedStorage.G016FinalGateProof` does not exist, so the required proof attributes are absent: `HatchLiveProofPassed`, `NPCActiveStateTransitionsPassed`, `ActionMotionProofPassed`, `GrowthScaleFromFoodWaterPassed`, and `L005LiveProbeRunId`.
+Top failing story: US15 Fresh full QA gate proves all stories.
+Failure: live world has promising population/food/water/tree counts, but no attached fresh proof artifact for hatch, NPC state transitions, action motion, or growth-scale delta.
+Root cause: verification probes are still observational and have not produced the final proof folder/metadata required by the G016 gate.
+Patch applied: documentation updated with exact reverify evidence and gaps; no gameplay or proof-attribute patch was made.
+Retest result: NOT DONE / expected gate FAIL until fresh live proof attributes are produced by an authorized Studio/live run.
+Next action: run the live proof harness that creates `G016FinalGateProof` only after verifying hatch, NPC transitions, action motion, and growth-scale delta.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: continue live proof capture; do not mark PASS from source/build or counts alone.

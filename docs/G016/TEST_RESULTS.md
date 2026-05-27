@@ -34,3 +34,7 @@ Studio MCP read-only probe executed `G016FinalGateSuite` without creating proof 
 ## L005 Gate Tightening Probe — 2026-05-27
 
 First failing probe before patch: current evidence still has `Fresh all-category TestRunner` FAIL and no explicit proof for the owner-reported gates (hatch live proof, >=10 visible dinosaurs with carnivores, NPC active transitions, tree/food/water visibility, action motion, and growth scale from food+water). Patch keeps the final gate failing until those fresh live proof attributes exist. No final PASS claimed.
+
+## L005 Reverify Probe — 2026-05-27T12:24Z
+
+Fresh worker-5 source/build checks passed on current worker HEAD, and Studio/MCP read-only probe found partial live-world evidence but no final proof folder. Evidence: `luac` all source PASS; `rojo build default.project.json --output /tmp/eggBreakers-worker5-l005-reverify.rbxl` PASS; Studio/MCP reported `ReplicatedStorage.G016FinalGateProof` missing, visible dinosaurs `25`, visible carnivores `8`, food `15`, water `5`, trees `9`. Exact remaining gaps: no `HatchLiveProofPassed`, no `NPCActiveStateTransitionsPassed`, no `ActionMotionProofPassed`, no `GrowthScaleFromFoodWaterPassed`, and no `L005LiveProbeRunId` proof attributes. No final PASS claimed.
