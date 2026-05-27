@@ -39,5 +39,20 @@ table.insert(suite.tests, { name = "square grid clusters are rejected", run = fu
     Assert.falsy(result.passed, "repeated equal deltas must be treated as grid placement")
 end })
 
+
+table.insert(suite.tests, { name = "final acceptance requires 500 unique source assets", run = function()
+    local records = {}
+    for index = 1, PlacementValidationService.MinimumUniqueSourceAssetIds do
+        table.insert(records, { id = "ImportedAsset" .. tostring(index), SourceAssetId = 900000 + index })
+    end
+    local result = PlacementValidationService:ValidateUniqueSourceAssets(records)
+    Assert.truthy(result.passed, table.concat(result.failures, "; "))
+    Assert.equals(result.uniqueSourceAssetIds, 500, "unique SourceAssetId count")
+
+    records[500].SourceAssetId = records[1].SourceAssetId
+    local duplicateResult = PlacementValidationService:ValidateUniqueSourceAssets(records)
+    Assert.falsy(duplicateResult.passed, "cloned duplicate SourceAssetId must fail final acceptance")
+end })
+
 TestRunner.registerSuite(suite)
 return suite

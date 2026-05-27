@@ -5,6 +5,7 @@ local PlacementValidationService = {}
 PlacementValidationService.RouteClearanceStuds = 22
 PlacementValidationService.GridStepToleranceStuds = 2
 PlacementValidationService.MinimumNaturalOffsetStuds = 7
+PlacementValidationService.MinimumUniqueSourceAssetIds = 500
 
 PlacementValidationService.CategoryRules = {
     NurseryGrove = {
@@ -62,6 +63,7 @@ PlacementValidationService.AcceptanceChecklist = {
     "rocks, cliffs, boulders, and mountain fossils stay in RedstoneCanyon or MountainNestingCliffs",
     "swamp trees, reeds, logs, mud rocks, and shallow water stay in SwampDelta",
     "fossils are never placed inside NurseryGrove safe zone",
+    "final imported placement sets must provide at least 500 unique SourceAssetId values and reject cloned duplicates",
 }
 
 PlacementValidationService.ReferencePlan = {
@@ -211,6 +213,37 @@ function PlacementValidationService:ValidatePlan(plan)
         passed = #failures == 0,
         failures = failures,
         total = #(plan or {}),
+    }
+end
+
+
+function PlacementValidationService:ValidateUniqueSourceAssets(records, minimum)
+    minimum = minimum or self.MinimumUniqueSourceAssetIds
+    local failures = {}
+    local unique = {}
+    local uniqueCount = 0
+
+    for _, record in ipairs(records or {}) do
+        local sourceAssetId = record.SourceAssetId or record.sourceAssetId
+        if sourceAssetId == nil or sourceAssetId == "" then
+            table.insert(failures, tostring(record.id) .. " missing SourceAssetId")
+        elseif unique[sourceAssetId] then
+            table.insert(failures, tostring(record.id) .. " duplicates SourceAssetId " .. tostring(sourceAssetId))
+        else
+            unique[sourceAssetId] = true
+            uniqueCount = uniqueCount + 1
+        end
+    end
+
+    if uniqueCount < minimum then
+        table.insert(failures, "unique SourceAssetId count " .. tostring(uniqueCount) .. " below required " .. tostring(minimum))
+    end
+
+    return {
+        passed = #failures == 0,
+        failures = failures,
+        uniqueSourceAssetIds = uniqueCount,
+        minimum = minimum,
     }
 end
 
