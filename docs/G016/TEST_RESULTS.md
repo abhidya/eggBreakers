@@ -13,6 +13,7 @@ Known latest evidence from owner: hatch completes but post-hatch game loop fails
 | Self-validating harness source | FIXING | T005 added G016 registry/suite/client proof files | run syntax/build/Studio gate |
 | G016 live proof attributes | FAIL | no `G016FinalGateProof` / `G016ClientProof` fresh live attributes yet | live E2E after repairs |
 | Fresh all-category TestRunner | FAIL | G015 carry-forward was 146 total, 129 passed, 17 failed | rerun after fixes |
+| L005 owner-failure live probes | FAIL | required proof attrs absent: hatch live proof, >=10 visible dinos, >=2 carnivores, NPC active transitions, trees/food/water, action motion, growth scale | run fresh Studio live probes after worker lanes merge |
 | Mobile/controller proof | BLOCKED | no fresh device/emulator/controller proof in this lane | live mobile/controller smoke |
 | RBXL save/reopen persistence | BLOCKED | no fresh save/reopen proof | save/reopen audit |
 | 500 asset gate | FAIL | latest evidence 34/500 release-ready visible imports | T006 |
@@ -29,3 +30,7 @@ Expected current result: FAIL until real live proof artifacts are attached. Do n
 ## Fresh Studio G016 Gate Probe — 2026-05-27
 
 Studio MCP read-only probe executed `G016FinalGateSuite` without creating proof attributes. Result: 7 total, 2 passed, 5 failed, 0 skipped, 1 suite. Passing checks: gate files present and UserStoryTestRegistry enumerates US01-US15. Expected failing checks: missing per-story live PASS proof, missing fresh all-category TestRunner proof, missing mobile/live E2E proof, missing RBXL persistence proof, and release asset count below 500.
+
+## L005 Gate Tightening Probe — 2026-05-27
+
+First failing probe before patch: current evidence still has `Fresh all-category TestRunner` FAIL and no explicit proof for the owner-reported gates (hatch live proof, >=10 visible dinosaurs with carnivores, NPC active transitions, tree/food/water visibility, action motion, and growth scale from food+water). Patch keeps the final gate failing until those fresh live proof attributes exist. No final PASS claimed.

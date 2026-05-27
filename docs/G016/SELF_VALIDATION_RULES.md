@@ -13,6 +13,7 @@
   - every story has concrete `US##Evidence`, `US##ObservedAt`, `US##ProofSource`, and `US##Milestone=G016FinalGate` metadata.
   - `FreshAllCategoryTestRunnerPassed=true`, milestone `G016FinalGate`, zero failures, and non-empty Client category.
   - `MobileControllerProofPassed=true` and `LiveE2EProofPassed=true`.
+  - L005 owner-failure probes are explicit and fresh: `HatchLiveProofPassed=true`, `VisibleDinosaurCount >= 10`, `VisibleCarnivoreCount >= 2`, `NPCActiveStateTransitionsPassed=true`, `TreesFoodWaterVisibilityPassed=true`, `ActionMotionProofPassed=true`, `GrowthScaleFromFoodWaterPassed=true`, and non-empty `L005LiveProbeRunId`.
   - `RBXLPersistencePassed=true` with reopen audit timestamp.
   - `releaseReadyVisibleAssets >= 500` via `AssetImportAuditService:ValidateReleaseCounts(500)`.
 - G015 evidence remains historical input only; G016 cannot inherit a G015 PASS.

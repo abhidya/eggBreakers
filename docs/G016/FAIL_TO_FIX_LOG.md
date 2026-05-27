@@ -81,3 +81,18 @@ Next action: commit clean preflight, launch team, assign L001-L005 with new owne
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: launch fresh OMX team after clean commit, then run live probes for hatch/growth/NPC/biome/action motion.
+
+## Run G016-R006 — L005 QA gate tightening — 2026-05-27T12:16:00Z
+
+Tests run: targeted failing evidence probe, source syntax/build checks pending in this lane.
+Passed: none claimed for final release.
+Failed: no fresh proof attributes yet for hatch live proof, >=10 visible dinosaurs, >=2 visible carnivores, NPC active state transitions, visible trees/food/water, visible action motion, and growth scale from food+water.
+Top failing story: US15 Fresh full QA gate proves all stories.
+Failure: final gate could require generic live proof while not naming every owner-reported playability failure as an explicit gate.
+Root cause: L005 required owner-failure probes were documented in the queue but not represented as a single explicit final-gate test.
+Patch applied: `G016FinalGateSuite` now has an `L005 live playability probes cover owner failure gates` test that fails until the exact fresh proof attributes and run id are attached.
+Retest result: expected FAIL until Studio live probes produce real attributes; no final PASS claimed.
+Next action: after worker lanes merge, run luac, Rojo build, all-category Studio TestRunner, and live hatch/NPC/biome/action/growth probes.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: keep collecting exact failing tests/probes; do not mark PASS from docs/source-only evidence.

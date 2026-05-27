@@ -58,6 +58,20 @@ table.insert(suite.tests, { name = "mobile controller and live E2E proof are att
     Assert.truthy(type(StoryAssertions.proofAttribute("LiveE2EProofRunId")) == "string", "live E2E proof must include a run id")
 end })
 
+table.insert(suite.tests, { name = "L005 live playability probes cover owner failure gates", run = function()
+    StoryAssertions.requireProofTrue("HatchLiveProofPassed", "live hatch proof from fresh Studio Play")
+    Assert.truthy((StoryAssertions.proofAttribute("VisibleDinosaurCount") or 0) >= 10,
+        "live proof must count at least 10 visible dinosaurs/NPCs")
+    Assert.truthy((StoryAssertions.proofAttribute("VisibleCarnivoreCount") or 0) >= 2,
+        "live proof must count at least two visible carnivores/predators")
+    StoryAssertions.requireProofTrue("NPCActiveStateTransitionsPassed", "NPC brain changes active state/action during live ticks")
+    StoryAssertions.requireProofTrue("TreesFoodWaterVisibilityPassed", "trees plus tagged food and water are visibly present near starter loop")
+    StoryAssertions.requireProofTrue("ActionMotionProofPassed", "Eat/Drink/Attack/Sprint/Call/Hide produce observable motion or effects")
+    StoryAssertions.requireProofTrue("GrowthScaleFromFoodWaterPassed", "food+water loop increases stats and produces readable growth scale delta")
+    Assert.truthy(type(StoryAssertions.proofAttribute("L005LiveProbeRunId")) == "string",
+        "L005 live probe must include a run id")
+end })
+
 table.insert(suite.tests, { name = "RBXL save reopen persistence proof is attached", run = function()
     StoryAssertions.requireProofTrue("RBXLPersistencePassed", ".rbxl save, close/reopen, and re-audit proof")
     Assert.truthy(type(StoryAssertions.proofAttribute("RBXLPersistenceReopenAuditTimestamp")) == "string", "RBXL persistence proof must include reopen audit timestamp")
