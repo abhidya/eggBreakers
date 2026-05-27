@@ -312,6 +312,7 @@ function G016LiveProofHarness:Run(options)
         nest:SetAttribute("ZoneId", "MountainNestingCliffs")
         nest:SetAttribute("InteractionHint", "Use nest")
         nest:SetAttribute("VisibleGameplayAffordance", true)
+        nest:SetAttribute("GameplayQuery", true)
         if not CollectionService:HasTag(nest, "NestZone") then CollectionService:AddTag(nest, "NestZone") end
         local adultPlayer = MockPlayer.new(91611, "G016NestAdult")
         local adultCharacter, adultRoot = makeCharacter("G016NestAdultCharacter", nest.Position + Vector3.new(0, 0, -5))

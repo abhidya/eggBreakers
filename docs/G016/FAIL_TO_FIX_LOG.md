@@ -261,3 +261,18 @@ Next action: clean/fresh reload workspace or continue release asset materializat
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: resolve release asset materialization (30/500) or run a true fresh Studio reload to eliminate stale dirty-workspace failures.
+
+## Run G016-R018 — performance query/collision cleanup — 2026-05-27T13:31Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-nest-query.rbxl`, `git diff --check`, Studio MCP fresh cloned performance audit, Studio MCP Performance category TestRunner.
+Passed: source syntax/build/diff checks passed. Fresh cloned performance scan passed with `decorativeCollidable=0`, `importedRuntimeScriptCount=0`, and no query/collision failures. Studio Performance category passed `8/8`.
+Failed: final release remains blocked by US14 30/500 assets, fresh all-category zero-failure proof, and RBXL persistence proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: performance category previously failed because every visible food/tree/dressing prop kept CanQuery/CanCollide enabled even when only gameplay interactables should be queryable.
+Root cause: Map dressing used one default physical/query profile for both decorative props and interactable food/water/nests.
+Patch applied: food/water/nest affordances now carry `GameplayQuery=true`; biome dressing disables collision/touch/query by default; US11 proof nest records `GameplayQuery=true`.
+Retest result: Performance category PASS; final all-category still expected FAIL on release gates and dirty placement/release audit issues.
+Next action: continue release asset gate or true fresh reload/placement cleanup.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: address US14 30/500 release-ready assets or fresh reload placement-audit blockers.

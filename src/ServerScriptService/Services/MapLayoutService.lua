@@ -354,6 +354,7 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
     marker:SetAttribute("InteractionHint", "Drink water")
     marker:SetAttribute("VisibleGameplayAffordance", true)
+    marker:SetAttribute("GameplayQuery", true)
     if not CollectionService:HasTag(marker, "WaterSource") then
         CollectionService:AddTag(marker, "WaterSource")
     end
@@ -399,6 +400,7 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("TutorialSafe", isTutorialFood)
         food:SetAttribute("InteractionHint", placement.diet == "Carnivore" and "Eat carcass" or "Eat plant")
         food:SetAttribute("VisibleGameplayAffordance", true)
+        food:SetAttribute("GameplayQuery", true)
         CollectionService:AddTag(food, "FoodSource")
     end
 end
@@ -531,6 +533,7 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing:SetAttribute("HighRisk", source.highRisk == true)
     existing:SetAttribute("InteractionHint", source.diet == "Carnivore" and "Eat carcass" or "Eat plant")
     existing:SetAttribute("VisibleGameplayAffordance", true)
+    existing:SetAttribute("GameplayQuery", true)
     existing:SetAttribute("CreatorStoreOnly", true)
     existing:SetAttribute("PlacementRole", source.diet == "Herbivore" and "PlantFood" or "CarnivoreCarcassFood")
     if not CollectionService:HasTag(existing, "FoodSource") then
@@ -550,9 +553,9 @@ end
 
 function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part.Anchored = true
-    part.CanCollide = true
+    part.CanCollide = false
     part.CanTouch = false
-    part.CanQuery = true
+    part.CanQuery = false
     part.Transparency = 0
     part:SetAttribute("ZoneId", spec.zone)
     part:SetAttribute("BiomeDressing", true)

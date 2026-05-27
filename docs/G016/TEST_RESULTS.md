@@ -90,3 +90,7 @@ Fresh G016FinalGate after the proof now passes 4/8 and fails 4/8: US14 live asse
 ## Fresh All-Category Reducer — 2026-05-27T13:24Z
 
 Fresh source checks passed after NPC/water/test-harness repairs. Studio all-category server probe improved to `177 total / 157 passed / 20 failed`; water-growth failures are gone. A fresh cloned `NPCService` probe showed nearby player flee works (`state=Flee`, `LastBrainAction=Flee`, `BrainMoveCount=1`, `ActiveNPCBrain=true`), but the active Studio all-category run still has stale/cached NPC failures and dirty workspace release-audit failures. No fresh all-category PASS proof was attached.
+
+## Performance Category Cleanup — 2026-05-27T13:31Z
+
+After adding explicit gameplay-query markers and disabling decorative collision/query on biome dressing, a fresh cloned performance scan passed with zero failures. Studio MCP Performance category also passed `8/8`. This does not clear final release because all-category still has release/asset/RBXL blockers.
