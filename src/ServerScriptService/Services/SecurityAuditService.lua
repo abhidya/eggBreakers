@@ -1,12 +1,23 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
+local AssetImportAuditService = require(script.Parent.AssetImportAuditService)
+
 local SecurityAuditService = {}
 
 local IMPORTED_LIBRARY_NAMES = {
     ImportedAssets = true,
     ImportedAssetLibrary = true,
 }
+
+
+function SecurityAuditService:GetImportedAssetStateCounts(options)
+    return AssetImportAuditService:AuditAndRepair(options).counts
+end
+
+function SecurityAuditService:ValidateImportedAssetReleaseGate(minimum)
+    return AssetImportAuditService:ValidateReleaseCounts(minimum)
+end
 
 function SecurityAuditService:AssertRejected(ok, before, after)
     return ok == false and before == after

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
+local AssetImportAuditService = require(script.Parent.AssetImportAuditService)
 
 local AssetAuditService = {}
 AssetAuditService.ForbiddenVisibleNameSignals = { "Placeholder", "Temp", "TODO", "Graybox", "Blockout", "TestCube", "ReplaceMe" }
@@ -69,6 +70,15 @@ function AssetAuditService:ValidateManifestReference(instance, failures)
     if not AssetManifest.AllowedScriptSandboxStatuses[entry.ScriptSandboxStatus] then
         table.insert(failures, instance:GetFullName() .. " references unsupported manifest script sandbox status")
     end
+end
+
+
+function AssetAuditService:GetAssetStateCounts(options)
+    return AssetImportAuditService:AuditAndRepair(options).counts
+end
+
+function AssetAuditService:ValidateReleaseImportReadiness(minimum)
+    return AssetImportAuditService:ValidateReleaseCounts(minimum)
 end
 
 function AssetAuditService:ScanWorkspace()
