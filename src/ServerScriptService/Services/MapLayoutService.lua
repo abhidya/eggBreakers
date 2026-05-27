@@ -101,6 +101,7 @@ MapLayoutService.FoodPlacements = {
 }
 
 MapLayoutService.ShallowWater = {
+    { name = "NurseryTutorialWater", center = Vector3.new(-1960, 10, -18), size = Vector3.new(64, 3, 42), tutorialSafe = true },
     { name = "FernPlainsPond", center = Vector3.new(-1080, 10, 205), size = Vector3.new(190, 5, 120) },
     { name = "SwampDeltaChannel", center = Vector3.new(-80, 8, 950), size = Vector3.new(760, 4, 115) },
     { name = "CityCanalShallow", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
@@ -179,13 +180,31 @@ end
 
 function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     local marker = folders.WaterSources:FindFirstChild(water.name)
+    if marker and not marker:IsA("BasePart") then
+        marker:Destroy()
+        marker = nil
+    end
     if not marker then
-        marker = Instance.new("Folder")
+        marker = Instance.new("Part")
         marker.Name = water.name
+        marker.Anchored = true
+        marker.CanCollide = false
+        marker.CanTouch = true
+        marker.CanQuery = true
+        marker.Material = Enum.Material.Glass
+        marker.Color = Color3.fromRGB(58, 137, 184)
+        marker.Transparency = 0.35
         marker.Parent = folders.WaterSources
     end
+    marker.Position = water.center
+    marker.Size = water.size
     marker:SetAttribute("ShallowWater", true)
+    marker:SetAttribute("WaterSource", true)
+    marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
+    if not CollectionService:HasTag(marker, "WaterSource") then
+        CollectionService:AddTag(marker, "WaterSource")
+    end
     return marker
 end
 
@@ -223,7 +242,9 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("Depleted", food:GetAttribute("Depleted") == true)
         food:SetAttribute("RespawnCooldownSeconds", placement.cooldown)
         food:SetAttribute("DangerousZone", placement.zone ~= "NurseryGrove" and placement.zone ~= "FernPlains")
-        food:SetAttribute("StarterFood", placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass")
+        local isTutorialFood = placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass"
+        food:SetAttribute("StarterFood", isTutorialFood)
+        food:SetAttribute("TutorialSafe", isTutorialFood)
         CollectionService:AddTag(food, "FoodSource")
     end
 end

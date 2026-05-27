@@ -53,4 +53,22 @@ table.insert(suite.tests, { name = "egg cannot drink before hatch", run = functi
     water:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "map tutorial water is tagged drink target", run = function()
+    local MapLayoutService = require(game:GetService("ServerScriptService").Services.MapLayoutService)
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureTerrainContinuity(folders)
+    local water = folders.WaterSources:FindFirstChild("NurseryTutorialWater")
+    Assert.notNil(water, "tutorial water generated")
+    Assert.truthy(CollectionService:HasTag(water, "WaterSource"), "tutorial water tagged")
+    local p = MockPlayer.new(33005, "MapWaterTester")
+    RateLimitService:ClearPlayer(p)
+    SurvivalService:CreateState(p, "gallimimus").Hatched = true
+    local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = water.Position + Vector3.new(2, 0, 0)
+    local char = Instance.new("Model"); root.Parent = char; p.Character = char
+    local state = SurvivalService:GetState(p); state.Thirst = 20
+    Assert.truthy(FoodWaterService:RequestDrink(p, water), "map tutorial water is drinkable")
+    Assert.truthy(state.Thirst > 20, "map water restores thirst")
+end })
+
 return suite
