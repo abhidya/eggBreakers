@@ -936,3 +936,18 @@ Next action: continue six-candidate batches toward 250.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch040 and move US14 from `206/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R063 — Creator Store import Batch040 — 2026-05-27T15:01Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch040 with six inserted candidates; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed six Creator Store assets: gas can `12217929751`, street barrier `11443424973`, mangrove root `15200561246`, fruit tree `5118142744`, rib bones `2726434290`, statue fragment `14030789088`. Import quarantine found `0` script objects and `0` particle emitters. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=211`, `releaseReadyVisibleAssets=211`, `placedVisibleAssets=211`, `taggedImportedAssets=211`, `auditedImportedAssets=211`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=211`, `releaseReadyVisibleAssets=211`, expected at least `500`. Remaining gap is `289` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch040.
+Root cause: release asset volume remains insufficient despite clean unique growth.
+Patch applied: no source patch; Studio place state received Batch040 imported assets under `Workspace.Map.ImportedAssets.G016Batch040` with release/audit/performance-safe attributes, including fruit-tree food and rib-bones carnivore/carcass affordances.
+Retest result: Batch040 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue six-candidate batches toward 250.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch041 and move US14 from `211/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
