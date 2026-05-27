@@ -531,3 +531,18 @@ Next action: continue Creator Store batches; watch high-part-count assets such a
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch014 and keep `scriptObjectsFound=0`.
+
+## Run G016-R036 — Creator Store import Batch014 — 2026-05-27T16:18Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch014 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: broken computer `2580502216`, leaves pile `10639902460`, monolith `12757558412`, mossy log duplicate `18497743057`, bones pile `54636442`. Import quarantine removed `12` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=90`, `releaseReadyVisibleAssets=90`, `placedVisibleAssets=90`, `taggedImportedAssets=90`, `auditedImportedAssets=90`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=90`, `releaseReadyVisibleAssets=90`, expected at least `500`. Remaining gap is `410` release-ready assets plus RBXL save/reopen and fresh all-category proof. Mossy log reused SourceAssetId `18497743057` and was correctly not counted twice.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch014.
+Root cause: four unique assets landed this batch; one duplicate was excluded from unique release count.
+Patch applied: no source patch; Studio place state received Batch014 imported assets under `Workspace.Map.ImportedAssets.G016Batch014` with release/audit attributes.
+Retest result: Batch014 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; avoid mossy/fallen log queries that repeat SourceAssetId `18497743057`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch015 with lower duplicate risk and keep `scriptObjectsFound=0`.
