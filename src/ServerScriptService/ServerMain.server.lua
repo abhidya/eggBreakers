@@ -18,6 +18,7 @@ local CityDiscoveryService = require(script.Parent.Services.CityDiscoveryService
 local MapLayoutService = require(script.Parent.Services.MapLayoutService)
 local StatReplicationService = require(script.Parent.Services.StatReplicationService)
 local MovementLockService = require(script.Parent.Services.MovementLockService)
+local CharacterVisualService = require(script.Parent.Services.CharacterVisualService)
 local RateLimitService = require(script.Parent.Services.RateLimitService)
 
 MapLayoutService:EnsureMapFolders()
@@ -47,6 +48,7 @@ local function initializePlayer(player)
     local data = PlayerDataService:Load(player)
     local state = SurvivalService:CreateState(player, getStarterSpecies(data))
     MovementLockService:SetHatchedMovement(player, false, state)
+    CharacterVisualService:ApplyForState(player, state)
     sendStats(player)
 end
 
@@ -55,6 +57,7 @@ Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
         local state = SurvivalService:GetState(player)
         MovementLockService:SetHatchedMovement(player, state and state.Hatched == true, state)
+        CharacterVisualService:ApplyForState(player, state)
     end)
 end)
 
@@ -76,6 +79,7 @@ Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
         local stats = SpeciesConfig[result.SpeciesId].BaseStats[result.GrowthStage]
         result.CurrentWalkSpeed = stats.WalkSpeed
         MovementLockService:SetHatchedMovement(player, true, result)
+        CharacterVisualService:ApplyDinosaur(player, result)
         ProgressionService:OnHatched(player)
         StatReplicationService:Notify(player, "You hatched!", "Success", 3)
     else
