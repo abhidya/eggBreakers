@@ -131,6 +131,10 @@ Remotes.RequestEat.OnServerEvent:Connect(function(player, target)
     local oldGrowth = previousState and previousState.Growth
     local ok, result = FoodWaterService:RequestEat(player, target)
     if ok and result.GrowthStage ~= oldStage then
+        local stats = SpeciesConfig[result.SpeciesId].BaseStats[result.GrowthStage]
+        result.CurrentWalkSpeed = stats.WalkSpeed
+        MovementLockService:SetHatchedMovement(player, true, result)
+        CharacterVisualService:ApplyForState(player, result)
         ProgressionService:OnGrowthStage(player, result.GrowthStage)
     end
     if ok and result.Growth ~= oldGrowth then
