@@ -336,3 +336,18 @@ Next action: real asset import/materialization batch or RBXL save/reopen workflo
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: materialize/import/audit/place real Creator Store assets toward 500 or run save/reopen persistence proof if Studio control allows.
+
+## Run G016-R023 — RBXL save/reopen capability probe — 2026-05-27T14:08Z
+
+Tests run: Studio MCP SavePlace capability probe plus before/after `AssetImportAuditService:ValidateReleaseCounts(500)`.
+Passed: Studio exposes `game:SavePlace`; before/after audit counts were stable (`actuallyImportedAssets=30`, `releaseReadyVisibleAssets=30`, scripts found `0`).
+Failed: `game:SavePlace()` returned `Game:SavePlace placeID is not valid!` because the local Studio session has `PlaceId=0`; MCP tools do not expose close/reopen or save-as. RBXL persistence remains BLOCKED, not PASS.
+Top failing story: US15 Fresh full QA gate / RBXL persistence.
+Failure: save/reopen proof cannot be completed from this current MCP lane.
+Root cause: local file session is not a valid published place save target for `SavePlace`, and no close/reopen tool exists in the current Studio MCP surface.
+Patch applied: created `docs/G016/RBXL_SAVE_REOPEN_AUDIT.md` with exact commands/attempt/error/counts; no proof attr set to PASS.
+Retest result: persistence still BLOCKED; asset gate remains `30/500`.
+Next action: use a Studio lane with local save-as/close/reopen control, or published valid PlaceId; otherwise continue US14 asset materialization.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: materialize real Creator Store assets toward 500 or move to a Studio control lane capable of local save/reopen.

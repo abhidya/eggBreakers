@@ -110,3 +110,7 @@ Fresh source checks passed. Studio E2E category passed `27/28`; only failure rem
 ## Post-Food Live Proof Stability — 2026-05-27T14:02Z
 
 Studio MCP consolidated `G016LiveProofHarness` passed after the food-density/carnivore regression changes. US01-US13 live proof attributes remained true. Observed proof counts in current Studio state: visible dinosaurs `198`, visible carnivores `80`, visible food `33`, water `4`, trees `20`. Fresh G016FinalGate remains `4/8`: US14 asset proof missing, fresh all-category proof missing, RBXL persistence missing, and release count remains `30/500`.
+
+## RBXL Save/Reopen Capability Probe — 2026-05-27T14:08Z
+
+Studio MCP probe found `game:SavePlace` exists, but calling it failed with `Game:SavePlace placeID is not valid!` because the current local session has `PlaceId=0`. Before/after asset counts were stable at `30` actually imported and `30` release-ready visible assets, but no close/reopen tool is available in this MCP lane, so RBXL persistence remains BLOCKED and not PASS. See `docs/G016/RBXL_SAVE_REOPEN_AUDIT.md`.
