@@ -84,7 +84,6 @@ function MobileControlsController:CreateControls(settings)
     feedback.TextScaled = true
     feedback.Visible = false
     feedback.Parent = gui
-    self:WireVisibleButtonEffects(gui)
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
     return { Gui = gui, Buttons = self.Buttons, Scale = scale }

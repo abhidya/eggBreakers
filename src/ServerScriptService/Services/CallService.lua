@@ -22,17 +22,14 @@ function CallService:CreateDebugMarker(player, callType, radius)
     marker.CanCollide = false
     marker.CanTouch = false
     marker.CanQuery = false
-    marker.Transparency = 0.45
-    marker.Material = Enum.Material.Neon
-    marker.Color = callType == "Threat" and Color3.fromRGB(255, 80, 60)
-        or callType == "Warning" and Color3.fromRGB(255, 210, 70)
-        or callType == "BabyDistress" and Color3.fromRGB(120, 180, 255)
-        or Color3.fromRGB(95, 255, 140)
     marker.Shape = Enum.PartType.Ball
-    marker.Size = Vector3.new(math.max(6, radius / 10), 1, math.max(6, radius / 10))
+    marker.Material = Enum.Material.Neon
+    marker.Color = Color3.fromRGB(120, 210, 255)
+    marker.Transparency = 0.45
+    marker.Size = Vector3.new(10, 10, 10)
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if root then marker.Position = root.Position + Vector3.new(0, 1.5, 0) end
-    marker:SetAttribute("VisibleGameplayFeedback", true)
+    if root then marker.Position = root.Position end
+    marker:SetAttribute("VisibleActionEffect", true)
     marker:SetAttribute("CallType", callType)
     marker:SetAttribute("Radius", radius)
     marker:SetAttribute("SourceUserId", player.UserId)

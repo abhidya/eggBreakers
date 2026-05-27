@@ -1,8 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local TweenService = game:GetService("TweenService")
 
 local controllers = script.Parent:WaitForChild("ClientControllers")
 local HUDController = require(controllers:WaitForChild("HUDController"))
@@ -164,6 +162,68 @@ ClientBootstrap.Controllers = {
     MobileControlsController = MobileControlsController,
 }
 
+local DEFAULT_WALK_SPEED = 16
+local SPRINT_WALK_SPEED = 24
+local HIDE_TRANSPARENCY = 0.55
+
+local function getHumanoid()
+    local character = player.Character
+    if not character then return nil end
+    return character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getCharacterRoot()
+    local character = player.Character
+    if not character then return nil end
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function showFeedback(gui, message)
+    local label = gui and gui:FindFirstChild("ActionFeedbackLabel")
+    if not label then return end
+    label.Text = message
+    label.Visible = true
+    label:SetAttribute("LastFeedback", message)
+end
+
+local function setButtonActive(button, isActive)
+    if not button then return end
+    button:SetAttribute("Active", isActive)
+    button.BackgroundColor3 = isActive and Color3.fromRGB(56, 126, 68) or Color3.fromRGB(35, 45, 35)
+end
+
+local function applyHiddenVisual(isHidden)
+    local character = player.Character
+    if not character then return end
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.LocalTransparencyModifier = isHidden and HIDE_TRANSPARENCY or 0
+        end
+    end
+end
+
+local function createLocalCallPulse(callType)
+    local root = getCharacterRoot()
+    if not root then return nil end
+    local pulse = Instance.new("Part")
+    pulse.Name = "LocalCallPulse"
+    pulse.Shape = Enum.PartType.Ball
+    pulse.Anchored = true
+    pulse.CanCollide = false
+    pulse.CanTouch = false
+    pulse.CanQuery = false
+    pulse.Material = Enum.Material.Neon
+    pulse.Color = Color3.fromRGB(120, 210, 255)
+    pulse.Transparency = 0.45
+    pulse.Size = Vector3.new(8, 8, 8)
+    pulse.CFrame = root.CFrame
+    pulse:SetAttribute("CallType", callType)
+    pulse:SetAttribute("VisibleActionEffect", true)
+    pulse.Parent = workspace
+    Debris:AddItem(pulse, 1.25)
+    return pulse
+end
+
 local function wireMobileButtons(result)
     local gui = result and result.Gui
     if not gui then return end
@@ -175,11 +235,10 @@ local function wireMobileButtons(result)
                 if CollectionService:HasTag(target, Constants.Tags.FoodSource) then
                     ClientBootstrap:PlayActionMotion("Eat")
                     InputController:RequestEat(target)
-                    ClientBootstrap:ShowActionFeedback(gui, "Eating nearby food")
-                elseif CollectionService:HasTag(target, Constants.Tags.WaterSource) then
-                    ClientBootstrap:PlayActionMotion("Drink")
+                    showFeedback(gui, "Eating")
+                elseif target:GetAttribute("WaterSource") or target.Name:find("Water") then
                     InputController:RequestDrink(target)
-                    ClientBootstrap:ShowActionFeedback(gui, "Drinking nearby water")
+                    showFeedback(gui, "Drinking")
                 end
             else
                 ClientBootstrap:ShowActionFeedback(gui, "No food or water nearby")
@@ -187,52 +246,44 @@ local function wireMobileButtons(result)
         end)
     end
     local attack = gui:FindFirstChild("AttackButton")
-    if attack then attack.Activated:Connect(function()
-        local target = ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12)
-        ClientBootstrap:PlayActionMotion("Attack")
-        InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), target)
-        ClientBootstrap:ShowActionFeedback(gui, target and "Attacking target" or "No target nearby")
-    end) end
-    local call = gui:FindFirstChild("CallButton")
-    if call then call.Activated:Connect(function()
-        local callType = "Friendly"
-        ClientBootstrap:PlayActionMotion("Call")
-        InputController:RequestCall(callType)
-        local pulse = ClientBootstrap:CreateLocalCallPulse(callType)
-        call:SetAttribute("LastCallType", callType)
-        call:SetAttribute("VisibleEffectCreated", pulse ~= nil)
-        ClientBootstrap:ShowActionFeedback(gui, "Friendly call sent")
-    end) end
+    if attack then attack.Activated:Connect(function() InputController:RequestAttack("Claw", nil) end) end
+
     local sprint = gui:FindFirstChild("SprintButton")
-    if sprint then sprint.Activated:Connect(function()
-        local humanoid = ClientBootstrap:GetHumanoid()
-        if not humanoid then return end
-        ClientBootstrap.Sprinting = not ClientBootstrap.Sprinting
-        local speciesId = ClientBootstrap.LastStats and ClientBootstrap.LastStats.species or "gallimimus"
-        local growthStage = ClientBootstrap.LastStats and ClientBootstrap.LastStats.growthStage or "Hatchling"
-        local species = SpeciesConfig[speciesId] or SpeciesConfig.gallimimus
-        local stats = species and species.BaseStats and species.BaseStats[growthStage]
-        humanoid.WalkSpeed = ClientBootstrap.Sprinting and ((stats and stats.SprintSpeed) or 20) or ((stats and stats.WalkSpeed) or 12)
-        ClientBootstrap:SetButtonText(sprint, ClientBootstrap.Sprinting and "Sprinting" or "Sprint")
-        player:SetAttribute("Sprinting", ClientBootstrap.Sprinting)
-        ClientBootstrap:ShowActionFeedback(gui, ClientBootstrap.Sprinting and "Sprint speed active" or "Sprint off")
-    end) end
+    if sprint then
+        sprint.Activated:Connect(function()
+            local isSprinting = not player:GetAttribute("Sprinting")
+            player:SetAttribute("Sprinting", isSprinting)
+            local humanoid = getHumanoid()
+            if humanoid then humanoid.WalkSpeed = isSprinting and SPRINT_WALK_SPEED or DEFAULT_WALK_SPEED end
+            sprint.Text = isSprinting and "Sprint ON" or "Sprint"
+            setButtonActive(sprint, isSprinting)
+            showFeedback(gui, isSprinting and "Sprint speed active" or "Sprint off")
+        end)
+    end
+
+    local call = gui:FindFirstChild("CallButton")
+    if call then
+        call.Activated:Connect(function()
+            local callType = "Friendly"
+            InputController:RequestCall(callType)
+            local pulse = createLocalCallPulse(callType)
+            call:SetAttribute("LastCallType", callType)
+            call:SetAttribute("VisibleEffectCreated", pulse ~= nil)
+            showFeedback(gui, "Friendly call sent")
+        end)
+    end
+
     local restHide = gui:FindFirstChild("RestHideButton")
-    if restHide then restHide.Activated:Connect(function()
-        local humanoid = ClientBootstrap:GetHumanoid()
-        ClientBootstrap.RestHidden = not ClientBootstrap.RestHidden
-        player:SetAttribute("RestHidden", ClientBootstrap.RestHidden)
-        player:SetAttribute("Hidden", ClientBootstrap.RestHidden)
-        ClientBootstrap:ApplyHiddenVisual(ClientBootstrap.RestHidden)
-        if ClientBootstrap.RestHidden then
-            ClientBootstrap:PlayActionMotion("Hide")
-        end
-        if humanoid then
-            humanoid.WalkSpeed = ClientBootstrap.RestHidden and 4 or 12
-        end
-        ClientBootstrap:SetButtonText(restHide, ClientBootstrap.RestHidden and "Hidden" or "Hide")
-        ClientBootstrap:ShowActionFeedback(gui, ClientBootstrap.RestHidden and "Hidden/resting" or "Visible")
-    end) end
+    if restHide then
+        restHide.Activated:Connect(function()
+            local isHidden = not player:GetAttribute("Hidden")
+            player:SetAttribute("Hidden", isHidden)
+            applyHiddenVisual(isHidden)
+            restHide.Text = isHidden and "Hidden" or "Rest/Hide"
+            setButtonActive(restHide, isHidden)
+            showFeedback(gui, isHidden and "Hidden/resting" or "Visible")
+        end)
+    end
 end
 
 function ClientBootstrap:Init()

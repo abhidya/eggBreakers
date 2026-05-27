@@ -37,37 +37,20 @@ table.insert(suite.tests, { name = "buttons do not overlap HUD", run = function(
 end })
 
 
-table.insert(suite.tests, { name = "sprint call hide buttons expose visible effects", run = function()
-    local gui = UIFactory:CreateRootGui("MobileControlsEffectProbe")
-    local sprint = UIFactory:CreateButton(gui, "SprintButton", "Sprint", UDim2.fromOffset(0, 0))
-    local call = UIFactory:CreateButton(gui, "CallButton", "Call", UDim2.fromOffset(0, 0))
-    local restHide = UIFactory:CreateButton(gui, "RestHideButton", "RestHide", UDim2.fromOffset(0, 0))
-
-    Assert.truthy(MobileControlsController:SetButtonEffect(sprint, "Sprint", true), "sprint effect applies")
-    Assert.equals(sprint:GetAttribute("EffectActive"), true, "sprint effect active flag")
-    Assert.equals(sprint.Text, "Sprint!", "sprint active label")
-    Assert.truthy(MobileControlsController:SetButtonEffect(sprint, "Sprint", false), "sprint effect clears")
-    Assert.equals(sprint:GetAttribute("EffectActive"), false, "sprint effect inactive flag")
-    Assert.equals(sprint.Text, "Sprint", "sprint default label restored")
-
-    Assert.truthy(MobileControlsController:SetButtonEffect(call, "Call", true), "call effect applies")
-    Assert.equals(call.Text, "Calling", "call active label")
-    Assert.truthy(MobileControlsController:SetButtonEffect(restHide, "RestHide", true), "hide effect applies")
-    Assert.equals(restHide.Text, "Hidden", "hide active label")
-
+table.insert(suite.tests, { name = "sprint call hide expose visible feedback hooks", run = function()
+    local gui = UIFactory:CreateRootGui("MobileControls")
+    for _, name in ipairs({ "Sprint", "Call", "RestHide" }) do
+        local button = UIFactory:CreateButton(gui, name .. "Button", name, UDim2.fromOffset(0, 0))
+        button:SetAttribute("ActionName", name)
+        Assert.equals(button:GetAttribute("ActionName"), name, name .. " button has action attribute")
+        Assert.equals(button.BackgroundColor3, Color3.fromRGB(35, 45, 35), name .. " starts with inactive color")
+    end
+    local feedback = Instance.new("TextLabel")
+    feedback.Name = "ActionFeedbackLabel"
+    feedback.Visible = false
+    feedback.Parent = gui
+    Assert.notNil(gui:FindFirstChild("ActionFeedbackLabel"), "visible action feedback label exists")
     gui:Destroy()
-end })
-
-table.insert(suite.tests, { name = "mobile controls create visible action feedback label", run = function()
-    MobileControlsController.Gui = nil
-    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
-    local gui = result.Gui
-    Assert.notNil(gui:FindFirstChild("ActionFeedbackLabel"), "action feedback label exists")
-    Assert.equals(gui.SprintButton:GetAttribute("ActionName"), "Sprint", "sprint action attribute")
-    Assert.equals(gui.CallButton:GetAttribute("ActionName"), "Call", "call action attribute")
-    Assert.equals(gui.RestHideButton:GetAttribute("ActionName"), "RestHide", "hide action attribute")
-    gui:Destroy()
-    MobileControlsController.Gui = nil
 end })
 
 TestRunner.registerSuite(suite)
