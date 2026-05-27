@@ -182,7 +182,7 @@ function CharacterVisualService:_applyGrowthVisualScale(model, state)
             model:ScaleTo(currentScale * growthScale)
         end)
         if not ok then
-            local _, center = model:GetBoundingBox()
+            local center = model:GetBoundingBox()
             for _, descendant in ipairs(model:GetDescendants()) do
                 if descendant:IsA("BasePart") then
                     descendant.Size = descendant.Size * growthScale

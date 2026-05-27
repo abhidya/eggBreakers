@@ -46,8 +46,23 @@ table.insert(suite.tests, { name = "food updates stat state", run = function()
     Assert.truthy(ok, "eat request succeeds")
     Assert.between(state.Hunger, 69, 100, "hunger restored")
     Assert.equals(food:GetAttribute("Depleted"), true, "food depleted server-side")
-    Assert.equals(state.Growth, 1, "growth grant server-side")
+    Assert.equals(state.Growth, FoodWaterService.FoodGrowthGrant, "growth grant server-side")
     food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "water updates thirst and growth state", run = function()
+    local p, food, root = setup(32007, "Herbivore")
+    local water = Instance.new("Part")
+    water.Name = "TestWater"
+    water.Position = Vector3.new(3, 3, 0)
+    water.Parent = workspace
+    CollectionService:AddTag(water, "WaterSource")
+    local state = SurvivalService:GetState(p); state.Thirst = 45; state.Growth = 0
+    local ok = FoodWaterService:RequestDrink(p, water)
+    Assert.truthy(ok, "drink request succeeds")
+    Assert.between(state.Thirst, 79, 100, "thirst restored")
+    Assert.equals(state.Growth, FoodWaterService.WaterGrowthGrant, "water grants growth server-side")
+    food:Destroy(); water:Destroy()
 end })
 
 

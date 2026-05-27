@@ -9,6 +9,10 @@ local SurvivalService = require(ServerScriptService.Services.SurvivalService)
 
 local suite = { name = "CharacterVisualServiceTests.server", category = "Integration", tests = {} }
 
+local function axisMax(vector)
+    return math.max(vector.X, vector.Y, vector.Z)
+end
+
 local function ensureFolder(parent, name)
     local folder = parent:FindFirstChild(name)
     if not folder then
@@ -140,6 +144,31 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     local _, size = visual:GetBoundingBox()
     Assert.truthy(math.max(size.X, size.Y, size.Z) >= CharacterVisualService.MinimumDinosaurLength, "attached model preserves readable part offsets")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible dinosaur replacement exists")
+    cleanup(player)
+end })
+
+table.insert(suite.tests, { name = "growth progress makes dinosaur visual larger", run = function()
+    setupImportedVisuals()
+    local player = MockPlayer.new(11005, "GrowthScaleVisualTester")
+    local character = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "gallimimus")
+    state.Hatched = true
+    state.Growth = 0
+
+    local ok = CharacterVisualService:ApplyForState(player, state)
+    Assert.truthy(ok, "base dinosaur visual applied")
+    local baseVisual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+    local _, baseSize = baseVisual:GetBoundingBox()
+
+    state.Growth = 25
+    ok = CharacterVisualService:ApplyForState(player, state)
+    Assert.truthy(ok, "grown dinosaur visual applied")
+    local grownVisual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+    local _, grownSize = grownVisual:GetBoundingBox()
+
+    Assert.truthy(grownVisual:GetAttribute("GrowthVisualScale") > 1, "growth visual scale recorded")
+    Assert.truthy(axisMax(grownSize) > axisMax(baseSize), "grown visual is larger than hatchling visual")
     cleanup(player)
 end })
 
