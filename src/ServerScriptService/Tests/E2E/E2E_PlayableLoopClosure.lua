@@ -12,6 +12,24 @@ local RateLimitService = require(game:GetService("ServerScriptService").Services
 
 local suite = { name = "E2E_PlayableLoopClosure.server", category = "E2E", tests = {} }
 
+
+local function ensureCarcassAsset()
+    local library = game:GetService("ReplicatedStorage"):FindFirstChild("ImportedAssetLibrary")
+    if not library then
+        library = Instance.new("Folder")
+        library.Name = "ImportedAssetLibrary"
+        library.Parent = game:GetService("ReplicatedStorage")
+    end
+    local asset = library:FindFirstChild("PlayableLoopCarcass")
+    if not asset then
+        asset = Instance.new("Part")
+        asset.Name = "PlayableLoopCarcass"
+        asset.Size = Vector3.new(4, 1, 2)
+        asset.Parent = library
+    end
+    return asset
+end
+
 local function rootFor(player, position)
     local root = Instance.new("Part")
     root.Name = "HumanoidRootPart"
@@ -74,14 +92,34 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     Assert.truthy(CombatService:RequestAttack(player, "Claw", prey), "attack succeeds")
     Assert.truthy(prey:GetAttribute("Health") < 10, "real damage reduces health")
 
+    ensureCarcassAsset()
     local preyModel = Instance.new("Model")
     preyModel.Name = "LoopPreyNPC"
-    preyModel:PivotTo(CFrame.new(3, 3, 0))
+    local preyRoot = Instance.new("Part")
+    preyRoot.Name = "Root"
+    preyRoot.Size = Vector3.new(2, 2, 2)
+    preyRoot.Position = Vector3.new(3, 3, 0)
+    preyRoot.Parent = preyModel
+    preyModel.PrimaryPart = preyRoot
     preyModel.Parent = workspace
     local registered, record = NPCService:Register(preyModel, "Prey")
     Assert.truthy(registered, "NPC prey registered")
+    Assert.truthy(CollectionService:HasTag(preyModel, "Damageable"), "registered NPC is damageable for player attacks")
     NPCService:TickNPCs({ player })
     Assert.equals(record.State, "Flee", "prey flees player")
+
+    record.Health = 1
+    state.Stamina = 100
+    RateLimitService:ClearPlayer(player)
+    Assert.truthy(CombatService:RequestAttack(player, "Claw", preyModel), "player can attack registered dinosaur NPC")
+    Assert.equals(record.State, "Dead", "player attack kills NPC prey")
+    Assert.notNil(record.Carcass, "player-killed NPC leaves carcass")
+    Assert.truthy(CollectionService:HasTag(record.Carcass, "FoodSource"), "player-killed NPC carcass is food")
+    root.Position = record.Carcass:GetPivot().Position + Vector3.new(0, 0, -3)
+    state.Hunger = 30
+    RateLimitService:ClearPlayer(player)
+    Assert.truthy(FoodWaterService:RequestEat(player, record.Carcass), "carnivore player eats NPC carcass")
+    Assert.truthy(state.Hunger > 30, "NPC carcass restores hunger")
 
     Assert.truthy(CityDiscoveryService:Discover(player, "ApocalypticCity"), "city discovered")
     local fossil = Instance.new("Part")
@@ -99,6 +137,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     Assert.equals(respawned.Hatched, false, "respawn returns egg")
     Assert.equals(PlayerDataService:Get(player).Fossils, 2, "saved reward survives respawn")
 
+    if record.Carcass then record.Carcass:Destroy() end
     eggFood:Destroy(); water:Destroy(); prey:Destroy(); preyModel:Destroy(); fossil:Destroy()
 end })
 

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local RemoteValidationService = require(script.Parent.RemoteValidationService)
 local SurvivalService = require(script.Parent.SurvivalService)
+local NPCService = require(script.Parent.NPCService)
 
 local CombatService = { LastAttack = {} }
 CombatService.Range = { Bite = 9, HeavyBite = 10, Claw = 8, Lunge = 14, Headbutt = 9, Nibble = 6 }
@@ -12,8 +13,29 @@ function CombatService:AttackAllowedForSpecies(state, attackType)
     return species.Abilities.PrimaryAttack == attackType or species.Abilities.SecondaryAbility == attackType
 end
 
+function CombatService:StampDamageAttributes(target, damage, attacker)
+    target:SetAttribute("LastDamage", damage)
+    target:SetAttribute("LastServerDamage", damage)
+    target:SetAttribute("LastDamagedByUserId", attacker and attacker.UserId or 0)
+    target:SetAttribute("PendingServerDamage", damage)
+end
+
 function CombatService:ApplyDamage(target, damage, attacker)
     if not target then return false, "missing_target" end
+    local npcRecord = NPCService:FindRecordForInstance(target)
+    if npcRecord then
+        local ok, reason = NPCService:DamageRecord(npcRecord, damage)
+        self:StampDamageAttributes(target, damage, attacker)
+        target:SetAttribute("Health", npcRecord.Health)
+        if npcRecord.State == "Dead" then
+            target:SetAttribute("Dead", true)
+            target:SetAttribute("Defeated", true)
+            if npcRecord.Carcass then
+                target:SetAttribute("CarcassFoodSource", npcRecord.Carcass.Name)
+            end
+        end
+        return ok, reason
+    end
     local humanoid = target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") or nil
     if humanoid then
         humanoid:TakeDamage(damage)
@@ -29,10 +51,7 @@ function CombatService:ApplyDamage(target, damage, attacker)
             target:SetAttribute("Defeated", true)
         end
     end
-    target:SetAttribute("LastDamage", damage)
-    target:SetAttribute("LastServerDamage", damage)
-    target:SetAttribute("LastDamagedByUserId", attacker and attacker.UserId or 0)
-    target:SetAttribute("PendingServerDamage", damage)
+    self:StampDamageAttributes(target, damage, attacker)
     return true
 end
 

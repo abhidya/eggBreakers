@@ -115,6 +115,9 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("NestX", pivotPosition.X)
         npc:SetAttribute("NestY", pivotPosition.Y)
         npc:SetAttribute("NestZ", pivotPosition.Z)
+        if not CollectionService:HasTag(npc, "Damageable") then
+            CollectionService:AddTag(npc, "Damageable")
+        end
     end
     table.insert(self.NPCs, record)
     return true, record
@@ -135,13 +138,15 @@ function NPCService:Transition(record, nextState)
     return true
 end
 
-function NPCService:GetFlightTarget(record, targetPosition, actionName)
-    if not record or record.FlightCapable ~= true or typeof(targetPosition) ~= "Vector3" then return targetPosition end
-    local altitude = record.PreferredAltitude or targetPosition.Y
-    if actionName == "Flee" then
-        altitude = math.max(altitude, targetPosition.Y + 8)
+
+function NPCService:FindRecordForInstance(instance)
+    if not instance then return nil end
+    for _, record in ipairs(self.NPCs) do
+        if record.Instance == instance then
+            return record
+        end
     end
-    return Vector3.new(targetPosition.X, altitude, targetPosition.Z)
+    return nil
 end
 
 function NPCService:GetRecordPosition(record)
