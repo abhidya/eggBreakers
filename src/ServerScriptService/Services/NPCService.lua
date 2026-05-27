@@ -89,27 +89,69 @@ function NPCService:GetInstancePosition(instance)
     return nil
 end
 
-function NPCService:MoveToward(record, targetPosition, step)
+function NPCService:FormatVector3(position)
+    return string.format("%.1f,%.1f,%.1f", position.X, position.Y, position.Z)
+end
+
+function NPCService:OrientToward(record, targetPosition, actionName)
+    if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
+    local npc = record.Instance
+    if not npc then return false, "missing_npc" end
+    local position = self:GetRecordPosition(record)
+    local lookAt = Vector3.new(targetPosition.X, position.Y, targetPosition.Z)
+    if (lookAt - position).Magnitude <= 0.05 then
+        lookAt = position + Vector3.new(0, 0, -1)
+    end
+    if npc.PivotTo then
+        npc:PivotTo(CFrame.lookAt(position, lookAt))
+    elseif npc:IsA("BasePart") then
+        npc.CFrame = CFrame.lookAt(position, lookAt)
+    end
+    record.LastBrainAction = actionName or record.LastBrainAction or "FaceTarget"
+    record.ActionTarget = targetPosition
+    npc:SetAttribute("LastBrainAction", record.LastBrainAction)
+    npc:SetAttribute("BrainActionTarget", self:FormatVector3(targetPosition))
+    npc:SetAttribute("FacingTarget", self:FormatVector3(targetPosition))
+    return true
+end
+
+function NPCService:MoveToward(record, targetPosition, step, actionName, targetInstance)
     if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
     local npc = record.Instance
     local position = self:GetRecordPosition(record)
     local delta = targetPosition - position
-    if delta.Magnitude <= 0.1 then return true end
+    if delta.Magnitude <= 0.1 then
+        return self:OrientToward(record, targetPosition, actionName or "Move")
+    end
     local nextPosition = position + delta.Unit * math.min(step or self.MoveStep, delta.Magnitude)
+    local lookAt = Vector3.new(targetPosition.X, nextPosition.Y, targetPosition.Z)
+    if (lookAt - nextPosition).Magnitude <= 0.05 then
+        lookAt = nextPosition + Vector3.new(0, 0, -1)
+    end
+    local brainAction = actionName or "Move"
     record.MoveTarget = targetPosition
+    record.ActionTarget = targetPosition
     record.LastMoveAt = os.time()
+    record.LastBrainAction = brainAction
     if npc then
+        local formattedTarget = self:FormatVector3(targetPosition)
         npc:SetAttribute("MoveTargetX", targetPosition.X)
         npc:SetAttribute("MoveTargetY", targetPosition.Y)
         npc:SetAttribute("MoveTargetZ", targetPosition.Z)
-        npc:SetAttribute("LastMoveTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+        npc:SetAttribute("LastMoveTarget", formattedTarget)
+        npc:SetAttribute("BrainTarget", formattedTarget)
+        npc:SetAttribute("BrainActionTarget", formattedTarget)
         npc:SetAttribute("BrainMoveCount", (npc:GetAttribute("BrainMoveCount") or 0) + 1)
-        npc:SetAttribute("LastBrainAction", "Move")
-        npc:SetAttribute("LastAction", "Move")
+        npc:SetAttribute("LastBrainAction", brainAction)
+        npc:SetAttribute("LastAction", brainAction)
+        npc:SetAttribute("ActiveNPCBrain", true)
+        if targetInstance then
+            npc:SetAttribute("BrainTargetName", targetInstance.Name)
+        end
         if npc.PivotTo then
-            npc:PivotTo(CFrame.new(nextPosition))
+            npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
         elseif npc:IsA("BasePart") then
-            npc.Position = nextPosition
+            npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
         end
     end
     return true
@@ -143,6 +185,10 @@ function NPCService:ApplyNeeds(record, deltaSeconds)
 end
 
 function NPCService:Eat(record, food)
+    local foodPosition = self:GetInstancePosition(food)
+    if foodPosition then
+        self:OrientToward(record, foodPosition, "Eat")
+    end
     record.Hunger = math.min(100, (record.Hunger or 0) + (food and food:GetAttribute("Nutrition") or 25))
     local position = self:GetRecordPosition(record)
     local expectedDiet = record.Kind == "Predator" and "Carnivore" or "Herbivore"
@@ -171,6 +217,10 @@ function NPCService:Eat(record, food)
 end
 
 function NPCService:Drink(record, water)
+    local waterPosition = self:GetInstancePosition(water)
+    if waterPosition then
+        self:OrientToward(record, waterPosition, "Drink")
+    end
     record.Thirst = math.min(100, (record.Thirst or 0) + 35)
     if record.Instance then
         record.Instance:SetAttribute("Thirst", record.Thirst)
@@ -191,6 +241,7 @@ end
 
 function NPCService:AttackRecord(attacker, target)
     if not attacker or not target or target.State == "Dead" then return false, "bad_target" end
+    self:OrientToward(attacker, self:GetRecordPosition(target), "Attack")
     attacker.AttackTarget = target.Instance
     attacker.LastAttackAt = os.time()
     if attacker.Instance then
@@ -232,7 +283,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         if playerRoot then
             local away = self:GetRecordPosition(record) - playerRoot.Position
             if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
-            self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep)
+            self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep, self.MoveStep, "Flee")
             record.FleeFrom = playerRoot.Position
             record.LastFleeAt = os.time()
             return self:Transition(record, "Flee")
@@ -251,7 +302,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end
         local away = self:GetRecordPosition(record) - self:GetRecordPosition(nearbyPredator)
         if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
-        self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep)
+        self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep, self.MoveStep, "Flee")
         return self:Transition(record, "Flee")
     end
 
@@ -259,7 +310,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         local water, distance = self:FindNearestTagged(record, "WaterSource", self.SenseDistance)
         if water and distance <= self.InteractDistance then return self:Drink(record, water) end
         if water then
-            self:MoveToward(record, self:GetInstancePosition(water))
+            self:MoveToward(record, self:GetInstancePosition(water), self.MoveStep, "SeekWater", water)
             return self:Transition(record, "SeekWater")
         end
     end
@@ -271,7 +322,12 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end)
         if food and distance <= self.InteractDistance then return self:Eat(record, food) end
         if food then
-            self:MoveToward(record, self:GetInstancePosition(food))
+            record.FoodTarget = food
+            if record.Instance then
+                record.Instance:SetAttribute("FoodTarget", food.Name)
+                record.Instance:SetAttribute("FoodTargetDiet", diet)
+            end
+            self:MoveToward(record, self:GetInstancePosition(food), self.MoveStep, "SeekFood", food)
             return self:Transition(record, "SeekFood")
         end
     end
@@ -280,13 +336,13 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         local prey, distance = self:FindNearestRecord(record, "Prey", self.SenseDistance)
         if prey and distance <= self.InteractDistance then return self:AttackRecord(record, prey) end
         if prey then
-            self:MoveToward(record, self:GetRecordPosition(prey))
+            self:MoveToward(record, self:GetRecordPosition(prey), self.MoveStep, "Chase", prey.Instance)
             return self:Transition(record, "Chase")
         end
     end
 
     local wanderTarget = record.SpawnPosition + Vector3.new(math.sin(os.clock()) * 18, 0, math.cos(os.clock()) * 18)
-    self:MoveToward(record, wanderTarget, self.MoveStep * 0.5)
+    self:MoveToward(record, wanderTarget, self.MoveStep * 0.5, "Wander")
     return self:Transition(record, "Wander")
 end
 
