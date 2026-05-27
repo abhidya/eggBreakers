@@ -137,15 +137,16 @@ function NPCSpawnService:MaintainMinimumActive()
     local spawnFolder = self:GetSpawnFolder()
     local spawns = spawnFolder and spawnFolder:GetChildren() or {}
     local index = active
-    while active < self.TargetActive and active < NPCService.MaxActive do
+    local attempts = 0
+    local maxAttempts = math.max(self.TargetActive * 2, #spawns * 2, 1)
+    while active < self.TargetActive and active < NPCService.MaxActive and attempts < maxAttempts do
+        attempts = attempts + 1
         index = index + 1
         local spawnInstance = spawns[((index - 1) % math.max(#spawns, 1)) + 1]
         if #spawns == 0 or self:IsSpawnPositionAllowed(spawnInstance) then
             local kind = spawnInstance and spawnInstance:GetAttribute("NPCKind") or self.SpawnKinds[((index - 1) % #self.SpawnKinds) + 1]
             local ok = self:CreateNPCRecord(spawnInstance, kind, index)
             if ok then active = active + 1 else break end
-        else
-            break
         end
     end
     return active
