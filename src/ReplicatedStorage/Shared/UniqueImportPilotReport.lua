@@ -44,4 +44,34 @@ UniqueImportPilotReport.ToolLimits = {
     "Parallel insertion can race with play/edit mode; several attempted calls failed with 'Unable to insert models from the marketplace in play mode' until play was stopped and calls were retried.",
 }
 
+
+UniqueImportPilotReport.Task10Summary = {
+    TaskId = "10",
+    RecordedAtUtc = "2026-05-27T05:20:00Z",
+    SuccessfulPrimaryImports = 16,
+    UniquePrimarySourceAssetIds = 16,
+    NewPrimaryIdsVersusTrackedReportAndManifest = 15,
+    DuplicatePrimaryIdsVersusTrackedReportAndManifest = 1,
+    Notes = "Continuation materialization batch run in Studio edit mode. All rows are primary IDs returned by insert_from_creator_store; secondary IDs remain catalog-only because this MCP surface cannot directly insert secondary IDs or set metadata attributes.",
+}
+
+UniqueImportPilotReport.Task10PrimaryImports = {
+    { Query = "swamp reeds grass", SearchId = "18f20a05-1b50-4520-a8e0-c266d9619299", InsertGuid = "b80ea38e-2df8-4341-927d-8667b1cf8744", SourceAssetId = "78276962664856" },
+    { Query = "mangrove roots swamp", SearchId = "66245bac-83ca-4aa7-b945-c926cc5fbfbf", InsertGuid = "64335961-bcae-4b6c-a906-10ae26caf60e", SourceAssetId = "130564329990740" },
+    { Query = "canyon arch rocks", SearchId = "f46ab2ca-03dc-4f3b-be37-e1e67614fc7e", InsertGuid = "c12c4bff-d86e-4686-b579-c6cc54785efd", SourceAssetId = "10839876465" },
+    { Query = "desert rock formation", SearchId = "1a734ce4-e390-4c6e-ac42-4dc2d4655f5a", InsertGuid = "99acea92-f69f-4a53-a8b2-ecc1d40e57b6", SourceAssetId = "2798025353" },
+    { Query = "broken building rubble", SearchId = "3ec3c721-d751-46f7-8983-d49325588c7a", InsertGuid = "0ba68ea0-c60e-4681-8499-47a92852f3d2", SourceAssetId = "117818892065354" },
+    { Query = "abandoned vehicle wreck", SearchId = "1cbdbb27-bdf7-4d2e-9ac4-84e9836a84c5", InsertGuid = "a86d8843-ab15-4ac6-9081-a1d1f2d5b352", SourceAssetId = "109905665910630" },
+    { Query = "fossil skeleton dinosaur", SearchId = "0a3ddd22-c46a-4648-a378-903a4e767972", InsertGuid = "def2349a-3747-4f49-af11-b04a658a311d", SourceAssetId = "137420276606883", AlreadyInTrackedReportOrManifest = true },
+    { Query = "forest vines hanging", SearchId = "9e55fe55-995a-4e00-892a-f1e40f2a1dc1", InsertGuid = "216778c8-6a9e-433c-9e99-770358e3c90a", SourceAssetId = "96041387484629" },
+    { Query = "tree stump forest", SearchId = "fc59f98b-ba4b-47e2-9f09-8c5f9fdd4fa1", InsertGuid = "23c78624-a209-4ec0-a558-9feb1d59adf5", SourceAssetId = "117401257092974" },
+    { Query = "mossy logs nature", SearchId = "0626662e-41b4-4889-9862-9f3bad9d9215", InsertGuid = "8cae9b40-2fae-4462-bcb3-01bffff73fbd", SourceAssetId = "72429568457235" },
+    { Query = "city concrete debris", SearchId = "042380b7-b6ca-4685-abcf-1e7a2e614c10", InsertGuid = "8b0e1106-b377-46d4-bfb9-1e8f725a50f2", SourceAssetId = "14819176862" },
+    { Query = "rusty car wreck", SearchId = "975e2519-e858-4eb8-b0e9-223c19af043d", InsertGuid = "0bcf9bd3-7765-4f41-b449-8133474b3154", SourceAssetId = "103158815948907" },
+    { Query = "swamp lily pads", SearchId = "02e989d1-cc0d-454d-be71-ffd9fa5400fe", InsertGuid = "eeed6d8f-7749-463a-bdde-b64985bde8e7", SourceAssetId = "11920489445" },
+    { Query = "fern bush jungle", SearchId = "038c9518-08eb-4eca-a307-9840312b3afb", InsertGuid = "b0d0afc1-d93f-40db-bf38-8a911c69f492", SourceAssetId = "8311854308" },
+    { Query = "mountain cliff rocks", SearchId = "459c051e-abad-4af4-9962-460e4bf30176", InsertGuid = "6390bc86-2b95-4f25-abc5-94dd1909dfa9", SourceAssetId = "85814757483752" },
+    { Query = "old stone arch ruins", SearchId = "62550d58-9a8d-4998-81d2-afa3e261be4b", InsertGuid = "25701a2e-6d17-4ed8-936e-cb6b3ff30507", SourceAssetId = "4026534443" },
+}
+
 return UniqueImportPilotReport
