@@ -906,3 +906,18 @@ Next action: run a small Batch038 to cross 200, then continue toward 500.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch038 and cross the 200-release-ready-asset milestone while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R061 — Creator Store import Batch038 / 200-asset milestone — 2026-05-27T14:56Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch038 with five initial candidates plus one replacement street-clock import; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed six Creator Store assets: shop sign `181501804`, wooden crate `757295239`, small jungle tree `8489145559`, edible fern duplicate `14703400302`, rib cage `4977968611`, street clock replacement `841866949`. Batch038 initially reached `199/500`, then the replacement import crossed the 200 milestone. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=200`, `releaseReadyVisibleAssets=200`, `placedVisibleAssets=200`, `taggedImportedAssets=200`, `auditedImportedAssets=200`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=200`, `releaseReadyVisibleAssets=200`, expected at least `500`. Remaining gap is `300` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: 200 release-ready imported assets is a milestone, not a release pass.
+Root cause: final gate still requires 300 more unique release-ready imports and external persistence/full-run proof.
+Patch applied: no source patch; Studio place state received Batch038 imported assets under `Workspace.Map.ImportedAssets.G016Batch038` with release/audit/performance-safe attributes.
+Retest result: Batch038 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store import batches toward 250, then 500.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch039 and move US14 from `200/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
