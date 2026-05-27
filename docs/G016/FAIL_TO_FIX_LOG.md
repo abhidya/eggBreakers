@@ -966,3 +966,18 @@ Next action: continue six-candidate batches toward 250.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch042 and move US14 from `216/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R065 — Creator Store import Batch042 — 2026-05-27T15:06Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch042 with six candidates plus two replacement imports; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed eight Creator Store assets: vending crate duplicate `757295239`, rusty barrel `12408514183`, radio `6226005653`, cattails duplicate `13261235137`, purple swamp flower `2114494376`, apple tree `80781031`, animal skull `40502677`, clay pot `9729423240`. Import quarantine removed `2` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=221`, `releaseReadyVisibleAssets=221`, `placedVisibleAssets=221`, `taggedImportedAssets=221`, `auditedImportedAssets=221`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=221`, `releaseReadyVisibleAssets=221`, expected at least `500`. Remaining gap is `279` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch042 netted five unique release-ready assets after replacement imports offset known duplicates.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch042.
+Root cause: duplicate-prone Creator Store results still require over-insert/replacement behavior; final gate remains volume-blocked.
+Patch applied: no source patch; Studio place state received Batch042 imported assets under `Workspace.Map.ImportedAssets.G016Batch042` with release/audit/performance-safe attributes, including apple-tree food and animal-skull carcass affordances.
+Retest result: Batch042 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue over-insert batches toward 250.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch043 and move US14 from `221/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
