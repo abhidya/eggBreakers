@@ -418,7 +418,8 @@ function NPCService:TickBrain(record, players, deltaSeconds)
     end
 
     if record.Apex == true then
-        self:StampApexEvent(record)
+        local apexEventOk = self:StampApexEvent(record)
+        if apexEventOk then return true end
     end
 
     local nearbyPredator = (record.Kind == "Prey" or record.Kind == "Omnivore") and self:FindNearestThreat(record, self.FleeDistance) or nil

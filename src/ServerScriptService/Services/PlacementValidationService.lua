@@ -310,7 +310,7 @@ function PlacementValidationService:ValidateFoodSourceInstance(instance)
         table.insert(failures, instance:GetFullName() .. " food source must be a BasePart for reachability checks")
     end
     local diet = instance:GetAttribute("Diet")
-    if diet ~= "Herbivore" and diet ~= "Carnivore" then
+    if diet ~= "Herbivore" and diet ~= "Carnivore" and diet ~= "Omnivore" then
         table.insert(failures, instance:GetFullName() .. " food source has invalid Diet " .. tostring(diet))
     end
     local nutrition = instance:GetAttribute("Nutrition")

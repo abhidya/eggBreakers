@@ -42,10 +42,27 @@ table.insert(suite.tests, { name = "food source tag diet nutrition and reachabil
 end })
 
 table.insert(suite.tests, { name = "invalid food source metadata fails placement gate", run = function()
-    local food = makeFood("BadFoodMetadata", "Omnivore", 0, Vector3.new(-2000, 12, 0))
+    local food = makeFood("BadFoodMetadata", "UnknownDiet", 0, Vector3.new(-2000, 12, 0))
     local result = PlacementValidationService:ValidateFoodSourceInstance(food)
     Assert.falsy(result.passed, "invalid diet/nutrition must fail")
     Assert.truthy(#result.failures >= 2, "diet and nutrition failures reported")
+    food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "omnivore food metadata and reachability support mixed diets", run = function()
+    local food = makeFood("NestScrapsOmnivoreFood", "Omnivore", 18, Vector3.new(-2000, 12, 0))
+    local root = Instance.new("Part")
+    root.Name = "OmnivoreReachabilityRoot"
+    root.Position = Vector3.new(-2003, 12, 0)
+    root.Parent = workspace
+
+    local placement = PlacementValidationService:ValidateFoodSourceInstance(food)
+    Assert.truthy(placement.passed, table.concat(placement.failures, "; "))
+    Assert.truthy(RemoteValidationService:ValidateFoodTarget(root, food, "Omnivore", 12), "omnivore eats omnivore food")
+    Assert.truthy(RemoteValidationService:ValidateFoodTarget(root, food, "Herbivore", 12), "herbivore-compatible omnivore food accepted")
+    Assert.truthy(RemoteValidationService:ValidateFoodTarget(root, food, "Carnivore", 12), "carnivore-compatible omnivore food accepted")
+
+    root:Destroy()
     food:Destroy()
 end })
 

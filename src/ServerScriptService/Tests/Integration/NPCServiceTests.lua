@@ -145,4 +145,60 @@ table.insert(suite.tests, { name = "prey flees then hides when badly hurt", run 
     predator:Destroy(); prey:Destroy()
 end })
 
+table.insert(suite.tests, { name = "apex NPC stamps territory event and scares nearby herd", run = function()
+    resetNPCs()
+    local apex = makeNPC("ApexTyrannosaurusNPC", Vector3.new(0, 3, 0))
+    local prey = makeNPC("ApexScaredPreyNPC", Vector3.new(20, 3, 0))
+    local apexOk, apexRecord = NPCService:Register(apex, "Apex")
+    local preyOk = NPCService:Register(prey, "Prey")
+    apexRecord.Hatched = true
+
+    Assert.truthy(apexOk and preyOk, "apex and prey register")
+    NPCService:TickBrain(apexRecord, {}, 1)
+    Assert.equals(apexRecord.State, "ApexEvent", "apex territory event state")
+    Assert.equals(apex:GetAttribute("ApexCategory"), true, "apex flag on instance")
+    Assert.equals(apex:GetAttribute("ApexEventActive"), true, "apex event stamped")
+    Assert.truthy(apex:GetAttribute("ApexEventAffected") >= 1, "nearby NPC affected")
+    Assert.equals(prey:GetAttribute("LastApexThreat"), "ApexTyrannosaurusNPC", "prey sees apex threat")
+
+    apex:Destroy(); prey:Destroy()
+end })
+
+table.insert(suite.tests, { name = "herding omnivore eats plant and carcass diets", run = function()
+    resetNPCs()
+    local omnivore = makeNPC("OviraptorOmnivoreNPC", Vector3.new(0, 3, 0))
+    local herdMate = makeNPC("OviraptorHerdMateNPC", Vector3.new(8, 3, 0))
+    local plant = makeTaggedPart("MixedFern", "FoodSource", Vector3.new(4, 3, 0))
+    plant:SetAttribute("Diet", "Herbivore")
+    plant:SetAttribute("Nutrition", 25)
+    local carcass = makeTaggedPart("MixedCarcass", "FoodSource", Vector3.new(30, 3, 0))
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("Nutrition", 25)
+    local _, record = NPCService:Register(omnivore, "Omnivore")
+    local _, mateRecord = NPCService:Register(herdMate, "Omnivore")
+    record.Hatched = true
+    mateRecord.Hatched = true
+
+    Assert.equals(record.Diet, "Omnivore", "omnivore profile diet")
+    record.Hunger = 20
+    NPCService:TickBrain(record, {}, 1)
+    Assert.equals(record.State, "Eat", "omnivore eats nearby plant food")
+    Assert.equals(plant:GetAttribute("Depleted"), true, "plant food depleted by omnivore")
+
+    record.Hunger = 20
+    carcass:SetAttribute("Depleted", false)
+    carcass.Position = Vector3.new(4, 3, 0)
+    NPCService:TickBrain(record, {}, 1)
+    Assert.equals(record.State, "Eat", "omnivore eats nearby carcass food")
+    Assert.equals(carcass:GetAttribute("Depleted"), true, "carcass food depleted by omnivore")
+
+    record.Hunger = 90
+    record.Thirst = 90
+    NPCService:TickBrain(record, {}, 1)
+    Assert.equals(omnivore:GetAttribute("HerdingEnabled"), true, "herding flag on omnivore")
+    Assert.truthy((omnivore:GetAttribute("HerdSize") or 0) >= 2, "omnivore herd size stamped")
+
+    omnivore:Destroy(); herdMate:Destroy(); plant:Destroy(); carcass:Destroy()
+end })
+
 return suite
