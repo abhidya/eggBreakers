@@ -318,8 +318,122 @@ MapLayoutService.BiomeDressingPlacements = {
         color = Color3.fromRGB(94, 89, 83),
         material = Enum.Material.Concrete,
     },
-    { name = "NurseryBerryBrowse_D", zone = "NurseryGrove", kind = "Bush", edibleBrowse = true, browseNutrition = 26, position = Vector3.new(-1910, 9, 122), size = Vector3.new(18, 12, 18), color = Color3.fromRGB(96, 145, 72), material = Enum.Material.Grass },
-    { name = "FernPlainsLowCycad_C", zone = "FernPlains", kind = "Bush", edibleBrowse = true, browseNutrition = 28, position = Vector3.new(-1195, 9, -38), size = Vector3.new(22, 13, 22), color = Color3.fromRGB(84, 138, 66), material = Enum.Material.Grass },
+    {
+        name = "RedstoneDormantVolcano_A",
+        zone = "RedstoneCanyon",
+        kind = "Volcano",
+        position = Vector3.new(58, 28, -1035),
+        size = Vector3.new(92, 78, 92),
+        color = Color3.fromRGB(88, 64, 58),
+        material = Enum.Material.Basalt,
+        scenicLandmark = true,
+    },
+    {
+        name = "RedstoneLavaGlow_A",
+        zone = "RedstoneCanyon",
+        kind = "LavaVisual",
+        position = Vector3.new(58, 72, -1035),
+        size = Vector3.new(58, 4, 58),
+        color = Color3.fromRGB(255, 91, 31),
+        material = Enum.Material.Neon,
+        shape = Enum.PartType.Cylinder,
+        lavaVisual = true,
+        scenicLandmark = true,
+    },
+    {
+        name = "MountainCliffFace_B",
+        zone = "MountainNestingCliffs",
+        kind = "Cliff",
+        position = Vector3.new(142, 92, -1780),
+        size = Vector3.new(118, 96, 32),
+        color = Color3.fromRGB(118, 115, 108),
+        material = Enum.Material.Rock,
+        scenicLandmark = true,
+    },
+    {
+        name = "MountainSnowcapVista_A",
+        zone = "MountainNestingCliffs",
+        kind = "MountainPeak",
+        position = Vector3.new(-278, 118, -1888),
+        size = Vector3.new(84, 56, 84),
+        color = Color3.fromRGB(210, 214, 218),
+        material = Enum.Material.Snow,
+        scenicLandmark = true,
+    },
+    {
+        name = "FernPlainsFlowerField_A",
+        zone = "FernPlains",
+        kind = "FlowerCluster",
+        position = Vector3.new(-1116, 12, 42),
+        size = Vector3.new(34, 3, 24),
+        color = Color3.fromRGB(235, 116, 183),
+        material = Enum.Material.Grass,
+        flowerCluster = true,
+        scenicLandmark = true,
+    },
+    {
+        name = "NurseryWildflowerPatch_A",
+        zone = "NurseryGrove",
+        kind = "FlowerCluster",
+        position = Vector3.new(-2055, 12, 118),
+        size = Vector3.new(26, 3, 22),
+        color = Color3.fromRGB(248, 211, 91),
+        material = Enum.Material.Grass,
+        flowerCluster = true,
+        scenicLandmark = true,
+    },
+    {
+        name = "JungleOrchidCluster_A",
+        zone = "JungleBasin",
+        kind = "FlowerCluster",
+        position = Vector3.new(-1518, 12, 1108),
+        size = Vector3.new(28, 4, 24),
+        color = Color3.fromRGB(177, 88, 231),
+        material = Enum.Material.LeafyGrass,
+        flowerCluster = true,
+        scenicLandmark = true,
+    },
+    {
+        name = "SwampLilyBloomCluster_A",
+        zone = "SwampDelta",
+        kind = "FlowerCluster",
+        position = Vector3.new(-115, 9, 895),
+        size = Vector3.new(38, 2, 20),
+        color = Color3.fromRGB(238, 232, 184),
+        material = Enum.Material.LeafyGrass,
+        flowerCluster = true,
+        scenicLandmark = true,
+    },
+    {
+        name = "JungleForestVista_A",
+        zone = "JungleBasin",
+        kind = "ForestVista",
+        position = Vector3.new(-1595, 15, 872),
+        size = Vector3.new(72, 28, 42),
+        color = Color3.fromRGB(35, 100, 54),
+        material = Enum.Material.LeafyGrass,
+        scenicLandmark = true,
+    },
+    {
+        name = "SwampRiverBendMarker_A",
+        zone = "SwampDelta",
+        kind = "RiverBend",
+        position = Vector3.new(-70, 8, 970),
+        size = Vector3.new(120, 3, 24),
+        color = Color3.fromRGB(58, 137, 184),
+        material = Enum.Material.Glass,
+        scenicLandmark = true,
+    },
+    {
+        name = "FernLakeShoreMarker_A",
+        zone = "FernPlains",
+        kind = "LakeShore",
+        position = Vector3.new(-1080, 10, 250),
+        size = Vector3.new(88, 2, 18),
+        color = Color3.fromRGB(72, 150, 188),
+        material = Enum.Material.Glass,
+        scenicLandmark = true,
+    },
 }
 
 MapLayoutService.NPCSpawnPlacements = {
@@ -714,6 +828,9 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("ProceduralGameplayVisual", true)
     part:SetAttribute("PlacementRole", role)
     part:SetAttribute("DressingKind", spec.kind)
+    part:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+    part:SetAttribute("FlowerCluster", spec.flowerCluster == true)
+    part:SetAttribute("LavaVisual", spec.lavaVisual == true)
     part:SetAttribute("AvoidRouteCenters", true)
     part:SetAttribute("GroundTopY", self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil)
     part:SetAttribute("FloatingAllowed", role == "VisibleTreeCanopy")
@@ -780,9 +897,9 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             if not prop then
                 prop = Instance.new("Part")
                 prop.Name = spec.name
-                prop.Shape = Enum.PartType.Block
                 prop.Parent = zoneFolder
             end
+            prop.Shape = spec.shape or Enum.PartType.Block
             prop.Size = spec.size
             prop.Position = spec.position
             prop.Color = spec.color

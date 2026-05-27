@@ -51,6 +51,58 @@ table.insert(suite.tests, { name = "visible trees and biome dressing are materia
     Assert.truthy(zoneCount >= 7, "dressing covers every major biome")
 end })
 
+table.insert(suite.tests, { name = "scenic landmarks and flower clusters are materialized", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local counts = {
+        scenic = 0,
+        flowers = 0,
+        volcano = 0,
+        lava = 0,
+        mountain = 0,
+        forest = 0,
+        waterScenery = 0,
+    }
+    local flowerZones = {}
+
+    for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if instance:IsA("BasePart") and instance:GetAttribute("BiomeDressing") == true and instance.Transparency < 1 then
+            local kind = instance:GetAttribute("DressingKind")
+            if instance:GetAttribute("ScenicLandmark") == true then
+                counts.scenic = counts.scenic + 1
+                Assert.truthy(instance:GetAttribute("AvoidRouteCenters"), "scenic landmark avoids route centers: " .. instance.Name)
+            end
+            if instance:GetAttribute("FlowerCluster") == true then
+                counts.flowers = counts.flowers + 1
+                flowerZones[instance:GetAttribute("ZoneId")] = true
+            end
+            if kind == "Volcano" then counts.volcano = counts.volcano + 1 end
+            if instance:GetAttribute("LavaVisual") == true then
+                counts.lava = counts.lava + 1
+                Assert.equals(instance.Material, Enum.Material.Neon, "lava marker uses bright visual material")
+            end
+            if kind == "Cliff" or kind == "MountainPeak" then counts.mountain = counts.mountain + 1 end
+            if kind == "ForestVista" then counts.forest = counts.forest + 1 end
+            if kind == "LakeShore" or kind == "RiverBend" then counts.waterScenery = counts.waterScenery + 1 end
+        end
+    end
+
+    local flowerZoneCount = 0
+    for _ in pairs(flowerZones) do
+        flowerZoneCount = flowerZoneCount + 1
+    end
+
+    Assert.truthy(counts.scenic >= 11, "scenic landmark coverage includes volcano/mountain/forest/water/flowers")
+    Assert.truthy(counts.flowers >= 4, "flower fields and clusters are visible vegetation")
+    Assert.truthy(flowerZoneCount >= 4, "flower clusters cover varied biomes")
+    Assert.truthy(counts.volcano >= 1, "volcano scenic marker exists")
+    Assert.truthy(counts.lava >= 1, "lava-safe visual marker exists")
+    Assert.truthy(counts.mountain >= 2, "mountain and cliff scenery exists")
+    Assert.truthy(counts.forest >= 1, "richer forest scenery exists")
+    Assert.truthy(counts.waterScenery >= 2, "lake and river scenery exists")
+end })
+
 table.insert(suite.tests, { name = "asset manifest placement rules keep biome props coherent", run = function()
     local result = AssetManifest.Validate({ minimum = 500 })
     Assert.truthy(result.passed, table.concat(result.failures, "; "))
