@@ -441,3 +441,18 @@ Next action: continue Creator Store batches; keep batch size/audit loop stable a
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch008 and keep `scriptObjectsFound=0`.
+
+## Run G016-R030 — Creator Store import Batch008 — 2026-05-27T15:17Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch008 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: car wreck `109905665910630`, giant mushroom `5578762802`, palm jungle asset `109638176453176`, boulder cluster `5543298662`, dinosaur statue `5029288945`. Import quarantine removed `4` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=63`, `releaseReadyVisibleAssets=63`, `placedVisibleAssets=63`, `taggedImportedAssets=63`, `auditedImportedAssets=63`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=63`, `releaseReadyVisibleAssets=63`, expected at least `500`. Remaining gap is `437` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch008.
+Root cause: imports are correctly counted and script-clean, but total unique release-ready assets are still far below the release oracle.
+Patch applied: no source patch; Studio place state received Batch008 imported assets under `Workspace.Map.ImportedAssets.G016Batch008` with release/audit attributes.
+Retest result: Batch008 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; use category-diverse queries to reduce duplicates.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch009 and keep `scriptObjectsFound=0`.
