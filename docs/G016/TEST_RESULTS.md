@@ -168,3 +168,9 @@ No final PASS: US14 still needs 433 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch010: rusty barrel `12408514183`, helicopter wreck `12181475741`, dry grass `9278154415`, stone arch `114581631910914`, waterfall rock `13739742387`. Quarantine removed `34` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=72`, `releaseReadyVisibleAssets=72`, and `placedVisibleAssets=72`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=72; expected at least 500` and `releaseReadyVisibleAssets=72; expected at least 500`.
 
 No final PASS: US14 still needs 428 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch011 Audit — 2026-05-27T15:46Z
+
+Studio MCP imported and audited Batch011: road sign `9460880283`, forest stump `117401257092974`, ruins wall duplicate `136549935878342`, swamp reeds `109605290524889`, ribs fossil `2726434290`. Quarantine removed `7` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=76`, `releaseReadyVisibleAssets=76`, and `placedVisibleAssets=76`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=76; expected at least 500` and `releaseReadyVisibleAssets=76; expected at least 500`.
+
+No final PASS: US14 still needs 424 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.

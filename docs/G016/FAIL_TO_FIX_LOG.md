@@ -486,3 +486,18 @@ Next action: continue Creator Store batches; prioritize categories with low dupl
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch011 and keep `scriptObjectsFound=0`.
+
+## Run G016-R033 — Creator Store import Batch011 — 2026-05-27T15:46Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch011 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: road sign `9460880283`, forest stump `117401257092974`, ruins wall duplicate `136549935878342`, swamp reeds `109605290524889`, ribs fossil `2726434290`. Import quarantine removed `7` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=76`, `releaseReadyVisibleAssets=76`, `placedVisibleAssets=76`, `taggedImportedAssets=76`, `auditedImportedAssets=76`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=76`, `releaseReadyVisibleAssets=76`, expected at least `500`. Remaining gap is `424` release-ready assets plus RBXL save/reopen and fresh all-category proof. Ruins wall reused SourceAssetId `136549935878342` and was correctly not counted twice.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch011.
+Root cause: four unique assets landed this batch; one duplicate was excluded from unique release count.
+Patch applied: no source patch; Studio place state received Batch011 imported assets under `Workspace.Map.ImportedAssets.G016Batch011` with release/audit attributes.
+Retest result: Batch011 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; avoid ruins/pillar queries that repeat SourceAssetId `136549935878342`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch012 with lower duplicate risk and keep `scriptObjectsFound=0`.
