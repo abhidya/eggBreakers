@@ -126,3 +126,9 @@ No final PASS: US14 asset gate, fresh all-category proof, and RBXL save/reopen p
 Studio MCP imported and audited Batch003: fern `4536575513`, fossil bones `137420276606883`, jungle tree `123664537225262`, nest `12406188391`, carnivore dinosaur `693899377`. Import quarantine removed `6` script objects before audit. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=40`, `releaseReadyVisibleAssets=40`, and `placedVisibleAssets=40`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=40; expected at least 500` and `releaseReadyVisibleAssets=40; expected at least 500`.
 
 No final PASS: US14 still needs 460 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch004 Audit — 2026-05-27T14:40Z
+
+Studio MCP imported and audited Batch004: rock formation `201847849`, swamp plant `84094116943108`, rubble `4570088`, skeleton fossil duplicate `137420276606883`, low-poly dinosaur `590162054`. Quarantine removed `1` script object. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=44`, `releaseReadyVisibleAssets=44`, and `placedVisibleAssets=44`. Tagged gameplay counts after the batch: food `52` (`30` herbivore, `22` carnivore), fossils `3`, tree props `24`, NPC visuals `2`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=44; expected at least 500` and `releaseReadyVisibleAssets=44; expected at least 500`.
+
+No final PASS: US14 still needs 456 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.

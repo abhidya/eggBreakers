@@ -381,3 +381,18 @@ Next action: continue Creator Store batches and periodically verify no scripts/p
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch004 or run clean all-category after Studio sync.
+
+## Run G016-R026 — Creator Store import Batch004 — 2026-05-27T14:40Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch004; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; tagged gameplay count probe.
+Passed: inserted/tagged/placed five Creator Store assets: rock formation `201847849`, swamp plant `84094116943108`, rubble `4570088`, skeleton fossil duplicate `137420276606883`, low-poly dinosaur `590162054`. Import quarantine removed `1` script object. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=44`, `releaseReadyVisibleAssets=44`, `placedVisibleAssets=44`, `taggedImportedAssets=44`, `auditedImportedAssets=44`. Gameplay tagged probe sees food `52` (`30` herbivore, `22` carnivore), fossils `3`, tree props `24`, NPC visuals `2`.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=44`, `releaseReadyVisibleAssets=44`, expected at least `500`. Remaining gap is `456` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch004.
+Root cause: batches are real but small; one fossil in Batch004 duplicated an existing SourceAssetId and does not count twice.
+Patch applied: no source patch; Studio place state received Batch004 imported assets under `Workspace.Map.ImportedAssets.G016Batch004` with release/audit attributes.
+Retest result: Batch004 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; prefer queries less likely to duplicate prior fossil/tree/dino assets.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch005 with lower-duplicate asset queries.
