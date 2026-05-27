@@ -192,6 +192,17 @@ function G016LiveProofHarness:Run(options)
         local meatOk, meatReason = FoodWaterService:RequestEat(carnivorePlayer, meat)
         assertTrue(meatOk == true and carnivoreState.Hunger > 35 and meat:GetAttribute("Depleted") == true, "carnivore meat eat failed: " .. tostring(meatOk) .. "/" .. tostring(meatReason))
 
+        food:SetAttribute("Depleted", false)
+        food:SetAttribute("DepletedUntil", nil)
+        food.Transparency = food:GetAttribute("RestoreTransparency") or 0
+        food.CanQuery = true
+        food.CanTouch = true
+        meat:SetAttribute("Depleted", false)
+        meat:SetAttribute("DepletedUntil", nil)
+        meat.Transparency = meat:GetAttribute("RestoreTransparency") or 0
+        meat.CanQuery = true
+        meat.CanTouch = true
+
         state.Growth = 25
         CharacterVisualService:ApplyForState(player, state)
         local grownVisual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)

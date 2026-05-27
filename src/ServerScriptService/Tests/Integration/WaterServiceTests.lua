@@ -35,7 +35,7 @@ table.insert(suite.tests, { name = "thirst updates", run = function()
     local state = SurvivalService:GetState(p); state.Thirst = 30; state.Growth = 0
     FoodWaterService:RequestDrink(p, water)
     Assert.between(state.Thirst, 64, 100, "thirst restored")
-    Assert.equals(state.Growth, 1, "drinking contributes readable growth progress")
+    Assert.equals(state.Growth, FoodWaterService.WaterGrowthGrant, "drinking contributes readable growth progress")
     water:Destroy()
 end })
 
@@ -70,7 +70,7 @@ table.insert(suite.tests, { name = "map tutorial water is tagged drink target", 
     local state = SurvivalService:GetState(p); state.Thirst = 20; state.Growth = 0
     Assert.truthy(FoodWaterService:RequestDrink(p, water), "map tutorial water is drinkable")
     Assert.truthy(state.Thirst > 20, "map water restores thirst")
-    Assert.equals(state.Growth, 1, "map water contributes growth")
+    Assert.equals(state.Growth, FoodWaterService.WaterGrowthGrant, "map water contributes growth")
 end })
 
 return suite

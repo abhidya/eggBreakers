@@ -246,3 +246,18 @@ Next action: attack US14 release asset gate or fresh all-category/RBXL proof; do
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: run/fix the next highest final gate blocker: US14 asset honesty remains 30/500 release-ready imported assets.
+
+## Run G016-R017 — fresh all-category reducer: water expectations and NPC flee cache proof — 2026-05-27T13:24Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-fresh-run-repairs.rbxl`, `git diff --check`, Studio MCP all-category TestRunner probe, Studio MCP fresh cloned NPCService probe.
+Passed: source syntax/build/diff checks passed. All-category probe improved from `155/177` to `157/177` by removing stale water-growth expectation failures. Fresh cloned NPCService probe passed with prey `state=Flee`, `LastBrainAction=Flee`, `BrainMoveCount=1`, `ActiveNPCBrain=true`.
+Failed: active Studio all-category runner still reports cached/stale NPC flee failures and dirty workspace placement/performance/release failures; final blockers remain 500 asset gate, fresh all-category zero-failure run, and RBXL persistence.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: all-category proof cannot be attached while current TestRunner has 20 failures and Client category remains 0 in server-side runner.
+Root cause: server all-category run is still dirty/cache-contaminated for NPCService and release workspace audits, while release asset count remains 30/500.
+Patch applied: NPC TickBrain now flees from nearby players before wandering/needs logic; water integration tests now assert against `FoodWaterService.WaterGrowthGrant`; live proof harness resets consumed tutorial food/meat so proof runs do not contaminate later placement tests.
+Retest result: source/build PASS; fresh cloned NPC behavior PASS; all-category still honest FAIL.
+Next action: clean/fresh reload workspace or continue release asset materialization; do not attach FreshAllCategoryTestRunnerPassed until all-category is 0-failure and Client category is proven non-empty.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: resolve release asset materialization (30/500) or run a true fresh Studio reload to eliminate stale dirty-workspace failures.

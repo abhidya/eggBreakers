@@ -86,3 +86,7 @@ Fresh G016FinalGate now passes 3/8 and fails 5/8. First story-level missing proo
 Fresh source checks passed: `luac` all source, Rojo build to `/tmp/eggBreakers-g016-us13.rbxl`, and `git diff --check`. Studio MCP consolidated proof with cloned services passed and wrote `US13LiveProofPassed=true`, `MobileControllerProofPassed=true`, `MobileControllerProofActions=EatDrink,Attack,Sprint,Call,RestHide`, plus `G016ClientProof.US13LiveControlsPassed=true`. This is deterministic simulated touch/controller proof, not physical device proof.
 
 Fresh G016FinalGate after the proof now passes 4/8 and fails 4/8: US14 live asset proof missing, fresh all-category TestRunner proof missing, RBXL persistence proof missing, and release asset count remains `30/500`.
+
+## Fresh All-Category Reducer — 2026-05-27T13:24Z
+
+Fresh source checks passed after NPC/water/test-harness repairs. Studio all-category server probe improved to `177 total / 157 passed / 20 failed`; water-growth failures are gone. A fresh cloned `NPCService` probe showed nearby player flee works (`state=Flee`, `LastBrainAction=Flee`, `BrainMoveCount=1`, `ActiveNPCBrain=true`), but the active Studio all-category run still has stale/cached NPC failures and dirty workspace release-audit failures. No fresh all-category PASS proof was attached.

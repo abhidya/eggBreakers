@@ -227,6 +227,18 @@ function NPCService:TickBrain(record, players, deltaSeconds)
     end
     self:ApplyNeeds(record, deltaSeconds)
 
+    if record.Kind == "Prey" then
+        local playerRoot = self.FindNearestPlayerRoot and self:FindNearestPlayerRoot(record, players, self.FleeDistance)
+        if playerRoot then
+            local away = self:GetRecordPosition(record) - playerRoot.Position
+            if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
+            self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep)
+            record.FleeFrom = playerRoot.Position
+            record.LastFleeAt = os.time()
+            return self:Transition(record, "Flee")
+        end
+    end
+
     local nearbyPredator = record.Kind == "Prey" and self:FindNearestRecord(record, "Predator", self.FleeDistance) or nil
     if nearbyPredator then
         record.FleeFrom = nearbyPredator.Instance
