@@ -300,6 +300,64 @@ function PlacementValidationService:ValidateUniqueSourceAssets(records, minimum)
     }
 end
 
+
+function PlacementValidationService:ValidateFoodSourceInstance(instance)
+    local failures = {}
+    if not instance then
+        return { passed = false, failures = { "missing food source" } }
+    end
+    if not instance:IsA("BasePart") then
+        table.insert(failures, instance:GetFullName() .. " food source must be a BasePart for reachability checks")
+    end
+    local diet = instance:GetAttribute("Diet")
+    if diet ~= "Herbivore" and diet ~= "Carnivore" then
+        table.insert(failures, instance:GetFullName() .. " food source has invalid Diet " .. tostring(diet))
+    end
+    local nutrition = instance:GetAttribute("Nutrition")
+    if type(nutrition) ~= "number" or nutrition <= 0 then
+        table.insert(failures, instance:GetFullName() .. " food source has invalid Nutrition " .. tostring(nutrition))
+    end
+    local zoneId = instance:GetAttribute("ZoneId")
+    if type(zoneId) == "string" and zoneId ~= "" then
+        local zone = MapLayoutService.ZoneTerrain[zoneId]
+        if not zone then
+            table.insert(failures, instance:GetFullName() .. " food source references unknown ZoneId " .. zoneId)
+        elseif instance:IsA("BasePart") then
+            local position = instance.Position
+            if not self:_insideRect(position, zone.center, zone.size, 0) then
+                table.insert(failures, instance:GetFullName() .. " food source outside ZoneId bounds " .. zoneId)
+            end
+            if position.Y < zone.topY - 1 then
+                table.insert(failures, instance:GetFullName() .. " food source is below zone terrain")
+            end
+        end
+    end
+    return { passed = #failures == 0, failures = failures }
+end
+
+function PlacementValidationService:ValidateNoFloatingVisibleAssets(root)
+    root = root or workspace
+    local failures = {}
+    local checked = 0
+    for _, instance in ipairs(root:GetDescendants()) do
+        if instance:IsA("BasePart") and instance.Transparency < 1 and instance:GetAttribute("FloatingAllowed") ~= true then
+            checked = checked + 1
+            local groundTopY = instance:GetAttribute("GroundTopY")
+            local zoneId = instance:GetAttribute("ZoneId")
+            if groundTopY == nil and type(zoneId) == "string" and MapLayoutService.ZoneTerrain[zoneId] then
+                groundTopY = MapLayoutService.ZoneTerrain[zoneId].topY
+            end
+            if type(groundTopY) == "number" then
+                local bottomY = instance.Position.Y - instance.Size.Y / 2
+                if bottomY > groundTopY + 2 then
+                    table.insert(failures, instance:GetFullName() .. " floats above ground by " .. tostring(math.floor((bottomY - groundTopY) * 10 + 0.5) / 10) .. " studs")
+                end
+            end
+        end
+    end
+    return { passed = #failures == 0, failures = failures, checked = checked }
+end
+
 function PlacementValidationService:GetReferencePlan()
     return self.ReferencePlan
 end
