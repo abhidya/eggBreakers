@@ -456,3 +456,18 @@ Next action: continue Creator Store batches; use category-diverse queries to red
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch009 and keep `scriptObjectsFound=0`.
+
+## Run G016-R031 — Creator Store import Batch009 — 2026-05-27T15:27Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch009 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: traffic cone `5520177659`, jungle bush duplicate `123664537225262`, desert skeleton `85088233229382`, pine tree `100998164094280`, wooden bridge `8587855708`. Import quarantine removed `17` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=67`, `releaseReadyVisibleAssets=67`, `placedVisibleAssets=67`, `taggedImportedAssets=67`, `auditedImportedAssets=67`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=67`, `releaseReadyVisibleAssets=67`, expected at least `500`. Remaining gap is `433` release-ready assets plus RBXL save/reopen and fresh all-category proof. Jungle bush reused an existing SourceAssetId and did not increase unique count.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch009.
+Root cause: four unique assets landed this batch; one duplicate was correctly excluded from count.
+Patch applied: no source patch; Studio place state received Batch009 imported assets under `Workspace.Map.ImportedAssets.G016Batch009` with release/audit attributes.
+Retest result: Batch009 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; avoid broad jungle tree/bush queries that duplicate `123664537225262`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch010 with lower duplicate risk and keep `scriptObjectsFound=0`.

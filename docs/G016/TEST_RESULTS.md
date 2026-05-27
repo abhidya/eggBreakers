@@ -156,3 +156,9 @@ No final PASS: US14 still needs 442 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch008: car wreck `109905665910630`, giant mushroom `5578762802`, palm jungle asset `109638176453176`, boulder cluster `5543298662`, dinosaur statue `5029288945`. Quarantine removed `4` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=63`, `releaseReadyVisibleAssets=63`, and `placedVisibleAssets=63`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=63; expected at least 500` and `releaseReadyVisibleAssets=63; expected at least 500`.
 
 No final PASS: US14 still needs 437 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch009 Audit — 2026-05-27T15:27Z
+
+Studio MCP imported and audited Batch009: traffic cone `5520177659`, jungle bush duplicate `123664537225262`, desert skeleton `85088233229382`, pine tree `100998164094280`, wooden bridge `8587855708`. Quarantine removed `17` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=67`, `releaseReadyVisibleAssets=67`, and `placedVisibleAssets=67`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=67; expected at least 500` and `releaseReadyVisibleAssets=67; expected at least 500`.
+
+No final PASS: US14 still needs 433 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
