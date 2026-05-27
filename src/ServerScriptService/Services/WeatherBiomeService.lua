@@ -30,13 +30,34 @@ function WeatherBiomeService:ApplyWeather(weatherName)
         rain.CanQuery = false
         rain.Material = Enum.Material.Glass
         rain.Color = Color3.fromRGB(120, 170, 255)
-        rain.Size = Vector3.new(900, 2, 900)
-        rain.Position = Vector3.new(-1500, 90, 120)
+        rain.Size = Vector3.new(4700, 2, 4400)
+        rain.Position = Vector3.new(-450, 90, -250)
         rain.Transparency = 1
         rain:SetAttribute("WeatherEffect", true)
         rain.Parent = folder
     end
-    rain.Transparency = self.CurrentWeather == "Rain" and 0.82 or 1
+    rain.Size = Vector3.new(4700, 2, 4400)
+    rain.Position = Vector3.new(-450, 90, -250)
+    rain.Transparency = self.CurrentWeather == "Rain" and 0.62 or 1
+    rain:SetAttribute("VisibleWeatherFeedback", self.CurrentWeather == "Rain")
+
+    local streak = folder:FindFirstChild("VisibleRainStreaks")
+    if not streak then
+        streak = Instance.new("Part")
+        streak.Name = "VisibleRainStreaks"
+        streak.Anchored = true
+        streak.CanCollide = false
+        streak.CanTouch = false
+        streak.CanQuery = false
+        streak.Material = Enum.Material.Neon
+        streak.Color = Color3.fromRGB(150, 205, 255)
+        streak.Size = Vector3.new(4700, 80, 4400)
+        streak.Position = Vector3.new(-450, 48, -250)
+        streak.Parent = folder
+    end
+    streak.Transparency = self.CurrentWeather == "Rain" and 0.88 or 1
+    streak:SetAttribute("WeatherEffect", true)
+    streak:SetAttribute("VisibleWeatherFeedback", self.CurrentWeather == "Rain")
     return self.CurrentWeather
 end
 

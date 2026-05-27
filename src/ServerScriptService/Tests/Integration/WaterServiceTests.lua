@@ -32,9 +32,10 @@ end })
 
 table.insert(suite.tests, { name = "thirst updates", run = function()
     local p, water = setup(33003, 2)
-    local state = SurvivalService:GetState(p); state.Thirst = 30
+    local state = SurvivalService:GetState(p); state.Thirst = 30; state.Growth = 0
     FoodWaterService:RequestDrink(p, water)
     Assert.between(state.Thirst, 64, 100, "thirst restored")
+    Assert.equals(state.Growth, 1, "drinking contributes readable growth progress")
     water:Destroy()
 end })
 

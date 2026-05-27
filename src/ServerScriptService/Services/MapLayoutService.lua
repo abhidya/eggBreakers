@@ -132,6 +132,16 @@ MapLayoutService.BiomeDressingPlacements = {
         canopyColor = Color3.fromRGB(72, 142, 65),
     },
     {
+        name = "NurseryTutorialTree_A",
+        zone = "NurseryGrove",
+        kind = "Tree",
+        position = Vector3.new(-2180, 9, -60),
+        trunkSize = Vector3.new(6, 22, 6),
+        canopySize = Vector3.new(28, 20, 28),
+        trunkColor = Color3.fromRGB(118, 78, 48),
+        canopyColor = Color3.fromRGB(76, 150, 70),
+    },
+    {
         name = "FernPlainsTree_A",
         zone = "FernPlains",
         kind = "Tree",
@@ -290,6 +300,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("WaterSource", true)
     marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
+    marker:SetAttribute("InteractionHint", "Drink water")
+    marker:SetAttribute("VisibleGameplayAffordance", true)
     if not CollectionService:HasTag(marker, "WaterSource") then
         CollectionService:AddTag(marker, "WaterSource")
     end
@@ -333,6 +345,8 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         local isTutorialFood = placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass"
         food:SetAttribute("StarterFood", isTutorialFood)
         food:SetAttribute("TutorialSafe", isTutorialFood)
+        food:SetAttribute("InteractionHint", placement.diet == "Carnivore" and "Eat carcass" or "Eat plant")
+        food:SetAttribute("VisibleGameplayAffordance", true)
         CollectionService:AddTag(food, "FoodSource")
     end
 end
@@ -439,6 +453,8 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing:SetAttribute("Depleted", false)
     existing:SetAttribute("TutorialSafe", source.tutorialSafe == true)
     existing:SetAttribute("HighRisk", source.highRisk == true)
+    existing:SetAttribute("InteractionHint", source.diet == "Carnivore" and "Eat carcass" or "Eat plant")
+    existing:SetAttribute("VisibleGameplayAffordance", true)
     existing:SetAttribute("CreatorStoreOnly", true)
     existing:SetAttribute("PlacementRole", source.diet == "Herbivore" and "PlantFood" or "CarnivoreCarcassFood")
     if not CollectionService:HasTag(existing, "FoodSource") then

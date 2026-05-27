@@ -28,6 +28,38 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialWater:GetAttribute("TutorialSafe"), true, "tutorial water marked safe")
 end })
 
+
+table.insert(suite.tests, { name = "tutorial loop has nearby food water and trees", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureTerrainContinuity(folders)
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local spawnPosition = Vector3.new(-2000, 12, 0)
+    local counts = { food = 0, water = 0, trees = 0 }
+    for _, target in ipairs(CollectionService:GetTagged("FoodSource")) do
+        if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
+            counts.food = counts.food + 1
+            Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby food is visibly marked")
+        end
+    end
+    for _, target in ipairs(CollectionService:GetTagged("WaterSource")) do
+        if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
+            counts.water = counts.water + 1
+            Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby water is visibly marked")
+        end
+    end
+    for _, target in ipairs(CollectionService:GetTagged("TreeProp")) do
+        if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
+            counts.trees = counts.trees + 1
+        end
+    end
+
+    Assert.truthy(counts.food >= 2, "tutorial radius has visible food")
+    Assert.truthy(counts.water >= 1, "tutorial radius has visible water")
+    Assert.truthy(counts.trees >= 2, "tutorial radius has visible tree trunk/canopy")
+end })
+
 table.insert(suite.tests, { name = "non nursery water and risky food/fossils reachable", run = function()
     local root = Instance.new("Part")
     root.Position = Vector3.new(0, 0, 0)
