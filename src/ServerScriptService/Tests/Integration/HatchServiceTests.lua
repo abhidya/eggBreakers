@@ -51,14 +51,15 @@ table.insert(suite.tests, { name = "rejected hatch taps do not strand egg below 
     local p = player(31005)
     SurvivalService:CreateState(p, "gallimimus")
     local accepted = 0
-    local tapTimes = { 300, 300.04, 300.09, 300.13, 300.18, 300.22, 300.27, 300.31, 300.36 }
+    local now = 300
 
-    for _, now in ipairs(tapTimes) do
+    for _ = 1, 9 do
         if RateLimitService:Check(p, "RequestHatch", 0.08, now) then
             local ok = SurvivalService:RequestHatch(p, "tap")
             Assert.truthy(ok, "accepted server hatch input applies")
             accepted = accepted + 1
         end
+        now = now + 0.04
     end
 
     local state = SurvivalService:GetState(p)
