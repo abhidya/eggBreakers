@@ -7,6 +7,8 @@ local CharacterVisualService = {}
 CharacterVisualService.VisualFolderName = "_EggBreakersCharacterVisual"
 CharacterVisualService.EggVisualName = "EggVisual"
 CharacterVisualService.DinosaurVisualName = "DinosaurVisual"
+CharacterVisualService.MinimumDinosaurHeight = 4
+CharacterVisualService.MinimumDinosaurLength = 7
 CharacterVisualService.ReleaseMode = true
 CharacterVisualService.AllowDebugFallback = false
 CharacterVisualService.EggModelCandidatePaths = {
@@ -57,6 +59,7 @@ local function setDescendantCollisionSafe(instance)
         instance.CanTouch = false
         instance.CanQuery = false
         instance.Massless = true
+        instance.Transparency = math.min(instance.Transparency, 0.05)
     end
 end
 
@@ -103,12 +106,105 @@ function CharacterVisualService:ClearVisual(character)
     if folder then folder:Destroy() end
 end
 
-function CharacterVisualService:_weldToRoot(part, root)
-    part.CFrame = root.CFrame
+function CharacterVisualService:_weldToRoot(part, root, preserveCFrame)
+    if not preserveCFrame then
+        part.CFrame = root.CFrame
+    end
     local weld = Instance.new("WeldConstraint")
     weld.Part0 = root
     weld.Part1 = part
     weld.Parent = part
+end
+
+local function axisMax(vector)
+    return math.max(vector.X, vector.Y, vector.Z)
+end
+
+local function getVisibleParts(instance)
+    local parts = {}
+    if instance:IsA("BasePart") then
+        table.insert(parts, instance)
+    end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            table.insert(parts, descendant)
+        end
+    end
+    return parts
+end
+
+local function boundsFromParts(parts)
+    if #parts == 0 then
+        return nil, Vector3.new(0, 0, 0)
+    end
+    local minX, minY, minZ = math.huge, math.huge, math.huge
+    local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+    for _, part in ipairs(parts) do
+        local half = part.Size / 2
+        local position = part.Position
+        minX = math.min(minX, position.X - half.X)
+        minY = math.min(minY, position.Y - half.Y)
+        minZ = math.min(minZ, position.Z - half.Z)
+        maxX = math.max(maxX, position.X + half.X)
+        maxY = math.max(maxY, position.Y + half.Y)
+        maxZ = math.max(maxZ, position.Z + half.Z)
+    end
+    local min = Vector3.new(minX, minY, minZ)
+    local max = Vector3.new(maxX, maxY, maxZ)
+    return (min + max) / 2, max - min
+end
+
+function CharacterVisualService:_readableScaleForSize(size)
+    local heightScale = size.Y > 0 and (self.MinimumDinosaurHeight / size.Y) or 1
+    local lengthScale = axisMax(size) > 0 and (self.MinimumDinosaurLength / axisMax(size)) or 1
+    return math.max(1, heightScale, lengthScale)
+end
+
+function CharacterVisualService:_normalizeDinosaurScale(model)
+    if model:IsA("Model") then
+        local _, size = model:GetBoundingBox()
+        local scale = self:_readableScaleForSize(size)
+        if scale > 1 then
+            local ok = pcall(function()
+                model:ScaleTo(scale)
+            end)
+            if not ok then
+                for _, descendant in ipairs(model:GetDescendants()) do
+                    if descendant:IsA("BasePart") then
+                        descendant.Size = descendant.Size * scale
+                    end
+                end
+            end
+        end
+        local _, normalizedSize = model:GetBoundingBox()
+        model:SetAttribute("ReadableScaleApplied", scale)
+        model:SetAttribute("ReadableHeight", normalizedSize.Y)
+        model:SetAttribute("ReadableLength", axisMax(normalizedSize))
+        return normalizedSize
+    elseif model:IsA("BasePart") then
+        local scale = self:_readableScaleForSize(model.Size)
+        if scale > 1 then
+            model.Size = model.Size * scale
+        end
+        model:SetAttribute("ReadableScaleApplied", scale)
+        model:SetAttribute("ReadableHeight", model.Size.Y)
+        model:SetAttribute("ReadableLength", axisMax(model.Size))
+        return model.Size
+    end
+    local parts = getVisibleParts(model)
+    local center, size = boundsFromParts(parts)
+    local scale = self:_readableScaleForSize(size)
+    if scale > 1 and center then
+        for _, part in ipairs(parts) do
+            part.Size = part.Size * scale
+            part.CFrame = CFrame.new(center + (part.Position - center) * scale) * part.CFrame.Rotation
+        end
+        _, size = boundsFromParts(parts)
+    end
+    model:SetAttribute("ReadableScaleApplied", scale)
+    model:SetAttribute("ReadableHeight", size.Y)
+    model:SetAttribute("ReadableLength", axisMax(size))
+    return size
 end
 
 function CharacterVisualService:ResolveImportedEggModel()
@@ -165,6 +261,7 @@ end
 function CharacterVisualService:_prepareDinosaurClone(model)
     local clone = self:_prepareVisualClone(model, self.DinosaurVisualName)
     clone:SetAttribute("VisualKind", "ImportedDinosaur")
+    self:_normalizeDinosaurScale(clone)
     return clone
 end
 
@@ -176,16 +273,28 @@ function CharacterVisualService:_attachModel(character, root, model)
     end
 
     local folder = self:_visualFolder(character)
+    local offsets = {}
+    if not model:IsA("Model") and not model:IsA("BasePart") then
+        for _, descendant in ipairs(model:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                offsets[descendant] = primary.CFrame:ToObjectSpace(descendant.CFrame)
+            end
+        end
+    end
     model.Parent = folder
     if model:IsA("Model") then
         model.PrimaryPart = primary
         model:PivotTo(root.CFrame)
     elseif model:IsA("BasePart") then
         model.CFrame = root.CFrame
+    else
+        for part, offset in pairs(offsets) do
+            part.CFrame = root.CFrame * offset
+        end
     end
     for _, descendant in ipairs(model:GetDescendants()) do
         if descendant:IsA("BasePart") then
-            self:_weldToRoot(descendant, root)
+            self:_weldToRoot(descendant, root, model:IsA("Model") or offsets[descendant] ~= nil)
         end
     end
     if model:IsA("BasePart") then
