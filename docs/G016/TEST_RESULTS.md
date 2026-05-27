@@ -276,3 +276,9 @@ No final PASS: US14 still needs 355 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch027: old desk `13011426229`, microwave `96508931775797`, yellow wildflower `13424841380`, slate rock duplicate `14932307872`, small fossil rock `5349336730`. Quarantine removed `3` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=149`, `releaseReadyVisibleAssets=149`, and `placedVisibleAssets=149`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=149; expected at least 500` and `releaseReadyVisibleAssets=149; expected at least 500`.
 
 No final PASS: US14 still needs 351 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch028 Audit / 150-Asset Milestone — 2026-05-27T18:59Z
+
+Studio MCP imported and audited Batch028: bookshelf `11312820132`, locker `9464302709`, blue wildflower `87795819188133`, sandstone pillar `15904082872`, fossil tablet `8804301890`. Quarantine found `0` script objects. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=154`, `releaseReadyVisibleAssets=154`, and `placedVisibleAssets=154`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=154; expected at least 500` and `releaseReadyVisibleAssets=154; expected at least 500`.
+
+No final PASS: US14 still needs 346 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
