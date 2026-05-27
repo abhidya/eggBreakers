@@ -4,6 +4,7 @@ local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFrame
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
+local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
 local suite = { name = "FoodServiceTests.server", category = "Integration", tests = {} }
 
 local function setup(id, diet)
@@ -47,6 +48,32 @@ table.insert(suite.tests, { name = "food updates stat state", run = function()
     Assert.equals(food:GetAttribute("Depleted"), true, "food depleted server-side")
     Assert.equals(state.Growth, 1, "growth grant server-side")
     food:Destroy()
+end })
+
+
+table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = function()
+    local p, food = setup(32005, "Herbivore")
+    food:SetAttribute("RespawnCooldownSeconds", 1)
+    Assert.truthy(FoodWaterService:RequestEat(p, food), "eat depletes food")
+    Assert.equals(food:GetAttribute("Depleted"), true, "food depleted")
+    food:SetAttribute("DepletedUntil", os.time() - 1)
+    FoodWaterService:RefreshDepletion(food)
+    Assert.equals(food:GetAttribute("Depleted"), false, "food restored after cooldown")
+    food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "dead prey creates carnivore carcass food", run = function()
+    local prey = Instance.new("Model")
+    prey.Name = "TestPrey"
+    prey.Parent = workspace
+    local ok, record = NPCService:Register(prey, "Prey")
+    Assert.truthy(ok, "prey registered")
+    local deadOk, carcass = NPCService:MarkPreyDead(record)
+    Assert.truthy(deadOk, "prey death creates carcass")
+    Assert.truthy(CollectionService:HasTag(carcass, "FoodSource"), "carcass tagged FoodSource")
+    Assert.equals(carcass:GetAttribute("Diet"), "Carnivore", "carcass carnivore diet")
+    Assert.truthy(carcass:GetAttribute("Nutrition") > 0, "carcass nutrition")
+    prey:Destroy(); carcass:Destroy()
 end })
 
 return suite

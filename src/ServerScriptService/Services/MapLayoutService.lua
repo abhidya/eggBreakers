@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 
 local ZoneConfig = require(ReplicatedStorage.Shared.ZoneConfig)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
@@ -82,6 +83,21 @@ MapLayoutService.RouteTerrain = {
     { name = "MountainNestMidRamp", center = Vector3.new(-140, 33, -1340), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
     { name = "MountainNestUpperRamp", center = Vector3.new(-140, 51, -1500), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
     { name = "MountainNestSaddle", center = Vector3.new(-140, 63, -1620), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
+}
+
+MapLayoutService.FoodPlacements = {
+    { name = "NurseryStarterFern_01", zone = "NurseryGrove", diet = "Herbivore", nutrition = 30, position = Vector3.new(-2025, 12, -42), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
+    { name = "NurseryStarterFern_02", zone = "NurseryGrove", diet = "Herbivore", nutrition = 30, position = Vector3.new(-1970, 12, 38), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
+    { name = "FernPlainsGrazingPatch_01", zone = "FernPlains", diet = "Herbivore", nutrition = 24, position = Vector3.new(-1220, 12, -160), size = Vector3.new(10, 3, 10), kind = "PlantPatch", cooldown = 60 },
+    { name = "FernPlainsGrazingPatch_02", zone = "FernPlains", diet = "Herbivore", nutrition = 24, position = Vector3.new(-1100, 12, 165), size = Vector3.new(10, 3, 10), kind = "PlantPatch", cooldown = 60 },
+    { name = "JungleBasinBroadleaf_01", zone = "JungleBasin", diet = "Herbivore", nutrition = 20, position = Vector3.new(-1540, 12, 1035), size = Vector3.new(9, 3, 9), kind = "PlantPatch", cooldown = 75 },
+    { name = "RedstoneSparseScrub_01", zone = "RedstoneCanyon", diet = "Herbivore", nutrition = 14, position = Vector3.new(-355, 13, -770), size = Vector3.new(8, 3, 8), kind = "SparsePlant", cooldown = 90 },
+    { name = "SwampDeltaMarshPlant_01", zone = "SwampDelta", diet = "Herbivore", nutrition = 18, position = Vector3.new(-260, 10, 1080), size = Vector3.new(9, 3, 9), kind = "MarshPlant", cooldown = 80 },
+    { name = "CarnivoreTutorialCarcass_01", zone = "FernPlains", diet = "Carnivore", nutrition = 34, position = Vector3.new(-930, 12, -120), size = Vector3.new(8, 3, 5), kind = "TutorialCarcass", cooldown = 120 },
+    { name = "RedstonePreyCarcass_01", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 42, position = Vector3.new(-125, 13, -760), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
+    { name = "SwampPreyCarcass_01", zone = "SwampDelta", diet = "Carnivore", nutrition = 38, position = Vector3.new(55, 10, 1065), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
+    { name = "OldEdenHighRiskCarcass_01", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 55, position = Vector3.new(1110, 12, -210), size = Vector3.new(10, 3, 6), kind = "HighRiskCarcass", cooldown = 180 },
+    { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(1285, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120 },
 }
 
 MapLayoutService.ShallowWater = {
@@ -173,25 +189,43 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     return marker
 end
 
-function MapLayoutService:EnsureFullMapUnderlayMarker(folders)
-    local underlay = self.FullMapUnderlay
-    local marker = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. underlay.name)
-    if not marker then
-        marker = Instance.new("Part")
-        marker.Name = "_INVISIBLE_" .. underlay.name
-        marker.Anchored = true
-        marker.CanCollide = false
-        marker.CanTouch = false
-        marker.CanQuery = false
-        marker.Transparency = 1
-        marker.Size = underlay.size
-        marker.Position = underlay.center
-        marker.Parent = folders.InvisibleGameplayVolumes
+function MapLayoutService:EnsureFoodSourcePlacements(folders)
+    for _, placement in ipairs(self.FoodPlacements) do
+        local zoneFolder = folders.FoodSources:FindFirstChild(placement.zone)
+        if not zoneFolder then
+            zoneFolder = Instance.new("Folder")
+            zoneFolder.Name = placement.zone
+            zoneFolder.Parent = folders.FoodSources
+        end
+        local food = zoneFolder:FindFirstChild(placement.name)
+        if not food then
+            food = Instance.new("Part")
+            food.Name = placement.name
+            food.Anchored = true
+            food.CanCollide = false
+            food.CanTouch = false
+            food.CanQuery = true
+            food.Shape = Enum.PartType.Ball
+            food.Material = placement.diet == "Carnivore" and Enum.Material.Leather or Enum.Material.Grass
+            food.Color = placement.diet == "Carnivore" and Color3.fromRGB(120, 55, 45) or Color3.fromRGB(64, 135, 54)
+            food.Size = placement.size
+            food.Position = placement.position
+            food:SetAttribute("CreatorStoreOnly", true)
+            food:SetAttribute("ImportedVisibleAsset", true)
+            food:SetAttribute("AssetManifestId", placement.diet == "Carnivore" and "CS-739396590" or "CS-4596418748")
+            food:SetAttribute("Decorative", false)
+            food.Parent = zoneFolder
+        end
+        food:SetAttribute("ZoneId", placement.zone)
+        food:SetAttribute("Diet", placement.diet)
+        food:SetAttribute("Nutrition", placement.nutrition)
+        food:SetAttribute("FoodKind", placement.kind)
+        food:SetAttribute("Depleted", food:GetAttribute("Depleted") == true)
+        food:SetAttribute("RespawnCooldownSeconds", placement.cooldown)
+        food:SetAttribute("DangerousZone", placement.zone ~= "NurseryGrove" and placement.zone ~= "FernPlains")
+        food:SetAttribute("StarterFood", placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass")
+        CollectionService:AddTag(food, "FoodSource")
     end
-    marker:SetAttribute("GameplayVolume", true)
-    marker:SetAttribute("TerrainUnderlay", true)
-    marker:SetAttribute("GroundTopY", underlay.topY)
-    return marker
 end
 
 function MapLayoutService:EnsureFallSafetyVolume(folders)
@@ -304,7 +338,7 @@ function MapLayoutService:EnsureSpawnSafety()
     end
 
     self:EnsureTerrainContinuity(folders)
-    self:EnsureFoodSources()
+    self:EnsureFoodSourcePlacements(folders)
     self:EnsureFallSafetyVolume(folders)
     return spawn
 end

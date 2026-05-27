@@ -6,7 +6,17 @@ local FoodWaterService = {}
 FoodWaterService.EatDistance = 12
 FoodWaterService.DrinkDistance = 14
 
+function FoodWaterService:RefreshDepletion(target, now)
+    if not target or target:GetAttribute("Depleted") ~= true then return end
+    local depletedUntil = target:GetAttribute("DepletedUntil")
+    if depletedUntil and (now or os.time()) >= depletedUntil then
+        target:SetAttribute("Depleted", false)
+        target:SetAttribute("DepletedUntil", nil)
+    end
+end
+
 function FoodWaterService:RequestEat(player, target)
+    self:RefreshDepletion(target)
     if not RemoteValidationService:CheckRate(player, "RequestEat") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)
     if not RemoteValidationService:IsAlive(state) or not RemoteValidationService:IsHatched(state) then return false, "not_alive_hatched" end
@@ -16,6 +26,10 @@ function FoodWaterService:RequestEat(player, target)
     if not ok then return false, reason end
     state.Hunger = math.min(100, state.Hunger + (target:GetAttribute("Nutrition") or 25))
     target:SetAttribute("Depleted", true)
+    local cooldown = target:GetAttribute("RespawnCooldownSeconds")
+    if cooldown then
+        target:SetAttribute("DepletedUntil", os.time() + cooldown)
+    end
     SurvivalService:AddGrowth(player, 1)
     return true, state
 end

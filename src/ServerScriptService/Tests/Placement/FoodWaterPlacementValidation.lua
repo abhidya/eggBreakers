@@ -13,6 +13,9 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.notNil(folders.Zones:FindFirstChild("NurseryGrove"), "NurseryGrove zone exists")
     Assert.notNil(folders.FoodSources, "FoodSources folder exists")
     Assert.notNil(folders.WaterSources, "WaterSources folder exists")
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    Assert.notNil(folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01"), "nursery starter plant exists")
+    Assert.notNil(folders.FoodSources.FernPlains:FindFirstChild("FernPlainsGrazingPatch_01"), "Fern Plains grazing plant exists")
 end })
 
 table.insert(suite.tests, { name = "non nursery water and risky food/fossils reachable", run = function()
@@ -31,34 +34,30 @@ table.insert(suite.tests, { name = "non nursery water and risky food/fossils rea
 end })
 
 
-table.insert(suite.tests, { name = "placed herbivore plants and carnivore carcasses exist", run = function()
+table.insert(suite.tests, { name = "placed food sources have diet nutrition tags and biome density", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
-    MapLayoutService:EnsureFoodSources()
-    local herbivore = 0
-    local carnivore = 0
-    local nurseryPlants = 0
-    local fernPlants = 0
-    local preyCarcasses = 0
-    for _, item in ipairs(folders.FoodSources:GetChildren()) do
-        if CollectionService:HasTag(item, "FoodSource") then
-            Assert.notNil(item:GetAttribute("Nutrition"), item.Name .. " has nutrition")
-            Assert.equals(item:GetAttribute("Depleted"), false, item.Name .. " starts available")
-            local diet = item:GetAttribute("Diet")
-            if diet == "Herbivore" then
-                herbivore = herbivore + 1
-                if item:GetAttribute("ZoneId") == "NurseryGrove" then nurseryPlants = nurseryPlants + 1 end
-                if item:GetAttribute("ZoneId") == "FernPlains" then fernPlants = fernPlants + 1 end
-            elseif diet == "Carnivore" then
-                carnivore = carnivore + 1
-                if tostring(item:GetAttribute("PlacementRole")):find("Carcass") then preyCarcasses = preyCarcasses + 1 end
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    local counts = { NurseryGrove = 0, FernPlains = 0, Carnivore = 0, CityReward = 0 }
+    for _, food in ipairs(CollectionService:GetTagged("FoodSource")) do
+        if food:IsDescendantOf(folders.FoodSources) then
+            Assert.truthy(food:GetAttribute("Diet") == "Herbivore" or food:GetAttribute("Diet") == "Carnivore", "food diet set " .. food.Name)
+            Assert.truthy((food:GetAttribute("Nutrition") or 0) > 0, "food nutrition set " .. food.Name)
+            Assert.equals(food:GetAttribute("Depleted"), false, "food starts available " .. food.Name)
+            Assert.truthy(food:GetAttribute("RespawnCooldownSeconds") > 0, "food cooldown set " .. food.Name)
+            local zone = food:GetAttribute("ZoneId")
+            if zone == "NurseryGrove" then counts.NurseryGrove = counts.NurseryGrove + 1 end
+            if zone == "FernPlains" and food:GetAttribute("Diet") == "Herbivore" then counts.FernPlains = counts.FernPlains + 1 end
+            if food:GetAttribute("Diet") == "Carnivore" then
+                counts.Carnivore = counts.Carnivore + 1
+                Assert.falsy(zone == "NurseryGrove", "carnivore prey/carcass outside Nursery " .. food.Name)
             end
+            if zone == "ApocalypticCity" then counts.CityReward = counts.CityReward + 1 end
         end
     end
-    Assert.truthy(herbivore >= 4, "multiple herbivore plant foods placed")
-    Assert.truthy(carnivore >= 4, "multiple carnivore carcass/meat foods placed")
-    Assert.truthy(nurseryPlants >= 2, "Nursery has starter plant food")
-    Assert.truthy(fernPlants >= 2, "Fern Plains has herbivore food density")
-    Assert.truthy(preyCarcasses >= 3, "carnivore prey/carcass food exists")
+    Assert.truthy(counts.NurseryGrove >= 2, "nursery starter plant count")
+    Assert.truthy(counts.FernPlains >= 2, "Fern Plains plant density")
+    Assert.truthy(counts.Carnivore >= 4, "carnivore prey/carcass source count")
+    Assert.truthy(counts.CityReward >= 2, "city high-risk food rewards")
 end })
 
 TestRunner.registerSuite(suite)

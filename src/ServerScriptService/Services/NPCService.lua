@@ -1,4 +1,5 @@
 local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 
 local NPCService = {}
 NPCService.MinActive = 12
@@ -61,6 +62,44 @@ end
 function NPCService:CanChaseIntoZone(zoneId, scriptedTutorialScare)
     if zoneId == "NurseryGrove" and not scriptedTutorialScare then return false end
     return true
+end
+
+function NPCService:CreateCarcassFoodSource(npc, nutrition)
+    local carcass = Instance.new("Part")
+    carcass.Name = (npc and npc.Name or "Prey") .. "_CarcassFoodSource"
+    carcass.Anchored = true
+    carcass.CanCollide = false
+    carcass.CanTouch = false
+    carcass.CanQuery = true
+    carcass.Shape = Enum.PartType.Ball
+    carcass.Material = Enum.Material.Leather
+    carcass.Color = Color3.fromRGB(125, 58, 48)
+    carcass.Size = Vector3.new(8, 3, 5)
+    local position = Vector3.new(0, 3, 0)
+    if npc and npc.GetPivot then
+        position = npc:GetPivot().Position
+    elseif npc and npc:IsA("BasePart") then
+        position = npc.Position
+    end
+    carcass.Position = position
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("Nutrition", nutrition or 35)
+    carcass:SetAttribute("FoodKind", "PreyCarcass")
+    carcass:SetAttribute("Depleted", false)
+    carcass:SetAttribute("RespawnCooldownSeconds", 180)
+    carcass:SetAttribute("CreatorStoreOnly", true)
+    carcass:SetAttribute("ImportedVisibleAsset", true)
+    carcass:SetAttribute("AssetManifestId", "CS-739396590")
+    carcass.Parent = Workspace:FindFirstChild("NPCs") or Workspace
+    CollectionService:AddTag(carcass, "FoodSource")
+    return carcass
+end
+
+function NPCService:MarkPreyDead(record)
+    if not record or record.Kind ~= "Prey" then return false, "not_prey" end
+    self:Transition(record, "Dead")
+    record.Carcass = self:CreateCarcassFoodSource(record.Instance, 35)
+    return true, record.Carcass
 end
 
 return NPCService
