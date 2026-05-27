@@ -111,3 +111,18 @@ Next action: run the live proof harness that creates `G016FinalGateProof` only a
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: continue live proof capture; do not mark PASS from source/build or counts alone.
+
+## Run G016-R008 — L005 current-head reverify after reassignment — 2026-05-27T12:29:00Z
+
+Tests run: worker-3 coordination message, all-source Lua syntax, Rojo build, Studio/MCP read-only current-head L005 probe.
+Passed: current HEAD `55e30b6`; source syntax passed; Rojo build produced `/tmp/eggBreakers-worker5-l005-current-head.rbxl`; Studio/MCP counted visible dinosaurs/NPCs `40`, visible carnivores/predators `9`, visible tree/natural props `100+`.
+Failed: `ReplicatedStorage.G016FinalGateProof` does not exist; all requested L005 proof attrs are absent; tagged food count `0`; tagged water count `0`; no NPC records showed non-idle action/state proof beyond standard attributes.
+Top failing story: US15 Fresh full QA gate proves all stories.
+Failure: latest live probe still cannot prove hatch, tagged food/water, active NPC transitions, action motion, or growth scale; it only proves source/build health and partial visible NPC/tree counts.
+Root cause: final proof harness has not produced proof attributes, and live place/tag state is inconsistent with earlier food/water counts.
+Patch applied: documentation updated with current-head evidence and exact gaps; no final PASS claimed.
+Retest result: NOT DONE / expected gate FAIL.
+Next action: run or create an authorized live proof harness that verifies and writes `G016FinalGateProof` only after hatch, food/water tags, NPC transitions, action motion, and growth-scale delta pass.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: resolve missing live food/water tags and active-state proof before any PASS claim.
