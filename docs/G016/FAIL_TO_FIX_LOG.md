@@ -981,3 +981,18 @@ Next action: continue over-insert batches toward 250.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch043 and move US14 from `221/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R066 — Creator Store import Batch043 — 2026-05-27T15:08Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch043 with six candidates plus one replacement import; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed seven Creator Store assets: metal fence `12062468498`, broken road sign duplicate `9460880283`, lantern `12332617205`, bamboo cluster `170066743`, pumpkin food `36431829`, bone pile `9093859254`, gold goblet `11506196281`. Import quarantine removed `1` script object before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=227`, `releaseReadyVisibleAssets=227`, `placedVisibleAssets=227`, `taggedImportedAssets=227`, `auditedImportedAssets=227`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=227`, `releaseReadyVisibleAssets=227`, expected at least `500`. Remaining gap is `273` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch043 netted six unique release-ready assets after the lantern replacement offset a known duplicate road sign.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch043.
+Root cause: release asset volume remains insufficient; duplicate-aware replacement behavior preserved net progress.
+Patch applied: no source patch; Studio place state received Batch043 imported assets under `Workspace.Map.ImportedAssets.G016Batch043` with release/audit/performance-safe attributes, including pumpkin food and bone-pile carcass affordances.
+Retest result: Batch043 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue over-insert batches toward 250.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch044 and move US14 from `227/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
