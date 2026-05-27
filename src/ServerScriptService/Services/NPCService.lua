@@ -237,10 +237,10 @@ function NPCService:Eat(record, food)
     end
     record.Hunger = math.min(100, (record.Hunger or 0) + (food and food:GetAttribute("Nutrition") or 25))
     local position = self:GetRecordPosition(record)
-    local expectedDiet = record.Kind == "Predator" and "Carnivore" or "Herbivore"
+    local expectedDiet = self:GetRecordDiet(record)
     local depletedCount = 0
     local function deplete(target)
-        if target and target:GetAttribute("Diet") == expectedDiet and target:GetAttribute("Depleted") ~= true then
+        if target and self:CanEatDiet(expectedDiet, target:GetAttribute("Diet")) and target:GetAttribute("Depleted") ~= true then
             target:SetAttribute("Depleted", true)
             target:SetAttribute("LastEatenByNPC", record.Instance and record.Instance.Name or "NPC")
             depletedCount = depletedCount + 1
@@ -295,7 +295,7 @@ function NPCService:AttackRecord(attacker, target)
         attacker.Instance:SetAttribute("AttackTarget", target.Instance and target.Instance.Name or "NPC")
     end
     self:Transition(attacker, "Attack")
-    return self:DamageRecord(target, attacker.Kind == "Predator" and 45 or 12)
+    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12)
 end
 
 function NPCService:FindNearestRecord(record, kind, maxDistance)
@@ -310,6 +310,87 @@ function NPCService:FindNearestRecord(record, kind, maxDistance)
         end
     end
     return best, bestDistance
+end
+
+function NPCService:FindNearestThreat(record, maxDistance)
+    local best, bestDistance = nil, maxDistance or self.FleeDistance
+    local position = self:GetRecordPosition(record)
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and (candidate.Kind == "Predator" or candidate.Apex == true) then
+            local distance = (self:GetRecordPosition(candidate) - position).Magnitude
+            if distance <= bestDistance then
+                best, bestDistance = candidate, distance
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+function NPCService:FindHerdCenter(record)
+    if not record or record.Herding ~= true then return nil, 0 end
+    local position = self:GetRecordPosition(record)
+    local radius = record.HerdRadius or self.HerdRadius
+    local total = position
+    local count = 1
+    local leaderName = record.Instance and record.Instance.Name or "NPC"
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and candidate.Herding == true and self:GetRecordDiet(candidate) == self:GetRecordDiet(record) then
+            local candidatePosition = self:GetRecordPosition(candidate)
+            if (candidatePosition - position).Magnitude <= radius then
+                total = total + candidatePosition
+                count = count + 1
+                if candidate.Instance and tostring(candidate.Instance.Name) < leaderName then
+                    leaderName = candidate.Instance.Name
+                end
+            end
+        end
+    end
+    return total / count, count, leaderName
+end
+
+function NPCService:ApplyHerding(record)
+    local center, count, leaderName = self:FindHerdCenter(record)
+    if not center or count < 2 then
+        if record.Instance then record.Instance:SetAttribute("HerdSize", count or 1) end
+        return false, "no_herd"
+    end
+    record.HerdCenter = center
+    record.HerdSize = count
+    if record.Instance then
+        record.Instance:SetAttribute("HerdSize", count)
+        record.Instance:SetAttribute("HerdLeader", leaderName)
+        record.Instance:SetAttribute("HerdCenter", string.format("%.1f,%.1f,%.1f", center.X, center.Y, center.Z))
+    end
+    local distance = (center - self:GetRecordPosition(record)).Magnitude
+    if distance > self.InteractDistance then
+        self:MoveToward(record, center, self.MoveStep * 0.75)
+    end
+    return self:Transition(record, "Herd")
+end
+
+function NPCService:StampApexEvent(record)
+    if not record or record.Apex ~= true then return false, "not_apex" end
+    local affected = 0
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and candidate.Apex ~= true then
+            local distance = (self:GetRecordPosition(candidate) - self:GetRecordPosition(record)).Magnitude
+            if distance <= (record.ThreatRadius or self.ApexThreatRadius) then
+                affected = affected + 1
+                candidate.LastApexThreat = record.Instance
+                if candidate.Instance then
+                    candidate.Instance:SetAttribute("LastApexThreat", record.Instance and record.Instance.Name or "Apex")
+                end
+            end
+        end
+    end
+    record.LastApexEventAt = os.time()
+    if record.Instance then
+        record.Instance:SetAttribute("ApexEventActive", true)
+        record.Instance:SetAttribute("ApexEventAffected", affected)
+        record.Instance:SetAttribute("ApexThreatRadius", record.ThreatRadius or self.ApexThreatRadius)
+        record.Instance:SetAttribute("LastBrainAction", "ApexEvent")
+    end
+    return self:Transition(record, "ApexEvent")
 end
 
 function NPCService:TickBrain(record, players, deltaSeconds)
@@ -336,7 +417,11 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end
     end
 
-    local nearbyPredator = record.Kind == "Prey" and self:FindNearestRecord(record, "Predator", self.FleeDistance) or nil
+    if record.Apex == true then
+        self:StampApexEvent(record)
+    end
+
+    local nearbyPredator = (record.Kind == "Prey" or record.Kind == "Omnivore") and self:FindNearestThreat(record, self.FleeDistance) or nil
     if nearbyPredator then
         record.FleeFrom = nearbyPredator.Instance
         if record.Health <= (record.MaxHealth or 80) * 0.35 then
@@ -362,9 +447,9 @@ function NPCService:TickBrain(record, players, deltaSeconds)
     end
 
     if (record.Hunger or 0) < 45 then
-        local diet = record.Kind == "Predator" and "Carnivore" or "Herbivore"
+        local diet = self:GetRecordDiet(record)
         local food, distance = self:FindNearestTagged(record, "FoodSource", self.SenseDistance, function(candidate)
-            return candidate:GetAttribute("Depleted") ~= true and candidate:GetAttribute("Diet") == diet
+            return candidate:GetAttribute("Depleted") ~= true and self:CanEatDiet(diet, candidate:GetAttribute("Diet"))
         end)
         if food and distance <= self.InteractDistance then return self:Eat(record, food) end
         if food then
@@ -378,13 +463,18 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end
     end
 
-    if record.Kind == "Predator" then
+    if record.Kind == "Predator" or record.Apex == true then
         local prey, distance = self:FindNearestRecord(record, "Prey", self.SenseDistance)
         if prey and distance <= self.InteractDistance then return self:AttackRecord(record, prey) end
         if prey then
             self:MoveToward(record, self:GetRecordPosition(prey), self.MoveStep, "Chase", prey.Instance)
             return self:Transition(record, "Chase")
         end
+    end
+
+    if record.Herding == true then
+        local herdOk = self:ApplyHerding(record)
+        if herdOk then return true end
     end
 
     local wanderTarget = record.SpawnPosition + Vector3.new(math.sin(os.clock()) * 18, 0, math.cos(os.clock()) * 18)

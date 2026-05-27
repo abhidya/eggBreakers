@@ -2,10 +2,11 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NPCService = require(script.Parent.NPCService)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
-NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "Predator" }
+NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "Omnivore", "Predator", "Apex" }
 NPCSpawnService.SpawnTickSeconds = 10
 NPCSpawnService.NPCModelCandidatePaths = {
     Prey = {
@@ -15,6 +16,14 @@ NPCSpawnService.NPCModelCandidatePaths = {
     Predator = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling",
+    },
+    Apex = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Tyrannosaurus_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Adult",
+    },
+    Omnivore = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Juvenile",
     },
 }
 
@@ -53,11 +62,17 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
 end
 
 function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
+    local profile = NPCService:GetKindProfile(kind)
+    local species = SpeciesConfig[profile.SpeciesId]
     local clone = source:Clone()
     clone.Name = kind .. "NPC_" .. tostring(index)
     clone:SetAttribute("NPCKind", kind)
-    clone:SetAttribute("Diet", kind == "Predator" and "Carnivore" or "Herbivore")
-    clone:SetAttribute("Carnivore", kind == "Predator")
+    clone:SetAttribute("SpeciesId", profile.SpeciesId)
+    clone:SetAttribute("SpeciesRole", species and species.Role or kind)
+    clone:SetAttribute("Diet", profile.Diet)
+    clone:SetAttribute("Carnivore", profile.Diet == "Carnivore")
+    clone:SetAttribute("ApexCategory", profile.Apex == true)
+    clone:SetAttribute("HerdingEnabled", profile.Herding == true)
     clone:SetAttribute("ImportedVisibleAsset", true)
     clone:SetAttribute("CreatorStoreOnly", true)
     clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
@@ -84,8 +99,12 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         local wrapper = Instance.new("Model")
         wrapper.Name = clone.Name
         wrapper:SetAttribute("NPCKind", kind)
-        wrapper:SetAttribute("Diet", kind == "Predator" and "Carnivore" or "Herbivore")
-        wrapper:SetAttribute("Carnivore", kind == "Predator")
+        wrapper:SetAttribute("SpeciesId", profile.SpeciesId)
+        wrapper:SetAttribute("SpeciesRole", species and species.Role or kind)
+        wrapper:SetAttribute("Diet", profile.Diet)
+        wrapper:SetAttribute("Carnivore", profile.Diet == "Carnivore")
+        wrapper:SetAttribute("ApexCategory", profile.Apex == true)
+        wrapper:SetAttribute("HerdingEnabled", profile.Herding == true)
         wrapper:SetAttribute("ImportedVisibleAsset", true)
         wrapper:SetAttribute("CreatorStoreOnly", true)
         wrapper:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))

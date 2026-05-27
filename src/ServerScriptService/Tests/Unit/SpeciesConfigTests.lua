@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 local requiredStages = { "Hatchling", "Juvenile", "SubAdult", "Adult" }
 local suite = { name = "SpeciesConfigTests", category = "Unit", tests = {} }
 
@@ -11,7 +12,7 @@ table.insert(suite.tests, { name = "every species has required fields and stages
         count = count + 1
         Assert.equals(species.SpeciesId, speciesId, "SpeciesId matches key")
         Assert.notNil(species.DisplayName, "DisplayName required")
-        Assert.truthy(species.Diet == "Herbivore" or species.Diet == "Carnivore", "Diet valid")
+        Assert.truthy(species.Diet == "Herbivore" or species.Diet == "Carnivore" or species.Diet == "Omnivore", "Diet valid")
         Assert.notNil(species.Role, "Role required")
         Assert.notNil(species.Abilities.PrimaryAttack, "PrimaryAttack required")
         Assert.notNil(species.Abilities.SecondaryAbility, "SecondaryAbility required")
@@ -26,7 +27,8 @@ table.insert(suite.tests, { name = "every species has required fields and stages
             Assert.truthy(species.ModelPaths[stage] ~= nil, "model path for " .. stage)
         end
     end
-    Assert.equals(count, 4, "vertical slice has exactly four starter species")
+    Assert.truthy(count >= Constants.ScopeFreeze.RequiredPlayableSpecies, "vertical slice keeps required starter species")
+    Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpeciesBeforeVerticalSlice, "vertical slice stays within playable species cap")
 end })
 
 table.insert(suite.tests, { name = "starter species diet roles stay fixed", run = function()
@@ -34,6 +36,14 @@ table.insert(suite.tests, { name = "starter species diet roles stay fixed", run 
     Assert.equals(SpeciesConfig.triceratops.Diet, "Herbivore")
     Assert.equals(SpeciesConfig.velociraptor.Diet, "Carnivore")
     Assert.equals(SpeciesConfig.carnotaurus.Diet, "Carnivore")
+end })
+
+table.insert(suite.tests, { name = "ecosystem expansion profiles cover apex herding and omnivore", run = function()
+    Assert.equals(SpeciesConfig.tyrannosaurus.EcosystemProfile.Category, "Apex", "apex category profile")
+    Assert.equals(SpeciesConfig.tyrannosaurus.EcosystemProfile.Apex, true, "apex flag")
+    Assert.truthy(SpeciesConfig.tyrannosaurus.UnlockCostDNA >= 3000, "apex unlock cost")
+    Assert.equals(SpeciesConfig.oviraptor.Diet, "Omnivore", "omnivore diet profile")
+    Assert.equals(SpeciesConfig.oviraptor.EcosystemProfile.Herding, true, "omnivore herding profile")
 end })
 
 return TestRunner.registerSuite(suite)
