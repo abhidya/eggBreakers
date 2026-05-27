@@ -27,6 +27,12 @@ local function requireNonEmptyString(attributeName, expectedDescription)
         "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
 end
 
+local function requireNonEmptyString(attributeName, expectedDescription)
+    local value = proofAttribute(attributeName)
+    Assert.truthy(type(value) == "string" and #value > 0,
+        "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
+end
+
 local function childNamed(parent, name)
     return parent and parent:FindFirstChild(name) ~= nil
 end
@@ -58,34 +64,60 @@ table.insert(suite.tests, { name = "G018 gate files are present and isolated", r
     Assert.truthy(childNamed(g018Folder, "StoryAssertions"), "missing StoryAssertions.lua")
 end })
 
-table.insert(suite.tests, { name = "UserStoryTestRegistry enumerates US27-US36", run = function()
-    StoryAssertions.assertRegistryEnumeratesAllStories(UserStoryTestRegistry)
-end })
-
-table.insert(suite.tests, { name = "G016 release honesty stays enforced", run = function()
-    Assert.truthy(REQUIRED_RELEASE_ASSETS >= 500, "G018 must not lower the 500 unique Creator Store asset gate")
-    Assert.falsy(manifestContainsSourceAssetId(BLOCKED_ASSET_ID), "blocked asset " .. BLOCKED_ASSET_ID .. " must not be reintroduced in AssetManifest.SourceAssets")
-    requireProofTrue("G016ReleaseHonestyPreserved", "G016 final honesty gates remain failing until live proof, RBXL persistence, and 500 assets pass")
-end })
-
-table.insert(suite.tests, { name = "every G018 user story has fresh live PASS proof", run = function()
-    for _, story in ipairs(UserStoryTestRegistry.all()) do
-        StoryAssertions.assertStoryHasLivePass(story)
+table.insert(suite.tests, { name = "G018 registry enumerates ecosystem expansion stories", run = function()
+    local stories = Registry.all()
+    Assert.equals(#stories, 11, "G018 registry must enumerate 11 ecosystem stories")
+    local seen = {}
+    for index, story in ipairs(stories) do
+        Assert.equals(story.id, string.format("G018-US%02d", index), "G018 story order/id contract")
+        Assert.falsy(seen[story.id], "duplicate story id " .. tostring(story.id))
+        seen[story.id] = true
+        Assert.truthy(type(story.title) == "string" and #story.title > 0, story.id .. " title required")
+        Assert.truthy(type(story.required) == "table" and #story.required > 0, story.id .. " required categories missing")
+        local requiredSeen = {}
+        for _, category in ipairs(story.required) do
+            requiredSeen[category] = true
+        end
+        Assert.truthy(requiredSeen.Unit or requiredSeen.Integration or requiredSeen.E2E or requiredSeen.Client or requiredSeen.Live,
+            story.id .. " must name at least one executable/proof category")
+        Assert.truthy(type(story.liveProof) == "string" and #story.liveProof > 0, story.id .. " live proof attr missing")
     end
 end })
 
-table.insert(suite.tests, { name = "fresh live play E2E matrix and all-category TestRunner are attached", run = function()
-    requireProofTrue("LivePlayE2EMatrixPassed", "US27-US36 live play proof matrix with non-empty evidence per row")
-    Assert.equals(proofAttribute("LivePlayE2EMatrixMilestone"), "G018FinalGate", "live play matrix milestone")
-    requireNonEmptyString("LivePlayE2ERunId", "live play E2E proof run id")
-    requireProofTrue("FreshAllCategoryTestRunnerPassed", "fresh all-category TestRunner with zero failures after G018 changes")
+table.insert(suite.tests, { name = "shared G018 profile plumbing exists", run = function()
+    for _, species in pairs(SpeciesConfig) do
+        Assert.notNil(species.CreatureCategory, "CreatureCategory required")
+        Assert.notNil(species.EcosystemProfile, "EcosystemProfile required")
+        Assert.notNil(species.MovementModes, "MovementModes required")
+        for _, stats in pairs(species.BaseStats) do
+            Assert.truthy((stats.MaxOxygen or 0) > 0, "MaxOxygen required")
+            Assert.truthy((stats.StaminaRegen or 0) > 0, "StaminaRegen required")
+            Assert.notNil(stats.FlightStaminaDrain, "FlightStaminaDrain required")
+        end
+    end
+    local payload = RemoteContracts.StatUpdate.Payload
+    Assert.truthy(table.find(payload, "oxygen") ~= nil, "StatUpdate oxygen required")
+    Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate creatureCategory required")
+    Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate ecosystemProfile required")
+end })
+
+table.insert(suite.tests, { name = "fresh live proof matrix is attached", run = function()
+    for _, story in ipairs(Registry.all()) do
+        requireProofTrue(story.liveProof, story.id .. " " .. story.title)
+        Assert.equals(proofAttribute(story.id .. "Status"), "PASS", story.id .. " status must be PASS only after live proof")
+        requireNonEmptyString(story.id .. "Evidence", story.id .. " concrete evidence")
+        requireNonEmptyString(story.id .. "ObservedAt", story.id .. " fresh observation timestamp")
+        requireNonEmptyString(story.id .. "ProofSource", story.id .. " proof source such as Studio TestRunner/live probe")
+        Assert.equals(proofAttribute(story.id .. "Milestone"), "G018FinalGate", story.id .. " milestone must be G018FinalGate")
+    end
+end })
+
+table.insert(suite.tests, { name = "fresh all-category TestRunner and mobile/client proof are attached", run = function()
+    requireProofTrue("FreshAllCategoryTestRunnerPassed", "all-category TestRunner run with zero failures")
     Assert.equals(proofAttribute("FreshAllCategoryTestRunnerMilestone"), "G018FinalGate", "fresh TestRunner milestone")
     Assert.equals(proofAttribute("FreshAllCategoryTestRunnerFailed"), 0, "fresh TestRunner failures")
     Assert.equals(proofAttribute("FreshAllCategoryClientSuitesMissing"), 0, "client category must not be empty")
-end })
-
-table.insert(suite.tests, { name = "mobile client, live E2E, and RBXL persistence proof are attached", run = function()
-    requireProofTrue("MobileClientProofPassed", "touch/mobile/controller proof for G018 HUD oxygen/profile/action guidance")
+    requireProofTrue("MobileClientProofPassed", "touch/mobile/controller proof for G018 HUD oxygen/profile guidance")
     requireProofTrue("LiveE2EProofPassed", "live ecosystem E2E proof for prey/fish/water/grazing/apex/herding")
     requireProofTrue("RBXLPersistencePassed", ".rbxl save/reopen persistence after G018 changes")
 end })

@@ -1,34 +1,25 @@
 # G018 Active Work Queue
 
-Status: **IN PROGRESS / NOT RELEASE READY**
-Created: 2026-05-27.
-Scope: ecosystem expansion, water repair, grazing, flight, swimming, apex, herding, species profiles, omnivore support, UI/QA, and publish-blocker proof.
+Rule: no final PASS until live E2E, fresh all-category TestRunner, mobile/client proof, RBXL persistence, publish-blocker scan, and 500 release-ready imported visible assets pass.
+Rule: G016 owner complaints and release blockers remain authoritative until fresh evidence supersedes them.
+Rule: Creator Store / Creator Marketplace assets are primary; GenerationService remains authoring fallback only and never counts as release-ready imported assets by itself.
 
-## Release honesty constraints
+## E001 — Shared profile/stat/UI plumbing
+Status: SOURCE FIXING
+Evidence: species category/profile/movement/oxygen payload and HUD oxygen/profile guidance added; needs fresh Studio TestRunner and client proof.
+Next gate: `G018EcosystemProfileTests` plus live HUD/mobile proof.
 
-- Do **not** mark G018 final PASS from docs-only or source-only evidence.
-- Preserve the G016 release honesty contract: live Play E2E, fresh all-category TestRunner, mobile/client proof, RBXL save/reopen, and the 500 unique Creator Store release asset gate remain enforced.
-- Creator Store / Creator Marketplace imports are primary; `GenerationService` is only a backup authoring path and cannot fake Creator Store provenance or count as a release-ready imported visible asset by itself.
-- Blocked asset id `9922699889` must remain absent from source, checked-in RBXL bytes, live Studio place metadata, and publish evidence before any publish claim.
-- `.omx/ultragoal` is leader-owned; workers must not mutate Ultragoal artifacts.
+## E002 — Fish schools and water integrity
+Status: TODO
+Evidence: no fish school service or live water-volume proof yet.
+Next gate: add fish-school placement/runtime tests and live water integrity proof.
 
-## Work items
+## E003 — Grazing/herding/apex events
+Status: TODO
+Evidence: metadata exists for grazing/herding/apex categories, but behavior/event systems are not live-proven.
+Next gate: source tests + live E2E for coordinated herd motion and apex event gating.
 
-| ID | Work item | Owner lane | Status | Gate evidence required |
-| --- | --- | --- | --- | --- |
-| G018-QA-001 | Shared ecosystem profile/stat/UI plumbing | worker-1 | SOURCE FIXING | `G018EcosystemProfileTests`, StatReplication payload, HUD/client proof |
-| G018-QA-002 | Small prey ecosystem | worker-2 | SOURCE FIXING | US27 live proof, prey flee/hide/carcass evidence, placement proof |
-| G018-QA-003 | Fish schools and water integrity | worker-2 | SOURCE FIXING | US28/US29 proof attrs, fish bounds, water volume/drink/swim audit |
-| G018-QA-004 | Herbivore grazing/action orientation | worker-3 | SOURCE FIXING | US30 proof, target-facing action evidence, visible food depletion/respawn |
-| G018-QA-005 | Flight stamina and swim oxygen | worker-2 | SOURCE FIXING | US31/US32 server+client proof attrs and exploit rejection evidence |
-| G018-QA-006 | Apex, herding, profiles, omnivore | worker-4 | SOURCE FIXING | US33-US36 proof attrs, apex priority, herding, omnivore/security evidence |
-| G018-QA-007 | G018 docs/final gate/publish blocker scan | worker-5/worker-1 | SOURCE FIXING | G018 final gate files, publish scan for `9922699889`, no fake PASS |
-| G018-QA-008 | Final all-category and live play matrix | leader/QA | BLOCKED | Fresh all-category zero-failure run, live E2E run id, RBXL persistence, mobile/client proof, 500 asset count |
-
-## Current blockers before any final PASS
-
-1. G018 implementation has source/build proof but still needs fresh live proof for US27-US36.
-2. `G018FinalGateProof` has not been produced by a fresh Studio/live harness.
-3. 500 release-ready visible Creator Store assets are still required by `AssetManifest.MinimumUniqueAssets` and `AssetImportAuditService:ValidateReleaseCounts`.
-4. Local scans found no `9922699889` literal in source/RBXL bytes, but a publish claim still needs a live Studio/place metadata scan and RBXL save/reopen proof.
-5. Full all-category Studio TestRunner remains blocked by known release/proof gates until the final QA lane supplies fresh evidence.
+## E004 — Final QA and publish blockers
+Status: BLOCKED
+Evidence: local scan found no `9922699889` matches in rbxl strings/manifest, but final gate still requires fresh Studio proof attributes and 500 release-ready assets.
+Next gate: run Studio TestRunner, save/reopen audit, mobile/client proof, and asset count validation.
