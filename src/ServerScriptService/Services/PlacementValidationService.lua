@@ -217,6 +217,59 @@ function PlacementValidationService:ValidatePlan(plan)
 end
 
 
+
+function PlacementValidationService:_boundsForRect(center, size)
+    return {
+        minX = center.X - size.X / 2,
+        maxX = center.X + size.X / 2,
+        minZ = center.Z - size.Z / 2,
+        maxZ = center.Z + size.Z / 2,
+    }
+end
+
+function PlacementValidationService:ValidateGeometryCoverage(plan)
+    local failures = {}
+    local underlay = MapLayoutService.FullMapUnderlay
+    local bounds = self:_boundsForRect(underlay.center, underlay.size)
+
+    for zoneId, zone in pairs(MapLayoutService.ZoneTerrain) do
+        local zoneBounds = self:_boundsForRect(zone.center, zone.size)
+        if zoneBounds.minX < bounds.minX or zoneBounds.maxX > bounds.maxX or zoneBounds.minZ < bounds.minZ or zoneBounds.maxZ > bounds.maxZ then
+            table.insert(failures, zoneId .. " is outside full-map terrain underlay")
+        end
+        if zone.topY < underlay.topY then
+            table.insert(failures, zoneId .. " topY is below full-map terrain underlay")
+        end
+    end
+
+    for _, route in ipairs(MapLayoutService.RouteTerrain) do
+        local routeBounds = self:_boundsForRect(route.center, route.size)
+        if routeBounds.minX < bounds.minX or routeBounds.maxX > bounds.maxX or routeBounds.minZ < bounds.minZ or routeBounds.maxZ > bounds.maxZ then
+            table.insert(failures, route.name .. " route is outside full-map terrain underlay")
+        end
+    end
+
+    for _, record in ipairs(plan or self.ReferencePlan) do
+        if record.position and typeof(record.position) == "Vector3" then
+            if record.position.X < bounds.minX or record.position.X > bounds.maxX or record.position.Z < bounds.minZ or record.position.Z > bounds.maxZ then
+                table.insert(failures, tostring(record.id) .. " placement is outside full-map terrain underlay")
+            end
+            local zone = self:_zoneForBiome(record.biome)
+            if zone and record.position.Y < underlay.topY then
+                table.insert(failures, tostring(record.id) .. " placement is below safe terrain underlay")
+            end
+        end
+    end
+
+    return {
+        passed = #failures == 0,
+        failures = failures,
+        underlayName = underlay.name,
+        underlaySize = underlay.size,
+        underlayTopY = underlay.topY,
+    }
+end
+
 function PlacementValidationService:ValidateUniqueSourceAssets(records, minimum)
     minimum = minimum or self.MinimumUniqueSourceAssetIds
     local failures = {}

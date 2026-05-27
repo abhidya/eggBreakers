@@ -42,6 +42,11 @@ table.insert(suite.tests, { name = "terrain-backed zones and safe routes are con
     Assert.truthy(canyonCity and canyonCity:GetAttribute("CityRoute"), "canyon city route missing")
     Assert.truthy(swampCity and swampCity:GetAttribute("CityRoute"), "swamp city route missing")
     Assert.notNil(folders.Routes:FindFirstChild("MountainNestSaddle"), "mountain nesting cliff route missing")
+
+    local underlay = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. MapLayoutService.FullMapUnderlay.name)
+    Assert.notNil(underlay, "full-map safe terrain underlay marker missing")
+    Assert.truthy(underlay:GetAttribute("TerrainUnderlay"), "underlay marker lacks TerrainUnderlay attribute")
+    Assert.equals(underlay:GetAttribute("GroundTopY"), MapLayoutService.FullMapUnderlay.topY, "underlay top Y marker")
 end })
 
 table.insert(suite.tests, { name = "water sources remain shallow", run = function()

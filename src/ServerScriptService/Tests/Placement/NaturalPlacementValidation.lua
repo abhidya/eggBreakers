@@ -54,5 +54,12 @@ table.insert(suite.tests, { name = "final acceptance requires 500 unique source 
     Assert.falsy(duplicateResult.passed, "cloned duplicate SourceAssetId must fail final acceptance")
 end })
 
+
+table.insert(suite.tests, { name = "full-map underlay covers zones routes and reference placements", run = function()
+    local result = PlacementValidationService:ValidateGeometryCoverage(PlacementValidationService:GetReferencePlan())
+    Assert.truthy(result.passed, table.concat(result.failures, "; "))
+    Assert.equals(result.underlayName, "FullMapSafeTerrainUnderlay", "single safe terrain underlay name")
+end })
+
 TestRunner.registerSuite(suite)
 return suite

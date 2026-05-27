@@ -8,6 +8,14 @@ local MapLayoutService = {}
 MapLayoutService.MapFolderName = "Map"
 MapLayoutService.InvisibleFolderName = "InvisibleGameplayVolumes"
 
+MapLayoutService.FullMapUnderlay = {
+    name = "FullMapSafeTerrainUnderlay",
+    center = Vector3.new(-450, -10, -250),
+    size = Vector3.new(4700, 12, 4300),
+    topY = -4,
+    material = Enum.Material.Ground,
+}
+
 MapLayoutService.ZoneTerrain = {
     NurseryGrove = {
         center = Vector3.new(-2000, 0, 0),
@@ -146,6 +154,27 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     return marker
 end
 
+function MapLayoutService:EnsureFullMapUnderlayMarker(folders)
+    local underlay = self.FullMapUnderlay
+    local marker = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. underlay.name)
+    if not marker then
+        marker = Instance.new("Part")
+        marker.Name = "_INVISIBLE_" .. underlay.name
+        marker.Anchored = true
+        marker.CanCollide = false
+        marker.CanTouch = false
+        marker.CanQuery = false
+        marker.Transparency = 1
+        marker.Size = underlay.size
+        marker.Position = underlay.center
+        marker.Parent = folders.InvisibleGameplayVolumes
+    end
+    marker:SetAttribute("GameplayVolume", true)
+    marker:SetAttribute("TerrainUnderlay", true)
+    marker:SetAttribute("GroundTopY", underlay.topY)
+    return marker
+end
+
 function MapLayoutService:EnsureFallSafetyVolume(folders)
     local safety = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_FallSafetyCatch")
     if not safety then
@@ -167,6 +196,9 @@ end
 
 function MapLayoutService:EnsureTerrainContinuity(folders)
     local terrain = Workspace.Terrain
+
+    self:FillTerrainBlock(terrain, self.FullMapUnderlay.center, self.FullMapUnderlay.size, self.FullMapUnderlay.material)
+    self:EnsureFullMapUnderlayMarker(folders)
 
     for zoneId, zone in pairs(self.ZoneTerrain) do
         self:FillTerrainBlock(terrain, zone.center, zone.size, zone.material)
@@ -226,6 +258,9 @@ function MapLayoutService:ValidateLayoutFolders()
     end
     if not folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_FallSafetyCatch") then
         table.insert(missing, "_INVISIBLE_FallSafetyCatch")
+    end
+    if not folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. self.FullMapUnderlay.name) then
+        table.insert(missing, self.FullMapUnderlay.name)
     end
     return #missing == 0, missing
 end
