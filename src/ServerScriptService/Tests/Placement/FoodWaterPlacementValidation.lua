@@ -42,10 +42,12 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
     MapLayoutService:EnsureBiomeDressing(folders)
 
     local spawnPosition = Vector3.new(-2000, 12, 0)
-    local counts = { food = 0, water = 0, trees = 0 }
+    local counts = { food = 0, herbivoreFood = 0, carnivoreFood = 0, water = 0, trees = 0 }
     for _, target in ipairs(CollectionService:GetTagged("FoodSource")) do
         if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
             counts.food = counts.food + 1
+            if target:GetAttribute("Diet") == "Herbivore" then counts.herbivoreFood = counts.herbivoreFood + 1 end
+            if target:GetAttribute("Diet") == "Carnivore" then counts.carnivoreFood = counts.carnivoreFood + 1 end
             Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby food is visibly marked")
         end
     end
@@ -61,7 +63,9 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
         end
     end
 
-    Assert.truthy(counts.food >= 2, "tutorial radius has visible food")
+    Assert.truthy(counts.food >= 8, "tutorial radius has enough visible food for repeated early attempts")
+    Assert.truthy(counts.herbivoreFood >= 5, "tutorial radius has enough herbivore starter plants")
+    Assert.truthy(counts.carnivoreFood >= 3, "tutorial radius has enough carnivore starter meat/carcass")
     Assert.truthy(counts.water >= 1, "tutorial radius has visible water")
     Assert.truthy(counts.trees >= 2, "tutorial radius has visible tree trunk/canopy")
 end })
@@ -102,9 +106,9 @@ table.insert(suite.tests, { name = "placed food sources have diet nutrition tags
             if zone == "ApocalypticCity" then counts.CityReward = counts.CityReward + 1 end
         end
     end
-    Assert.truthy(counts.NurseryGrove >= 2, "nursery starter plant count")
-    Assert.truthy(counts.FernPlains >= 2, "Fern Plains plant density")
-    Assert.truthy(counts.Carnivore >= 4, "carnivore prey/carcass source count")
+    Assert.truthy(counts.NurseryGrove >= 8, "nursery starter food density")
+    Assert.truthy(counts.FernPlains >= 3, "Fern Plains plant density")
+    Assert.truthy(counts.Carnivore >= 8, "carnivore prey/carcass source count")
     Assert.truthy(counts.CityReward >= 2, "city high-risk food rewards")
 end })
 

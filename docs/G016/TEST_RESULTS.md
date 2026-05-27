@@ -102,3 +102,7 @@ Source checks passed after updating `AssetAuditService` to allow explicit invisi
 ## Carnivore Prey Loop + Food Density — 2026-05-27T13:47Z
 
 Fresh source checks passed. Studio MCP cloned proof showed enough starter food after patch: nearby herbivore food `9`, nearby carnivore food `4`, all visible herbivore food `19`, all visible carnivore food `14`. Carnivore loop proof: predator attacked herbivore prey, prey became `Dead`, a carnivore carcass was created, and a velociraptor player ate the carcass (`Hunger 30 -> 65`). These procedural gameplay affordances remain excluded from the 500 imported asset count.
+
+## Food Density Regression Tests — 2026-05-27T13:55Z
+
+Fresh source checks passed. Studio E2E category passed `27/28`; only failure remains the intentional 500-asset release gate. Studio Placement category passed `38/40`; new density checks passed for at least 8 nearby tutorial foods, 5 herbivore starter foods, and 3 carnivore meat/carcass sources. The carnivore E2E now proves predator kills herbivore prey, carcass is created, and a carnivore eats it for hunger gain.

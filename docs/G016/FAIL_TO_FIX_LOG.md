@@ -306,3 +306,18 @@ Next action: sync/reload Studio to apply audit source changes, then continue act
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: fresh Studio sync/reload or asset import batch; keep procedural food separate from release imported asset count.
+
+## Run G016-R021 — food-density regression tests — 2026-05-27T13:55Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-food-density-tests.rbxl`, `git diff --check`, Studio MCP E2E category, Studio MCP Placement category.
+Passed: source syntax/build/diff checks passed. E2E category passed `27/28`; the only E2E failure is the intentional G013 500-asset release gate at `30/500`. The new carnivore-prey-carcass regression passed inside E2E. Placement category passed `38/40`; new food-density assertions passed, proving at least 8 nearby foods, at least 5 herbivore starter foods, and at least 3 carnivore starter meat/carcass sources in the tutorial radius.
+Failed: Placement still has 2 stale/unsynced audit failures in active Studio: placeholder/import manifest noise and one manifest biome coherence rule. Release asset gate remains `30/500`.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: carnivore/prey/food density needed executable regression coverage after the gameplay patch.
+Root cause: previous proof existed as a Studio MCP probe/log only; no tests enforced minimum food density or predator-kills-herbivore-carcase-eat flow.
+Patch applied: strengthened `FoodWaterPlacementValidation` density assertions and replaced the carnivore E2E carcass test with predator-kills-herbivore-prey -> carcass -> carnivore-eats-carcase -> hunger-gain flow.
+Retest result: target E2E/placement regressions PASS; final release still honest FAIL on US14/RBXL/fresh synced all-category.
+Next action: fresh Studio sync/reload or real asset import batch; do not count procedural food as imported release assets.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: fresh sync/reload to clear stale Studio audit noise, then continue US14 asset materialization from 30/500.

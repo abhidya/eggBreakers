@@ -12,18 +12,25 @@ local function food(diet) local f=Instance.new("Part"); f.Position=Vector3.new(2
 
 table.insert(suite.tests,{name="carnivore rejects plant accepts meat",run=function() local p=setup(43001); local plant=food("Herbivore"); Assert.falsy(FoodWaterService:RequestEat(p,plant),"carnivore rejects plant"); RateLimitService:ClearPlayer(p); local meat=food("Carnivore"); Assert.truthy(FoodWaterService:RequestEat(p,meat),"carnivore eats meat"); plant:Destroy(); meat:Destroy() end})
 table.insert(suite.tests,{name="hunt attack applies species damage and stamina cost",run=function() local p,s=setup(43002); local startingStamina=s.Stamina; local prey=Instance.new("Part"); prey.Position=Vector3.new(5,3,0); prey.Parent=workspace; CollectionService:AddTag(prey,"Damageable"); Assert.truthy(CombatService:RequestAttack(p,"Claw",prey),"server hunt attack succeeds"); Assert.equals(prey:GetAttribute("LastServerDamage"),7,"hatchling velociraptor claw applies configured damage"); Assert.equals(s.Stamina,startingStamina-10,"claw consumes configured stamina cost"); prey:Destroy() end})
-table.insert(suite.tests,{name="dead prey creates carnivore carcass food",run=function()
-    local p=setup(43003)
-    local prey=Instance.new("Model"); prey.Name="FoodPreyNPC"; prey:PivotTo(CFrame.new(3,12,0)); prey.Parent=workspace
-    local ok, record=NPCService:Register(prey,"Prey")
-    Assert.truthy(ok,"prey registered")
-    Assert.truthy(NPCService:Transition(record,"Dead"),"prey can die")
-    local carcass=record.Carcass
-    Assert.notNil(carcass,"carcass created")
+table.insert(suite.tests,{name="predator kills herbivore prey and carnivore eats carcass",run=function()
+    local p,state=setup(43003)
+    state.Hunger=30
+    local predator=Instance.new("Model"); predator.Name="HuntingPredatorNPC"; local predatorRoot=Instance.new("Part"); predatorRoot.Name="HumanoidRootPart"; predatorRoot.Parent=predator; predator.PrimaryPart=predatorRoot; predator:PivotTo(CFrame.new(0,3,0)); predator.Parent=workspace
+    local prey=Instance.new("Model"); prey.Name="HerbivoreFoodPreyNPC"; local preyRoot=Instance.new("Part"); preyRoot.Name="HumanoidRootPart"; preyRoot.Parent=prey; prey.PrimaryPart=preyRoot; prey:PivotTo(CFrame.new(6,3,0)); prey.Parent=workspace
+    local predatorOk,predatorRecord=NPCService:Register(predator,"Predator")
+    local preyOk,preyRecord=NPCService:Register(prey,"Prey")
+    Assert.truthy(predatorOk and preyOk,"predator and prey registered")
+    predatorRecord.Hatched=true; preyRecord.Hatched=true; preyRecord.Health=20
+    Assert.truthy(NPCService:AttackRecord(predatorRecord,preyRecord),"predator attacks herbivore prey")
+    Assert.equals(preyRecord.State,"Dead","herbivore prey dies")
+    local carcass=preyRecord.Carcass
+    Assert.notNil(carcass,"dead herbivore leaves carcass")
     Assert.equals(carcass:GetAttribute("Diet"),"Carnivore","carcass is carnivore food")
+    local root=p.Character:FindFirstChild("HumanoidRootPart"); root.Position=carcass:GetPivot().Position+Vector3.new(0,0,-3)
     RateLimitService:ClearPlayer(p)
     local eatOk=FoodWaterService:RequestEat(p,carcass)
-    Assert.truthy(eatOk,"carnivore eats prey carcass")
-    prey:Destroy(); carcass:Destroy()
+    Assert.truthy(eatOk,"carnivore eats herbivore prey carcass")
+    Assert.truthy(state.Hunger > 30,"carcass restores carnivore hunger")
+    predator:Destroy(); prey:Destroy(); carcass:Destroy()
 end})
 return suite
