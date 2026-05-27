@@ -801,3 +801,18 @@ Next action: continue Creator Store batches with more duplicate-resistant catego
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch031 and move US14 from `163/500` toward 500 while keeping `scriptObjectsFound=0`, food `GameplayQuery` intentional, and performance green.
+
+## Run G016-R054 — Creator Store import Batch031 — 2026-05-27T14:38Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch031 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: vending machine `15841399451`, road sign `9460880283`, pink wildflower `8747386278`, agave `1389693258`, crystal geode `2327073073`. Import quarantine found `0` script objects and `0` particle emitters. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=167`, `releaseReadyVisibleAssets=167`, `placedVisibleAssets=167`, `taggedImportedAssets=167`, `auditedImportedAssets=167`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=167`, `releaseReadyVisibleAssets=167`, expected at least `500`. Remaining gap is `333` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch031 added four net unique release-ready assets because one inserted SourceAssetId was already represented in the release audit set.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch031.
+Root cause: unique release-ready imports are increasing, but the final 500-asset release threshold is still unmet.
+Patch applied: no source patch; Studio place state received Batch031 imported assets under `Workspace.Map.ImportedAssets.G016Batch031` with release/audit/performance-safe attributes.
+Retest result: Batch031 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; keep using specific category queries and performance checks after every batch.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch032 and move US14 from `167/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
