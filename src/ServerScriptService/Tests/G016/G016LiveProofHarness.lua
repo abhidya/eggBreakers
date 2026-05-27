@@ -19,6 +19,10 @@ local function loadServices(serviceRoot)
         NPCSpawnService = require(serviceRoot.NPCSpawnService),
         MapLayoutService = require(serviceRoot.MapLayoutService),
         WeatherBiomeService = require(serviceRoot.WeatherBiomeService),
+        CityDiscoveryService = require(serviceRoot.CityDiscoveryService),
+        FossilService = require(serviceRoot.FossilService),
+        PlayerDataService = require(serviceRoot.PlayerDataService),
+        CallService = require(serviceRoot.CallService),
     }
 end
 
@@ -100,6 +104,10 @@ function G016LiveProofHarness:Run(options)
         local NPCSpawnService = services.NPCSpawnService
         local MapLayoutService = services.MapLayoutService
         local WeatherBiomeService = services.WeatherBiomeService
+        local CityDiscoveryService = services.CityDiscoveryService
+        local FossilService = services.FossilService
+        local PlayerDataService = services.PlayerDataService
+        local CallService = services.CallService
 
         local folders = MapLayoutService:EnsureMapFolders()
         MapLayoutService:EnsureSpawnSafety()
@@ -241,12 +249,34 @@ function G016LiveProofHarness:Run(options)
         for _, item in ipairs(CollectionService:GetTagged("WaterSource")) do if item:IsA("BasePart") and item.Transparency < 1 then waterCount = waterCount + 1 end end
         assertTrue(treeCount >= 20 and foodCount >= 2 and waterCount >= 1, "tree/food/water visibility proof failed")
 
+        local cityDiscovered = CityDiscoveryService:Discover(player, "ApocalypticCity")
+        assertTrue(cityDiscovered == true, "Old Eden city discovery did not grant")
+        assertTrue(player.LastNotification and player.LastNotification.message == "Old Eden discovered", "Old Eden notification missing")
+        local fossil = Instance.new("Part")
+        fossil.Name = "G016CityFossilProof"
+        fossil.Position = root.Position + Vector3.new(0, 0, -3)
+        fossil:SetAttribute("FossilReward", 3)
+        fossil:SetAttribute("ZoneId", "ApocalypticCity")
+        fossil:SetAttribute("CreatorStoreOnly", true)
+        fossil:SetAttribute("ImportedVisibleAsset", true)
+        fossil.Parent = Workspace
+        table.insert(created, fossil)
+        CollectionService:AddTag(fossil, "Fossil")
+        RateLimitService:ClearPlayer(player)
+        local fossilOk, fossilReason = FossilService:RequestCollect(player, fossil)
+        assertTrue(fossilOk == true and PlayerDataService:Get(player).Fossils >= 3 and fossil:GetAttribute("Collected") == true, "fossil collect failed: " .. tostring(fossilOk) .. "/" .. tostring(fossilReason))
+
+        local callOk, callResult = CallService:RequestCall(player, "Warning")
+        assertTrue(callOk == true and callResult and callResult.Marker and callResult.Marker:GetAttribute("VisibleActionEffect") == true, "call visible action effect missing")
+        local actionMotionProof = eatOk == true and drinkOk == true and attackOk == true and callOk == true and preyRecord.State ~= nil
+
         proof:SetAttribute("HatchLiveProofPassed", true)
         proof:SetAttribute("VisibleDinosaurCount", visibleDinosaurs)
         proof:SetAttribute("VisibleCarnivoreCount", carnivores)
         proof:SetAttribute("NPCActiveStateTransitionsPassed", true)
         proof:SetAttribute("TreesFoodWaterVisibilityPassed", true)
         proof:SetAttribute("GrowthScaleFromFoodWaterPassed", true)
+        proof:SetAttribute("ActionMotionProofPassed", actionMotionProof)
         proof:SetAttribute("L005LiveProbeRunId", runId)
         proof:SetAttribute("LiveE2EProofRunId", runId)
         proof:SetAttribute("LiveE2EProofPassed", true)
@@ -259,6 +289,8 @@ function G016LiveProofHarness:Run(options)
         setStoryProof(proof, "US06", "food+water raised stats and growth visual scale", source, timestamp)
         setStoryProof(proof, "US07", "server combat reduced real health on tutorial target", source, timestamp)
         setStoryProof(proof, "US08", "12 active NPCs, >=10 visible, >=2 carnivores, active brain transition", source, timestamp)
+        setStoryProof(proof, "US09", "Old Eden discovery notification and server fossil collection both passed", source, timestamp)
+        setStoryProof(proof, "US10", "Warning call created visible pulse marker", source, timestamp)
         setStoryProof(proof, "US12", "Kill set health zero/dead and Respawn returned hatchling egg state", source, timestamp)
 
         proof:SetAttribute("LastCoreLiveProofFailure", nil)

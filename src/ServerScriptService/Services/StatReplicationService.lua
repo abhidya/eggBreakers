@@ -32,10 +32,13 @@ function StatReplicationService:Send(player, state)
 end
 
 function StatReplicationService:Notify(player, message, notificationType, duration, icon)
+    local payload = { message = message, type = notificationType or "Info", duration = duration or 3, icon = icon }
+    if type(player) == "table" then
+        player.LastNotification = payload
+    end
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local event = remotes and remotes:FindFirstChild("ClientNotification")
 	if event then
-		local payload = { message = message, type = notificationType or "Info", duration = duration or 3, icon = icon }
 		local ok = pcall(function()
 			event:FireClient(player, payload)
 		end)
@@ -43,6 +46,7 @@ function StatReplicationService:Notify(player, message, notificationType, durati
 			player.LastNotification = payload
 		end
 	end
+    return payload
 end
 
 return StatReplicationService

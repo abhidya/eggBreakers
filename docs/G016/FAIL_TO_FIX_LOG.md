@@ -201,3 +201,18 @@ Next action: implement/prove US09 city/fossil, action motion proof, and fresh re
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: add US09/action-motion proof harness or run fresh Play client probe; do not mark final PASS.
+
+## Run G016-R014 — US09 and action-effect proof — 2026-05-27T13:01Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-notification-proof.rbxl`, `git diff --check`, Studio MCP inline proof with cloned services, fresh G016FinalGateSuite check.
+Passed: US09/action inline proof passed: Old Eden discovery returned true, notification text was `Old Eden discovered`, fossil collect granted 3 fossils, carnivore eat passed, attack reduced target health to 2, and call created visible pulse marker. `StatReplicationService:Notify` now records notifications for test doubles even when no RemoteEvent exists.
+Failed: G016FinalGate still fails because current Studio proof folder did not retain earlier core proof attrs (US01 etc.), and larger gates remain missing: fresh all-category proof, mobile/controller proof, RBXL persistence proof, 500 imported assets.
+Top failing story: US15 Fresh full QA gate after proof attr reset; otherwise US13/mobile, US14/assets remain.
+Failure: Old Eden notification proof could not be observed on MockPlayer when no client RemoteEvent path existed.
+Root cause: `StatReplicationService:Notify` only stored fallback notification after a failed RemoteEvent call, not when no event existed.
+Patch applied: `Notify` now always stores `LastNotification` for table-backed test doubles and returns the payload; harness extended to cover US09, US10, and action-effect proof.
+Retest result: targeted proof PASS; final gate remains honest FAIL.
+Next action: run the full core harness and US09/action proof in one fresh Studio session, then continue mobile/RBXL/asset gates.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: consolidate proof runs and continue remaining release gates.
