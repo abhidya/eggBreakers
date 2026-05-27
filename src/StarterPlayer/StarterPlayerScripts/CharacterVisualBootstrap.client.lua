@@ -6,6 +6,7 @@ local player = Players.LocalPlayer
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local VISUAL_NAME = "_EggBreakersCharacterVisualClient"
+local DEBUG_VISUAL_FALLBACK = false
 local hatchProgress = 0
 local hatched = false
 
@@ -64,13 +65,15 @@ local function makePart(name, size, color)
 end
 
 local function showEgg(character)
+    if not DEBUG_VISUAL_FALLBACK then return false end
     local root = rootFor(character)
     if not root then return false end
     clearVisual(character)
     hideDefaultAvatar(character)
     local model = Instance.new("Model")
     model.Name = VISUAL_NAME
-    model:SetAttribute("VisualKind", "Egg")
+    model:SetAttribute("VisualKind", "DebugEggFallback")
+    model:SetAttribute("DebugOnly", true)
     local shell = makePart("EggVisual", Vector3.new(3.5, 4.5, 3.5), Color3.fromRGB(232, 221, 190))
     shell.Shape = Enum.PartType.Ball
     shell.Parent = model
@@ -80,13 +83,15 @@ local function showEgg(character)
 end
 
 local function showDinosaur(character)
+    if not DEBUG_VISUAL_FALLBACK then return false end
     local root = rootFor(character)
     if not root then return false end
     clearVisual(character)
     hideDefaultAvatar(character)
     local model = Instance.new("Model")
     model.Name = VISUAL_NAME
-    model:SetAttribute("VisualKind", "DinosaurFallback")
+    model:SetAttribute("VisualKind", "DebugDinosaurFallback")
+    model:SetAttribute("DebugOnly", true)
     local body = makePart("DinosaurVisual", Vector3.new(4.5, 2, 6), Color3.fromRGB(64, 142, 74))
     body.Parent = model
     weld(root, body, CFrame.new(0, -1.1, -0.2))
