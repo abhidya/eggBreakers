@@ -546,3 +546,18 @@ Next action: continue Creator Store batches; avoid mossy/fallen log queries that
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch015 with lower duplicate risk and keep `scriptObjectsFound=0`.
+
+## Run G016-R037 — Creator Store import Batch015 — 2026-05-27T16:28Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch015 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: gas pump `10662659970`, cattails `13261235137`, stone skull `178057508`, fallen branch `84953839342564`, concrete barrier `11971201462`. Import quarantine removed `3` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=95`, `releaseReadyVisibleAssets=95`, `placedVisibleAssets=95`, `taggedImportedAssets=95`, `auditedImportedAssets=95`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=95`, `releaseReadyVisibleAssets=95`, expected at least `500`. Remaining gap is `405` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch015.
+Root cause: import lane is progressing with unique assets, but 95 is still below the 500 release threshold.
+Patch applied: no source patch; Studio place state received Batch015 imported assets under `Workspace.Map.ImportedAssets.G016Batch015` with release/audit attributes.
+Retest result: Batch015 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; checkpoint milestone at 100+ assets next batch.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch016 and pass the 100 release-ready asset milestone while keeping `scriptObjectsFound=0`.

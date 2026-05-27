@@ -192,3 +192,9 @@ No final PASS: US14 still needs 414 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch014: broken computer `2580502216`, leaves pile `10639902460`, monolith `12757558412`, mossy log duplicate `18497743057`, bones pile `54636442`. Quarantine removed `12` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=90`, `releaseReadyVisibleAssets=90`, and `placedVisibleAssets=90`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=90; expected at least 500` and `releaseReadyVisibleAssets=90; expected at least 500`.
 
 No final PASS: US14 still needs 410 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch015 Audit — 2026-05-27T16:28Z
+
+Studio MCP imported and audited Batch015: gas pump `10662659970`, cattails `13261235137`, stone skull `178057508`, fallen branch `84953839342564`, concrete barrier `11971201462`. Quarantine removed `3` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=95`, `releaseReadyVisibleAssets=95`, and `placedVisibleAssets=95`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=95; expected at least 500` and `releaseReadyVisibleAssets=95; expected at least 500`.
+
+No final PASS: US14 still needs 405 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
