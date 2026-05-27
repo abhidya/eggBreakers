@@ -17,7 +17,11 @@ function StatReplicationService:BuildPayload(state)
         diet = state.Diet,
         species = state.SpeciesId,
         creatureCategory = state.CreatureCategory,
-        movementModes = state.MovementModes or {},
+        oxygen = state.Oxygen,
+        maxOxygen = state.MaxOxygen or 100,
+        swimming = state.Swimming == true,
+        flying = state.Flying == true,
+        movementModes = state.MovementModes or { swimming = state.Swimming == true, flying = state.Flying == true },
         ecosystemProfile = state.EcosystemProfile or {},
         statusEffects = state.StatusEffects or {},
     }

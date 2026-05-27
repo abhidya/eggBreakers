@@ -1,0 +1,34 @@
+local RemoteValidationService = require(script.Parent.RemoteValidationService)
+local SurvivalService = require(script.Parent.SurvivalService)
+local WaterService = require(script.Parent.WaterService)
+local OxygenService = require(script.Parent.OxygenService)
+
+local SwimService = {}
+SwimService.SwimDistance = 16
+SwimService.StaminaCost = 4
+
+function SwimService:RequestSwim(player, water)
+    if not RemoteValidationService:CheckRate(player, "RequestSwim") then return false, "rate_limited" end
+    local state = SurvivalService:GetState(player)
+    if not RemoteValidationService:IsAlive(state) or not RemoteValidationService:IsHatched(state) then return false, "not_alive_hatched" end
+    if not WaterService:IsWaterSource(water) then return false, "not_water" end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not RemoteValidationService:IsClose(root, water, self.SwimDistance) then return false, "too_far" end
+    if not SurvivalService:ConsumeStamina(player, self.StaminaCost) then return false, "low_stamina" end
+    state.Swimming = true
+    state.Flying = false
+    state.CurrentWaterSource = water.Name
+    OxygenService:EnsureOxygen(state)
+    return true, state
+end
+
+function SwimService:StopSwimming(player)
+    local state = SurvivalService:GetState(player)
+    if not state then return false, "missing_state" end
+    state.Swimming = false
+    state.CurrentWaterSource = nil
+    return true, state
+end
+
+return SwimService

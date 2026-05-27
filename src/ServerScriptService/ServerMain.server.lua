@@ -9,6 +9,8 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local PlayerDataService = require(script.Parent.Services.PlayerDataService)
 local SurvivalService = require(script.Parent.Services.SurvivalService)
 local FoodWaterService = require(script.Parent.Services.FoodWaterService)
+local SwimService = require(script.Parent.Services.SwimService)
+local FlightService = require(script.Parent.Services.FlightService)
 local CombatService = require(script.Parent.Services.CombatService)
 local GroupService = require(script.Parent.Services.GroupService)
 local CallService = require(script.Parent.Services.CallService)
@@ -158,6 +160,22 @@ Remotes.RequestDrink.OnServerEvent:Connect(function(player, target)
     notifyResult(player, ok, result, "Drank water")
     sendStats(player)
 end)
+
+if Remotes:FindFirstChild("RequestSwim") then
+    Remotes.RequestSwim.OnServerEvent:Connect(function(player, water)
+        local ok, result = SwimService:RequestSwim(player, water)
+        notifyResult(player, ok, result, "Swimming")
+        sendStats(player)
+    end)
+end
+
+if Remotes:FindFirstChild("RequestFlight") then
+    Remotes.RequestFlight.OnServerEvent:Connect(function(player, enabled)
+        local ok, result = FlightService:RequestFlight(player, enabled == true)
+        notifyResult(player, ok, result, enabled == true and "Flight active" or "Flight off")
+        sendStats(player)
+    end)
+end
 
 Remotes.RequestAttack.OnServerEvent:Connect(function(player, attackType, target)
     local ok, result = CombatService:RequestAttack(player, attackType, target)
