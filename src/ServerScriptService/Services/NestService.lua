@@ -12,10 +12,11 @@ function NestService:RequestNestAction(player, actionType, nestInstance)
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not RemoteValidationService:HasTag(nestInstance, "NestZone") then return false, "bad_nest_zone" end
     if not RemoteValidationService:IsClose(root, nestInstance, self.Distance) then return false, "too_far" end
-    self.Nests[player] = { Owner = player, Instance = nestInstance, UpdatedAt = os.time(), Action = actionType }
+    local outcome = { EggSlots = 1, HatchlingBuff = "NestRested" }
+    self.Nests[player] = { Owner = player, Instance = nestInstance, UpdatedAt = os.time(), Action = actionType, Outcome = outcome }
     state.NestRespawn = nestInstance
-    state.NestEggSlots = math.max(state.NestEggSlots or 0, actionType == "Create" and 1 or 0)
-    state.HatchlingBuff = state.HatchlingBuff or { Source = "Nest", HungerBonus = 5, ThirstBonus = 5 }
+    state.NestEggSlots = outcome.EggSlots
+    state.HatchlingBuff = outcome.HatchlingBuff
     return true, self.Nests[player]
 end
 

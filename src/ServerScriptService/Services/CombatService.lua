@@ -12,21 +12,26 @@ function CombatService:AttackAllowedForSpecies(state, attackType)
     return species.Abilities.PrimaryAttack == attackType or species.Abilities.SecondaryAbility == attackType
 end
 
-function CombatService:ApplyDamageToTarget(target, damage)
-    local humanoid = target and (target:IsA("Humanoid") and target or target:FindFirstChildOfClass("Humanoid"))
+function CombatService:ApplyDamage(target, damage, attacker)
+    if not target then return false, "missing_target" end
+    local humanoid = target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") or nil
     if humanoid then
         humanoid:TakeDamage(damage)
-        return true, humanoid.Health
+        target:SetAttribute("Health", humanoid.Health)
+    else
+        local currentHealth = target:GetAttribute("Health")
+        if currentHealth == nil then currentHealth = target:GetAttribute("MaxHealth") or 100 end
+        local nextHealth = math.max(0, currentHealth - damage)
+        target:SetAttribute("Health", nextHealth)
+        if nextHealth <= 0 then
+            target:SetAttribute("Dead", true)
+            target:SetAttribute("Defeated", true)
+        end
     end
-    local currentHealth = target:GetAttribute("Health") or target:GetAttribute("DamageableHealth") or target:GetAttribute("MaxHealth") or 25
-    local nextHealth = math.max(0, currentHealth - damage)
-    target:SetAttribute("Health", nextHealth)
-    target:SetAttribute("DamageableHealth", nextHealth)
-    target:SetAttribute("LastServerDamage", damage)
-    if nextHealth <= 0 then
-        target:SetAttribute("Dead", true)
-    end
-    return true, nextHealth
+    target:SetAttribute("LastDamage", damage)
+    target:SetAttribute("LastDamagedByUserId", attacker and attacker.UserId or 0)
+    target:SetAttribute("PendingServerDamage", damage)
+    return true
 end
 
 function CombatService:RequestAttack(player, attackType, target)
@@ -45,7 +50,7 @@ function CombatService:RequestAttack(player, attackType, target)
     if not SurvivalService:ConsumeStamina(player, cost) then return false, "no_stamina" end
     if target then
         local damage = SpeciesConfig[state.SpeciesId].BaseStats[state.GrowthStage].Damage
-        self:ApplyDamageToTarget(target, damage)
+        self:ApplyDamage(target, damage, player)
     end
     return true, state
 end

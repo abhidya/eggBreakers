@@ -1,8 +1,9 @@
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local ProgressionService = require(script.Parent.ProgressionService)
 local StatReplicationService = require(script.Parent.StatReplicationService)
 
-local CityDiscoveryService = { Discovered = {} }
+local CityDiscoveryService = { Discovered = {}, TriggerConnections = {} }
 
 function CityDiscoveryService:Discover(player, zoneId)
     if zoneId ~= "ApocalypticCity" then
@@ -16,27 +17,57 @@ function CityDiscoveryService:Discover(player, zoneId)
     return true
 end
 
-function CityDiscoveryService:BindTrigger(triggerPart)
-    if not triggerPart or triggerPart:GetAttribute("CityDiscoveryBound") then return false end
-    triggerPart:SetAttribute("CityDiscoveryBound", true)
-    triggerPart.Touched:Connect(function(hit)
-        local character = hit and hit.Parent
-        local player = character and Players:GetPlayerFromCharacter(character)
-        if player then
-            self:Discover(player, triggerPart:GetAttribute("ZoneId") or "ApocalypticCity")
-        end
+function CityDiscoveryService:GetTriggerFolder()
+    local map = Workspace:FindFirstChild("Map") or Workspace
+    local folder = map:FindFirstChild("CityDiscoveryTriggers")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "CityDiscoveryTriggers"
+        folder.Parent = map
+    end
+    return folder
+end
+
+function CityDiscoveryService:HandleTriggerTouched(trigger, hit)
+    local character = hit and hit.Parent
+    local player = character and Players:GetPlayerFromCharacter(character)
+    if not player then return false, "no_player" end
+    return self:Discover(player, trigger:GetAttribute("ZoneId") or "ApocalypticCity")
+end
+
+function CityDiscoveryService:BindTrigger(trigger)
+    if not trigger or self.TriggerConnections[trigger] then return false, "already_bound" end
+    self.TriggerConnections[trigger] = trigger.Touched:Connect(function(hit)
+        self:HandleTriggerTouched(trigger, hit)
     end)
+    trigger:SetAttribute("DiscoveryTriggerBound", true)
     return true
 end
 
-function CityDiscoveryService:BindTriggers(root)
-    local bound = 0
-    for _, instance in ipairs((root or workspace):GetDescendants()) do
-        if instance:IsA("BasePart") and instance:GetAttribute("CityDiscoveryTrigger") == true then
-            if self:BindTrigger(instance) then bound = bound + 1 end
-        end
+function CityDiscoveryService:EnsureCityTrigger(zoneId, position)
+    zoneId = zoneId or "ApocalypticCity"
+    local folder = self:GetTriggerFolder()
+    local trigger = folder:FindFirstChild(zoneId .. "Trigger")
+    if not trigger then
+        trigger = Instance.new("Part")
+        trigger.Name = zoneId .. "Trigger"
+        trigger.Anchored = true
+        trigger.CanCollide = false
+        trigger.CanTouch = true
+        trigger.CanQuery = true
+        trigger.Transparency = 1
+        trigger.Size = Vector3.new(60, 24, 60)
+        trigger.Position = position or Vector3.new(0, 12, -220)
+        trigger:SetAttribute("ZoneId", zoneId)
+        trigger:SetAttribute("DiscoveryTrigger", true)
+        trigger.Parent = folder
     end
-    return bound
+    self:BindTrigger(trigger)
+    return trigger
+end
+
+function CityDiscoveryService:EnsureCityDiscoveryTriggers()
+    return self:EnsureCityTrigger("ApocalypticCity")
 end
 
 function CityDiscoveryService:Clear(player)

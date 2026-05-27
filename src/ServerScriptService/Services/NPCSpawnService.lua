@@ -1,7 +1,8 @@
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 local NPCService = require(script.Parent.NPCService)
 
-local NPCSpawnService = { SpawnLoopStarted = false }
+local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
 NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "Predator" }
 NPCSpawnService.SpawnTickSeconds = 10
@@ -59,16 +60,21 @@ function NPCSpawnService:MaintainMinimumActive()
     return active
 end
 
-function NPCSpawnService:StartSpawnLoop()
-    if self.SpawnLoopStarted then return false, "already_started" end
-    self.SpawnLoopStarted = true
+function NPCSpawnService:StartSpawnLoop(intervalSeconds)
+    if self.SpawnLoopRunning then return false, "already_running" end
+    self.SpawnLoopRunning = true
     task.spawn(function()
-        while self.SpawnLoopStarted do
+        while self.SpawnLoopRunning do
             self:MaintainMinimumActive()
-            task.wait(self.SpawnTickSeconds)
+            NPCService:Tick(Players:GetPlayers())
+            task.wait(intervalSeconds or 3)
         end
     end)
     return true
+end
+
+function NPCSpawnService:StopSpawnLoop()
+    self.SpawnLoopRunning = false
 end
 
 return NPCSpawnService

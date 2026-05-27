@@ -6,9 +6,21 @@ function GroupService:RequestInvite(player, targetPlayer)
     if typeof(targetPlayer) ~= "Instance" or not targetPlayer:IsA("Player") then return false, "bad_target" end
     if player == targetPlayer then return false, "self_invite" end
     self.PendingInvites[targetPlayer] = self.PendingInvites[targetPlayer] or {}
-    local invite = { From = player, To = targetPlayer, CreatedAt = os.time() }
+    local invite = { From = player, To = targetPlayer, ExpiresAt = os.time() + 60 }
     self.PendingInvites[targetPlayer][player] = invite
     return true, invite
+end
+
+function GroupService:AcceptInvite(player, fromPlayer)
+    if not RemoteValidationService:CheckRate(player, "RequestGroupAccept") then return false, "rate_limited" end
+    local incoming = self.PendingInvites[player]
+    local invite = incoming and incoming[fromPlayer]
+    if not invite or invite.ExpiresAt < os.time() then return false, "no_invite" end
+    incoming[fromPlayer] = nil
+    local group = self.PlayerGroup[fromPlayer] or self:CreateOrJoin(fromPlayer, "Herd")
+    group.Members[player] = true
+    self.PlayerGroup[player] = group
+    return true, group
 end
 
 function GroupService:CreateOrJoin(player, groupType)

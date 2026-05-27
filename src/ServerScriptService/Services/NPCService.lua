@@ -61,6 +61,48 @@ function NPCService:Transition(record, nextState)
     return true
 end
 
+function NPCService:GetRecordPosition(record)
+    local npc = record and record.Instance
+    if npc and npc.GetPivot then
+        return npc:GetPivot().Position
+    elseif npc and npc:IsA("BasePart") then
+        return npc.Position
+    end
+    return record and record.SpawnPosition or Vector3.new(0, 0, 0)
+end
+
+function NPCService:TickPreyFlee(record, threatPosition, fleeDistance)
+    if not record or record.Kind ~= "Prey" or record.State == "Dead" then return false, "not_active_prey" end
+    if typeof(threatPosition) ~= "Vector3" then return false, "missing_threat" end
+    local position = self:GetRecordPosition(record)
+    if (position - threatPosition).Magnitude <= (fleeDistance or 55) then
+        record.FleeFrom = threatPosition
+        record.LastFleeAt = os.time()
+        return self:Transition(record, "Flee")
+    end
+    if record.State == "Flee" then
+        return self:Transition(record, "Wander")
+    end
+    return false, "no_threat"
+end
+
+function NPCService:Tick(players)
+    local fled = 0
+    for _, record in ipairs(self.NPCs) do
+        if record.Kind == "Prey" and record.State ~= "Dead" then
+            for _, player in ipairs(players or {}) do
+                local character = player.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if root and self:TickPreyFlee(record, root.Position) then
+                    fled = fled + 1
+                    break
+                end
+            end
+        end
+    end
+    return fled
+end
+
 function NPCService:CanChaseIntoZone(zoneId, scriptedTutorialScare)
     if zoneId == "NurseryGrove" and not scriptedTutorialScare then return false end
     return true

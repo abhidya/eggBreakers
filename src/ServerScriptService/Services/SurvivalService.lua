@@ -1,8 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
-local SurvivalService = { States = {}, TickLoopStarted = false }
-SurvivalService.NeedsTickSeconds = 1
+local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1 }
 
 local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
@@ -114,10 +115,39 @@ end
 
 function SurvivalService:ConsumeStamina(player, amount)
     local state = self:GetState(player)
-    if not state or not state.Hatched or state.Dead then return false end
+    if not state or state.Dead or state.Hatched ~= true then return false end
     if state.Stamina < amount then return false end
     state.Stamina = state.Stamina - amount
     return true
+end
+
+function SurvivalService:StartNeedsLoop(intervalSeconds, playersService)
+    if self.NeedsLoopConnection then
+        return false, "already_running"
+    end
+    self.NeedsTickSeconds = intervalSeconds or self.NeedsTickSeconds or 1
+    self.NeedsLoopAccumulator = 0
+    playersService = playersService or Players
+    self.NeedsLoopConnection = RunService.Heartbeat:Connect(function(deltaSeconds)
+        self.NeedsLoopAccumulator = self.NeedsLoopAccumulator + deltaSeconds
+        if self.NeedsLoopAccumulator < self.NeedsTickSeconds then
+            return
+        end
+        local elapsed = self.NeedsLoopAccumulator
+        self.NeedsLoopAccumulator = 0
+        for _, player in ipairs(playersService:GetPlayers()) do
+            self:ApplyNeedsTick(player, elapsed)
+        end
+    end)
+    return true
+end
+
+function SurvivalService:StopNeedsLoop()
+    if self.NeedsLoopConnection then
+        self.NeedsLoopConnection:Disconnect()
+        self.NeedsLoopConnection = nil
+    end
+    self.NeedsLoopAccumulator = 0
 end
 
 function SurvivalService:Kill(player, cause)
