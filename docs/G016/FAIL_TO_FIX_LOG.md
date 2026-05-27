@@ -861,3 +861,18 @@ Next action: continue six-candidate Creator Store batches to offset duplicate So
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch035 and move US14 from `180/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R058 — Creator Store import Batch035 — 2026-05-27T14:48Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch035 with six inserted candidates; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed six Creator Store assets: mailbox `7367638865`, park bench `298483813`, tropical bush `10720526536`, banana plant `13437819237`, bones pile `14047690299`, glow mushroom `72188073`. Import quarantine removed `1` script object before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=185`, `releaseReadyVisibleAssets=185`, `placedVisibleAssets=185`, `taggedImportedAssets=185`, `auditedImportedAssets=185`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=185`, `releaseReadyVisibleAssets=185`, expected at least `500`. Remaining gap is `315` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch035 over-inserted six candidates and netted five release-ready unique assets.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch035.
+Root cause: release asset volume remains insufficient; unique-count growth is progressing but final gate still needs 315 more release-ready imports.
+Patch applied: no source patch; Studio place state received Batch035 imported assets under `Workspace.Map.ImportedAssets.G016Batch035` with release/audit/performance-safe attributes, including extra food/carcass sources for the owner's not-enough-food/carnivore-loop complaints.
+Retest result: Batch035 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue six-candidate Creator Store batches toward the next 200-asset milestone.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch036 and move US14 from `185/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
