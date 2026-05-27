@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local UIFactory = require(script.Parent.Parent.ClientControllers.UIFactory)
+local MobileControlsController = require(script.Parent.Parent.ClientControllers.MobileControlsController)
 
 local suite = { name = "MobileControlsTests.client", category = "Client", tests = {} }
 
@@ -33,6 +34,28 @@ table.insert(suite.tests, { name = "buttons do not overlap HUD", run = function(
     Assert.equals(button.Size.Y.Offset, 48, "mobile button height contract")
     Assert.truthy(button.Position.X.Offset < 0, "action buttons anchor from right edge")
     button.Parent:Destroy()
+end })
+
+
+table.insert(suite.tests, { name = "sprint call hide buttons expose visible effects", run = function()
+    local gui = UIFactory:CreateRootGui("MobileControlsEffectProbe")
+    local sprint = UIFactory:CreateButton(gui, "SprintButton", "Sprint", UDim2.fromOffset(0, 0))
+    local call = UIFactory:CreateButton(gui, "CallButton", "Call", UDim2.fromOffset(0, 0))
+    local restHide = UIFactory:CreateButton(gui, "RestHideButton", "RestHide", UDim2.fromOffset(0, 0))
+
+    Assert.truthy(MobileControlsController:SetButtonEffect(sprint, "Sprint", true), "sprint effect applies")
+    Assert.equals(sprint:GetAttribute("EffectActive"), true, "sprint effect active flag")
+    Assert.equals(sprint.Text, "Sprint!", "sprint active label")
+    Assert.truthy(MobileControlsController:SetButtonEffect(sprint, "Sprint", false), "sprint effect clears")
+    Assert.equals(sprint:GetAttribute("EffectActive"), false, "sprint effect inactive flag")
+    Assert.equals(sprint.Text, "Sprint", "sprint default label restored")
+
+    Assert.truthy(MobileControlsController:SetButtonEffect(call, "Call", true), "call effect applies")
+    Assert.equals(call.Text, "Calling", "call active label")
+    Assert.truthy(MobileControlsController:SetButtonEffect(restHide, "RestHide", true), "hide effect applies")
+    Assert.equals(restHide.Text, "Hidden", "hide active label")
+
+    gui:Destroy()
 end })
 
 TestRunner.registerSuite(suite)

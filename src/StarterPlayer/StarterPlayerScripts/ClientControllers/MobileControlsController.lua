@@ -4,6 +4,54 @@ local UIFactory = require(script.Parent.UIFactory)
 local MobileControlsController = {}
 MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide" }
 
+MobileControlsController.DefaultButtonColor = Color3.fromRGB(35, 45, 35)
+MobileControlsController.EffectStyles = {
+    Sprint = { ActiveText = "Sprint!", ActiveColor = Color3.fromRGB(72, 128, 255) },
+    Call = { ActiveText = "Calling", ActiveColor = Color3.fromRGB(255, 196, 76) },
+    RestHide = { ActiveText = "Hidden", ActiveColor = Color3.fromRGB(56, 92, 68) },
+}
+
+function MobileControlsController:SetButtonEffect(button, actionName, active)
+    local style = self.EffectStyles[actionName]
+    if not button or not style then return false end
+    button:SetAttribute("EffectActive", active == true)
+    button.BackgroundColor3 = active and style.ActiveColor or self.DefaultButtonColor
+    button.Text = active and style.ActiveText or actionName
+    return true
+end
+
+function MobileControlsController:FlashButtonEffect(button, actionName, durationSeconds)
+    if not self:SetButtonEffect(button, actionName, true) then return false end
+    task.delay(durationSeconds or 0.35, function()
+        if button and button.Parent then
+            self:SetButtonEffect(button, actionName, false)
+        end
+    end)
+    return true
+end
+
+function MobileControlsController:WireVisibleButtonEffects(gui)
+    if not gui then return false end
+    local sprint = gui:FindFirstChild("SprintButton")
+    if sprint then
+        sprint.MouseButton1Down:Connect(function() self:SetButtonEffect(sprint, "Sprint", true) end)
+        sprint.MouseButton1Up:Connect(function() self:SetButtonEffect(sprint, "Sprint", false) end)
+        sprint.MouseLeave:Connect(function() self:SetButtonEffect(sprint, "Sprint", false) end)
+    end
+    local call = gui:FindFirstChild("CallButton")
+    if call then
+        call.Activated:Connect(function() self:FlashButtonEffect(call, "Call") end)
+    end
+    local restHide = gui:FindFirstChild("RestHideButton")
+    if restHide then
+        restHide.MouseButton1Down:Connect(function() self:SetButtonEffect(restHide, "RestHide", true) end)
+        restHide.MouseButton1Up:Connect(function() self:SetButtonEffect(restHide, "RestHide", false) end)
+        restHide.MouseLeave:Connect(function() self:SetButtonEffect(restHide, "RestHide", false) end)
+    end
+    return true
+end
+
+
 function MobileControlsController:CreateControls(settings)
     if self.Gui then return self.Gui end
     local scale = settings and settings.MobileButtonScale or 1.0
@@ -25,6 +73,7 @@ function MobileControlsController:CreateControls(settings)
     for name, position in pairs(positions) do
         UIFactory:CreateButton(gui, name .. "Button", name, position)
     end
+    self:WireVisibleButtonEffects(gui)
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
     return { Gui = gui, Buttons = self.Buttons, Scale = scale }
