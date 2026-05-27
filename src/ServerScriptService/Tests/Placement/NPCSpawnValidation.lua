@@ -8,6 +8,14 @@ local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
 
 local suite = { name = "NPCSpawnValidation.server", category = "Placement", tests = {} }
 
+local function hasVisiblePart(instance)
+    if instance:IsA("BasePart") and instance.Transparency < 1 then return true end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant.Transparency < 1 then return true end
+    end
+    return false
+end
+
 table.insert(suite.tests, { name = "NPC spawn zones valid", run = function()
     local spawn = Instance.new("Part")
     spawn.Name = "FernPlainsSpawn"
@@ -55,6 +63,18 @@ table.insert(suite.tests, { name = "spawn loop reaches visible world target from
     Assert.truthy(active >= 12, "spawn loop reaches 12 active NPCs")
     local folder = workspace:FindFirstChild("NPCs")
     Assert.truthy(folder and #folder:GetChildren() >= 12, "visible NPC instances exist in Workspace.NPCs")
+    local visibleDinosaurs = 0
+    local carnivores = 0
+    for _, npc in ipairs(folder:GetChildren()) do
+        if npc:GetAttribute("NPCKind") == "Prey" or npc:GetAttribute("NPCKind") == "Predator" then
+            if hasVisiblePart(npc) then visibleDinosaurs = visibleDinosaurs + 1 end
+            if npc:GetAttribute("NPCKind") == "Predator" or npc:GetAttribute("Carnivore") == true or npc:GetAttribute("Diet") == "Carnivore" then
+                carnivores = carnivores + 1
+            end
+        end
+    end
+    Assert.truthy(visibleDinosaurs >= 10, "at least 10 visible dinosaur NPCs exist")
+    Assert.truthy(carnivores >= 4, "visible dinosaur population includes carnivores")
     NPCSpawnService.TargetActive = oldTarget
     NPCService.NPCs = oldRecords
 end })
