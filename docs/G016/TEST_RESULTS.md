@@ -204,3 +204,9 @@ No final PASS: US14 still needs 405 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch016: fire hydrant `11971419591`, mushroom cluster `17847955134`, cairn rock pile `5011762570`, street barricade `4700428364`, bone spear `13025540557`. Quarantine removed `18` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=100`, `releaseReadyVisibleAssets=100`, and `placedVisibleAssets=100`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=100; expected at least 500` and `releaseReadyVisibleAssets=100; expected at least 500`.
 
 No final PASS: US14 still needs 400 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Post-100 Asset Performance Cleanup — 2026-05-27T16:48Z
+
+After reaching `100/500` release-ready imports, Studio MCP `PerformanceAuditService:Scan()` found imported touch/query and particle-budget pressure. Cleanup disabled touch/query where safe on imported/decorative parts, disabled decorative collision, and disabled `48` imported particle emitters. Final scan passed with `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, and `failureCount=0`.
+
+No final PASS: US14 still needs 400 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.

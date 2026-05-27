@@ -576,3 +576,18 @@ Next action: continue Creator Store batches; run a performance snapshot soon bec
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch017 and schedule a performance/placeholder sweep after more imports.
+
+## Run G016-R039 — post-100 asset performance cleanup — 2026-05-27T16:48Z
+
+Tests run: Studio MCP `PerformanceAuditService:Scan()` after crossing 100 release-ready assets; Studio cleanup for imported touch/query/collision and imported particle emitters; repeat `PerformanceAuditService:Scan()`.
+Passed: initial post-100 sweep found imported touch/query pressure. Cleanup set imported/decorative parts to `CanTouch=false`, disabled non-gameplay `CanQuery`, disabled decorative collision, and disabled `48` imported particle emitters. Final performance scan passed with `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, and `failureCount=0`.
+Failed: US14 remains below release threshold: latest known `actuallyImportedAssets=100`, `releaseReadyVisibleAssets=100`, expected at least `500`. RBXL save/reopen and fresh all-category proof remain open.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset volume introduced performance-budget risk after many imports.
+Root cause: Creator Store assets can arrive with touch/query enabled and decorative particle emitters even after scripts are removed.
+Patch applied: Studio-place cleanup only; no source patch in this run. Imported assets and biome dressing were made non-touch/non-query where safe, decorative collision was disabled, and imported decorative particle emitters were disabled.
+Retest result: performance scan PASS after cleanup; final release gate still FAIL on 500-asset/RBXL/fresh-run blockers.
+Next action: continue Creator Store imports and repeat performance/placeholder sweeps periodically.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch017, preserving touch/query/collision/particle cleanup rules.
