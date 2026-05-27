@@ -96,3 +96,48 @@ Next action: after worker lanes merge, run luac, Rojo build, all-category Studio
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: keep collecting exact failing tests/probes; do not mark PASS from docs/source-only evidence.
+
+## Run G016-R007 — L005 latest live-proof reverify — 2026-05-27T12:24:00Z
+
+Tests run: all-source Lua syntax, Rojo build, Studio/MCP read-only live probe for L005 attributes.
+Passed: source syntax passed; Rojo build produced `/tmp/eggBreakers-worker5-l005-reverify.rbxl`; Studio/MCP counted visible dinosaurs `25`, visible carnivores `8`, food `15`, water `5`, trees `9`.
+Failed: `ReplicatedStorage.G016FinalGateProof` does not exist, so the required proof attributes are absent: `HatchLiveProofPassed`, `NPCActiveStateTransitionsPassed`, `ActionMotionProofPassed`, `GrowthScaleFromFoodWaterPassed`, and `L005LiveProbeRunId`.
+Top failing story: US15 Fresh full QA gate proves all stories.
+Failure: live world has promising population/food/water/tree counts, but no attached fresh proof artifact for hatch, NPC state transitions, action motion, or growth-scale delta.
+Root cause: verification probes are still observational and have not produced the final proof folder/metadata required by the G016 gate.
+Patch applied: documentation updated with exact reverify evidence and gaps; no gameplay or proof-attribute patch was made.
+Retest result: NOT DONE / expected gate FAIL until fresh live proof attributes are produced by an authorized Studio/live run.
+Next action: run the live proof harness that creates `G016FinalGateProof` only after verifying hatch, NPC transitions, action motion, and growth-scale delta.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: continue live proof capture; do not mark PASS from source/build or counts alone.
+
+## Run G016-R008 — L005 current-head reverify after reassignment — 2026-05-27T12:29:00Z
+
+Tests run: worker-3 coordination message, all-source Lua syntax, Rojo build, Studio/MCP read-only current-head L005 probe.
+Passed: current HEAD `55e30b6`; source syntax passed; Rojo build produced `/tmp/eggBreakers-worker5-l005-current-head.rbxl`; Studio/MCP counted visible dinosaurs/NPCs `40`, visible carnivores/predators `9`, visible tree/natural props `100+`.
+Failed: `ReplicatedStorage.G016FinalGateProof` does not exist; all requested L005 proof attrs are absent; tagged food count `0`; tagged water count `0`; no NPC records showed non-idle action/state proof beyond standard attributes.
+Top failing story: US15 Fresh full QA gate proves all stories.
+Failure: latest live probe still cannot prove hatch, tagged food/water, active NPC transitions, action motion, or growth scale; it only proves source/build health and partial visible NPC/tree counts.
+Root cause: final proof harness has not produced proof attributes, and live place/tag state is inconsistent with earlier food/water counts.
+Patch applied: documentation updated with current-head evidence and exact gaps; no final PASS claimed.
+Retest result: NOT DONE / expected gate FAIL.
+Next action: run or create an authorized live proof harness that verifies and writes `G016FinalGateProof` only after hatch, food/water tags, NPC transitions, action motion, and growth-scale delta pass.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: resolve missing live food/water tags and active-state proof before any PASS claim.
+
+## Run G016-R009 — worker-3 coordination addendum — 2026-05-27T12:33:00Z
+
+Tests run: mailbox coordination review plus source grep for worker-3 reported L002/L003 gaps.
+Passed: L003 source/test hooks remain present for starter species variety, no-repeat starter selection, forward visual correction, growth visual scaling, and visible action motion wiring.
+Failed: worker-3 reports and source grep confirms likely active NPC proof mismatch: `NPCSpawnValidation.lua` asserts `prey:GetAttribute("ActiveNPCBrain") == true`, but current `NPCService.lua` stamps `LastBrainAction`, `BrainTarget`, and `LastBrainMovedAt` without stamping `ActiveNPCBrain`; Studio proof folder still absent.
+Top failing story: US08 NPC ecosystem + US15 Fresh full QA gate.
+Failure: active NPC brain behavior is partially implemented but lacks the explicit live/source proof marker expected by the validation test and final QA lane.
+Root cause: movement/action attributes and proof attributes are not aligned with the validation contract.
+Patch applied: documentation updated with worker-3 coordination evidence only; no gameplay patch made from QA lane.
+Retest result: NOT DONE / expected gate FAIL until `ActiveNPCBrain` proof and final live proof attrs exist.
+Next action: owner lane for NPC service should align attribute stamping with `NPCSpawnValidation` and then rerun L005 proof harness.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: fix or reassign the `ActiveNPCBrain` proof marker gap before final QA.
