@@ -3,6 +3,9 @@ local Workspace = game:GetService("Workspace")
 
 local WeatherBiomeService = { CurrentWeather = "Clear" }
 WeatherBiomeService.WeatherCycle = { "Clear", "Cloudy", "Rain" }
+WeatherBiomeService.CoverageSize = Vector3.new(4700, 2, 4400)
+WeatherBiomeService.CoverageCenter = Vector3.new(-450, 90, -250)
+WeatherBiomeService.MaxTileSize = 2048
 
 function WeatherBiomeService:GetFolder()
     local folder = Workspace:FindFirstChild("WeatherEffects")
@@ -14,50 +17,85 @@ function WeatherBiomeService:GetFolder()
     return folder
 end
 
+function WeatherBiomeService:_configureWeatherPart(part, size, position, material, color)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.Material = material
+    part.Color = color
+    part.Size = size
+    part.Position = position
+    part:SetAttribute("WeatherEffect", true)
+end
+
+function WeatherBiomeService:_ensureRainTiles(folder, prefix, height, y, material, color)
+    local coverage = self.CoverageSize
+    local center = self.CoverageCenter
+    local maxTile = self.MaxTileSize
+    local xTiles = math.ceil(coverage.X / maxTile)
+    local zTiles = math.ceil(coverage.Z / maxTile)
+    local tileX = coverage.X / xTiles
+    local tileZ = coverage.Z / zTiles
+    local used = {}
+
+    for x = 1, xTiles do
+        for z = 1, zTiles do
+            local name = string.format("%s_%d_%d", prefix, x, z)
+            used[name] = true
+            local part = folder:FindFirstChild(name)
+            if not part then
+                part = Instance.new("Part")
+                part.Name = name
+                part.Parent = folder
+            end
+            local offsetX = -coverage.X / 2 + tileX * (x - 0.5)
+            local offsetZ = -coverage.Z / 2 + tileZ * (z - 0.5)
+            self:_configureWeatherPart(
+                part,
+                Vector3.new(tileX, height, tileZ),
+                Vector3.new(center.X + offsetX, y, center.Z + offsetZ),
+                material,
+                color
+            )
+            part:SetAttribute("CoverageX", coverage.X)
+            part:SetAttribute("CoverageZ", coverage.Z)
+            part:SetAttribute("RainTileCount", xTiles * zTiles)
+        end
+    end
+
+    for _, child in ipairs(folder:GetChildren()) do
+        if string.sub(child.Name, 1, #prefix + 1) == prefix .. "_" and not used[child.Name] then
+            child:Destroy()
+        end
+    end
+    return xTiles * zTiles
+end
+
 function WeatherBiomeService:ApplyWeather(weatherName)
     self.CurrentWeather = weatherName or self.CurrentWeather or "Clear"
     Lighting:SetAttribute("CurrentWeather", self.CurrentWeather)
     Lighting.Brightness = self.CurrentWeather == "Rain" and 1.5 or 2
     Lighting.ClockTime = self.CurrentWeather == "Rain" and 15.5 or 13
     local folder = self:GetFolder()
-    local rain = folder:FindFirstChild("VisibleRainVolume")
-    if not rain then
-        rain = Instance.new("Part")
-        rain.Name = "VisibleRainVolume"
-        rain.Anchored = true
-        rain.CanCollide = false
-        rain.CanTouch = false
-        rain.CanQuery = false
-        rain.Material = Enum.Material.Glass
-        rain.Color = Color3.fromRGB(120, 170, 255)
-        rain.Size = Vector3.new(4700, 2, 4400)
-        rain.Position = Vector3.new(-450, 90, -250)
-        rain.Transparency = 1
-        rain:SetAttribute("WeatherEffect", true)
-        rain.Parent = folder
-    end
-    rain.Size = Vector3.new(4700, 2, 4400)
-    rain.Position = Vector3.new(-450, 90, -250)
-    rain.Transparency = self.CurrentWeather == "Rain" and 0.62 or 1
-    rain:SetAttribute("VisibleWeatherFeedback", self.CurrentWeather == "Rain")
+    local rainTileCount = self:_ensureRainTiles(folder, "VisibleRainVolume", 2, self.CoverageCenter.Y, Enum.Material.Glass, Color3.fromRGB(120, 170, 255))
+    self:_ensureRainTiles(folder, "VisibleRainStreaks", 80, 48, Enum.Material.Neon, Color3.fromRGB(150, 205, 255))
 
-    local streak = folder:FindFirstChild("VisibleRainStreaks")
-    if not streak then
-        streak = Instance.new("Part")
-        streak.Name = "VisibleRainStreaks"
-        streak.Anchored = true
-        streak.CanCollide = false
-        streak.CanTouch = false
-        streak.CanQuery = false
-        streak.Material = Enum.Material.Neon
-        streak.Color = Color3.fromRGB(150, 205, 255)
-        streak.Size = Vector3.new(4700, 80, 4400)
-        streak.Position = Vector3.new(-450, 48, -250)
-        streak.Parent = folder
+    local visible = self.CurrentWeather == "Rain"
+    folder:SetAttribute("WeatherCoverageX", self.CoverageSize.X)
+    folder:SetAttribute("WeatherCoverageZ", self.CoverageSize.Z)
+    folder:SetAttribute("RainTileCount", rainTileCount)
+    folder:SetAttribute("VisibleWeatherFeedback", visible)
+    for _, child in ipairs(folder:GetChildren()) do
+        if child:IsA("BasePart") then
+            if string.find(child.Name, "VisibleRainVolume", 1, true) then
+                child.Transparency = visible and 0.62 or 1
+            elseif string.find(child.Name, "VisibleRainStreaks", 1, true) then
+                child.Transparency = visible and 0.88 or 1
+            end
+            child:SetAttribute("VisibleWeatherFeedback", visible)
+        end
     end
-    streak.Transparency = self.CurrentWeather == "Rain" and 0.88 or 1
-    streak:SetAttribute("WeatherEffect", true)
-    streak:SetAttribute("VisibleWeatherFeedback", self.CurrentWeather == "Rain")
     return self.CurrentWeather
 end
 

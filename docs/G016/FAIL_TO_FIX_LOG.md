@@ -156,3 +156,18 @@ Next action: run fresh Studio reload/live proof harness, then handle remaining w
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: continue repairing Integration failures and produce fresh live proof attributes; do not claim PASS from source/build only.
+
+## Run G016-R011 — weather tile repair and fresh clone proof — 2026-05-27T12:42Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-weather-tiles.rbxl`, `git diff --check`, Studio MCP fresh cloned service probe.
+Passed: source syntax/build/diff checks passed. Fresh cloned service probe passed: combat health `16` after `9` server damage; water growth `4`; progression unlock DNA `50`; NPC eating depleted food and stamped Eat action; weather coverage attrs `4700x4400` with 9 rain tiles and no tile over Roblox's 2048-stud part clamp.
+Failed: final G016 gate still unproven because active Studio all-category TestRunner is stale/cache-contaminated, live Play proof attributes are absent, mobile/controller proof is absent, RBXL save/reopen proof is absent, and 500 asset gate is absent.
+Top failing story: US15 Fresh full QA gate.
+Failure: prior single giant rain part could never satisfy a 4700x4400 visible coverage test because Roblox clamps individual Part dimensions at 2048.
+Root cause: weather implementation attempted map-wide coverage with one oversized Part instead of tiled weather volumes.
+Patch applied: `WeatherBiomeService` now creates tiled rain volumes/streaks, records coverage attributes, and tests coverage through tile counts/attrs instead of impossible single-part size.
+Retest result: fresh clone probe PASS for repaired source behavior; NOT DONE for final release gates.
+Next action: run fresh Studio reload/all-category TestRunner and live Play proof harness that writes `G016FinalGateProof`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: gather fresh reload/live proof; do not mark PASS from clone/source evidence alone.

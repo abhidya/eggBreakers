@@ -12,15 +12,24 @@ table.insert(suite.tests, { name = "weather creates visible rain feedback and li
     Assert.equals(weather, "Rain", "rain weather applied")
     Assert.equals(Lighting:GetAttribute("CurrentWeather"), "Rain", "Lighting records current weather")
     local folder = workspace:FindFirstChild("WeatherEffects")
-    local rain = folder and folder:FindFirstChild("VisibleRainVolume")
-    Assert.notNil(rain, "visible rain volume exists")
-    Assert.equals(rain:GetAttribute("WeatherEffect"), true, "rain is tagged as weather effect")
-    Assert.truthy(rain.Transparency < 1, "rain has visible feedback")
-    Assert.equals(rain.Size, Vector3.new(4700, 2, 4400), "rain covers the playable biome map")
-    Assert.equals(rain:GetAttribute("VisibleWeatherFeedback"), true, "rain volume marks visible feedback")
-    local streak = folder and folder:FindFirstChild("VisibleRainStreaks")
-    Assert.notNil(streak, "visible rain streaks exist")
-    Assert.truthy(streak.Transparency < 1, "rain streaks are visible")
+    Assert.equals(folder:GetAttribute("WeatherCoverageX"), 4700, "rain coverage spans playable map width")
+    Assert.equals(folder:GetAttribute("WeatherCoverageZ"), 4400, "rain coverage spans playable map depth")
+    Assert.truthy((folder:GetAttribute("RainTileCount") or 0) >= 9, "rain uses tiled parts to avoid Roblox 2048-stud part clamp")
+    local visibleRainTiles = 0
+    local visibleStreakTiles = 0
+    for _, child in ipairs(folder:GetChildren()) do
+        if child:IsA("BasePart") and child:GetAttribute("WeatherEffect") == true then
+            Assert.truthy(child.Size.X <= 2048 and child.Size.Z <= 2048, "weather tile respects Roblox part size limit")
+            if string.find(child.Name, "VisibleRainVolume", 1, true) and child.Transparency < 1 then
+                visibleRainTiles = visibleRainTiles + 1
+            elseif string.find(child.Name, "VisibleRainStreaks", 1, true) and child.Transparency < 1 then
+                visibleStreakTiles = visibleStreakTiles + 1
+            end
+            Assert.equals(child:GetAttribute("VisibleWeatherFeedback"), true, "weather tile marks visible feedback")
+        end
+    end
+    Assert.truthy(visibleRainTiles >= 9, "visible rain tiles exist")
+    Assert.truthy(visibleStreakTiles >= 9, "visible rain streak tiles exist")
     WeatherBiomeService:ApplyWeather("Clear")
     Assert.equals(Lighting:GetAttribute("CurrentWeather"), "Clear", "clear weather restored")
 end })

@@ -52,3 +52,9 @@ Worker-3 replied with source-level L002/L003 evidence and one likely failing tes
 Current head after team shutdown: `40dcc25` plus local service fixes. Source checks passed: `luac` over all `src/**/*.lua`; `rojo build default.project.json --output /tmp/eggBreakers-g016-core-fixes.rbxl`; `git diff --check`. Studio Integration TestRunner remains stale/partially failing at 49 total, 44 passed, 5 failed: CombatService default Damageable health, FoodWaterService water growth, NPCService food depletion target, ProgressionService DNA grant without preloaded profile, WeatherBiomeService rain size cache/state. Local patches address the first, second, third, and fourth source causes; Studio require-cache still reported old values until a fresh Studio reload/TestRunner run.
 
 Remaining proof gaps: fresh Studio reload, live Play proof attributes, mobile/controller proof, RBXL save/reopen, 500 asset gate.
+
+## Fresh Clone Service Probe — 2026-05-27T12:42Z
+
+Because active Studio still has cached required modules, a fresh cloned `ServerScriptService.Services` probe was run. It proves current source behavior independent of the old require cache: combat target health `25 -> 16` with server damage `9`; water drink growth `0 -> 4`; progression `GrantDNA(300)` then unlock leaves DNA `50`; NPC prey eating sets state `Eat`, depletes food, and stamps `FoodSourcesDepleted`; weather uses 9 rain volume tiles + 9 streak tiles with max tile size about `1566x1466`, coverage attrs `4700x4400`, avoiding Roblox's 2048-stud part clamp.
+
+This is stronger source/runtime evidence, but still not final PASS because it is not a fresh Studio reload all-category TestRunner, not a Play-mode live proof artifact, and not mobile/RBXL/asset-gate proof.
