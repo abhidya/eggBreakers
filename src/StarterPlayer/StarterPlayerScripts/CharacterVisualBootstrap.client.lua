@@ -178,12 +178,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         local now = os.clock()
         if now - lastHatchInputAt < HATCH_INPUT_COOLDOWN then return end
         lastHatchInputAt = now
-        hatchProgress = math.clamp(hatchProgress + 20, 0, 100)
         Remotes:WaitForChild("RequestHatch"):FireServer("tap")
         hopEgg(player.Character)
-        if hatchProgress >= 100 then
-            hatched = true
-        end
+        -- Keep hatch state server-authoritative. Optimistically marking 100% here can
+        -- strand players if one local tap was rate-limited or dropped: the client
+        -- stops accepting input while the server egg remains below hatch threshold.
         applyVisual()
     end
 end)
