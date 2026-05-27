@@ -10,6 +10,8 @@ function StatReplicationService:BuildPayload(state)
         stamina = state.Stamina,
         growth = state.Growth,
         growthStage = state.GrowthStage,
+        hatched = state.Hatched == true,
+        hatchProgress = state.HatchProgress or 0,
         diet = state.Diet,
         species = state.SpeciesId,
         statusEffects = state.StatusEffects or {},
