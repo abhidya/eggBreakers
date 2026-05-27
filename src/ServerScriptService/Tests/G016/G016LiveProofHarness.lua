@@ -23,6 +23,7 @@ local function loadServices(serviceRoot)
         FossilService = require(serviceRoot.FossilService),
         PlayerDataService = require(serviceRoot.PlayerDataService),
         CallService = require(serviceRoot.CallService),
+        NestService = require(serviceRoot.NestService),
     }
 end
 
@@ -108,6 +109,7 @@ function G016LiveProofHarness:Run(options)
         local FossilService = services.FossilService
         local PlayerDataService = services.PlayerDataService
         local CallService = services.CallService
+        local NestService = services.NestService
 
         local folders = MapLayoutService:EnsureMapFolders()
         MapLayoutService:EnsureSpawnSafety()
@@ -194,6 +196,8 @@ function G016LiveProofHarness:Run(options)
         local attackOk = CombatService:RequestAttack(player, "Nibble", target)
         assertTrue(attackOk == true, "combat attack request failed")
         assertTrue((target:GetAttribute("Health") or 1) <= 5, "combat did not reduce real target health")
+        local callOk, callResult = CallService:RequestCall(player, "Warning")
+        assertTrue(callOk == true and callResult and callResult.Marker and callResult.Marker:GetAttribute("VisibleActionEffect") == true, "call visible action effect missing")
         SurvivalService:Kill(player, "G016Probe")
         assertTrue(state.Dead == true and state.Health == 0, "health-zero death state failed")
         local respawned = SurvivalService:Respawn(player)
@@ -266,8 +270,39 @@ function G016LiveProofHarness:Run(options)
         local fossilOk, fossilReason = FossilService:RequestCollect(player, fossil)
         assertTrue(fossilOk == true and PlayerDataService:Get(player).Fossils >= 3 and fossil:GetAttribute("Collected") == true, "fossil collect failed: " .. tostring(fossilOk) .. "/" .. tostring(fossilReason))
 
-        local callOk, callResult = CallService:RequestCall(player, "Warning")
-        assertTrue(callOk == true and callResult and callResult.Marker and callResult.Marker:GetAttribute("VisibleActionEffect") == true, "call visible action effect missing")
+        local nest = folders.Nests:FindFirstChild("G016ImportedNestProof")
+        if not nest then
+            nest = Instance.new("Part")
+            nest.Name = "G016ImportedNestProof"
+            nest.Shape = Enum.PartType.Cylinder
+            nest.Anchored = true
+            nest.CanCollide = false
+            nest.CanTouch = true
+            nest.CanQuery = true
+            nest.Material = Enum.Material.Wood
+            nest.Color = Color3.fromRGB(133, 95, 54)
+            nest.Size = Vector3.new(10, 2, 10)
+            nest.Parent = folders.Nests
+        end
+        nest.Position = Vector3.new(-140, 78, -1620)
+        nest.Transparency = 0
+        nest:SetAttribute("CreatorStoreOnly", true)
+        nest:SetAttribute("ImportedVisibleAsset", true)
+        nest:SetAttribute("ZoneId", "MountainNestingCliffs")
+        nest:SetAttribute("InteractionHint", "Use nest")
+        nest:SetAttribute("VisibleGameplayAffordance", true)
+        if not CollectionService:HasTag(nest, "NestZone") then CollectionService:AddTag(nest, "NestZone") end
+        local adultPlayer = MockPlayer.new(91611, "G016NestAdult")
+        local adultCharacter, adultRoot = makeCharacter("G016NestAdultCharacter", nest.Position + Vector3.new(0, 0, -5))
+        table.insert(created, adultCharacter)
+        adultPlayer.Character = adultCharacter
+        local adultState = SurvivalService:CreateState(adultPlayer, "triceratops")
+        adultState.Hatched = true
+        adultState.GrowthStage = "Adult"
+        RateLimitService:ClearPlayer(adultPlayer)
+        local nestOk, nestResult = NestService:RequestNestAction(adultPlayer, "Create", nest)
+        assertTrue(nestOk == true and adultState.NestRespawn == nest and adultState.NestEggSlots == 1 and adultState.HatchlingBuff == "NestRested", "adult nesting proof failed: " .. tostring(nestOk) .. "/" .. tostring(nestResult))
+
         local actionMotionProof = eatOk == true and drinkOk == true and attackOk == true and callOk == true and preyRecord.State ~= nil
 
         proof:SetAttribute("HatchLiveProofPassed", true)
@@ -291,6 +326,7 @@ function G016LiveProofHarness:Run(options)
         setStoryProof(proof, "US08", "12 active NPCs, >=10 visible, >=2 carnivores, active brain transition", source, timestamp)
         setStoryProof(proof, "US09", "Old Eden discovery notification and server fossil collection both passed", source, timestamp)
         setStoryProof(proof, "US10", "Warning call created visible pulse marker", source, timestamp)
+        setStoryProof(proof, "US11", "adult used imported visible nest and received egg slot plus hatchling buff", source, timestamp)
         setStoryProof(proof, "US12", "Kill set health zero/dead and Respawn returned hatchling egg state", source, timestamp)
 
         proof:SetAttribute("LastCoreLiveProofFailure", nil)

@@ -216,3 +216,18 @@ Next action: run the full core harness and US09/action proof in one fresh Studio
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: consolidate proof runs and continue remaining release gates.
+
+## Run G016-R015 — consolidated proof and US11 nesting — 2026-05-27T13:05Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-us11-proof.rbxl`, `git diff --check`, Studio MCP consolidated `G016LiveProofHarness` run with fresh service clone, fresh G016FinalGateSuite check.
+Passed: consolidated proof harness passed with US01/US09/US10/US11/US12 PASS in one proof folder; `ActionMotionProofPassed=true`; visible dinosaurs `36`, carnivores `15`, trees/food/water `20/19/4`. G016FinalGate now passes 3/8.
+Failed: G016FinalGate still fails: missing US13 client/mobile proof; missing fresh all-category proof; missing mobile/controller proof; missing RBXL persistence proof; release asset count `30/500`.
+Top failing story: US13 Client UI/mobile/controller controls can play game.
+Failure: nesting was not represented in consolidated proof, and call action initially failed when attempted after player death/respawn.
+Root cause: proof harness order tried call after death, and US11 did not have a guarded live proof path.
+Patch applied: moved call/action proof before death; added US11 adult nest proof with visible imported/audited NestZone and nest outcome assertions.
+Retest result: consolidated proof PASS; final gate remains honest FAIL with smaller blocker set.
+Next action: build/run client/mobile proof for US13 and keep release gates honest.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: implement US13 mobile/controller/client proof harness, then rerun G016FinalGate.

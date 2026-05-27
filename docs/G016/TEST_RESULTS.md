@@ -74,3 +74,9 @@ Fresh G016FinalGate rerun improved but still fails honestly: first missing story
 ## US09 / Action-Motion Inline Proof — 2026-05-27T13:01Z
 
 Fresh Studio MCP inline proof with a cloned service root passed for US09 and action effects: `CityDiscoveryService:Discover("ApocalypticCity")` returned true; mock player received notification `Old Eden discovered`; `FossilService:RequestCollect` granted 3 fossils server-side; carnivore tutorial meat eat passed; combat attack reduced target health to 2; `CallService:RequestCall("Warning")` created a visible pulse marker. The proof wrote `US09LiveProofPassed`, `US10LiveProofPassed`, and `ActionMotionProofPassed` attributes. A subsequent G016 gate run still failed because this Studio session no longer had the prior core proof attrs (US01 etc.), plus fresh all-category/mobile/RBXL/500-asset gates remain absent.
+
+## Consolidated Core + US09/US10/US11 Proof — 2026-05-27T13:05Z
+
+Fresh consolidated `G016LiveProofHarness` run with `freshServiceClone=true` passed in Studio MCP and kept proof attrs in one `G016FinalGateProof` folder. Evidence: US01, US09, US10, US11, US12 all marked PASS; `ActionMotionProofPassed=true`; visible dinosaurs `36`; visible carnivores `15`; tree/food/water counts `20/19/4`. US11 nesting proof created a visible imported/audited nest marker, tagged `NestZone`, and verified an Adult Triceratops received nest respawn, egg slot, and `NestRested` hatchling buff.
+
+Fresh G016FinalGate now passes 3/8 and fails 5/8. First story-level missing proof advanced to US13 Client UI/mobile/controller. Remaining non-story blockers: fresh all-category TestRunner proof, mobile/controller proof, RBXL persistence proof, and release asset count still `30/500`.
