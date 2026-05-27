@@ -79,7 +79,7 @@ Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
         local stats = SpeciesConfig[result.SpeciesId].BaseStats[result.GrowthStage]
         result.CurrentWalkSpeed = stats.WalkSpeed
         MovementLockService:SetHatchedMovement(player, true, result)
-        CharacterVisualService:ApplyDinosaur(player, result)
+        CharacterVisualService:ApplyForState(player, result)
         ProgressionService:OnHatched(player)
         StatReplicationService:Notify(player, "You hatched!", "Success", 3)
     else
