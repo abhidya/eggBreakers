@@ -67,9 +67,10 @@ table.insert(suite.tests, { name = "map tutorial water is tagged drink target", 
     SurvivalService:CreateState(p, "gallimimus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = water.Position + Vector3.new(2, 0, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
-    local state = SurvivalService:GetState(p); state.Thirst = 20
+    local state = SurvivalService:GetState(p); state.Thirst = 20; state.Growth = 0
     Assert.truthy(FoodWaterService:RequestDrink(p, water), "map tutorial water is drinkable")
     Assert.truthy(state.Thirst > 20, "map water restores thirst")
+    Assert.equals(state.Growth, 1, "map water contributes growth")
 end })
 
 return suite
