@@ -585,7 +585,7 @@ local function classifySource(index, source)
         return fossilZones[((index - 1) % #fossilZones) + 1], "Fossil", "FossilDigEdge", "fossils remain outside Nursery safe zones and away from spawn centers"
     end
 
-    if containsAny(text, { "swamp", "water lily", "mushroom" }) then
+    if containsAny(text, { "swamp", "water lily", "mushroom", "pond", "waterfall" }) then
         return "SwampDelta", "Foliage", "SwampBankEdge", "swamp assets stay in Swamp Delta banks and wetland edges"
     end
 
