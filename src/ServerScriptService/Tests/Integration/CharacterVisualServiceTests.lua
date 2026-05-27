@@ -158,4 +158,28 @@ table.insert(suite.tests, { name = "debug fallback is disabled for release Apply
     cleanup(player)
 end })
 
+
+table.insert(suite.tests, { name = "avatar hide preserves existing imported dinosaur visual", run = function()
+    local character, head = makeCharacter()
+    local folder = Instance.new("Folder")
+    folder.Name = CharacterVisualService.VisualFolderName
+    folder.Parent = character
+    local visual = Instance.new("Model")
+    visual.Name = CharacterVisualService.DinosaurVisualName
+    visual:SetAttribute("EggBreakersVisual", true)
+    visual:SetAttribute("ImportedVisual", true)
+    visual.Parent = folder
+    local body = Instance.new("Part")
+    body.Name = "ImportedDinoBody"
+    body.Transparency = 0
+    body.Parent = visual
+
+    CharacterVisualService:HideDefaultAvatar(character)
+
+    Assert.equals(head.Transparency, 1, "default avatar hidden")
+    Assert.equals(body.Transparency, 0, "imported dinosaur remains visible")
+    Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible imported dinosaur survives avatar hiding")
+    character:Destroy()
+end })
+
 return TestRunner.registerSuite(suite)

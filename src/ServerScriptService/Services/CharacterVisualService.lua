@@ -31,6 +31,17 @@ local function resolvePath(path)
     return current
 end
 
+local function isGameVisualDescendant(instance)
+    local current = instance
+    while current do
+        if current.Name == CharacterVisualService.VisualFolderName or current:GetAttribute("EggBreakersVisual") == true or current:GetAttribute("ImportedVisual") == true then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
 local function hasVisiblePart(instance)
     if instance:IsA("BasePart") and instance.Transparency < 1 then return true end
     for _, descendant in ipairs(instance:GetDescendants()) do
@@ -59,7 +70,9 @@ function CharacterVisualService:HideDefaultAvatar(character)
     if not character then return false end
     local changed = false
     for _, descendant in ipairs(character:GetDescendants()) do
-        if descendant:IsA("BasePart") then
+        if isGameVisualDescendant(descendant) then
+            -- Preserve imported egg/dinosaur replacements; only hide the default Roblox avatar.
+        elseif descendant:IsA("BasePart") then
             if descendant.Name ~= "HumanoidRootPart" then
                 descendant.Transparency = 1
                 descendant.CanCollide = false
@@ -67,7 +80,7 @@ function CharacterVisualService:HideDefaultAvatar(character)
                 descendant.CanQuery = false
             end
             changed = true
-        elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+        elseif not isGameVisualDescendant(descendant) and (descendant:IsA("Decal") or descendant:IsA("Texture")) then
             descendant.Transparency = 1
             changed = true
         end

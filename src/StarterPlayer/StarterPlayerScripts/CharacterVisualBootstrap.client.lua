@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+local SERVER_VISUAL_NAME = "_EggBreakersCharacterVisual"
 local VISUAL_NAME = "_EggBreakersCharacterVisualClient"
 local DEBUG_VISUAL_FALLBACK = false
 local hatchProgress = 0
@@ -14,10 +15,23 @@ local function rootFor(character)
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
+local function isGameVisualDescendant(instance)
+    local current = instance
+    while current do
+        if current.Name == SERVER_VISUAL_NAME or current.Name == VISUAL_NAME or current:GetAttribute("EggBreakersVisual") == true or current:GetAttribute("ImportedVisual") == true then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
 local function hideDefaultAvatar(character)
     if not character then return end
     for _, descendant in ipairs(character:GetDescendants()) do
-        if descendant:IsA("BasePart") then
+        if isGameVisualDescendant(descendant) then
+            -- Server-imported egg/dinosaur visuals are the playable body; never hide them as default avatar parts.
+        elseif descendant:IsA("BasePart") then
             if descendant.Name ~= "HumanoidRootPart" then
                 descendant.LocalTransparencyModifier = 1
                 descendant.Transparency = 1
@@ -25,7 +39,7 @@ local function hideDefaultAvatar(character)
             descendant.CanCollide = false
             descendant.CanTouch = false
             descendant.CanQuery = false
-        elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+        elseif not isGameVisualDescendant(descendant) and (descendant:IsA("Decal") or descendant:IsA("Texture")) then
             descendant.Transparency = 1
         end
     end
