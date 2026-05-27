@@ -140,7 +140,9 @@ table.insert(suite.tests, { name = "active NPC brain moves prey and predators", 
     Assert.truthy((NPCService:GetRecordPosition(preyRecord) - preyStart).Magnitude > 0, "prey visibly moved")
     Assert.truthy((NPCService:GetRecordPosition(predatorRecord) - predatorStart).Magnitude > 0, "predator visibly moved")
     Assert.equals(prey:GetAttribute("ActiveNPCBrain"), true, "prey has active brain marker")
+    Assert.truthy((prey:GetAttribute("BrainMoveCount") or 0) > 0, "prey brain movement count recorded")
     Assert.equals(predator:GetAttribute("LastBrainAction"), "Chase", "predator action marker set")
+    Assert.truthy((predator:GetAttribute("BrainMoveCount") or 0) > 0, "predator brain movement count recorded")
 
     prey:Destroy()
     predator:Destroy()

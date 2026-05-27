@@ -38,6 +38,9 @@ function NPCService:Register(npc, kind)
         MaxHealth = kind == "Predator" and 140 or 80,
     }
     if npc then
+        npc:SetAttribute("ActiveNPCBrain", true)
+        npc:SetAttribute("BrainMoveCount", 0)
+        npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)
         npc:SetAttribute("Hatched", false)
         npc:SetAttribute("Hunger", record.Hunger)
@@ -94,6 +97,9 @@ function NPCService:MoveToward(record, targetPosition, step)
         npc:SetAttribute("MoveTargetX", targetPosition.X)
         npc:SetAttribute("MoveTargetY", targetPosition.Y)
         npc:SetAttribute("MoveTargetZ", targetPosition.Z)
+        npc:SetAttribute("LastMoveTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+        npc:SetAttribute("BrainMoveCount", (npc:GetAttribute("BrainMoveCount") or 0) + 1)
+        npc:SetAttribute("LastBrainAction", "Move")
         npc:SetAttribute("LastAction", "Move")
         if npc.PivotTo then
             npc:PivotTo(CFrame.new(nextPosition))
@@ -295,6 +301,8 @@ function NPCService:MoveRecordToward(record, targetPosition, stepStuds, actionNa
     if npc.SetAttribute then
         npc:SetAttribute("LastBrainAction", record.LastBrainAction)
         npc:SetAttribute("BrainTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+        npc:SetAttribute("LastMoveTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+        npc:SetAttribute("BrainMoveCount", (npc:GetAttribute("BrainMoveCount") or 0) + 1)
         npc:SetAttribute("LastBrainMovedAt", os.time())
     end
     return true
@@ -445,7 +453,14 @@ end
 function NPCService:TickNPCs(players)
     local active = 0
     for _, record in ipairs(self.NPCs) do
-        self:TickBrain(record, players, self.TickSeconds)
+        local ok = self:TickBrain(record, players, self.TickSeconds)
+        if record.Instance then
+            record.Instance:SetAttribute("ActiveNPCBrain", true)
+            record.Instance:SetAttribute("BrainState", record.State)
+        end
+        if ok then
+            active = active + 1
+        end
     end
     return active
 end

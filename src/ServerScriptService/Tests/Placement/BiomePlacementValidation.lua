@@ -47,7 +47,7 @@ table.insert(suite.tests, { name = "visible trees and biome dressing are materia
     for _ in pairs(visibleDressingZones) do
         zoneCount = zoneCount + 1
     end
-    Assert.truthy(visibleTrees >= 8, "four visible trees create trunk/canopy parts")
+    Assert.truthy(visibleTrees >= 20, "ten visible trees create trunk/canopy parts")
     Assert.truthy(zoneCount >= 7, "dressing covers every major biome")
 end })
 
