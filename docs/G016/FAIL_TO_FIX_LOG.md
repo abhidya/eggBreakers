@@ -726,3 +726,18 @@ Next action: continue Creator Store batches; repeat performance sweep at the nex
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch026 with performance-safe tagging and keep `scriptObjectsFound=0`.
+
+## Run G016-R049 — Creator Store import Batch026 — 2026-05-27T18:37Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch026 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: file cabinet `12254823970`, broken TV `5060075753`, purple flower `16155453427`, granite boulder `10280383411`, ancient coin `24303751`. Import quarantine found `0` script objects. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=145`, `releaseReadyVisibleAssets=145`, `placedVisibleAssets=145`, `taggedImportedAssets=145`, `auditedImportedAssets=145`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=145`, `releaseReadyVisibleAssets=145`, expected at least `500`. Remaining gap is `355` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch026.
+Root cause: clean unique imports continue, but the final release threshold is still unmet.
+Patch applied: no source patch; Studio place state received Batch026 imported assets under `Workspace.Map.ImportedAssets.G016Batch026` with release/audit/performance-safe attributes.
+Retest result: Batch026 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; next milestone is 150 release-ready assets.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch027 and pass 150 release-ready assets while keeping `scriptObjectsFound=0`.
