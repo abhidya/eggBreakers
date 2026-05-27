@@ -5,7 +5,7 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local suite = { name = "DietLogicTests", category = "Unit", tests = {} }
 
 local function canEat(diet, foodDiet, depleted)
-    return not depleted and diet == foodDiet
+    return not depleted and (diet == foodDiet or diet == "Omnivore")
 end
 
 table.insert(suite.tests, { name = "herbivore and carnivore diet matrix", run = function()
@@ -13,6 +13,8 @@ table.insert(suite.tests, { name = "herbivore and carnivore diet matrix", run = 
     Assert.falsy(canEat("Herbivore", "Carnivore", false))
     Assert.truthy(canEat("Carnivore", "Carnivore", false))
     Assert.falsy(canEat("Carnivore", "Herbivore", false))
+    Assert.truthy(canEat("Omnivore", "Herbivore", false))
+    Assert.truthy(canEat("Omnivore", "Carnivore", false))
     Assert.falsy(canEat("Herbivore", "Herbivore", true))
 end })
 

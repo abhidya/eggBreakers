@@ -11,11 +11,21 @@ function HUDController:BuildDietGuidance(payload)
     local growthStage = tostring(payload.growthStage or "Unknown stage")
     local foodHint = "find labeled food"
     if diet == "Herbivore" then
-        foodHint = "eat green plant patches"
+        foodHint = "graze green plant patches"
     elseif diet == "Carnivore" then
-        foodHint = "eat red carcass/meat caches"
+        foodHint = "hunt prey or eat red carcass/meat caches"
+    elseif diet == "Omnivore" then
+        foodHint = "eat safe plants or small prey"
     end
-    return string.format("%s %s is a %s — %s, drink blue water.", growthStage, species, diet, foodHint)
+    local category = tostring(payload.creatureCategory or "Ecosystem")
+    local movementHint = ""
+    local movementModes = payload.movementModes or {}
+    if movementModes.Flight then
+        movementHint = " Flight drains stamina."
+    elseif movementModes.Swim or payload.maxOxygen then
+        movementHint = " Watch oxygen in deep water."
+    end
+    return string.format("%s %s [%s] is a %s — %s, drink blue water.%s", growthStage, species, category, diet, foodHint, movementHint)
 end
 
 function HUDController:EnsureGui()
@@ -51,7 +61,9 @@ function HUDController:EnsureGui()
     self.Bars.hunger = UIFactory:CreateBar(root, "Hunger", 90)
     self.Bars.thirst = UIFactory:CreateBar(root, "Thirst", 112)
     self.Bars.stamina = UIFactory:CreateBar(root, "Stamina", 134)
-    self.Bars.growth = UIFactory:CreateBar(root, "Growth", 156)
+    self.Bars.oxygen = UIFactory:CreateBar(root, "Oxygen", 156)
+    self.Bars.growth = UIFactory:CreateBar(root, "Growth", 178)
+    root.Size = UDim2.fromOffset(420, 200)
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
     return gui
@@ -71,6 +83,7 @@ function HUDController:ApplyStatUpdate(payload)
     self:SetBar("hunger", payload.hunger)
     self:SetBar("thirst", payload.thirst)
     self:SetBar("stamina", payload.stamina)
+    self:SetBar("oxygen", payload.maxOxygen and payload.maxOxygen > 0 and (payload.oxygen or payload.maxOxygen) / payload.maxOxygen * 100 or 100)
     self:SetBar("growth", payload.growth)
 end
 

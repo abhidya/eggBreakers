@@ -8,7 +8,7 @@ local RemoteContracts = {
     RequestGroupAccept = { Direction = "ClientToServer", Arguments = { fromPlayer = "Player" }, RateLimitSeconds = 1.0 },
     RequestNestAction = { Direction = "ClientToServer", Arguments = { actionType = "string", nestInstance = "Instance" }, RateLimitSeconds = 1.0 },
     RequestCollectFossil = { Direction = "ClientToServer", Arguments = { fossilInstance = "Instance" }, RateLimitSeconds = 0.75 },
-    StatUpdate = { Direction = "ServerToClient", Payload = { "health", "hunger", "thirst", "stamina", "growth", "growthStage", "diet", "species", "statusEffects" } },
+    StatUpdate = { Direction = "ServerToClient", Payload = { "health", "hunger", "thirst", "stamina", "oxygen", "maxOxygen", "growth", "growthStage", "diet", "species", "creatureCategory", "movementModes", "ecosystemProfile", "statusEffects" } },
     ClientNotification = { Direction = "ServerToClient", Payload = { "message", "type", "duration", "icon" } },
 }
 

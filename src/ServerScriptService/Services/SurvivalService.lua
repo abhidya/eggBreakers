@@ -34,6 +34,11 @@ function SurvivalService:CreateState(player, speciesId)
         Hunger = 100,
         Thirst = 100,
         Stamina = stats.MaxStamina,
+        Oxygen = stats.MaxOxygen or 100,
+        MaxOxygen = stats.MaxOxygen or 100,
+        MovementModes = species.MovementModes or { Ground = true },
+        CreatureCategory = species.CreatureCategory or "Unclassified",
+        EcosystemProfile = species.EcosystemProfile or {},
         Dead = false,
         NestRespawn = nil,
     }
@@ -64,6 +69,8 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
     state.Hunger = clamp(state.Hunger - stats.HungerDrain * deltaSeconds, 0, 100)
     state.Thirst = clamp(state.Thirst - stats.ThirstDrain * deltaSeconds, 0, 100)
     state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
+    state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
+    state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) + (stats.OxygenRegen or 12) * deltaSeconds, 0, state.MaxOxygen)
     if state.Hunger <= 0 or state.Thirst <= 0 then
         self:ApplyDamage(player, 3 * deltaSeconds, "Starvation/Dehydration")
     end
@@ -92,6 +99,8 @@ function SurvivalService:AddGrowth(player, amount)
         local stats = SpeciesConfig[state.SpeciesId].BaseStats[nextStage]
         state.Health = stats.MaxHealth
         state.Stamina = stats.MaxStamina
+        state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
+        state.Oxygen = state.MaxOxygen
     end
     return true, state
 end
@@ -102,6 +111,48 @@ function SurvivalService:ConsumeStamina(player, amount)
     if state.Stamina < amount then return false end
     state.Stamina = state.Stamina - amount
     return true
+end
+
+function SurvivalService:GetSpeciesProfile(stateOrSpeciesId)
+    local speciesId = type(stateOrSpeciesId) == "table" and stateOrSpeciesId.SpeciesId or stateOrSpeciesId
+    local species = SpeciesConfig[speciesId or "gallimimus"] or SpeciesConfig.gallimimus
+    if not species then return nil end
+    return {
+        speciesId = species.SpeciesId,
+        diet = species.Diet,
+        creatureCategory = species.CreatureCategory or "Unclassified",
+        movementModes = species.MovementModes or { Ground = true },
+        ecosystemProfile = species.EcosystemProfile or {},
+    }
+end
+
+function SurvivalService:ApplySwimOxygenTick(player, isSubmerged, deltaSeconds)
+    local state = self:GetState(player)
+    if not state or state.Dead or state.Hatched ~= true then return false, "not_alive_hatched" end
+    local species = SpeciesConfig[state.SpeciesId]
+    local stats = species.BaseStats[state.GrowthStage]
+    state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
+    if isSubmerged then
+        state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) - (stats.OxygenDrain or 10) * (deltaSeconds or 1), 0, state.MaxOxygen)
+        if state.Oxygen <= 0 then
+            self:ApplyDamage(player, (stats.DrowningDamage or 8) * (deltaSeconds or 1), "Drowning")
+        end
+    else
+        state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) + (stats.OxygenRegen or 12) * (deltaSeconds or 1), 0, state.MaxOxygen)
+    end
+    return true, state
+end
+
+function SurvivalService:ConsumeFlightStamina(player, deltaSeconds)
+    local state = self:GetState(player)
+    if not state or state.Dead or state.Hatched ~= true then return false, "not_alive_hatched" end
+    if not state.MovementModes or state.MovementModes.Flight ~= true then return false, "flight_unavailable" end
+    local species = SpeciesConfig[state.SpeciesId]
+    local stats = species.BaseStats[state.GrowthStage]
+    local drain = (stats.FlightStaminaDrain or 18) * (deltaSeconds or 1)
+    if (state.Stamina or 0) < drain then return false, "stamina_empty" end
+    state.Stamina = state.Stamina - drain
+    return true, state
 end
 
 function SurvivalService:OnDeath(callback)

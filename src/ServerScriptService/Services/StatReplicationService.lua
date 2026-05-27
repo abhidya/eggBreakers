@@ -8,12 +8,17 @@ function StatReplicationService:BuildPayload(state)
         hunger = state.Hunger,
         thirst = state.Thirst,
         stamina = state.Stamina,
+        oxygen = state.Oxygen,
+        maxOxygen = state.MaxOxygen,
         growth = state.Growth,
         growthStage = state.GrowthStage,
         hatched = state.Hatched == true,
         hatchProgress = state.HatchProgress or 0,
         diet = state.Diet,
         species = state.SpeciesId,
+        creatureCategory = state.CreatureCategory,
+        movementModes = state.MovementModes or {},
+        ecosystemProfile = state.EcosystemProfile or {},
         statusEffects = state.StatusEffects or {},
     }
 end

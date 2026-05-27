@@ -24,6 +24,11 @@ table.insert(suite.tests, { name = "small screen readability gate", run = functi
     Assert.truthy(table.find(payload, "hunger") ~= nil, "StatUpdate includes hunger")
     Assert.truthy(table.find(payload, "thirst") ~= nil, "StatUpdate includes thirst")
     Assert.truthy(table.find(payload, "stamina") ~= nil, "StatUpdate includes stamina")
+    Assert.truthy(table.find(payload, "oxygen") ~= nil, "StatUpdate includes oxygen")
+    Assert.truthy(table.find(payload, "maxOxygen") ~= nil, "StatUpdate includes max oxygen")
+    Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate includes creature category")
+    Assert.truthy(table.find(payload, "movementModes") ~= nil, "StatUpdate includes movement modes")
+    Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate includes ecosystem profile")
     Assert.truthy(table.find(payload, "growthStage") ~= nil, "StatUpdate includes growth stage")
 end })
 
@@ -32,10 +37,14 @@ table.insert(suite.tests, { name = "diet guidance explains species food and wate
         species = "gallimimus",
         diet = "Herbivore",
         growthStage = "Hatchling",
+        creatureCategory = "SmallPrey",
+        maxOxygen = 55,
     })
     Assert.truthy(string.find(herbivore, "gallimimus", 1, true) ~= nil, "species appears in guidance")
     Assert.truthy(string.find(herbivore, "Herbivore", 1, true) ~= nil, "diet appears in guidance")
     Assert.truthy(string.find(herbivore, "green plant", 1, true) ~= nil, "herbivore food hint appears")
+    Assert.truthy(string.find(herbivore, "SmallPrey", 1, true) ~= nil, "creature category appears")
+    Assert.truthy(string.find(herbivore, "oxygen", 1, true) ~= nil, "oxygen hint appears")
     Assert.truthy(string.find(herbivore, "blue water", 1, true) ~= nil, "water hint appears")
 
     local carnivore = HUDController:BuildDietGuidance({
