@@ -1,16 +1,49 @@
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
 NPCService.MaxActive = 30
-NPCService.AllowedStates = { HatchAtNest=true, Idle=true, Wander=true, SeekFood=true, Eat=true, SeekWater=true, Drink=true, Hide=true, Flee=true, Chase=true, Attack=true, Dead=true, Despawn=true }
+NPCService.AllowedStates = { HatchAtNest=true, Idle=true, Wander=true, Herd=true, SeekFood=true, Eat=true, SeekWater=true, Drink=true, Hide=true, Flee=true, Chase=true, Attack=true, ApexEvent=true, Dead=true, Despawn=true }
 NPCService.NPCs = {}
 NPCService.FleeDistance = 80
 NPCService.TickSeconds = 1
 NPCService.SenseDistance = 90
 NPCService.InteractDistance = 10
 NPCService.MoveStep = 8
+NPCService.HerdRadius = 65
+NPCService.ApexThreatRadius = 140
+NPCService.KindProfiles = {
+    Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "gallimimus" },
+    Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "carnotaurus" },
+    Apex = { Diet = "Carnivore", Health = 260, Damage = 80, Apex = true, SpeciesId = "tyrannosaurus", ThreatRadius = 140 },
+    Omnivore = { Diet = "Omnivore", Health = 95, Damage = 18, Herding = true, SpeciesId = "oviraptor" },
+}
+
+function NPCService:GetKindProfile(kind)
+    local base = self.KindProfiles[kind] or self.KindProfiles.Prey
+    local profile = {}
+    for key, value in pairs(base) do profile[key] = value end
+    local species = SpeciesConfig[profile.SpeciesId]
+    if species and species.EcosystemProfile then
+        profile.Apex = profile.Apex or species.EcosystemProfile.Apex == true
+        profile.Herding = profile.Herding or species.EcosystemProfile.Herding == true
+        profile.ThreatRadius = profile.ThreatRadius or species.EcosystemProfile.ThreatRadius
+        profile.HerdRadius = profile.HerdRadius or species.EcosystemProfile.HerdRadius
+    end
+    return profile
+end
+
+function NPCService:GetRecordDiet(record)
+    if record and record.Diet then return record.Diet end
+    return self:GetKindProfile(record and record.Kind or "Prey").Diet
+end
+
+function NPCService:CanEatDiet(eaterDiet, foodDiet)
+    return eaterDiet == "Omnivore" or foodDiet == "Omnivore" or eaterDiet == foodDiet
+end
 
 function NPCService:CanSpawn(positionOk, activeCount)
     activeCount = activeCount or #self.NPCs
@@ -19,6 +52,7 @@ end
 
 function NPCService:Register(npc, kind)
     if #self.NPCs >= self.MaxActive then return false, "cap_reached" end
+    local profile = self:GetKindProfile(kind)
     local pivotPosition = Vector3.new(0, 0, 0)
     if npc.GetPivot then
         pivotPosition = npc:GetPivot().Position
@@ -34,11 +68,23 @@ function NPCService:Register(npc, kind)
         Hatched = false,
         Hunger = 65,
         Thirst = 65,
-        Health = kind == "Predator" and 140 or 80,
-        MaxHealth = kind == "Predator" and 140 or 80,
+        Health = profile.Health,
+        MaxHealth = profile.Health,
+        Damage = profile.Damage,
+        Diet = profile.Diet,
+        SpeciesId = profile.SpeciesId,
+        Apex = profile.Apex == true,
+        Herding = profile.Herding == true,
+        ThreatRadius = profile.ThreatRadius or self.ApexThreatRadius,
+        HerdRadius = profile.HerdRadius or self.HerdRadius,
     }
     if npc then
         npc:SetAttribute("ActiveNPCBrain", true)
+        npc:SetAttribute("NPCKind", kind)
+        npc:SetAttribute("Diet", record.Diet)
+        npc:SetAttribute("SpeciesId", record.SpeciesId)
+        npc:SetAttribute("ApexCategory", record.Apex)
+        npc:SetAttribute("HerdingEnabled", record.Herding)
         npc:SetAttribute("BrainMoveCount", 0)
         npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)

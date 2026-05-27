@@ -36,7 +36,8 @@ function RemoteValidationService:ValidateFoodTarget(playerRoot, target, diet, ma
     if not self:HasTag(target, Constants.Tags.FoodSource) then return false, "target_not_food" end
     if not self:IsClose(playerRoot, target, maxDistance) then return false, "too_far" end
     if target:GetAttribute("Depleted") then return false, "depleted" end
-    if target:GetAttribute("Diet") ~= diet then return false, "wrong_diet" end
+    local targetDiet = target:GetAttribute("Diet")
+    if diet ~= "Omnivore" and targetDiet ~= "Omnivore" and targetDiet ~= diet then return false, "wrong_diet" end
     return true
 end
 
