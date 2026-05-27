@@ -563,9 +563,51 @@ local function creatorStoreUrl(sourceAssetId)
     return "https://create.roblox.com/store/asset/" .. tostring(sourceAssetId)
 end
 
+local function containsAny(text, needles)
+    text = string.lower(text or "")
+    for _, needle in ipairs(needles) do
+        if string.find(text, needle, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function classifySource(index, source)
+    local text = table.concat({ source.Name or "", source.SearchQuery or "", source.CategoryPath or "" }, " ")
+
+    if containsAny(text, { "ruin", "city", "car", "rubble", "concrete", "street", "asphalt", "barrel", "crate", "metal", "debris", "bridge" }) then
+        return "ApocalypticCity", "Environment", "CityRuinCluster", "city ruins/cars/rubble grouped inside Apocalyptic City, offset from cross-route centers"
+    end
+
+    if containsAny(text, { "fossil", "skull", "bone", "skeleton", "dinosaur" }) then
+        local fossilZones = { "ApocalypticCity", "MountainNestingCliffs", "RedstoneCanyon" }
+        return fossilZones[((index - 1) % #fossilZones) + 1], "Fossil", "FossilDigEdge", "fossils remain outside Nursery safe zones and away from spawn centers"
+    end
+
+    if containsAny(text, { "swamp", "water lily", "mushroom" }) then
+        return "SwampDelta", "Foliage", "SwampBankEdge", "swamp assets stay in Swamp Delta banks and wetland edges"
+    end
+
+    if containsAny(text, { "rock", "cliff", "boulder", "canyon", "sandstone", "cave", "arch", "crystal" }) then
+        if index % 2 == 0 then
+            return "MountainNestingCliffs", "Environment", "CliffEdge", "rocks/cliffs placed on mountain ledges and route edges"
+        end
+        return "RedstoneCanyon", "Environment", "CanyonEdge", "rocks/cliffs placed along redstone canyon edges, not route centers"
+    end
+
+    if containsAny(text, { "tree", "pine", "fern", "bush", "grass", "flower", "vine", "palm", "cycad", "stump", "log" }) then
+        local groveZones = { "FernPlains", "JungleBasin", "NurseryGrove" }
+        return groveZones[((index - 1) % #groveZones) + 1], "Foliage", "NaturalGroveEdge", "trees/bushes use natural groves and path edges, never path centers"
+    end
+
+    local fallbackType = typeCycle[((index - 1) % #typeCycle) + 1]
+    local fallbackZone = zones[((index - 1) % #zones) + 1]
+    return fallbackZone, fallbackType, "BiomeEdge", "biome-appropriate edge placement with travel paths kept clear"
+end
+
 local function add(index, source)
-    local assetType = typeCycle[((index - 1) % #typeCycle) + 1]
-    local zone = zones[((index - 1) % #zones) + 1]
+    local zone, assetType, placementBand, placementNotes = classifySource(index, source)
     local collisionEnabled = assetType == "Environment" or assetType == "Landmark" or assetType == "Nest"
     local scriptSandboxStatus = source.SourceScriptCount > 0 and "ScriptsRemoved" or "NoScripts"
     table.insert(AssetManifest.Entries, {
@@ -585,6 +627,10 @@ local function add(index, source)
         AssetType = assetType,
         UsedIn = zone,
         ExplorerPath = "Workspace/Map/" .. (assetType == "Landmark" and "Landmarks" or "Zones/" .. zone),
+        PlacementBand = placementBand,
+        PlacementPattern = "natural_offset_no_grid",
+        PlacementNotes = placementNotes,
+        AvoidRouteCenters = true,
         VisibleToPlayers = assetType ~= "Audio",
         ImportedScriptsPresent = false,
         ScriptsRemoved = source.SourceScriptCount > 0,

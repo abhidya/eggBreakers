@@ -61,6 +61,13 @@ MapLayoutService.ZoneTerrain = {
     },
 }
 
+MapLayoutService.FullMapTerrainUnderlay = {
+    name = "FullMapTerrainUnderlay",
+    center = Vector3.new(-450, -10, -250),
+    size = Vector3.new(4700, 12, 4400),
+    material = Enum.Material.Ground,
+}
+
 MapLayoutService.RouteTerrain = {
     { name = "NurseryToFernBabySafe", center = Vector3.new(-1575, 0, 0), size = Vector3.new(900, 18, 180), material = Enum.Material.Grass, babySafe = true },
     { name = "NurseryToJungleBabySafe", center = Vector3.new(-1765, 0, 475), size = Vector3.new(220, 18, 960), material = Enum.Material.LeafyGrass, babySafe = true },
@@ -197,8 +204,9 @@ end
 function MapLayoutService:EnsureTerrainContinuity(folders)
     local terrain = Workspace.Terrain
 
-    self:FillTerrainBlock(terrain, self.FullMapUnderlay.center, self.FullMapUnderlay.size, self.FullMapUnderlay.material)
-    self:EnsureFullMapUnderlayMarker(folders)
+    self:FillTerrainBlock(terrain, self.FullMapTerrainUnderlay.center, self.FullMapTerrainUnderlay.size, self.FullMapTerrainUnderlay.material)
+    folders.Map:SetAttribute("FullMapTerrainUnderlay", true)
+    folders.Map:SetAttribute("FullMapTerrainUnderlaySize", string.format("%d,%d,%d", self.FullMapTerrainUnderlay.size.X, self.FullMapTerrainUnderlay.size.Y, self.FullMapTerrainUnderlay.size.Z))
 
     for zoneId, zone in pairs(self.ZoneTerrain) do
         self:FillTerrainBlock(terrain, zone.center, zone.size, zone.material)
