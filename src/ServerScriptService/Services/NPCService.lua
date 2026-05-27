@@ -265,25 +265,101 @@ function NPCService:TickPreyFlee(record, threatPosition, fleeDistance)
 end
 
 function NPCService:Tick(players)
-    local fled = 0
-    for _, record in ipairs(self.NPCs) do
-        if record.Kind == "Prey" and record.State ~= "Dead" then
-            for _, player in ipairs(players or {}) do
-                local character = player.Character
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-                if root and self:TickPreyFlee(record, root.Position) then
-                    fled = fled + 1
-                    break
-                end
-            end
-        end
-    end
-    return fled
+    return self:TickNPCs(players)
 end
 
 function NPCService:CanChaseIntoZone(zoneId, scriptedTutorialScare)
     if zoneId == "NurseryGrove" and not scriptedTutorialScare then return false end
     return true
+end
+
+function NPCService:MoveRecordToward(record, targetPosition, stepStuds, actionName)
+    local npc = record and record.Instance
+    if not npc or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
+    local position = self:GetRecordPosition(record)
+    local offset = targetPosition - position
+    if offset.Magnitude <= 0.05 then return false, "already_at_target" end
+    local travel = math.min(stepStuds or self.BrainStepStuds, offset.Magnitude)
+    local nextPosition = position + offset.Unit * travel
+    local lookAt = Vector3.new(targetPosition.X, nextPosition.Y, targetPosition.Z)
+    if (lookAt - nextPosition).Magnitude <= 0.05 then
+        lookAt = nextPosition + Vector3.new(0, 0, -1)
+    end
+    if npc.PivotTo then
+        npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
+    elseif npc:IsA("BasePart") then
+        npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
+    end
+    record.LastMoveTarget = targetPosition
+    record.LastBrainAction = actionName or "Move"
+    if npc.SetAttribute then
+        npc:SetAttribute("LastBrainAction", record.LastBrainAction)
+        npc:SetAttribute("BrainTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+        npc:SetAttribute("LastBrainMovedAt", os.time())
+    end
+    return true
+end
+
+function NPCService:FindNearestPlayerRoot(record, players, maxDistance)
+    local position = self:GetRecordPosition(record)
+    local nearestRoot = nil
+    local nearestDistance = maxDistance or math.huge
+    for _, player in ipairs(players or {}) do
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local distance = (root.Position - position).Magnitude
+            if distance <= nearestDistance then
+                nearestRoot = root
+                nearestDistance = distance
+            end
+        end
+    end
+    return nearestRoot, nearestDistance
+end
+
+function NPCService:Wander(record)
+    record.BrainTick = (record.BrainTick or 0) + 1
+    local angle = (record.BrainTick % 8) * (math.pi / 4)
+    local radius = math.min(self.WanderRadius, 10 + (record.BrainTick % 4) * 4)
+    local origin = record.SpawnPosition or self:GetRecordPosition(record)
+    local target = origin + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+    self:Transition(record, "Wander")
+    return self:MoveRecordToward(record, target, self.BrainStepStuds, "Wander")
+end
+
+function NPCService:RunPreyBrain(record, players)
+    local root, distance = self:FindNearestPlayerRoot(record, players, self.FleeDistance)
+    if root and distance then
+        local position = self:GetRecordPosition(record)
+        local away = position - root.Position
+        if away.Magnitude <= 0.05 then away = Vector3.new(1, 0, 0) end
+        local target = position + away.Unit * self.BrainStepStuds
+        record.FleeFrom = root.Position
+        record.LastFleeAt = os.time()
+        self:Transition(record, "Flee")
+        return self:MoveRecordToward(record, target, self.BrainStepStuds, "Flee")
+    end
+    return self:Wander(record)
+end
+
+function NPCService:RunPredatorBrain(record, players)
+    local root, distance = self:FindNearestPlayerRoot(record, players, record.MaxChaseDistance or 120)
+    if root and distance then
+        record.ChaseTarget = root.Parent
+        if distance <= self.AttackDistance then
+            record.LastAttackAt = os.time()
+            self:Transition(record, "Attack")
+            if record.Instance and record.Instance.SetAttribute then
+                record.Instance:SetAttribute("LastBrainAction", "Attack")
+                record.Instance:SetAttribute("AttackRangeConfirmed", true)
+            end
+            return true
+        end
+        self:Transition(record, "Chase")
+        return self:MoveRecordToward(record, root.Position, self.BrainStepStuds, "Chase")
+    end
+    return self:Wander(record)
 end
 
 function NPCService:ResolveImportedCarcassVisual()
@@ -367,10 +443,11 @@ function NPCService:MarkPreyDead(record)
 end
 
 function NPCService:TickNPCs(players)
+    local active = 0
     for _, record in ipairs(self.NPCs) do
         self:TickBrain(record, players, self.TickSeconds)
     end
-    return #self.NPCs
+    return active
 end
 
 function NPCService:StartTickLoop(playersService)

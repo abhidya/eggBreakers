@@ -96,6 +96,58 @@ table.insert(suite.tests, { name = "prey flees nearby players", run = function()
     prey:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "active NPC brain moves prey and predators", run = function()
+    local oldRecords = NPCService.NPCs
+    NPCService.NPCs = {}
+
+    local prey = Instance.new("Model")
+    prey.Name = "BrainPrey"
+    local preyRoot = Instance.new("Part")
+    preyRoot.Name = "HumanoidRootPart"
+    preyRoot.Size = Vector3.new(2, 2, 2)
+    preyRoot.Parent = prey
+    prey.PrimaryPart = preyRoot
+    prey:PivotTo(CFrame.new(0, 3, 0))
+    prey.Parent = workspace
+    local preyOk, preyRecord = NPCService:Register(prey, "Prey")
+    Assert.truthy(preyOk, "prey registered for brain")
+
+    local predator = Instance.new("Model")
+    predator.Name = "BrainPredator"
+    local predatorRoot = Instance.new("Part")
+    predatorRoot.Name = "HumanoidRootPart"
+    predatorRoot.Size = Vector3.new(2, 2, 2)
+    predatorRoot.Parent = predator
+    predator.PrimaryPart = predatorRoot
+    predator:PivotTo(CFrame.new(40, 3, 0))
+    predator.Parent = workspace
+    local predatorOk, predatorRecord = NPCService:Register(predator, "Predator")
+    Assert.truthy(predatorOk, "predator registered for brain")
+
+    local player = { Character = Instance.new("Model") }
+    local playerRoot = Instance.new("Part")
+    playerRoot.Name = "HumanoidRootPart"
+    playerRoot.Position = Vector3.new(6, 3, 0)
+    playerRoot.Parent = player.Character
+
+    local preyStart = NPCService:GetRecordPosition(preyRecord)
+    local predatorStart = NPCService:GetRecordPosition(predatorRecord)
+    local active = NPCService:TickNPCs({ player })
+    Assert.truthy(active >= 2, "brain ticks both NPCs")
+    Assert.equals(preyRecord.State, "Flee", "prey flees nearby player")
+    Assert.equals(predatorRecord.State, "Chase", "predator chases player outside attack range")
+    Assert.truthy((NPCService:GetRecordPosition(preyRecord) - preyStart).Magnitude > 0, "prey visibly moved")
+    Assert.truthy((NPCService:GetRecordPosition(predatorRecord) - predatorStart).Magnitude > 0, "predator visibly moved")
+    Assert.equals(prey:GetAttribute("ActiveNPCBrain"), true, "prey has active brain marker")
+    Assert.equals(predator:GetAttribute("LastBrainAction"), "Chase", "predator action marker set")
+
+    prey:Destroy()
+    predator:Destroy()
+    player.Character:Destroy()
+    NPCService.NPCs = oldRecords
+end })
+
 table.insert(suite.tests, { name = "prey/danger spawns separated and hard cap exists", run = function()
     Assert.equals(NPCService.MaxActive, 30, "hard NPC cap")
     Assert.truthy(NPCSpawnService.TargetActive <= NPCService.MaxActive, "target active does not exceed hard cap")
