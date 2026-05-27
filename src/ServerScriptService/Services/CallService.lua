@@ -40,9 +40,10 @@ end
 function CallService:RequestCall(player, callType)
     if not RemoteValidationService:CheckRate(player, "RequestCall") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)
-    if not state or not state.Hatched or state.Dead or not self.Allowed[callType] then return false, "bad_call" end
+    if not RemoteValidationService:IsAlive(state) or not RemoteValidationService:IsHatched(state) then return false, "not_alive_hatched" end
+    if not self.Allowed[callType] then return false, "bad_call" end
     local marker = self:CreateDebugMarker(player, callType, 80)
-    return true, { Player = player, CallType = callType, Radius = 80, EffectMarker = marker }
+    return true, { Player = player, CallType = callType, Radius = 80, EffectMarker = marker, Marker = marker }
 end
 
 return CallService

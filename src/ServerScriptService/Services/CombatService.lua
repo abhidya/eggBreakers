@@ -29,6 +29,7 @@ function CombatService:ApplyDamage(target, damage, attacker)
         end
     end
     target:SetAttribute("LastDamage", damage)
+    target:SetAttribute("LastServerDamage", damage)
     target:SetAttribute("LastDamagedByUserId", attacker and attacker.UserId or 0)
     target:SetAttribute("PendingServerDamage", damage)
     return true

@@ -25,31 +25,6 @@ function NPCService:Register(npc, kind)
     return true, record
 end
 
-function NPCService:CreateCarcassFoodSource(record)
-    local npc = record and record.Instance
-    if not npc then return nil, "missing_npc" end
-    local carcass = Instance.new("Part")
-    carcass.Name = (npc.Name or "Prey") .. "_CarcassFood"
-    carcass.Anchored = true
-    carcass.CanCollide = false
-    carcass.CanTouch = true
-    carcass.CanQuery = true
-    carcass.Size = Vector3.new(7, 1.5, 4)
-    carcass.Color = Color3.fromRGB(118, 58, 47)
-    carcass.Material = Enum.Material.Slate
-    local pos = record.SpawnPosition or Vector3.new(0, 12, 0)
-    if npc.GetPivot then pos = npc:GetPivot().Position end
-    carcass.Position = Vector3.new(pos.X, math.max(pos.Y, 12), pos.Z)
-    carcass:SetAttribute("Diet", "Carnivore")
-    carcass:SetAttribute("Nutrition", 45)
-    carcass:SetAttribute("Depleted", false)
-    carcass:SetAttribute("SourceNPC", npc.Name)
-    carcass:SetAttribute("PlacementRole", "PreyCarcassFood")
-    carcass.Parent = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("FoodSources") or workspace
-    CollectionService:AddTag(carcass, "FoodSource")
-    return carcass
-end
-
 function NPCService:Transition(record, nextState)
     if not self.AllowedStates[nextState] then return false, "bad_state" end
     if record.Kind == "Prey" and not ({ Idle=true, Wander=true, Flee=true, Dead=true, Despawn=true })[nextState] then return false, "prey_state_forbidden" end
@@ -108,24 +83,63 @@ function NPCService:CanChaseIntoZone(zoneId, scriptedTutorialScare)
     return true
 end
 
-function NPCService:CreateCarcassFoodSource(npc, nutrition)
-    local carcass = Instance.new("Part")
-    carcass.Name = (npc and npc.Name or "Prey") .. "_CarcassFoodSource"
-    carcass.Anchored = true
-    carcass.CanCollide = false
-    carcass.CanTouch = false
-    carcass.CanQuery = true
-    carcass.Shape = Enum.PartType.Ball
-    carcass.Material = Enum.Material.Leather
-    carcass.Color = Color3.fromRGB(125, 58, 48)
-    carcass.Size = Vector3.new(8, 3, 5)
+function NPCService:ResolveImportedCarcassVisual()
+    local library = game:GetService("ReplicatedStorage"):FindFirstChild("ImportedAssetLibrary")
+    if not library then return nil end
+    for _, descendant in ipairs(library:GetDescendants()) do
+        local name = string.lower(descendant.Name)
+        if (string.find(name, "fossil", 1, true) or string.find(name, "bone", 1, true) or string.find(name, "dinosaur", 1, true) or string.find(name, "egg", 1, true)) then
+            if descendant:IsA("Model") or descendant:IsA("BasePart") then
+                if descendant:IsA("BasePart") or descendant:FindFirstChildWhichIsA("BasePart", true) then
+                    return descendant
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
+	local record = type(npcOrRecord) == "table" and npcOrRecord.Instance ~= nil and npcOrRecord or nil
+	local npc = record and record.Instance or npcOrRecord
+    if not npc then return nil, "missing_npc" end
     local position = Vector3.new(0, 3, 0)
     if npc and npc.GetPivot then
         position = npc:GetPivot().Position
     elseif npc and npc:IsA("BasePart") then
         position = npc.Position
+    elseif record and record.SpawnPosition then
+        position = record.SpawnPosition
     end
-    carcass.Position = position
+    local source = self:ResolveImportedCarcassVisual()
+    if not source then return nil, "missing_imported_carcass_visual" end
+    local carcass = source:Clone()
+    if carcass:IsA("BasePart") then
+        local wrapper = Instance.new("Model")
+        wrapper.Name = (npc.Name or "Prey") .. "_CarcassFoodSource"
+        carcass.Parent = wrapper
+        wrapper.PrimaryPart = carcass
+        carcass = wrapper
+    else
+        carcass.Name = (npc.Name or "Prey") .. "_CarcassFoodSource"
+    end
+    for _, descendant in ipairs(carcass:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            descendant:Destroy()
+        elseif descendant:IsA("ModuleScript") then
+            descendant:SetAttribute("ImportedScriptAudited", true)
+            descendant:SetAttribute("Sandboxed", true)
+        elseif descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = true
+        end
+    end
+    if carcass:IsA("Model") then
+        if not carcass.PrimaryPart then carcass.PrimaryPart = carcass:FindFirstChildWhichIsA("BasePart", true) end
+        if carcass.PrimaryPart then carcass:PivotTo(CFrame.new(position)) end
+    end
     carcass:SetAttribute("Diet", "Carnivore")
     carcass:SetAttribute("Nutrition", nutrition or 35)
     carcass:SetAttribute("FoodKind", "PreyCarcass")
@@ -133,7 +147,8 @@ function NPCService:CreateCarcassFoodSource(npc, nutrition)
     carcass:SetAttribute("RespawnCooldownSeconds", 180)
     carcass:SetAttribute("CreatorStoreOnly", true)
     carcass:SetAttribute("ImportedVisibleAsset", true)
-    carcass:SetAttribute("AssetManifestId", "CS-739396590")
+    carcass:SetAttribute("AssetManifestId", carcass:GetAttribute("AssetManifestId") or "ImportedPreyCarcass")
+    carcass:SetAttribute("SourceNPC", npc.Name)
     carcass.Parent = Workspace:FindFirstChild("NPCs") or Workspace
     CollectionService:AddTag(carcass, "FoodSource")
     return carcass
@@ -142,7 +157,9 @@ end
 function NPCService:MarkPreyDead(record)
     if not record or record.Kind ~= "Prey" then return false, "not_prey" end
     self:Transition(record, "Dead")
-    record.Carcass = self:CreateCarcassFoodSource(record.Instance, 35)
+    if not record.Carcass then
+        record.Carcass = self:CreateCarcassFoodSource(record, 35)
+    end
     return true, record.Carcass
 end
 

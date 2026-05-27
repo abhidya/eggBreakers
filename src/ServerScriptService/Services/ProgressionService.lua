@@ -10,12 +10,13 @@ function ProgressionService:_bucket(player)
 end
 
 function ProgressionService:GrantOnce(player, key, currency, amount, reason)
-    local bucket = self:_bucket(player)
-    if bucket[key] then return false, "already_granted" end
-    bucket[key] = true
-    if currency == "DNA" then return PlayerDataService:GrantDNA(player, amount, reason) end
-    if currency == "Fossils" then return PlayerDataService:GrantFossils(player, amount, reason) end
-    return false, "bad_currency"
+	local bucket = self:_bucket(player)
+	if bucket[key] then return false, "already_granted" end
+	bucket[key] = true
+	PlayerDataService:Get(player)
+	if currency == "DNA" then return PlayerDataService:GrantDNA(player, amount, reason) end
+	if currency == "Fossils" then return PlayerDataService:GrantFossils(player, amount, reason) end
+	return false, "bad_currency"
 end
 
 function ProgressionService:OnHatched(player)

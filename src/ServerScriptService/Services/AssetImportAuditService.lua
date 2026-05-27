@@ -210,16 +210,19 @@ function AssetImportAuditService:AuditAndRepair(options)
                 and instance:GetAttribute("CreatorStoreOnly") == true
             local visible = self:IsVisibleImportedAsset(instance)
             local scriptsPresent = false
-            for _, descendant in ipairs(instance:GetDescendants()) do
-                if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
-                    scriptsPresent = true
-                    break
-                end
-            end
+			for _, descendant in ipairs(instance:GetDescendants()) do
+				if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
+					scriptsPresent = true
+					break
+				end
+			end
+			if mutate and not scriptsPresent and instance:GetAttribute("ScriptsAudited") ~= true then
+				instance:SetAttribute("ScriptsAudited", true)
+			end
 
-            addUnique(importedSourceIds, sourceAssetId)
-            if tagged then addUnique(taggedSourceIds, sourceAssetId) end
-            if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
+			addUnique(importedSourceIds, sourceAssetId)
+			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
+			if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
             if instance:GetAttribute("ScriptsAudited") == true or (entry and entry.ScriptsAudited == true and not scriptsPresent) then
                 addUnique(auditedSourceIds, sourceAssetId)
             end

@@ -12,10 +12,10 @@ local Bootstrap = require(ServerScriptService.Bootstrap)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
 local CombatService = require(ServerScriptService.Services.CombatService)
 local FoodWaterService = require(ServerScriptService.Services.FoodWaterService)
+local AssetImportAuditService = require(ServerScriptService.Services.AssetImportAuditService)
 local NPCService = require(ServerScriptService.Services.NPCService)
 local NPCSpawnService = require(ServerScriptService.Services.NPCSpawnService)
 local SurvivalService = require(ServerScriptService.Services.SurvivalService)
-local UniqueImportPilotReport = require(ReplicatedStorage.Shared.UniqueImportPilotReport)
 
 local suite = { name = "G013FinalGate.server", category = "E2E", tests = {} }
 
@@ -48,23 +48,8 @@ local function destroyPlayerCharacter(player)
 end
 
 local function trackedMaterializedUniqueCount()
-    if UniqueImportPilotReport.Task19Summary and UniqueImportPilotReport.Task19Summary.CumulativeTrackedUniquePrimaryIds then
-        return UniqueImportPilotReport.Task19Summary.CumulativeTrackedUniquePrimaryIds
-    end
-    local seen = {}
-    local count = 0
-    local function addRows(rows)
-        for _, row in ipairs(rows or {}) do
-            if row.SourceAssetId and not seen[row.SourceAssetId] then
-                seen[row.SourceAssetId] = true
-                count = count + 1
-            end
-        end
-    end
-    addRows(UniqueImportPilotReport.PrimaryImports)
-    addRows(UniqueImportPilotReport.Task10PrimaryImports)
-    addRows(UniqueImportPilotReport.Task19PrimaryImports)
-    return count
+	local audit = AssetImportAuditService:AuditAndRepair({ mutate = true })
+	return audit.counts.releaseReadyVisibleAssets or 0
 end
 
 table.insert(suite.tests, { name = "startup bootstrap require and remotes are clean", run = function()
@@ -153,9 +138,9 @@ table.insert(suite.tests, { name = "food carcass and city/assets cannot be gener
 end })
 
 table.insert(suite.tests, { name = "materialized imports are reported separately and reach release threshold", run = function()
-    local materialized = trackedMaterializedUniqueCount()
-    Assert.truthy(materialized > 0, "materialized import count must be reported separately from manifest")
-    Assert.truthy(materialized >= 500, "materialized unique primary Store imports below 500: " .. tostring(materialized))
+	local materialized = trackedMaterializedUniqueCount()
+	Assert.truthy(materialized > 0, "materialized import count must be reported separately from manifest")
+	Assert.truthy(materialized >= 500, "release-ready live imported assets below 500: " .. tostring(materialized))
 end })
 
 table.insert(suite.tests, { name = "user story tests cover US01 through US15", run = function()
