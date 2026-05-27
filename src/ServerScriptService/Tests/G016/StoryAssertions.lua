@@ -34,11 +34,21 @@ function StoryAssertions.assertRegistryEnumeratesAllStories(registry)
     end
 end
 
+local function assertNonEmptyString(value, message)
+    Assert.truthy(type(value) == "string" and #value > 0, message)
+end
+
 function StoryAssertions.assertStoryHasLivePass(story)
     StoryAssertions.requireProofTrue(story.liveProof, story.id .. " " .. story.title)
     Assert.equals(StoryAssertions.proofAttribute(story.id .. "Status"), "PASS", story.id .. " matrix status must be PASS")
-    Assert.truthy(type(StoryAssertions.proofAttribute(story.id .. "Evidence")) == "string",
+    assertNonEmptyString(StoryAssertions.proofAttribute(story.id .. "Evidence"),
         story.id .. " must name concrete live/source evidence")
+    assertNonEmptyString(StoryAssertions.proofAttribute(story.id .. "ObservedAt"),
+        story.id .. " must include fresh proof observation timestamp")
+    assertNonEmptyString(StoryAssertions.proofAttribute(story.id .. "ProofSource"),
+        story.id .. " must include proof source, such as Studio TestRunner or live play probe")
+    Assert.equals(StoryAssertions.proofAttribute(story.id .. "Milestone"), "G016FinalGate",
+        story.id .. " proof milestone must match G016FinalGate")
 end
 
 return StoryAssertions

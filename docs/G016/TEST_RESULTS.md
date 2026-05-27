@@ -10,5 +10,22 @@ Known latest evidence from owner: hatch completes but post-hatch game loop fails
 | Food/water loop | FAIL | owner sees no food/water | T002 |
 | Attack/combat/death | FAIL | attack no-op, health 0 no death | T003 |
 | Sprint/call/hide | FAIL | buttons do nothing | T004 |
-| Self-validating harness | FAIL | G015 had failing tests/missing client proof | T005 |
-| 500 asset gate | FAIL | latest evidence 34/500 | T006 |
+| Self-validating harness source | FIXING | T005 added G016 registry/suite/client proof files | run syntax/build/Studio gate |
+| G016 live proof attributes | FAIL | no `G016FinalGateProof` / `G016ClientProof` fresh live attributes yet | live E2E after repairs |
+| Fresh all-category TestRunner | FAIL | G015 carry-forward was 146 total, 129 passed, 17 failed | rerun after fixes |
+| Mobile/controller proof | BLOCKED | no fresh device/emulator/controller proof in this lane | live mobile/controller smoke |
+| RBXL save/reopen persistence | BLOCKED | no fresh save/reopen proof | save/reopen audit |
+| 500 asset gate | FAIL | latest evidence 34/500 release-ready visible imports | T006 |
+
+## T005 Harness Status
+
+- `src/ServerScriptService/Tests/G016/UserStoryTestRegistry.lua` enumerates US01-US15.
+- `src/ServerScriptService/Tests/G016/StoryAssertions.lua` centralizes proof checks and requires per-story timestamp/source/milestone metadata.
+- `src/ServerScriptService/Tests/G016/G016FinalGateSuite.lua` fails unless all stories have live PASS proof, fresh all-category proof, mobile/live E2E proof, RBXL persistence proof, and 500 release-ready imports.
+- `src/StarterPlayer/StarterPlayerScripts/Tests/G016ClientStoryProofTests.client.lua` prevents US13/client control PASS without live mobile/controller proof.
+
+Expected current result: FAIL until real live proof artifacts are attached. Do not override this with docs-only evidence.
+
+## Fresh Studio G016 Gate Probe — 2026-05-27
+
+Studio MCP read-only probe executed `G016FinalGateSuite` without creating proof attributes. Result: 7 total, 2 passed, 5 failed, 0 skipped, 1 suite. Passing checks: gate files present and UserStoryTestRegistry enumerates US01-US15. Expected failing checks: missing per-story live PASS proof, missing fresh all-category TestRunner proof, missing mobile/live E2E proof, missing RBXL persistence proof, and release asset count below 500.
