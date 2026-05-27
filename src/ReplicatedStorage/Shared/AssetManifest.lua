@@ -1,5 +1,8 @@
 local AssetManifest = {}
-AssetManifest.MinimumUniqueAssets = 500AssetManifest.CreatorStoreApiEvidence = "https://apis.roblox.com/toolbox-service/v2/assets:search"AssetManifest.OwnerCorrectedRule = "500 unique Roblox Creator Store source asset IDs; cloned duplicates by source ID are invalid."AssetManifest.RequiredStatuses = {
+AssetManifest.MinimumUniqueAssets = 500
+AssetManifest.CreatorStoreApiEvidence = "https://apis.roblox.com/toolbox-service/v2/assets:search"
+AssetManifest.OwnerCorrectedRule = "500 unique Roblox Creator Store source asset IDs; cloned duplicates by source ID are invalid."
+AssetManifest.RequiredStatuses = {
     Final = true,
     Temporary = true,
     PendingImport = true,
