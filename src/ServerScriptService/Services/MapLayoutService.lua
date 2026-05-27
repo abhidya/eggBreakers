@@ -290,6 +290,76 @@ MapLayoutService.NPCSpawnPlacements = {
     { name = "SwampPredator_01", position = Vector3.new(65, 11, 1010), kind = "Predator", zone = "SwampDelta", dangerous = true },
 }
 
+
+MapLayoutService.CompactLayout = {
+    origin = Vector3.new(-2000, 0, 0),
+    scaleXZ = 0.45,
+    minimumTerrainXZ = 240,
+    minimumRouteXZ = 96,
+    minimumWaterXZ = 42,
+}
+
+function MapLayoutService:CompactPosition(vector)
+    local layout = self.CompactLayout
+    return Vector3.new(
+        layout.origin.X + (vector.X - layout.origin.X) * layout.scaleXZ,
+        vector.Y,
+        layout.origin.Z + (vector.Z - layout.origin.Z) * layout.scaleXZ
+    )
+end
+
+function MapLayoutService:CompactSize(size, minimumXZ)
+    local scale = self.CompactLayout.scaleXZ
+    return Vector3.new(
+        math.max(minimumXZ or 0, size.X * scale),
+        size.Y,
+        math.max(minimumXZ or 0, size.Z * scale)
+    )
+end
+
+function MapLayoutService:ApplyCompactLayout()
+    if self._compactLayoutApplied then return end
+    self._compactLayoutApplied = true
+
+    self.FullMapUnderlay.center = self:CompactPosition(self.FullMapUnderlay.center)
+    self.FullMapUnderlay.size = self:CompactSize(self.FullMapUnderlay.size, 1800)
+    self.FullMapTerrainUnderlay.center = self:CompactPosition(self.FullMapTerrainUnderlay.center)
+    self.FullMapTerrainUnderlay.size = self:CompactSize(self.FullMapTerrainUnderlay.size, 1800)
+
+    for _, zone in pairs(self.ZoneTerrain) do
+        zone.center = self:CompactPosition(zone.center)
+        zone.size = self:CompactSize(zone.size, self.CompactLayout.minimumTerrainXZ)
+    end
+
+    for _, route in ipairs(self.RouteTerrain) do
+        route.center = self:CompactPosition(route.center)
+        route.size = self:CompactSize(route.size, self.CompactLayout.minimumRouteXZ)
+    end
+
+    for _, water in ipairs(self.ShallowWater) do
+        water.center = self:CompactPosition(water.center)
+        water.size = self:CompactSize(water.size, self.CompactLayout.minimumWaterXZ)
+    end
+
+    for _, placement in ipairs(self.FoodPlacements) do
+        placement.position = self:CompactPosition(placement.position)
+    end
+
+    for _, source in ipairs(self.FoodSourcePlacements) do
+        source.position = self:CompactPosition(source.position)
+    end
+
+    for _, spec in ipairs(self.BiomeDressingPlacements) do
+        spec.position = self:CompactPosition(spec.position)
+    end
+
+    for _, spec in ipairs(self.NPCSpawnPlacements) do
+        spec.position = self:CompactPosition(spec.position)
+    end
+end
+
+MapLayoutService:ApplyCompactLayout()
+
 function MapLayoutService:GetOrCreateFolder(parent, name)
     local folder = parent:FindFirstChild(name)
     if not folder then
@@ -439,8 +509,8 @@ function MapLayoutService:EnsureCityDiscoveryTriggers(folders)
     local triggerFolder = self:GetOrCreateFolder(folders.InvisibleGameplayVolumes, "CityDiscoveryTriggers")
     local zone = self.ZoneTerrain.ApocalypticCity
     local triggers = {
-        { name = "_INVISIBLE_CityDiscovery_RedstoneGate", position = Vector3.new(620, zone.topY + 5, -325), size = Vector3.new(90, 14, 180) },
-        { name = "_INVISIBLE_CityDiscovery_SwampCauseway", position = Vector3.new(620, zone.topY + 5, 475), size = Vector3.new(90, 14, 180) },
+        { name = "_INVISIBLE_CityDiscovery_RedstoneGate", position = self:CompactPosition(Vector3.new(620, zone.topY + 5, -325)), size = Vector3.new(90, 14, 180) },
+        { name = "_INVISIBLE_CityDiscovery_SwampCauseway", position = self:CompactPosition(Vector3.new(620, zone.topY + 5, 475)), size = Vector3.new(90, 14, 180) },
         { name = "_INVISIBLE_CityDiscovery_CityCore", position = Vector3.new(zone.center.X, zone.topY + 5, zone.center.Z), size = Vector3.new(220, 14, 220) },
     }
     for _, spec in ipairs(triggers) do
@@ -474,12 +544,12 @@ function MapLayoutService:EnsureFallSafetyVolume(folders)
         safety.CanTouch = true
         safety.CanQuery = false
         safety.Transparency = 1
-        safety.Size = Vector3.new(4600, 4, 4200)
-        safety.Position = Vector3.new(-450, -16, -250)
-        safety:SetAttribute("GameplayVolume", true)
-        safety:SetAttribute("FallSafety", true)
         safety.Parent = folders.InvisibleGameplayVolumes
     end
+    safety.Size = Vector3.new(self.FullMapUnderlay.size.X, 4, self.FullMapUnderlay.size.Z)
+    safety.Position = Vector3.new(self.FullMapUnderlay.center.X, -16, self.FullMapUnderlay.center.Z)
+    safety:SetAttribute("GameplayVolume", true)
+    safety:SetAttribute("FallSafety", true)
     return safety
 end
 
@@ -697,7 +767,7 @@ function MapLayoutService:EnsureTutorialCombatTarget(folders)
         target.Color = Color3.fromRGB(235, 82, 64)
         target.Parent = folders.Map
     end
-    target.Position = Vector3.new(-1976, 14, 10)
+    target.Position = self:CompactPosition(Vector3.new(-1976, 14, 10))
     target.Size = Vector3.new(6, 6, 6)
     target.CanCollide = false
     target.CanTouch = true
@@ -729,11 +799,11 @@ function MapLayoutService:EnsureSpawnSafety()
         spawn.Neutral = true
         spawn.Duration = 0
         spawn.Size = Vector3.new(18, 2, 18)
-        spawn.Position = Vector3.new(-2000, 12, 0)
-        spawn:SetAttribute("GameplayVolume", true)
-        spawn:SetAttribute("ZoneId", "NurseryGrove")
         spawn.Parent = spawnFolder
     end
+    spawn.Position = self:CompactPosition(Vector3.new(-2000, 12, 0))
+    spawn:SetAttribute("GameplayVolume", true)
+    spawn:SetAttribute("ZoneId", "NurseryGrove")
 
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)
