@@ -1,3 +1,5 @@
+local CollectionService = game:GetService("CollectionService")
+
 local NPCService = {}
 NPCService.MinActive = 12
 NPCService.MaxActive = 30
@@ -20,11 +22,39 @@ function NPCService:Register(npc, kind)
     return true, record
 end
 
+function NPCService:CreateCarcassFoodSource(record)
+    local npc = record and record.Instance
+    if not npc then return nil, "missing_npc" end
+    local carcass = Instance.new("Part")
+    carcass.Name = (npc.Name or "Prey") .. "_CarcassFood"
+    carcass.Anchored = true
+    carcass.CanCollide = false
+    carcass.CanTouch = true
+    carcass.CanQuery = true
+    carcass.Size = Vector3.new(7, 1.5, 4)
+    carcass.Color = Color3.fromRGB(118, 58, 47)
+    carcass.Material = Enum.Material.Slate
+    local pos = record.SpawnPosition or Vector3.new(0, 12, 0)
+    if npc.GetPivot then pos = npc:GetPivot().Position end
+    carcass.Position = Vector3.new(pos.X, math.max(pos.Y, 12), pos.Z)
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("Nutrition", 45)
+    carcass:SetAttribute("Depleted", false)
+    carcass:SetAttribute("SourceNPC", npc.Name)
+    carcass:SetAttribute("PlacementRole", "PreyCarcassFood")
+    carcass.Parent = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("FoodSources") or workspace
+    CollectionService:AddTag(carcass, "FoodSource")
+    return carcass
+end
+
 function NPCService:Transition(record, nextState)
     if not self.AllowedStates[nextState] then return false, "bad_state" end
     if record.Kind == "Prey" and not ({ Idle=true, Wander=true, Flee=true, Dead=true, Despawn=true })[nextState] then return false, "prey_state_forbidden" end
     if record.Kind == "Predator" and not ({ Idle=true, Wander=true, Chase=true, Attack=true, Dead=true, Despawn=true })[nextState] then return false, "predator_state_forbidden" end
     record.State = nextState
+    if nextState == "Dead" and record.Kind == "Prey" then
+        record.Carcass = self:CreateCarcassFoodSource(record)
+    end
     return true
 end
 

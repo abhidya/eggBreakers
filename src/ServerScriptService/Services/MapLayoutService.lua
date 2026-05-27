@@ -90,6 +90,18 @@ MapLayoutService.ShallowWater = {
     { name = "CityCanalShallow", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
 }
 
+MapLayoutService.FoodSourcePlacements = {
+    { name = "NurseryStarterFernPatch_A", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1985, 13, -34), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(70, 150, 67) },
+    { name = "NurseryStarterFernPatch_B", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1918, 13, 58), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(82, 160, 74) },
+    { name = "FernPlainsGrazingPatch_A", zone = "FernPlains", diet = "Herbivore", nutrition = 40, respawnSeconds = 60, position = Vector3.new(-1515, 12, -155), size = Vector3.new(12, 2, 10), color = Color3.fromRGB(78, 170, 72) },
+    { name = "FernPlainsGrazingPatch_B", zone = "FernPlains", diet = "Herbivore", nutrition = 40, respawnSeconds = 60, position = Vector3.new(-1260, 12, 210), size = Vector3.new(14, 2, 10), color = Color3.fromRGB(68, 145, 60) },
+    { name = "JungleBasinLeafCluster", zone = "JungleBasin", diet = "Herbivore", nutrition = 30, respawnSeconds = 80, position = Vector3.new(-640, 13, -430), size = Vector3.new(10, 2, 10), color = Color3.fromRGB(44, 132, 65) },
+    { name = "NurseryTutorialMeatCache", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1870, 13, -92), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(126, 62, 48), tutorialSafe = true },
+    { name = "FernPlainsPreyCarcass_A", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1080, 12, -255), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
+    { name = "RedstonePreyCarcass_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 55, respawnSeconds = 150, position = Vector3.new(260, 18, -940), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(120, 64, 52) },
+    { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
+}
+
 function MapLayoutService:GetOrCreateFolder(parent, name)
     local folder = parent:FindFirstChild(name)
     if not folder then
@@ -228,6 +240,48 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
     end
 end
 
+
+function MapLayoutService:EnsureFoodSource(folders, source)
+    local CollectionService = game:GetService("CollectionService")
+    local existing = folders.FoodSources:FindFirstChild(source.name)
+    if not existing then
+        existing = Instance.new("Part")
+        existing.Name = source.name
+        existing.Anchored = true
+        existing.Shape = Enum.PartType.Block
+        existing.Material = source.diet == "Herbivore" and Enum.Material.Grass or Enum.Material.Slate
+        existing.Parent = folders.FoodSources
+    end
+    existing.Position = source.position
+    existing.Size = source.size
+    existing.Color = source.color
+    existing.CanCollide = false
+    existing.CanTouch = true
+    existing.CanQuery = true
+    existing.Transparency = 0
+    existing:SetAttribute("ZoneId", source.zone)
+    existing:SetAttribute("Diet", source.diet)
+    existing:SetAttribute("Nutrition", source.nutrition)
+    existing:SetAttribute("RespawnSeconds", source.respawnSeconds)
+    existing:SetAttribute("Depleted", false)
+    existing:SetAttribute("TutorialSafe", source.tutorialSafe == true)
+    existing:SetAttribute("HighRisk", source.highRisk == true)
+    existing:SetAttribute("CreatorStoreOnly", true)
+    existing:SetAttribute("PlacementRole", source.diet == "Herbivore" and "PlantFood" or "CarnivoreCarcassFood")
+    if not CollectionService:HasTag(existing, "FoodSource") then
+        CollectionService:AddTag(existing, "FoodSource")
+    end
+    return existing
+end
+
+function MapLayoutService:EnsureFoodSources()
+    local folders = self:EnsureMapFolders()
+    for _, source in ipairs(self.FoodSourcePlacements) do
+        self:EnsureFoodSource(folders, source)
+    end
+    return folders.FoodSources
+end
+
 function MapLayoutService:EnsureSpawnSafety()
     local folders = self:EnsureMapFolders()
     local spawnFolder = self:GetOrCreateFolder(folders.Map, "SpawnLocations")
@@ -250,6 +304,7 @@ function MapLayoutService:EnsureSpawnSafety()
     end
 
     self:EnsureTerrainContinuity(folders)
+    self:EnsureFoodSources()
     self:EnsureFallSafetyVolume(folders)
     return spawn
 end

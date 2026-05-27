@@ -4,6 +4,7 @@ local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFrame
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
 local CombatService = require(game:GetService("ServerScriptService").Services.CombatService)
+local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local suite = { name = "E2E_CarnivoreSurvival.server", category = "E2E", tests = {} }
 local function setup(id) local p=MockPlayer.new(id,"CarnE2E"); RateLimitService:ClearPlayer(p); local r=Instance.new("Part"); r.Name="HumanoidRootPart"; r.Position=Vector3.new(0,3,0); local c=Instance.new("Model"); r.Parent=c; p.Character=c; local s=SurvivalService:CreateState(p,"velociraptor"); s.Hatched=true; return p,s end
@@ -11,4 +12,18 @@ local function food(diet) local f=Instance.new("Part"); f.Position=Vector3.new(2
 
 table.insert(suite.tests,{name="carnivore rejects plant accepts meat",run=function() local p=setup(43001); local plant=food("Herbivore"); Assert.falsy(FoodWaterService:RequestEat(p,plant),"carnivore rejects plant"); RateLimitService:ClearPlayer(p); local meat=food("Carnivore"); Assert.truthy(FoodWaterService:RequestEat(p,meat),"carnivore eats meat"); plant:Destroy(); meat:Destroy() end})
 table.insert(suite.tests,{name="hunt attack applies species damage and stamina cost",run=function() local p,s=setup(43002); local startingStamina=s.Stamina; local prey=Instance.new("Part"); prey.Position=Vector3.new(5,3,0); prey.Parent=workspace; CollectionService:AddTag(prey,"Damageable"); Assert.truthy(CombatService:RequestAttack(p,"Claw",prey),"server hunt attack succeeds"); Assert.equals(prey:GetAttribute("PendingServerDamage"),7,"hatchling velociraptor claw applies configured damage"); Assert.equals(s.Stamina,startingStamina-10,"claw consumes configured stamina cost"); prey:Destroy() end})
+table.insert(suite.tests,{name="dead prey creates carnivore carcass food",run=function()
+    local p=setup(43003)
+    local prey=Instance.new("Model"); prey.Name="FoodPreyNPC"; prey:PivotTo(CFrame.new(3,12,0)); prey.Parent=workspace
+    local ok, record=NPCService:Register(prey,"Prey")
+    Assert.truthy(ok,"prey registered")
+    Assert.truthy(NPCService:Transition(record,"Dead"),"prey can die")
+    local carcass=record.Carcass
+    Assert.notNil(carcass,"carcass created")
+    Assert.equals(carcass:GetAttribute("Diet"),"Carnivore","carcass is carnivore food")
+    RateLimitService:ClearPlayer(p)
+    local eatOk=FoodWaterService:RequestEat(p,carcass)
+    Assert.truthy(eatOk,"carnivore eats prey carcass")
+    prey:Destroy(); carcass:Destroy()
+end})
 return suite
