@@ -85,20 +85,61 @@ MapLayoutService.RouteTerrain = {
     { name = "MountainNestSaddle", center = Vector3.new(-140, 63, -1620), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
 }
 
+
+MapLayoutService.EdibleVegetationMetadata = {
+    StarterPlant = { vegetationType = "TenderFern", plantPart = "Frond", browseTier = "Ground", browseHeight = 2.5, compactGroup = "NurseryStarterBrowse", interactionHint = "Eat tender fern" },
+    PlantPatch = { vegetationType = "CycadPatch", plantPart = "Frond", browseTier = "Ground", browseHeight = 3, compactGroup = "PlainsGrazingPatch", interactionHint = "Eat cycad fronds" },
+    SparsePlant = { vegetationType = "DesertScrub", plantPart = "Shoot", browseTier = "Ground", browseHeight = 2, compactGroup = "CanyonScrub", interactionHint = "Eat scrub shoots" },
+    MarshPlant = { vegetationType = "MarshReed", plantPart = "Reed", browseTier = "Ground", browseHeight = 3.5, compactGroup = "SwampReeds", interactionHint = "Eat marsh reeds" },
+    HighRiskPlant = { vegetationType = "CityOvergrowth", plantPart = "LeafCluster", browseTier = "Ground", browseHeight = 3, compactGroup = "CityOvergrowth", interactionHint = "Eat overgrowth leaves" },
+    TreeBrowse = { vegetationType = "TreeCanopy", plantPart = "Leaves", browseTier = "Tree", browseHeight = 7.5, compactGroup = "TreeBrowse", interactionHint = "Eat tree leaves" },
+}
+
+MapLayoutService.CarnivoreFoodMetadata = {
+    TutorialCarcass = { meatType = "SmallCarcassCache", compactGroup = "NurseryMeatCache", interactionHint = "Eat safe carcass" },
+    PreyCarcass = { meatType = "PreyCarcass", compactGroup = "PredatorTrailCarcass", interactionHint = "Eat prey carcass" },
+    HighRiskCarcass = { meatType = "LargeCarcass", compactGroup = "CityRiskCarcass", interactionHint = "Eat large carcass" },
+}
+
+function MapLayoutService:GetFoodMetadata(kind, diet)
+    if diet == "Carnivore" then
+        return self.CarnivoreFoodMetadata[kind] or self.CarnivoreFoodMetadata.PreyCarcass
+    end
+    return self.EdibleVegetationMetadata[kind] or self.EdibleVegetationMetadata.PlantPatch
+end
+
+function MapLayoutService:ApplyFoodMetadata(food, spec)
+    local diet = spec.diet
+    local kind = spec.kind or (diet == "Carnivore" and "PreyCarcass" or "PlantPatch")
+    local metadata = self:GetFoodMetadata(kind, diet)
+    food:SetAttribute("FoodKind", kind)
+    food:SetAttribute("Diet", diet)
+    food:SetAttribute("Nutrition", spec.nutrition)
+    food:SetAttribute("EdibleVegetation", diet == "Herbivore")
+    food:SetAttribute("TreeBrowse", kind == "TreeBrowse")
+    food:SetAttribute("VegetationType", spec.vegetationType or metadata.vegetationType)
+    food:SetAttribute("PlantPart", spec.plantPart or metadata.plantPart)
+    food:SetAttribute("BrowseTier", spec.browseTier or metadata.browseTier)
+    food:SetAttribute("BrowseHeightStuds", spec.browseHeight or metadata.browseHeight)
+    food:SetAttribute("MeatType", metadata.meatType)
+    food:SetAttribute("CompactFoodGroup", metadata.compactGroup)
+    food:SetAttribute("InteractionHint", metadata.interactionHint or (diet == "Carnivore" and "Eat carcass" or "Eat plant"))
+end
+
 MapLayoutService.FoodPlacements = {
     { name = "NurseryStarterFern_01", zone = "NurseryGrove", diet = "Herbivore", nutrition = 30, position = Vector3.new(-2025, 12, -42), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryStarterFern_02", zone = "NurseryGrove", diet = "Herbivore", nutrition = 30, position = Vector3.new(-1970, 12, 38), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryTutorialMeatCache", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, position = Vector3.new(-1870, 13, -92), size = Vector3.new(7, 1.5, 4), kind = "TutorialCarcass", cooldown = 90, tutorialSafe = true },
     { name = "FernPlainsGrazingPatch_01", zone = "FernPlains", diet = "Herbivore", nutrition = 24, position = Vector3.new(-1220, 12, -160), size = Vector3.new(10, 3, 10), kind = "PlantPatch", cooldown = 60 },
     { name = "FernPlainsGrazingPatch_02", zone = "FernPlains", diet = "Herbivore", nutrition = 24, position = Vector3.new(-1100, 12, 165), size = Vector3.new(10, 3, 10), kind = "PlantPatch", cooldown = 60 },
-    { name = "JungleBasinBroadleaf_01", zone = "JungleBasin", diet = "Herbivore", nutrition = 20, position = Vector3.new(-1540, 12, 1035), size = Vector3.new(9, 3, 9), kind = "PlantPatch", cooldown = 75 },
-    { name = "RedstoneSparseScrub_01", zone = "RedstoneCanyon", diet = "Herbivore", nutrition = 14, position = Vector3.new(-355, 13, -770), size = Vector3.new(8, 3, 8), kind = "SparsePlant", cooldown = 90 },
-    { name = "SwampDeltaMarshPlant_01", zone = "SwampDelta", diet = "Herbivore", nutrition = 18, position = Vector3.new(-260, 10, 1080), size = Vector3.new(9, 3, 9), kind = "MarshPlant", cooldown = 80 },
+    { name = "JungleBasinBroadleaf_01", zone = "JungleBasin", diet = "Herbivore", nutrition = 20, position = Vector3.new(-1540, 12, 1035), size = Vector3.new(9, 3, 9), kind = "PlantPatch", cooldown = 75, vegetationType = "BroadleafCluster" },
+    { name = "RedstoneSparseScrub_01", zone = "RedstoneCanyon", diet = "Herbivore", nutrition = 14, position = Vector3.new(-355, 13, -770), size = Vector3.new(8, 3, 8), kind = "SparsePlant", cooldown = 90, vegetationType = "CanyonScrub" },
+    { name = "SwampDeltaMarshPlant_01", zone = "SwampDelta", diet = "Herbivore", nutrition = 18, position = Vector3.new(-260, 10, 1080), size = Vector3.new(9, 3, 9), kind = "MarshPlant", cooldown = 80, vegetationType = "MarshReed" },
     { name = "CarnivoreTutorialCarcass_01", zone = "FernPlains", diet = "Carnivore", nutrition = 34, position = Vector3.new(-930, 12, -120), size = Vector3.new(8, 3, 5), kind = "TutorialCarcass", cooldown = 120 },
     { name = "RedstonePreyCarcass_01", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 42, position = Vector3.new(-125, 13, -760), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
     { name = "SwampPreyCarcass_01", zone = "SwampDelta", diet = "Carnivore", nutrition = 38, position = Vector3.new(55, 10, 1065), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
     { name = "OldEdenHighRiskCarcass_01", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 55, position = Vector3.new(1110, 12, -210), size = Vector3.new(10, 3, 6), kind = "HighRiskCarcass", cooldown = 180 },
-    { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(1285, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120 },
+    { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(1285, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120, vegetationType = "CityOvergrowth" },
     { name = "NurseryStarterFern_03", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2045, 12, 30), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryStarterFern_04", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-1934, 12, -52), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryStarterFern_05", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2008, 12, 86), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
@@ -210,6 +251,8 @@ MapLayoutService.BiomeDressingPlacements = {
         name = "NurseryFoodShadeTree_C",
         zone = "NurseryGrove",
         kind = "Tree",
+        edibleBrowse = true,
+        browseNutrition = 24,
         position = Vector3.new(-1955, 9, -38),
         trunkSize = Vector3.new(6, 23, 6),
         canopySize = Vector3.new(30, 22, 30),
@@ -220,6 +263,8 @@ MapLayoutService.BiomeDressingPlacements = {
         name = "FernPlainsTree_B",
         zone = "FernPlains",
         kind = "Tree",
+        edibleBrowse = true,
+        browseNutrition = 26,
         position = Vector3.new(-1285, 9, 70),
         trunkSize = Vector3.new(7, 29, 7),
         canopySize = Vector3.new(40, 25, 40),
@@ -273,6 +318,8 @@ MapLayoutService.BiomeDressingPlacements = {
         color = Color3.fromRGB(94, 89, 83),
         material = Enum.Material.Concrete,
     },
+    { name = "NurseryBerryBrowse_D", zone = "NurseryGrove", kind = "Bush", edibleBrowse = true, browseNutrition = 26, position = Vector3.new(-1910, 9, 122), size = Vector3.new(18, 12, 18), color = Color3.fromRGB(96, 145, 72), material = Enum.Material.Grass },
+    { name = "FernPlainsLowCycad_C", zone = "FernPlains", kind = "Bush", edibleBrowse = true, browseNutrition = 28, position = Vector3.new(-1195, 9, -38), size = Vector3.new(22, 13, 22), color = Color3.fromRGB(84, 138, 66), material = Enum.Material.Grass },
 }
 
 MapLayoutService.NPCSpawnPlacements = {
@@ -484,9 +531,7 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
             food.Parent = zoneFolder
         end
         food:SetAttribute("ZoneId", placement.zone)
-        food:SetAttribute("Diet", placement.diet)
-        food:SetAttribute("Nutrition", placement.nutrition)
-        food:SetAttribute("FoodKind", placement.kind)
+        self:ApplyFoodMetadata(food, placement)
         food:SetAttribute("CreatorStoreOnly", nil)
         food:SetAttribute("ImportedVisibleAsset", nil)
         food:SetAttribute("AssetManifestId", nil)
@@ -497,7 +542,6 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         local isTutorialFood = placement.tutorialSafe == true or placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass"
         food:SetAttribute("StarterFood", isTutorialFood)
         food:SetAttribute("TutorialSafe", isTutorialFood)
-        food:SetAttribute("InteractionHint", placement.diet == "Carnivore" and "Eat carcass" or "Eat plant")
         food:SetAttribute("VisibleGameplayAffordance", true)
         food:SetAttribute("GameplayQuery", true)
         CollectionService:AddTag(food, "FoodSource")
@@ -623,14 +667,16 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing.CanQuery = true
     existing.Transparency = 0
     existing:SetAttribute("ZoneId", source.zone)
-    existing:SetAttribute("Diet", source.diet)
-    existing:SetAttribute("Nutrition", source.nutrition)
+    self:ApplyFoodMetadata(existing, {
+        diet = source.diet,
+        nutrition = source.nutrition,
+        kind = source.kind or (source.diet == "Herbivore" and "PlantPatch" or "PreyCarcass"),
+    })
     existing:SetAttribute("RespawnSeconds", source.respawnSeconds)
     existing:SetAttribute("RespawnCooldownSeconds", source.respawnSeconds)
     existing:SetAttribute("Depleted", false)
     existing:SetAttribute("TutorialSafe", source.tutorialSafe == true)
     existing:SetAttribute("HighRisk", source.highRisk == true)
-    existing:SetAttribute("InteractionHint", source.diet == "Carnivore" and "Eat carcass" or "Eat plant")
     existing:SetAttribute("VisibleGameplayAffordance", true)
     existing:SetAttribute("GameplayQuery", true)
     existing:SetAttribute("CreatorStoreOnly", nil)
@@ -714,6 +760,21 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + spec.canopySize.Y * 0.32, 0)
             canopy.Color = spec.canopyColor
             self:ApplyDressingAttributes(canopy, spec, "VisibleTreeCanopy")
+            if spec.edibleBrowse == true then
+                canopy.CanTouch = true
+                canopy.CanQuery = true
+                canopy:SetAttribute("Decorative", false)
+                canopy:SetAttribute("VisibleGameplayAffordance", true)
+                canopy:SetAttribute("GameplayQuery", true)
+                canopy:SetAttribute("TutorialSafe", spec.zone == "NurseryGrove")
+                canopy:SetAttribute("StarterFood", spec.zone == "NurseryGrove")
+                canopy:SetAttribute("RespawnCooldownSeconds", spec.browseCooldown or 75)
+                canopy:SetAttribute("Depleted", canopy:GetAttribute("Depleted") == true)
+                self:ApplyFoodMetadata(canopy, { diet = "Herbivore", nutrition = spec.browseNutrition or 24, kind = "TreeBrowse" })
+                if not CollectionService:HasTag(canopy, "FoodSource") then
+                    CollectionService:AddTag(canopy, "FoodSource")
+                end
+            end
         else
             local prop = zoneFolder:FindFirstChild(spec.name)
             if not prop then
@@ -727,6 +788,21 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             prop.Color = spec.color
             prop.Material = spec.material
             self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
+            if spec.edibleBrowse == true then
+                prop.CanTouch = true
+                prop.CanQuery = true
+                prop:SetAttribute("Decorative", false)
+                prop:SetAttribute("VisibleGameplayAffordance", true)
+                prop:SetAttribute("GameplayQuery", true)
+                prop:SetAttribute("TutorialSafe", spec.zone == "NurseryGrove")
+                prop:SetAttribute("StarterFood", spec.zone == "NurseryGrove")
+                prop:SetAttribute("RespawnCooldownSeconds", spec.browseCooldown or 60)
+                prop:SetAttribute("Depleted", prop:GetAttribute("Depleted") == true)
+                self:ApplyFoodMetadata(prop, { diet = "Herbivore", nutrition = spec.browseNutrition or 22, kind = "PlantPatch", vegetationType = spec.kind .. "Browse" })
+                if not CollectionService:HasTag(prop, "FoodSource") then
+                    CollectionService:AddTag(prop, "FoodSource")
+                end
+            end
         end
     end
     return folders.BiomeDressing
