@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -10,6 +11,8 @@ local VISUAL_NAME = "_EggBreakersCharacterVisualClient"
 local DEBUG_VISUAL_FALLBACK = false
 local hatchProgress = 0
 local hatched = false
+local lastHatchInputAt = 0
+local HATCH_INPUT_COOLDOWN = 0.08
 
 local function rootFor(character)
     return character and character:FindFirstChild("HumanoidRootPart")
@@ -130,6 +133,21 @@ local function applyVisual()
     end
 end
 
+local function hopEgg(character)
+    local root = rootFor(character)
+    if not root then return false end
+    root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, 28, root.AssemblyLinearVelocity.Z)
+    local original = root.CFrame
+    local up = original * CFrame.new(0, 0.45, 0) * CFrame.Angles(math.rad(4), 0, math.rad(3))
+    local out = TweenService:Create(root, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = up })
+    local back = TweenService:Create(root, TweenInfo.new(0.12, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), { CFrame = original })
+    out:Play()
+    out.Completed:Connect(function()
+        back:Play()
+    end)
+    return true
+end
+
 local function bindCharacter(character)
     character:WaitForChild("HumanoidRootPart", 10)
     task.defer(applyVisual)
@@ -157,8 +175,12 @@ end)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed or hatched then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch or input.KeyCode == Enum.KeyCode.Space then
+        local now = os.clock()
+        if now - lastHatchInputAt < HATCH_INPUT_COOLDOWN then return end
+        lastHatchInputAt = now
         hatchProgress = math.clamp(hatchProgress + 20, 0, 100)
         Remotes:WaitForChild("RequestHatch"):FireServer("tap")
+        hopEgg(player.Character)
         if hatchProgress >= 100 then
             hatched = true
         end

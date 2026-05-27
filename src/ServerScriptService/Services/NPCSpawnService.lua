@@ -109,6 +109,7 @@ function NPCSpawnService:IsSpawnPositionAllowed(spawnInstance)
 end
 
 function NPCSpawnService:CreateNPCRecord(spawnInstance, kind, index)
+    kind = spawnInstance and spawnInstance:GetAttribute("NPCKind") or kind
     local source = self:ResolveImportedNPCModel(kind)
     if not source then return false, "missing_imported_npc_model" end
     local model = self:PrepareNPCModel(source, kind, index, spawnInstance)
@@ -136,7 +137,7 @@ function NPCSpawnService:MaintainMinimumActive()
         index = index + 1
         local spawnInstance = spawns[((index - 1) % math.max(#spawns, 1)) + 1]
         if #spawns == 0 or self:IsSpawnPositionAllowed(spawnInstance) then
-            local kind = self.SpawnKinds[((index - 1) % #self.SpawnKinds) + 1]
+            local kind = spawnInstance and spawnInstance:GetAttribute("NPCKind") or self.SpawnKinds[((index - 1) % #self.SpawnKinds) + 1]
             local ok = self:CreateNPCRecord(spawnInstance, kind, index)
             if ok then active = active + 1 else break end
         else

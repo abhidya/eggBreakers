@@ -119,6 +119,21 @@ MapLayoutService.FoodSourcePlacements = {
     { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
 }
 
+MapLayoutService.NPCSpawnPlacements = {
+    { name = "NurseryPrey_01", position = Vector3.new(-1905, 14, 95), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
+    { name = "NurseryPrey_02", position = Vector3.new(-2075, 14, -115), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
+    { name = "FernPrey_01", position = Vector3.new(-1250, 14, 120), kind = "Prey", zone = "FernPlains" },
+    { name = "FernPrey_02", position = Vector3.new(-1120, 14, -165), kind = "Prey", zone = "FernPlains" },
+    { name = "JunglePrey_01", position = Vector3.new(-1460, 14, 1010), kind = "Prey", zone = "JungleBasin" },
+    { name = "SwampPrey_01", position = Vector3.new(-230, 11, 1040), kind = "Prey", zone = "SwampDelta" },
+    { name = "RedstonePredator_01", position = Vector3.new(-280, 16, -720), kind = "Predator", zone = "RedstoneCanyon", dangerous = true },
+    { name = "CityPredator_01", position = Vector3.new(980, 14, -160), kind = "Predator", zone = "ApocalypticCity", dangerous = true },
+    { name = "MountainPrey_01", position = Vector3.new(-90, 79, -1660), kind = "Prey", zone = "MountainNestingCliffs" },
+    { name = "FernPredator_01", position = Vector3.new(-980, 14, -260), kind = "Predator", zone = "FernPlains", dangerous = true },
+    { name = "JunglePredator_01", position = Vector3.new(-1340, 14, 1110), kind = "Predator", zone = "JungleBasin", dangerous = true },
+    { name = "SwampPredator_01", position = Vector3.new(65, 11, 1010), kind = "Predator", zone = "SwampDelta", dangerous = true },
+}
+
 function MapLayoutService:GetOrCreateFolder(parent, name)
     local folder = parent:FindFirstChild(name)
     if not folder then
@@ -367,6 +382,58 @@ function MapLayoutService:EnsureFoodSources()
     return folders.FoodSources
 end
 
+function MapLayoutService:EnsureNPCSpawnMarkers(folders)
+    for _, spec in ipairs(self.NPCSpawnPlacements) do
+        local marker = folders.NPCSpawns:FindFirstChild(spec.name)
+        if not marker then
+            marker = Instance.new("Part")
+            marker.Name = spec.name
+            marker.Anchored = true
+            marker.CanCollide = false
+            marker.CanTouch = false
+            marker.CanQuery = false
+            marker.Transparency = 1
+            marker.Size = Vector3.new(8, 2, 8)
+            marker.Parent = folders.NPCSpawns
+        end
+        marker.Position = spec.position
+        marker:SetAttribute("NPCSpawn", true)
+        marker:SetAttribute("NPCKind", spec.kind)
+        marker:SetAttribute("ZoneId", spec.zone)
+        marker:SetAttribute("SafeBabyArea", spec.tutorialSafe == true)
+        marker:SetAttribute("DangerousNPC", spec.dangerous == true)
+    end
+    return folders.NPCSpawns
+end
+
+function MapLayoutService:EnsureTutorialCombatTarget(folders)
+    local target = folders.Map:FindFirstChild("TutorialPracticeTarget")
+    if not target then
+        target = Instance.new("Part")
+        target.Name = "TutorialPracticeTarget"
+        target.Anchored = true
+        target.Shape = Enum.PartType.Ball
+        target.Material = Enum.Material.Neon
+        target.Color = Color3.fromRGB(235, 82, 64)
+        target.Parent = folders.Map
+    end
+    target.Position = Vector3.new(-1976, 14, 10)
+    target.Size = Vector3.new(6, 6, 6)
+    target.CanCollide = false
+    target.CanTouch = true
+    target.CanQuery = true
+    target.Transparency = 0.08
+    target:SetAttribute("Health", math.max(1, target:GetAttribute("Health") or 40))
+    target:SetAttribute("MaxHealth", 40)
+    target:SetAttribute("TutorialSafe", true)
+    target:SetAttribute("ZoneId", "NurseryGrove")
+    target:SetAttribute("InteractionHint", "Attack practice target")
+    if not CollectionService:HasTag(target, "Damageable") then
+        CollectionService:AddTag(target, "Damageable")
+    end
+    return target
+end
+
 function MapLayoutService:EnsureSpawnSafety()
     local folders = self:EnsureMapFolders()
     local spawnFolder = self:GetOrCreateFolder(folders.Map, "SpawnLocations")
@@ -391,6 +458,8 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
+    self:EnsureNPCSpawnMarkers(folders)
+    self:EnsureTutorialCombatTarget(folders)
     self:EnsureCityDiscoveryTriggers(folders)
     self:EnsureFallSafetyVolume(folders)
     return spawn

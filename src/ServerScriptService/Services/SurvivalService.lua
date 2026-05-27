@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
-local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1 }
+local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1, DeathCallbacks = {} }
 
 local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
@@ -82,23 +82,6 @@ function SurvivalService:ApplyDamage(player, amount, cause)
     return true, state
 end
 
-function SurvivalService:StartNeedsLoop(playersService, statReplicationService)
-    if self.TickLoopStarted then return false, "already_started" end
-    self.TickLoopStarted = true
-    task.spawn(function()
-        while self.TickLoopStarted do
-            task.wait(self.NeedsTickSeconds)
-            for _, player in ipairs((playersService or game:GetService("Players")):GetPlayers()) do
-                local ok, state = self:ApplyNeedsTick(player, self.NeedsTickSeconds)
-                if ok and statReplicationService then
-                    statReplicationService:Send(player, state)
-                end
-            end
-        end
-    end)
-    return true
-end
-
 function SurvivalService:AddGrowth(player, amount)
     local state = self:GetState(player)
     if not state or state.Dead then return false end
@@ -121,7 +104,19 @@ function SurvivalService:ConsumeStamina(player, amount)
     return true
 end
 
-function SurvivalService:StartNeedsLoop(intervalSeconds, playersService)
+function SurvivalService:OnDeath(callback)
+    table.insert(self.DeathCallbacks, callback)
+    return function()
+        for index, candidate in ipairs(self.DeathCallbacks) do
+            if candidate == callback then
+                table.remove(self.DeathCallbacks, index)
+                break
+            end
+        end
+    end
+end
+
+function SurvivalService:StartNeedsLoop(intervalSeconds, playersService, statReplicationService)
     if self.NeedsLoopConnection then
         return false, "already_running"
     end
@@ -136,7 +131,10 @@ function SurvivalService:StartNeedsLoop(intervalSeconds, playersService)
         local elapsed = self.NeedsLoopAccumulator
         self.NeedsLoopAccumulator = 0
         for _, player in ipairs(playersService:GetPlayers()) do
-            self:ApplyNeedsTick(player, elapsed)
+            local ok, state = self:ApplyNeedsTick(player, elapsed)
+            if ok and statReplicationService then
+                statReplicationService:Send(player, state)
+            end
         end
     end)
     return true
@@ -153,9 +151,19 @@ end
 function SurvivalService:Kill(player, cause)
     local state = self:GetState(player)
     if not state then return false end
+    if state.Dead == true then return true, state end
+    state.Health = 0
     state.Dead = true
     state.DeathCause = cause
-    return true
+    local character = player and player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health > 0 then
+        humanoid.Health = 0
+    end
+    for _, callback in ipairs(self.DeathCallbacks) do
+        task.spawn(callback, player, state)
+    end
+    return true, state
 end
 
 function SurvivalService:Respawn(player)

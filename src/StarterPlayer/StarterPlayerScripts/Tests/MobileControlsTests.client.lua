@@ -58,5 +58,17 @@ table.insert(suite.tests, { name = "sprint call hide buttons expose visible effe
     gui:Destroy()
 end })
 
+table.insert(suite.tests, { name = "mobile controls create visible action feedback label", run = function()
+    MobileControlsController.Gui = nil
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
+    local gui = result.Gui
+    Assert.notNil(gui:FindFirstChild("ActionFeedbackLabel"), "action feedback label exists")
+    Assert.equals(gui.SprintButton:GetAttribute("ActionName"), "Sprint", "sprint action attribute")
+    Assert.equals(gui.CallButton:GetAttribute("ActionName"), "Call", "call action attribute")
+    Assert.equals(gui.RestHideButton:GetAttribute("ActionName"), "RestHide", "hide action attribute")
+    gui:Destroy()
+    MobileControlsController.Gui = nil
+end })
+
 TestRunner.registerSuite(suite)
 return suite

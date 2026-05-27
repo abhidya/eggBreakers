@@ -23,3 +23,18 @@ Next action: run source syntax/build checks now; after T001-T004/T006 land, run 
 
 G016 CHECKPOINT — NOT DONE
 Reason: self-validating harness exists, but live proof attributes, mobile/controller proof, RBXL persistence proof, and 500-asset gate are still not satisfied.
+
+Run ID: G016-R002
+Timestamp: 2026-05-27
+Tests run: source syntax, Rojo build, Studio live probes
+Passed: hatch 5 taps at 0.09s reached 100% and hatched; live NPC folder had 25 children; WeatherEffects folder/rain existed; visible dino proof from worker-1; food/drink/attack source fixes built.
+Failed: final release still below 500 assets; full mobile/controller physical proof and save/reopen proof still pending.
+Top failing story: US08/US13 playability gaps
+Failure: owner reported no NPCs and flaky tap hatch; eat/drink/attack needed motion.
+Root cause: no authored NPC spawn markers in MapLayout; hatch server cooldown too high for rapid taps; client actions sent remotes without body motion.
+Patch applied: added NPC spawn markers, visible weather loop, lowered hatch cooldown to 0.08s, added egg hop on tap, added eat/drink/attack/call/hide body motion hooks.
+Retest result: PASS for focused live probes: hatch=true progress=100; npcs=25; weatherFolder=true; rain=true.
+Next action: commit focused playability fixes, reconcile/shutdown G016 live team, then continue asset/import + save/reopen gates.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: commit playability fixes and continue US14 asset gate / RBXL persistence proof.

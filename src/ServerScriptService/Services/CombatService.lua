@@ -23,6 +23,7 @@ function CombatService:ApplyDamage(target, damage, attacker)
         if currentHealth == nil then currentHealth = target:GetAttribute("MaxHealth") or 100 end
         local nextHealth = math.max(0, currentHealth - damage)
         target:SetAttribute("Health", nextHealth)
+        target:SetAttribute("DamageableHealth", nextHealth)
         if nextHealth <= 0 then
             target:SetAttribute("Dead", true)
             target:SetAttribute("Defeated", true)

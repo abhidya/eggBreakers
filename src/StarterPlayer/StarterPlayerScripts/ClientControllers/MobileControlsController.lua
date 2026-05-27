@@ -71,8 +71,19 @@ function MobileControlsController:CreateControls(settings)
     thumbstick.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     thumbstick.Parent = gui
     for name, position in pairs(positions) do
-        UIFactory:CreateButton(gui, name .. "Button", name, position)
+        local button = UIFactory:CreateButton(gui, name .. "Button", name, position)
+        button:SetAttribute("ActionName", name)
     end
+    local feedback = Instance.new("TextLabel")
+    feedback.Name = "ActionFeedbackLabel"
+    feedback.Size = UDim2.fromOffset(260 * scale, 34 * scale)
+    feedback.Position = UDim2.new(1, -290 * scale, 1, -205 * scale)
+    feedback.BackgroundTransparency = 0.25
+    feedback.BackgroundColor3 = Color3.fromRGB(20, 35, 24)
+    feedback.TextColor3 = Color3.new(1, 1, 1)
+    feedback.TextScaled = true
+    feedback.Visible = false
+    feedback.Parent = gui
     self:WireVisibleButtonEffects(gui)
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui

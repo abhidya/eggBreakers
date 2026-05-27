@@ -28,4 +28,29 @@ table.insert(suite.tests, { name = "death resets life state but not account serv
     Assert.equals(state.GrowthStage, "Hatchling")
 end })
 
+table.insert(suite.tests, { name = "health zero kills humanoid and invokes death callback", run = function()
+    local player = MockPlayer.new(103, "ZeroHealthDeathTester")
+    local state = SurvivalService:CreateState(player, "gallimimus")
+    state.Hatched = true
+    local humanoid = Instance.new("Humanoid")
+    humanoid.Health = 12
+    local character = Instance.new("Model")
+    humanoid.Parent = character
+    player.Character = character
+    local called = false
+    local disconnect = SurvivalService:OnDeath(function(deadPlayer, deadState)
+        if deadPlayer == player and deadState == state then
+            called = true
+        end
+    end)
+    local ok = SurvivalService:ApplyDamage(player, 999, "test_zero")
+    disconnect()
+    Assert.truthy(ok, "damage accepted")
+    Assert.equals(state.Health, 0, "state health clamped to zero")
+    Assert.equals(state.Dead, true, "zero health sets Dead")
+    Assert.equals(state.DeathCause, "test_zero", "death cause recorded")
+    Assert.equals(humanoid.Health, 0, "humanoid killed for live death flow")
+    Assert.truthy(called, "death callback invoked")
+end })
+
 return TestRunner.registerSuite(suite)

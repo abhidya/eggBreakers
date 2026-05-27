@@ -22,13 +22,15 @@ local MovementLockService = require(script.Parent.Services.MovementLockService)
 local CharacterVisualService = require(script.Parent.Services.CharacterVisualService)
 local RateLimitService = require(script.Parent.Services.RateLimitService)
 local NPCSpawnService = require(script.Parent.Services.NPCSpawnService)
+local WeatherBiomeService = require(script.Parent.Services.WeatherBiomeService)
 
 MapLayoutService:EnsureMapFolders()
 MapLayoutService:EnsureSpawnSafety()
 CityDiscoveryService:EnsureCityDiscoveryTriggers()
-SurvivalService:StartNeedsLoop(1, Players)
+SurvivalService:StartNeedsLoop(1, Players, StatReplicationService)
 FoodWaterService:StartDepletionLoop(1)
 NPCSpawnService:StartSpawnLoop(3)
+WeatherBiomeService:StartLoop(90)
 
 local function getStarterSpecies(data)
     for speciesId, unlocked in pairs(data.UnlockedSpecies or {}) do
@@ -49,6 +51,24 @@ local function sendStats(player)
     local state = SurvivalService:GetState(player)
     if state then StatReplicationService:Send(player, state) end
 end
+
+local function applyDeathState(player, state)
+    if not state or state.Dead ~= true then return end
+    if state.RespawnScheduled == true then return end
+    state.RespawnScheduled = true
+    MovementLockService:SetHatchedMovement(player, false, state)
+    StatReplicationService:Notify(player, "You died: " .. tostring(state.DeathCause or "Damage") .. ". Respawning from an egg.", "Warning", 4)
+    task.delay(2, function()
+        if not player.Parent then return end
+        local respawned = SurvivalService:Respawn(player)
+        MovementLockService:SetHatchedMovement(player, false, respawned)
+        CharacterVisualService:ApplyForState(player, respawned)
+        sendStats(player)
+        StatReplicationService:Notify(player, "Respawned as an egg. Hatch again.", "Info", 4)
+    end)
+end
+
+SurvivalService:OnDeath(applyDeathState)
 
 local function initializePlayer(player)
     local data = PlayerDataService:Load(player)
@@ -88,7 +108,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
-    if not RateLimitService:Check(player, "RequestHatch", 0.2) then
+    if not RateLimitService:Check(player, "RequestHatch", 0.08) then
         StatReplicationService:Notify(player, "Hatch input too fast", "Warning", 1)
         return
     end
@@ -162,4 +182,3 @@ end)
 _G.eggBreakersDiscoverZone = function(player, zoneId)
     return CityDiscoveryService:Discover(player, zoneId)
 end
-
