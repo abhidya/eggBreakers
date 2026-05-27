@@ -561,3 +561,18 @@ Next action: continue Creator Store batches; checkpoint milestone at 100+ assets
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch016 and pass the 100 release-ready asset milestone while keeping `scriptObjectsFound=0`.
+
+## Run G016-R038 — Creator Store import Batch016 / 100-asset milestone — 2026-05-27T16:38Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch016 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: fire hydrant `11971419591`, mushroom cluster `17847955134`, cairn rock pile `5011762570`, street barricade `4700428364`, bone spear `13025540557`. Import quarantine removed `18` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=100`, `releaseReadyVisibleAssets=100`, `placedVisibleAssets=100`, `taggedImportedAssets=100`, `auditedImportedAssets=100`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=100`, `releaseReadyVisibleAssets=100`, expected at least `500`. Remaining gap is `400` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: 100 imported/release-ready assets is a real milestone but still not the 500-asset release threshold.
+Root cause: asset materialization is progressing in honest Creator Store batches; final gate requires 400 more unique release-ready imports.
+Patch applied: no source patch; Studio place state received Batch016 imported assets under `Workspace.Map.ImportedAssets.G016Batch016` with release/audit attributes.
+Retest result: Batch016 audit PASS for scripts/tagging/placement and crosses 100/500; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; run a performance snapshot soon because visible imported asset volume is growing.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch017 and schedule a performance/placeholder sweep after more imports.
