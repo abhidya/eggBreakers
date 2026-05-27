@@ -816,3 +816,18 @@ Next action: continue Creator Store batches; keep using specific category querie
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch032 and move US14 from `167/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R055 — Creator Store import Batch032 — 2026-05-27T14:40Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch032 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed six Creator Store assets after replacing a duplicate-prone tablet search with an extra Old Eden prop: computer monitor `2579239132`, IV stand `18396231943`, microscope `524466740`, fern plant `16682838398`, swamp reed `13261235137`, ancient tablet duplicate `8804301890`. Import quarantine removed `1` script object before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=171`, `releaseReadyVisibleAssets=171`, `placedVisibleAssets=171`, `taggedImportedAssets=171`, `auditedImportedAssets=171`. Performance scan passed: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=171`, `releaseReadyVisibleAssets=171`, expected at least `500`. Remaining gap is `329` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch032 added four net unique release-ready assets despite six inserted/tagged objects because duplicate SourceAssetIds are correctly excluded from the release count.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch032.
+Root cause: Creator Store searches are increasingly returning duplicate IDs; the release audit correctly counts only unique release-ready imports.
+Patch applied: no source patch; Studio place state received Batch032 imported assets under `Workspace.Map.ImportedAssets.G016Batch032` with release/audit/performance-safe attributes.
+Retest result: Batch032 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches with more specific duplicate-resistant queries and consider inserting additional replacements when an audit batch nets fewer than five.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch033 and move US14 from `171/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
