@@ -33,6 +33,12 @@ local function requireNonEmptyString(attributeName, expectedDescription)
         "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
 end
 
+local function requireNonEmptyString(attributeName, expectedDescription)
+    local value = proofAttribute(attributeName)
+    Assert.truthy(type(value) == "string" and #value > 0,
+        "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
+end
+
 local function childNamed(parent, name)
     return parent and parent:FindFirstChild(name) ~= nil
 end
