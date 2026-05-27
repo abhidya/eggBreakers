@@ -68,6 +68,8 @@ local function add(index)
         ImportedScriptsPresent = false,
         ScriptsRemoved = true,
         ScriptsAudited = true,
+        ScriptPolicy = "RemovedAtImport",
+        SecurityDisposition = "No imported code preserved; re-audit required before enabling any imported ModuleScript.",
         CollisionEnabled = collisionEnabled,
         PerformanceNotes = "G011 pipeline entry: unique id reserved; collision/query/touch must be audited at import.",
         ReplacementStatus = status,
@@ -126,6 +128,9 @@ function AssetManifest.Validate(options)
         end
         if entry.ScriptsAudited ~= true then
             table.insert(failures, prefix .. " lacks imported script audit flag")
+        end
+        if entry.ScriptsRemoved ~= true and entry.ScriptPolicy ~= "AuditedSandboxedModule" then
+            table.insert(failures, prefix .. " has no approved imported script disposition")
         end
     end
 
