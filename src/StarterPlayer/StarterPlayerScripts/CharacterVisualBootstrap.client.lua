@@ -161,8 +161,8 @@ if player.Character then bindCharacter(player.Character) end
 
 Remotes:WaitForChild("StatUpdate").OnClientEvent:Connect(function(payload)
     if type(payload) == "table" then
-        if payload.hatched == true then
-            hatched = true
+        if type(payload.hatched) == "boolean" then
+            hatched = payload.hatched
         end
         if type(payload.hatchProgress) == "number" then
             hatchProgress = payload.hatchProgress
