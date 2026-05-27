@@ -252,7 +252,7 @@ local function wireMobileButtons(result)
     if attack then
         attack.Activated:Connect(function()
             ClientBootstrap:PlayActionMotion("Attack")
-            InputController:RequestAttack("Claw", nil)
+            InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12))
             showFeedback(gui, "Attacking")
         end)
     end
