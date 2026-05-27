@@ -74,4 +74,39 @@ UniqueImportPilotReport.Task10PrimaryImports = {
     { Query = "old stone arch ruins", SearchId = "62550d58-9a8d-4998-81d2-afa3e261be4b", InsertGuid = "25701a2e-6d17-4ed8-936e-cb6b3ff30507", SourceAssetId = "4026534443" },
 }
 
+
+UniqueImportPilotReport.Task19Summary = {
+    TaskId = "19",
+    RecordedAtUtc = "2026-05-27T05:39:00Z",
+    SuccessfulPrimaryImports = 14,
+    UniquePrimarySourceAssetIds = 14,
+    NewPrimaryIdsVersusTrackedReport = 14,
+    CumulativeTrackedUniquePrimaryIds = 44,
+    RemainingGapTo500 = 456,
+    Notes = "Live Studio MCP materialization batch. Initial parallel insert attempt failed because Studio reported play mode; after start_stop_play(false), retry inserted primary assets. Manifest-only rows are not counted here.",
+}
+
+UniqueImportPilotReport.Task19PrimaryImports = {
+    { Query = "jungle bush pack", SearchId = "8f969051-6d50-4edf-a417-0236ba423fda", InsertGuid = "79214e2f-f57c-4179-8c0c-b8299c5127f6", SourceAssetId = "4775476638" },
+    { Query = "tropical plant pack", SearchId = "e03c0058-ef02-40da-8ecf-69273705122a", InsertGuid = "3a2ef23a-623c-4d91-aa58-cdeafe38d025", SourceAssetId = "71660046955277" },
+    { Query = "swamp cypress tree", SearchId = "fe5e2aae-aee7-4a6a-b206-ac869577e8a9", InsertGuid = "3ec63e07-47ae-4f35-8d9f-d0159c0cde58", SourceAssetId = "91090488957679" },
+    { Query = "marsh grass reeds", SearchId = "746fa3fe-122d-48c0-965f-a866ae884fe6", InsertGuid = "919cc2af-6523-4176-9001-60357c3962e6", SourceAssetId = "134302502719859" },
+    { Query = "canyon boulder set", SearchId = "42290ee0-9298-4921-9235-c12b9f623071", InsertGuid = "12798abb-d069-49c5-9c16-4b3d55445277", SourceAssetId = "9142161166" },
+    { Query = "red rock cliff", SearchId = "477a19da-756e-4179-ada6-89459c462482", InsertGuid = "fbb188d3-2b0b-434a-a364-7452624a8053", SourceAssetId = "155403152" },
+    { Query = "post apocalyptic building", SearchId = "fa20ffcf-e99d-4bab-be29-77e051c792a5", InsertGuid = "38ac445a-e38e-43c8-abda-a06d0b6213d6", SourceAssetId = "98072256581142" },
+    { Query = "rubble pile debris", SearchId = "99bc268d-850c-4fb7-b1d6-045e59ac181f", InsertGuid = "cbcefc47-286d-48e7-947f-c88e38fc702f", SourceAssetId = "126869748953266" },
+    { Query = "dinosaur egg nest model", SearchId = "83e5c557-1096-42bc-86be-7b878f03add5", InsertGuid = "9185bd0d-2609-43bd-a775-fe473b9754ea", SourceAssetId = "73903179158629" },
+    { Query = "hanging vines plant", SearchId = "c378b866-91af-46ca-9e7d-88c45706d359", InsertGuid = "41e95edf-37de-43dc-b3cf-29e1200c38bb", SourceAssetId = "134425530937434" },
+    { Query = "moss rock set", SearchId = "427e06d7-467c-404e-bff0-44eebff0e3d0", InsertGuid = "0a2b43a3-f9f7-47bc-9e1c-599443ec9507", SourceAssetId = "837559003" },
+    { Query = "swamp water plants", SearchId = "aba83d25-ed15-45de-9f77-1305236e4b55", InsertGuid = "f3d1cb44-df90-4786-beb6-69719e1d4f02", SourceAssetId = "102184221548239" },
+    { Query = "ruined wall building", SearchId = "09837054-402d-4bbc-8483-3751c779dd60", InsertGuid = "f5e70ab3-8307-4d48-8622-c72e39e9292a", SourceAssetId = "99017233137282" },
+    { Query = "crashed car prop", SearchId = "58d5af1f-5fb5-4a49-b25e-bc62b27f9903", InsertGuid = "e8090207-d71d-4fb5-b36b-4f6d6a08c695", SourceAssetId = "5708963888" },
+}
+
+UniqueImportPilotReport.Task19Failures = {
+    { Query = "large fossil bones", SearchId = "714b6585-26bf-4cbf-8e4f-873d268089bb", Error = "Target is not reachable (CreatorStoreInsertTool_insertFromMarketplaceAsync)" },
+    { Query = "fallen tree log", SearchId = "9375ee91-671a-41a6-b25e-ca8b8c6774d6", Error = "Target is not reachable (CreatorStoreInsertTool_insertFromMarketplaceAsync)" },
+    { Query = "first insert attempt for 8 searchIds", Error = "Studio reported play mode; fixed with start_stop_play(false) and retried successful candidates" },
+}
+
 return UniqueImportPilotReport
