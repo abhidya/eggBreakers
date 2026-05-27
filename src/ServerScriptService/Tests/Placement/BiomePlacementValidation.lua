@@ -95,11 +95,31 @@ table.insert(suite.tests, { name = "asset manifest placement rules keep biome pr
     Assert.truthy(foliageEdgeCount > 0, "foliage edge coverage exists")
 end })
 
-table.insert(suite.tests, { name = "full map terrain underlay is single and oversized", run = function()
+table.insert(suite.tests, { name = "full map terrain underlay is single and compact", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     MapLayoutService:EnsureTerrainContinuity(folders)
     Assert.truthy(folders.Map:GetAttribute("FullMapTerrainUnderlay"), "full map underlay marker set")
-    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "4700,12,4400", "full map underlay covers all biomes and routes")
+    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2115,12,1980", "compact full map underlay covers all biomes and routes")
+end })
+
+table.insert(suite.tests, { name = "compact map keeps every biome in playable range", run = function()
+    local nurseryCenter = MapLayoutService.ZoneTerrain.NurseryGrove.center
+    local biomeCount = 0
+    local maxDistance = 0
+
+    for zoneId in pairs(ZoneConfig) do
+        local zone = MapLayoutService.ZoneTerrain[zoneId]
+        Assert.notNil(zone, "zone terrain preserved for " .. zoneId)
+        biomeCount = biomeCount + 1
+        local distance = (zone.center - nurseryCenter).Magnitude
+        if distance > maxDistance then
+            maxDistance = distance
+        end
+    end
+
+    Assert.equals(biomeCount, 7, "all seven biomes remain represented")
+    Assert.truthy(maxDistance <= 1400, "outer biome centers are condensed below long empty traversal")
+    Assert.equals(MapLayoutService.CompactLayout.scaleXZ, 0.45, "compact transform documents traversal scale")
 end })
 
 TestRunner.registerSuite(suite)
