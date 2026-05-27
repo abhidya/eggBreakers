@@ -576,7 +576,7 @@ end
 local function classifySource(index, source)
     local text = table.concat({ source.Name or "", source.SearchQuery or "", source.CategoryPath or "" }, " ")
 
-    if containsAny(text, { "ruin", "city", "car", "rubble", "concrete", "street", "asphalt", "barrel", "crate", "metal", "debris", "bridge" }) then
+    if containsAny(text, { "ruin", "city", "car", "rubble", "concrete", "street", "road", "sign", "asphalt", "barrel", "crate", "metal", "debris", "bridge" }) then
         return "ApocalypticCity", "Environment", "CityRuinCluster", "city ruins/cars/rubble grouped inside Apocalyptic City, offset from cross-route centers"
     end
 
@@ -596,7 +596,7 @@ local function classifySource(index, source)
         return "RedstoneCanyon", "Environment", "CanyonEdge", "rocks/cliffs placed along redstone canyon edges, not route centers"
     end
 
-    if containsAny(text, { "tree", "pine", "fern", "bush", "grass", "flower", "vine", "palm", "cycad", "stump", "log" }) then
+    if containsAny(text, { "tree", "pine", "fern", "bush", "grass", "flower", "vine", "palm", "cycad", "stump", "log", "nest" }) then
         local groveZones = { "FernPlains", "JungleBasin", "NurseryGrove" }
         return groveZones[((index - 1) % #groveZones) + 1], "Foliage", "NaturalGroveEdge", "trees/bushes use natural groves and path edges, never path centers"
     end
