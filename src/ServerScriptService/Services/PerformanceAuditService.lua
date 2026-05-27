@@ -28,10 +28,12 @@ function PerformanceAuditService:_isRuntimeScript(instance)
     return instance:IsA("Script") or instance:IsA("LocalScript")
 end
 
-function PerformanceAuditService:_scanRoots()
-    local roots = {}
-    local map = Workspace:FindFirstChild("Map")
-    table.insert(roots, map or Workspace)
+function PerformanceAuditService:_worldScanRoot()
+    return Workspace:FindFirstChild("Map") or Workspace
+end
+
+function PerformanceAuditService:_scriptScanRoots()
+    local roots = { self:_worldScanRoot() }
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     if library then
         table.insert(roots, library)
@@ -63,29 +65,31 @@ function PerformanceAuditService:Scan()
         table.insert(failures, "NPC count exceeds cap: " .. tostring(#NPCService.NPCs))
     end
     local particleCountByZone = {}
-    for _, scanRoot in ipairs(self:_scanRoots()) do
+    for _, scanRoot in ipairs(self:_scriptScanRoots()) do
         for _, instance in ipairs(scanRoot:GetDescendants()) do
             if self:_isRuntimeScript(instance) and self:_isImportedAssetDescendant(instance) then
                 importedRuntimeScriptCount = importedRuntimeScriptCount + 1
                 table.insert(failures, instance:GetFullName() .. " imported runtime script should be removed or quarantined")
             end
-            if instance:IsA("ParticleEmitter") then
+        end
+    end
+    for _, instance in ipairs(self:_worldScanRoot():GetDescendants()) do
+        if instance:IsA("ParticleEmitter") then
             if instance.Enabled and instance.Rate > 0 then
                 local key = self:_zoneKeyFor(instance)
                 particleCountByZone[key] = (particleCountByZone[key] or 0) + 1
             end
         end
-            if instance:IsA("BasePart") then
-                if self:_isDecorative(instance) and instance.CanCollide then
+        if instance:IsA("BasePart") then
+            if self:_isDecorative(instance) and instance.CanCollide then
                 decorativeCollidable = decorativeCollidable + 1
                 table.insert(failures, instance:GetFullName() .. " decorative/foliage collision should be disabled")
             end
             if instance:GetAttribute("ImportedVisibleAsset") == true and instance.CanTouch then
                 importedTouchEnabled = importedTouchEnabled + 1
             end
-                if instance:GetAttribute("ImportedVisibleAsset") == true and instance:GetAttribute("GameplayQuery") ~= true and instance.CanQuery then
-                    table.insert(failures, instance:GetFullName() .. " imported decorative asset should disable CanQuery unless GameplayQuery=true")
-                end
+            if instance:GetAttribute("ImportedVisibleAsset") == true and instance:GetAttribute("GameplayQuery") ~= true and instance.CanQuery then
+                table.insert(failures, instance:GetFullName() .. " imported decorative asset should disable CanQuery unless GameplayQuery=true")
             end
         end
     end
