@@ -23,4 +23,4 @@ Overall status: **FAIL** — do not publish or claim final PASS.
 2. Replace release fallback visuals and empty NPC/carcass placeholders with approved models/assets.
 3. Fix pre-hatch drink and server-authoritative combat damage.
 4. Continue materialized Store imports to 500 unique audited primary source IDs or explicitly fail the owner-corrected rule.
-5. Run fresh synced Studio all-category TestRunner and update this report from FAIL to PASS only after `G013FinalGate.server.lua` passes.
+5. Run fresh synced Studio all-category TestRunner and update this report from FAIL to PASS only after `G013FinalGate.lua` / `G013FinalGate.server.lua` passes.

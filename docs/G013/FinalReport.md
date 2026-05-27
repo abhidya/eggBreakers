@@ -21,4 +21,4 @@ This report is intentionally conservative: the current repository has useful sta
 - Fresh all-category Studio TestRunner/mobile/performance/security evidence is blocked until merge and runtime gates settle.
 
 ## Stop Condition
-Do not change this report to PASS until `src/ServerScriptService/Tests/E2E/G013FinalGate.server.lua` passes in a fresh synced Studio run and docs/G013/TestResults.md contains only PASS rows for release-critical gates.
+Do not change this report to PASS until `src/ServerScriptService/Tests/E2E/G013FinalGate.lua` passes in a fresh synced Studio run and docs/G013/TestResults.md contains only PASS rows for release-critical gates.
