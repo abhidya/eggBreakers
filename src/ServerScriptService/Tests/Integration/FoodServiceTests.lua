@@ -119,4 +119,26 @@ table.insert(suite.tests, { name = "dead prey creates carnivore carcass food", r
     prey:Destroy(); carcass:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "carnivore player eats NPC-created carcass", run = function()
+    local p, _, root = setup(32008, "Carnivore")
+    local prey = Instance.new("Model")
+    prey.Name = "FoodWaterCarcassPrey"
+    prey.Parent = workspace
+    local ok, record = NPCService:Register(prey, "Prey")
+    Assert.truthy(ok, "prey registered")
+    local deadOk, carcass = NPCService:MarkPreyDead(record)
+    Assert.truthy(deadOk, "prey death creates carcass")
+    Assert.notNil(carcass, "carcass instance exists")
+    root.Position = NPCService:GetInstancePosition(carcass) + Vector3.new(0, 0, -3)
+    local state = SurvivalService:GetState(p)
+    state.Hunger = 30
+    RateLimitService:ClearPlayer(p)
+    local eatOk = FoodWaterService:RequestEat(p, carcass)
+    Assert.truthy(eatOk, "carnivore player can eat NPC-created carcass")
+    Assert.truthy(state.Hunger > 30, "carcass restores hunger")
+    Assert.equals(carcass:GetAttribute("Depleted"), true, "carcass depletes after player eat")
+    prey:Destroy(); carcass:Destroy()
+end })
+
 return suite
