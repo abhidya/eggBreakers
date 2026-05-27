@@ -696,3 +696,18 @@ Next action: continue Creator Store batches; avoid limestone/waterfall rock and 
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch024 with lower duplicate risk and keep `scriptObjectsFound=0`.
+
+## Run G016-R047 — Creator Store import Batch024 — 2026-05-27T18:14Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch024 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: suitcase `457692304`, metal crate `16151805720`, orchid flower `3604226780`, basalt column `101719667`, amber fossil `54118093`. Import quarantine found `0` script objects. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=135`, `releaseReadyVisibleAssets=135`, `placedVisibleAssets=135`, `taggedImportedAssets=135`, `auditedImportedAssets=135`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=135`, `releaseReadyVisibleAssets=135`, expected at least `500`. Remaining gap is `365` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch024.
+Root cause: five unique assets landed and are clean, but the release oracle still requires 365 more unique release-ready imports.
+Patch applied: no source patch; Studio place state received Batch024 imported assets under `Workspace.Map.ImportedAssets.G016Batch024` with release/audit/performance-safe attributes.
+Retest result: Batch024 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; preserve low-duplicate category-diverse query strategy.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch025 with performance-safe tagging and keep `scriptObjectsFound=0`.

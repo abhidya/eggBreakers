@@ -252,3 +252,9 @@ No final PASS: US14 still needs 373 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch023: newspaper pile `13715437326`, rusty bike `5575217438`, swamp lily flower `12970904999`, limestone cliff duplicate `13739742387`, tooth necklace duplicate `692494307`. Quarantine found `0` script objects. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=130`, `releaseReadyVisibleAssets=130`, and `placedVisibleAssets=130`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=130; expected at least 500` and `releaseReadyVisibleAssets=130; expected at least 500`.
 
 No final PASS: US14 still needs 370 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch024 Audit — 2026-05-27T18:14Z
+
+Studio MCP imported and audited Batch024: suitcase `457692304`, metal crate `16151805720`, orchid flower `3604226780`, basalt column `101719667`, amber fossil `54118093`. Quarantine found `0` script objects. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=135`, `releaseReadyVisibleAssets=135`, and `placedVisibleAssets=135`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=135; expected at least 500` and `releaseReadyVisibleAssets=135; expected at least 500`.
+
+No final PASS: US14 still needs 365 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
