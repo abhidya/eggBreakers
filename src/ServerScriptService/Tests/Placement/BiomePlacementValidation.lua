@@ -64,11 +64,13 @@ table.insert(suite.tests, { name = "asset manifest placement rules keep biome pr
         Assert.equals(entry.PlacementPattern, "natural_offset_no_grid", "no grid/square placement for " .. entry.AssetId)
         Assert.truthy(entry.AvoidRouteCenters, "route centers kept clear for " .. entry.AssetId)
         local text = string.lower(table.concat({ entry.Name or "", entry.CreatorStoreSearchQuery or "", entry.SourceCategoryPath or "" }, " "))
-        if string.find(text, "city", 1, true) or string.find(text, "car", 1, true) or string.find(text, "rubble", 1, true) or string.find(text, "ruin", 1, true) then
+        local cityLike = string.find(text, "city", 1, true) or string.find(text, "car", 1, true) or string.find(text, "rubble", 1, true) or string.find(text, "ruin", 1, true)
+        local swampLike = string.find(text, "swamp", 1, true) or string.find(text, "water lily", 1, true)
+        if cityLike then
             Assert.equals(entry.UsedIn, "ApocalypticCity", "city prop belongs in Apocalyptic City: " .. entry.AssetId)
             cityCount = cityCount + 1
         end
-        if string.find(text, "swamp", 1, true) or string.find(text, "water lily", 1, true) then
+        if swampLike and not cityLike then
             Assert.equals(entry.UsedIn, "SwampDelta", "swamp prop belongs in Swamp Delta: " .. entry.AssetId)
             swampCount = swampCount + 1
         end

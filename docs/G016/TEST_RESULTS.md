@@ -98,3 +98,7 @@ After adding explicit gameplay-query markers and disabling decorative collision/
 ## Invisible Helper Cleanup Snapshot — 2026-05-27T13:38Z
 
 Source checks passed after updating `AssetAuditService` to allow explicit invisible NPC/weather/procedural helpers. Studio cleanup removed 12 transient test artifacts and reset food depletion state. Active Studio all-category snapshot stayed `177 total / 159 passed / 18 failed`, indicating remaining failures are dominated by unsynced/stale Studio state plus hard release gates (`30/500` assets, missing RBXL persistence, missing fresh final proof). No final PASS proof attached.
+
+## Carnivore Prey Loop + Food Density — 2026-05-27T13:47Z
+
+Fresh source checks passed. Studio MCP cloned proof showed enough starter food after patch: nearby herbivore food `9`, nearby carnivore food `4`, all visible herbivore food `19`, all visible carnivore food `14`. Carnivore loop proof: predator attacked herbivore prey, prey became `Dead`, a carnivore carcass was created, and a velociraptor player ate the carcass (`Hunger 30 -> 65`). These procedural gameplay affordances remain excluded from the 500 imported asset count.

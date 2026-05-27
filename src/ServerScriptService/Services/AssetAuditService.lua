@@ -49,7 +49,7 @@ function AssetAuditService:IsAllowedProceduralGameplayVisual(instance)
         if current:GetAttribute("WeatherEffect") == true or current:GetAttribute("ProceduralVFX") == true then
             return true
         end
-        if current:GetAttribute("ProceduralWaterSource") == true then
+        if current:GetAttribute("ProceduralWaterSource") == true or current:GetAttribute("ProceduralGameplayVisual") == true then
             return true
         end
         current = current.Parent

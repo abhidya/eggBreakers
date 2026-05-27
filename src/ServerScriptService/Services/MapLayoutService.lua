@@ -99,6 +99,13 @@ MapLayoutService.FoodPlacements = {
     { name = "SwampPreyCarcass_01", zone = "SwampDelta", diet = "Carnivore", nutrition = 38, position = Vector3.new(55, 10, 1065), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
     { name = "OldEdenHighRiskCarcass_01", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 55, position = Vector3.new(1110, 12, -210), size = Vector3.new(10, 3, 6), kind = "HighRiskCarcass", cooldown = 180 },
     { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(1285, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120 },
+    { name = "NurseryStarterFern_03", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2045, 12, 30), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
+    { name = "NurseryStarterFern_04", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-1934, 12, -52), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
+    { name = "NurseryStarterFern_05", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2008, 12, 86), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
+    { name = "NurseryTutorialMeatCache_02", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, position = Vector3.new(-1908, 13, -54), size = Vector3.new(7, 1.5, 4), kind = "TutorialCarcass", cooldown = 90, tutorialSafe = true },
+    { name = "NurseryTutorialMeatCache_03", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, position = Vector3.new(-1844, 13, -128), size = Vector3.new(7, 1.5, 4), kind = "TutorialCarcass", cooldown = 90, tutorialSafe = true },
+    { name = "FernPlainsGrazingPatch_03", zone = "FernPlains", diet = "Herbivore", nutrition = 24, position = Vector3.new(-1160, 12, 40), size = Vector3.new(10, 3, 10), kind = "PlantPatch", cooldown = 60 },
+    { name = "FernPlainsPreyCarcass_02", zone = "FernPlains", diet = "Carnivore", nutrition = 36, position = Vector3.new(-1002, 12, -210), size = Vector3.new(8, 3, 5), kind = "PreyCarcass", cooldown = 120 },
 }
 
 MapLayoutService.ShallowWater = {
@@ -118,6 +125,11 @@ MapLayoutService.FoodSourcePlacements = {
     { name = "FernPlainsPreyCarcass_A", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1080, 12, -255), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
     { name = "RedstonePreyCarcass_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 55, respawnSeconds = 150, position = Vector3.new(260, 18, -940), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(120, 64, 52) },
     { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
+    { name = "NurseryStarterFernPatch_C", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-2058, 13, 70), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(74, 156, 68) },
+    { name = "NurseryStarterFernPatch_D", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1935, 13, -86), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(88, 164, 76) },
+    { name = "NurseryTutorialMeatCache_B", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1835, 13, -48), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(132, 64, 50), tutorialSafe = true },
+    { name = "FernPlainsPreyCarcass_B", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1015, 12, -185), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
+    { name = "SwampPreyCarcass_B", zone = "SwampDelta", diet = "Carnivore", nutrition = 42, respawnSeconds = 150, position = Vector3.new(-35, 10, 1015), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(110, 58, 50) },
 }
 
 
@@ -382,9 +394,10 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
             food.Color = placement.diet == "Carnivore" and Color3.fromRGB(120, 55, 45) or Color3.fromRGB(64, 135, 54)
             food.Size = placement.size
             food.Position = placement.position
-            food:SetAttribute("CreatorStoreOnly", true)
-            food:SetAttribute("ImportedVisibleAsset", true)
-            food:SetAttribute("AssetManifestId", placement.diet == "Carnivore" and "CS-739396590" or "CS-4596418748")
+            food:SetAttribute("CreatorStoreOnly", nil)
+            food:SetAttribute("ImportedVisibleAsset", nil)
+            food:SetAttribute("AssetManifestId", nil)
+            food:SetAttribute("ProceduralGameplayVisual", true)
             food:SetAttribute("Decorative", false)
             food.Parent = zoneFolder
         end
@@ -392,6 +405,10 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("Diet", placement.diet)
         food:SetAttribute("Nutrition", placement.nutrition)
         food:SetAttribute("FoodKind", placement.kind)
+        food:SetAttribute("CreatorStoreOnly", nil)
+        food:SetAttribute("ImportedVisibleAsset", nil)
+        food:SetAttribute("AssetManifestId", nil)
+        food:SetAttribute("ProceduralGameplayVisual", true)
         food:SetAttribute("Depleted", food:GetAttribute("Depleted") == true)
         food:SetAttribute("RespawnCooldownSeconds", placement.cooldown)
         food:SetAttribute("DangerousZone", placement.zone ~= "NurseryGrove" and placement.zone ~= "FernPlains")
@@ -534,7 +551,10 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing:SetAttribute("InteractionHint", source.diet == "Carnivore" and "Eat carcass" or "Eat plant")
     existing:SetAttribute("VisibleGameplayAffordance", true)
     existing:SetAttribute("GameplayQuery", true)
-    existing:SetAttribute("CreatorStoreOnly", true)
+    existing:SetAttribute("CreatorStoreOnly", nil)
+    existing:SetAttribute("ImportedVisibleAsset", nil)
+    existing:SetAttribute("AssetManifestId", nil)
+    existing:SetAttribute("ProceduralGameplayVisual", true)
     existing:SetAttribute("PlacementRole", source.diet == "Herbivore" and "PlantFood" or "CarnivoreCarcassFood")
     if not CollectionService:HasTag(existing, "FoodSource") then
         CollectionService:AddTag(existing, "FoodSource")
@@ -560,8 +580,10 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("ZoneId", spec.zone)
     part:SetAttribute("BiomeDressing", true)
     part:SetAttribute("Decorative", true)
-    part:SetAttribute("CreatorStoreOnly", true)
-    part:SetAttribute("ImportedVisibleAsset", true)
+    part:SetAttribute("CreatorStoreOnly", nil)
+    part:SetAttribute("ImportedVisibleAsset", nil)
+    part:SetAttribute("AssetManifestId", nil)
+    part:SetAttribute("ProceduralGameplayVisual", true)
     part:SetAttribute("PlacementRole", role)
     part:SetAttribute("DressingKind", spec.kind)
     part:SetAttribute("AvoidRouteCenters", true)

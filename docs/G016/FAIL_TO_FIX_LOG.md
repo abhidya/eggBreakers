@@ -291,3 +291,18 @@ Next action: run a true fresh Studio sync/reload or materialize imported assets;
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: fresh Studio reload/sync to test current source, then continue US14 asset materialization from 30/500.
+
+## Run G016-R020 — carnivore prey food loop and food density — 2026-05-27T13:47Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-food-density.rbxl`, `git diff --check`, Studio MCP fresh cloned carnivore/food-density proof, Studio MCP Placement category snapshot.
+Passed: source syntax/build/diff checks passed. Fresh cloned proof counted nearby starter food after density patch: herbivore food near spawn `9`, carnivore food near spawn `4`, all visible herbivore food `19`, all visible carnivore food `14`. Carnivore/prey proof passed: predator attack killed herbivore prey, prey state became `Dead`, carcass was created with `Diet=Carnivore`, and a velociraptor player ate the prey carcass, raising hunger from `30` to `65`.
+Failed: active Studio Placement category still reports 3 failures due stale/unsynced service code and hard release-audit rules; release asset count remains `30/500` and no final PASS is claimed.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: owner reported not enough food and asked whether carnivores eat herbivores.
+Root cause: starter/tutorial map had sparse food/carcass affordances, and the carnivore-prey relationship was not recorded in the current proof log even though service paths existed.
+Patch applied: added more procedural gameplay food/carcass affordances in Nursery/Fern/Swamp; kept them marked `ProceduralGameplayVisual` so they do not inflate release-ready imported asset counts; verified predator-kills-herbivore -> carcass -> carnivore-eats-carcass loop in Studio MCP.
+Retest result: live/service proof PASS for food density and carnivore eating prey carcass; final release remains honest FAIL on US14/RBXL/fresh all-category.
+Next action: sync/reload Studio to apply audit source changes, then continue actual Creator Store asset materialization toward 500.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: fresh Studio sync/reload or asset import batch; keep procedural food separate from release imported asset count.
