@@ -50,8 +50,24 @@ function AssetAuditService:ValidateManifestReference(instance, failures)
         table.insert(failures, instance:GetFullName() .. " visible imported asset lacks AssetManifestId attribute")
         return
     end
-    if not AssetManifest.GetById(manifestId) then
+    local entry = AssetManifest.GetById(manifestId)
+    if not entry then
         table.insert(failures, instance:GetFullName() .. " references unknown AssetManifestId " .. tostring(manifestId))
+        return
+    end
+
+    local sourceAssetId = instance:GetAttribute("SourceAssetId")
+    if sourceAssetId ~= nil and tostring(sourceAssetId) ~= entry.SourceAssetId then
+        table.insert(failures, instance:GetFullName() .. " SourceAssetId does not match manifest entry " .. tostring(manifestId))
+    end
+    if instance:GetAttribute("ImportedScriptsPresent") == true then
+        table.insert(failures, instance:GetFullName() .. " still contains imported scripts after catalog audit")
+    end
+    if entry.ImportedScriptsPresent or entry.ScriptsAudited ~= true then
+        table.insert(failures, instance:GetFullName() .. " references unaudited imported script state in manifest")
+    end
+    if not AssetManifest.AllowedScriptSandboxStatuses[entry.ScriptSandboxStatus] then
+        table.insert(failures, instance:GetFullName() .. " references unsupported manifest script sandbox status")
     end
 end
 

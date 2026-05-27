@@ -20,7 +20,10 @@ table.insert(suite.tests, { name = "imported scripts audited", run = function()
     for _, entry in ipairs(AssetManifest.Entries) do
         Assert.falsy(entry.ImportedScriptsPresent, "imported scripts removed for " .. entry.AssetId)
         Assert.truthy(entry.ScriptsAudited, "script audit flag set for " .. entry.AssetId)
-        Assert.truthy(entry.ScriptsRemoved or entry.ScriptPolicy == "AuditedSandboxedModule", "script disposition approved for " .. entry.AssetId)
+        Assert.truthy(AssetManifest.AllowedScriptSandboxStatuses[entry.ScriptSandboxStatus], "script sandbox status valid for " .. entry.AssetId)
+        if (entry.SourceScriptCount or 0) > 0 then
+            Assert.truthy(entry.ScriptsRemoved or entry.ScriptSandboxStatus == "Sandboxed", "source scripts removed or sandboxed for " .. entry.AssetId)
+        end
     end
 end })
 
