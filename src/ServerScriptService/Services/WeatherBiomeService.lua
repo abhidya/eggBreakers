@@ -27,6 +27,7 @@ function WeatherBiomeService:_configureWeatherPart(part, size, position, materia
     part.Size = size
     part.Position = position
     part:SetAttribute("WeatherEffect", true)
+    part:SetAttribute("ProceduralVFX", true)
 end
 
 function WeatherBiomeService:_ensureRainTiles(folder, prefix, height, y, material, color)

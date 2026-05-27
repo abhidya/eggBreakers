@@ -97,7 +97,7 @@ table.insert(suite.tests, { name = "placed food sources have diet nutrition tags
             if zone == "FernPlains" and food:GetAttribute("Diet") == "Herbivore" then counts.FernPlains = counts.FernPlains + 1 end
             if food:GetAttribute("Diet") == "Carnivore" then
                 counts.Carnivore = counts.Carnivore + 1
-                Assert.falsy(zone == "NurseryGrove", "carnivore prey/carcass outside Nursery " .. food.Name)
+                Assert.falsy(zone == "NurseryGrove" and food:GetAttribute("TutorialSafe") ~= true, "carnivore prey/carcass outside Nursery unless tutorial-safe " .. food.Name)
             end
             if zone == "ApocalypticCity" then counts.CityReward = counts.CityReward + 1 end
         end

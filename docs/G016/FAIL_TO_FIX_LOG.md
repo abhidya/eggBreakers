@@ -171,3 +171,18 @@ Next action: run fresh Studio reload/all-category TestRunner and live Play proof
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: gather fresh reload/live proof; do not mark PASS from clone/source evidence alone.
+
+## Run G016-R012 — placement/NPC proof-contract repairs — 2026-05-27T12:48Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-invisible-helper-audit.rbxl`, `git diff --check`, Studio MCP fresh cloned placement/brain probe.
+Passed: source syntax/build/diff checks passed. Fresh cloned placement/brain probe passed: full-map underlay exists with `TerrainUnderlay=true`; Nursery carnivore tutorial meat exists and has cooldown; invisible city trigger children are allowed under `InvisibleGameplayVolumes`; NPC brain yields prey `Flee` and predator `Chase` with `LastBrainAction=Chase` and movement count.
+Failed: final G016 gate still fails due absent proof folder, no mobile/RBXL proof, no fresh reload all-category proof, and release asset count below 500. Active workspace also contains stale test artifacts from previous failing runs, so placeholder scan remains contaminated until fresh reload/cleanup.
+Top failing story: US08 NPC ecosystem + US15 Fresh full QA gate.
+Failure: validation contract expected explicit predator `Chase` action and terrain underlay/invisible helper markers.
+Root cause: `NPCService:Transition` did not stamp state as the final brain action after movement, and terrain/invisible helper validation did not model nested invisible trigger folders.
+Patch applied: `NPCService:Transition` stamps `BrainState`/`LastBrainAction`; `MapLayoutService` creates the full-map underlay marker and tutorial carnivore meat in the zone folder; `AssetAuditService` allows approved invisible helpers under descendant folders of `InvisibleGameplayVolumes` and explicit procedural weather/water visuals.
+Retest result: fresh clone probe PASS for targeted repairs; NOT DONE for final release gates.
+Next action: fresh Studio reload/cleanup, then all-category TestRunner and live Play proof harness.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: produce fresh reload/live proof; do not mark PASS from targeted clone probes.

@@ -58,3 +58,9 @@ Remaining proof gaps: fresh Studio reload, live Play proof attributes, mobile/co
 Because active Studio still has cached required modules, a fresh cloned `ServerScriptService.Services` probe was run. It proves current source behavior independent of the old require cache: combat target health `25 -> 16` with server damage `9`; water drink growth `0 -> 4`; progression `GrantDNA(300)` then unlock leaves DNA `50`; NPC prey eating sets state `Eat`, depletes food, and stamps `FoodSourcesDepleted`; weather uses 9 rain volume tiles + 9 streak tiles with max tile size about `1566x1466`, coverage attrs `4700x4400`, avoiding Roblox's 2048-stud part clamp.
 
 This is stronger source/runtime evidence, but still not final PASS because it is not a fresh Studio reload all-category TestRunner, not a Play-mode live proof artifact, and not mobile/RBXL/asset-gate proof.
+
+## Fresh Placement/Brain Probe — 2026-05-27T12:48Z
+
+Fresh cloned services probe after placement repairs: `underlayOk=true` for `_INVISIBLE_FullMapSafeTerrainUnderlay`; `meatOk=true` for tutorial carnivore meat cache under NurseryGrove with cooldown 90; invisible city triggers are accepted through the approved `InvisibleGameplayVolumes` ancestor; active NPC proof shows prey `Flee`, predator `Chase`, predator `LastBrainAction=Chase`, `BrainMoveCount=1`.
+
+Still not final PASS: placeholder audit still reports stale test artifacts and non-release procedural/tutorial objects in the dirty active Studio workspace; release asset count remains below 500; proof folder/mobile/RBXL/fresh reload remain absent.

@@ -18,9 +18,12 @@ function AssetAuditService:IsInvisibleHelper(instance)
     if instance.Transparency ~= 1 then return false end
     if self:IsCreatorStoreDerived(instance) then return true end
     if string.sub(instance.Name, 1, 11) ~= "_INVISIBLE_" then return false end
-    local parentName = instance.Parent and instance.Parent.Name or ""
-    for _, allowed in ipairs(self.AllowedInvisibleParents) do
-        if parentName == allowed then return true end
+    local current = instance.Parent
+    while current and current ~= Workspace do
+        for _, allowed in ipairs(self.AllowedInvisibleParents) do
+            if current.Name == allowed then return true end
+        end
+        current = current.Parent
     end
     return false
 end
@@ -29,6 +32,20 @@ function AssetAuditService:IsCreatorStoreDerived(instance)
     local current = instance
     while current do
         if current:GetAttribute("CreatorStoreOnly") then return true end
+        current = current.Parent
+    end
+    return false
+end
+
+function AssetAuditService:IsAllowedProceduralGameplayVisual(instance)
+    local current = instance
+    while current do
+        if current:GetAttribute("WeatherEffect") == true or current:GetAttribute("ProceduralVFX") == true then
+            return true
+        end
+        if current:GetAttribute("ProceduralWaterSource") == true then
+            return true
+        end
         current = current.Parent
     end
     return false
@@ -90,7 +107,7 @@ function AssetAuditService:ScanWorkspace()
             if self:HasForbiddenVisibleName(instance) then
                 table.insert(failures, instance:GetFullName() .. " has forbidden placeholder-like name")
             end
-            if instance:IsA("Part") and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) then
+            if instance:IsA("Part") and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) and not self:IsAllowedProceduralGameplayVisual(instance) then
                 table.insert(failures, instance:GetFullName() .. " is visible default block Part not marked Creator Store-derived")
             end
             if instance:GetAttribute("ImportedVisibleAsset") == true then

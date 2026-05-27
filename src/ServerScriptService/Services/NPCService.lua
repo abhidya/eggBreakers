@@ -57,7 +57,12 @@ end
 function NPCService:Transition(record, nextState)
     if not self.AllowedStates[nextState] then return false, "bad_state" end
     record.State = nextState
-    if record.Instance then record.Instance:SetAttribute("NPCState", nextState) end
+    record.LastBrainAction = nextState
+    if record.Instance then
+        record.Instance:SetAttribute("NPCState", nextState)
+        record.Instance:SetAttribute("BrainState", nextState)
+        record.Instance:SetAttribute("LastBrainAction", nextState)
+    end
     if nextState == "Dead" and record.Kind == "Prey" then
         record.Carcass = self:CreateCarcassFoodSource(record)
     end
