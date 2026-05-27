@@ -636,3 +636,18 @@ Next action: continue Creator Store batches; avoid grass/tuft queries that repea
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch020 with performance-safe tagging and keep `scriptObjectsFound=0`.
+
+## Run G016-R043 — Creator Store import Batch020 — 2026-05-27T17:31Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch020 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: bus stop `12281009493`, shopping cart `93736777229930`, cypress knees `9559509683`, tooth fossil `692494307`, park fountain `2394192438`. Import quarantine removed `5` script objects before counting and disabled `40` imported particle emitters. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=118`, `releaseReadyVisibleAssets=118`, `placedVisibleAssets=118`, `taggedImportedAssets=118`, `auditedImportedAssets=118`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=118`, `releaseReadyVisibleAssets=118`, expected at least `500`. Remaining gap is `382` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch020.
+Root cause: unique imports and performance-safe tagging are working, but the final release threshold still requires 382 more unique assets.
+Patch applied: no source patch; Studio place state received Batch020 imported assets under `Workspace.Map.ImportedAssets.G016Batch020` with release/audit/performance-safe attributes.
+Retest result: Batch020 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; keep particle disabling because fountain-type assets can ship with emitters.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch021 with performance-safe tagging and keep `scriptObjectsFound=0`.
