@@ -1,0 +1,22 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
+local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
+local PlayerDataService = require(game:GetService("ServerScriptService").Services.PlayerDataService)
+local suite = { name = "DataSchemaTests", category = "Unit", tests = {} }
+
+table.insert(suite.tests, { name = "default data has required fields", run = function()
+    local data = PlayerDataService.DefaultData(123)
+    Assert.equals(data.SchemaVersion, 1)
+    Assert.equals(data.DNA, 0)
+    Assert.equals(data.Fossils, 0)
+    Assert.truthy(data.UnlockedSpecies.gallimimus)
+    Assert.truthy(data.UnlockedSpecies.triceratops)
+    Assert.truthy(data.UnlockedSpecies.velociraptor)
+    Assert.truthy(data.UnlockedSpecies.carnotaurus)
+    Assert.notNil(data.CosmeticsOwned)
+    Assert.notNil(data.EquippedCosmetics)
+    Assert.notNil(data.Settings)
+    Assert.equals(data.LastPlayedAt, 123)
+end })
+
+return TestRunner.registerSuite(suite)

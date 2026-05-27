@@ -1,0 +1,28 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
+local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
+local EconomyConfig = require(ReplicatedStorage.Shared.EconomyConfig)
+local PlayerDataService = require(game:GetService("ServerScriptService").Services.PlayerDataService)
+local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local suite = { name = "EconomyRewardTests", category = "Unit", tests = {} }
+
+table.insert(suite.tests, { name = "starting reward values match production addendum", run = function()
+    Assert.equals(EconomyConfig.DNARewards.FirstHatch, 25)
+    Assert.equals(EconomyConfig.DNARewards.CompleteTutorial, 50)
+    Assert.equals(EconomyConfig.DNARewards.ReachJuvenile, 40)
+    Assert.equals(EconomyConfig.FossilRewards.Common, 1)
+    Assert.equals(EconomyConfig.UnlockCosts.Starter, 0)
+    Assert.equals(EconomyConfig.UnlockCosts.Apex, 3000)
+end })
+
+table.insert(suite.tests, { name = "currency grants require loaded server profile", run = function()
+    local player = MockPlayer.new(301, "CurrencyTester")
+    PlayerDataService.Profiles[player] = PlayerDataService.DefaultData(1)
+    Assert.truthy(PlayerDataService:GrantDNA(player, 25, "test"))
+    Assert.truthy(PlayerDataService:GrantFossils(player, 2, "test"))
+    Assert.equals(PlayerDataService.Profiles[player].DNA, 25)
+    Assert.equals(PlayerDataService.Profiles[player].Fossils, 2)
+    PlayerDataService:Clear(player)
+end })
+
+return TestRunner.registerSuite(suite)

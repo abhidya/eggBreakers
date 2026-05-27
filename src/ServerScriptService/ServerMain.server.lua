@@ -1,0 +1,139 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+require(script.Parent.Bootstrap)
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local PlayerDataService = require(script.Parent.Services.PlayerDataService)
+local SurvivalService = require(script.Parent.Services.SurvivalService)
+local FoodWaterService = require(script.Parent.Services.FoodWaterService)
+local CombatService = require(script.Parent.Services.CombatService)
+local GroupService = require(script.Parent.Services.GroupService)
+local CallService = require(script.Parent.Services.CallService)
+local NestService = require(script.Parent.Services.NestService)
+local FossilService = require(script.Parent.Services.FossilService)
+local ProgressionService = require(script.Parent.Services.ProgressionService)
+local CityDiscoveryService = require(script.Parent.Services.CityDiscoveryService)
+local MapLayoutService = require(script.Parent.Services.MapLayoutService)
+local StatReplicationService = require(script.Parent.Services.StatReplicationService)
+local MovementLockService = require(script.Parent.Services.MovementLockService)
+local RateLimitService = require(script.Parent.Services.RateLimitService)
+
+MapLayoutService:EnsureMapFolders()
+MapLayoutService:EnsureSpawnSafety()
+
+local function getStarterSpecies(data)
+    for speciesId, unlocked in pairs(data.UnlockedSpecies or {}) do
+        if unlocked and SpeciesConfig[speciesId] then return speciesId end
+    end
+    return "gallimimus"
+end
+
+local function notifyResult(player, ok, resultOrReason, successMessage)
+    if ok then
+        StatReplicationService:Notify(player, successMessage or "Action complete", "Success", 2)
+    else
+        StatReplicationService:Notify(player, tostring(resultOrReason), "Warning", 2)
+    end
+end
+
+local function sendStats(player)
+    local state = SurvivalService:GetState(player)
+    if state then StatReplicationService:Send(player, state) end
+end
+
+local function initializePlayer(player)
+    local data = PlayerDataService:Load(player)
+    local state = SurvivalService:CreateState(player, getStarterSpecies(data))
+    MovementLockService:SetHatchedMovement(player, false, state)
+    sendStats(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    initializePlayer(player)
+    player.CharacterAdded:Connect(function()
+        local state = SurvivalService:GetState(player)
+        MovementLockService:SetHatchedMovement(player, state and state.Hatched == true, state)
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    PlayerDataService:Save(player)
+    PlayerDataService:Clear(player)
+    ProgressionService:Clear(player)
+    CityDiscoveryService:Clear(player)
+    RateLimitService:ClearPlayer(player)
+end)
+
+Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
+    if not RateLimitService:Check(player, "RequestHatch", 0.2) then
+        StatReplicationService:Notify(player, "Hatch input too fast", "Warning", 1)
+        return
+    end
+    local ok, result = SurvivalService:RequestHatch(player, inputType)
+    if ok and result.Hatched then
+        local stats = SpeciesConfig[result.SpeciesId].BaseStats[result.GrowthStage]
+        result.CurrentWalkSpeed = stats.WalkSpeed
+        MovementLockService:SetHatchedMovement(player, true, result)
+        ProgressionService:OnHatched(player)
+        StatReplicationService:Notify(player, "You hatched!", "Success", 3)
+    else
+        notifyResult(player, ok, result, "Shell cracking")
+    end
+    sendStats(player)
+end)
+
+Remotes.RequestEat.OnServerEvent:Connect(function(player, target)
+    local oldStage = SurvivalService:GetState(player) and SurvivalService:GetState(player).GrowthStage
+    local ok, result = FoodWaterService:RequestEat(player, target)
+    if ok and result.GrowthStage ~= oldStage then
+        ProgressionService:OnGrowthStage(player, result.GrowthStage)
+    end
+    notifyResult(player, ok, result, "Ate food")
+    sendStats(player)
+end)
+
+Remotes.RequestDrink.OnServerEvent:Connect(function(player, target)
+    local ok, result = FoodWaterService:RequestDrink(player, target)
+    notifyResult(player, ok, result, "Drank water")
+    sendStats(player)
+end)
+
+Remotes.RequestAttack.OnServerEvent:Connect(function(player, attackType, target)
+    local ok, result = CombatService:RequestAttack(player, attackType, target)
+    notifyResult(player, ok, result, "Attack attempted")
+    sendStats(player)
+end)
+
+Remotes.RequestCall.OnServerEvent:Connect(function(player, callType)
+    local ok, result = CallService:RequestCall(player, callType)
+    notifyResult(player, ok, result, "Call sent")
+end)
+
+Remotes.RequestGroupInvite.OnServerEvent:Connect(function(player, targetPlayer)
+    local ok, result = GroupService:RequestInvite(player, targetPlayer)
+    if ok then StatReplicationService:Notify(targetPlayer, player.Name .. " invited you to a group", "Info", 5) end
+    notifyResult(player, ok, result, "Invite sent")
+end)
+
+Remotes.RequestNestAction.OnServerEvent:Connect(function(player, actionType, nestInstance)
+    local ok, result = NestService:RequestNestAction(player, actionType, nestInstance)
+    notifyResult(player, ok, result, "Nest updated")
+    sendStats(player)
+end)
+
+Remotes.RequestCollectFossil.OnServerEvent:Connect(function(player, fossilInstance)
+    local ok, result = FossilService:RequestCollect(player, fossilInstance)
+    notifyResult(player, ok, result, "Fossil collected")
+    sendStats(player)
+end)
+
+-- Test/trigger helper: server-owned discovery path. Map trigger scripts should call this service, never client currency grants.
+_G.eggBreakersDiscoverZone = function(player, zoneId)
+    return CityDiscoveryService:Discover(player, zoneId)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.defer(initializePlayer, player)
+end
