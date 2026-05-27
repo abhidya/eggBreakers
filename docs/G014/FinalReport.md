@@ -1,6 +1,6 @@
 # G014 Final Report
 
-Latest Commit: 303c7e7 updating rblx file plus current G014 source/doc fixes pending commit.
+Latest Commit: af9fd05 plus current live Studio import batch docs pending commit.
 RBXL Audit: PASS for open/responding Studio; FAIL for release persistence/full 500-asset audit.
 Bootstrap Status: PASS — `Bootstrap.lua` ModuleScript and `Bootstrap.Init()` create required RemoteEvents.
 Client Playability Status: FAIL — keyboard hatch smoke works and HUD/Hatch/Mobile UI appear, but full touch/controller device proof remains unproven.
@@ -17,14 +17,14 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 | State | Count |
 |---|---:|
 | Cataloged SourceAssetIds | 500+ |
-| Actually Imported Assets | 5 live imported assets from Studio audit |
-| Audited Imported Assets | 5 live assets marked script-audited; below target |
-| Tagged Imported Assets | 5 live tagged imported assets; below target |
-| Placed Visible Assets | 5 live placed/visible imported assets; below target |
-| Release Ready Visible Assets | 5 live release-ready visible assets |
+| Actually Imported Assets | 10 live imported assets from Studio audit |
+| Audited Imported Assets | 10 live assets marked script-audited; below target |
+| Tagged Imported Assets | 10 live tagged imported assets; below target |
+| Placed Visible Assets | 10 live placed/visible imported assets; below target |
+| Release Ready Visible Assets | 10 live release-ready visible assets |
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
-| Scripts Quarantined | 0; no executable imported scripts found in the 5 live imported roots |
-| Remaining Release Ready Gap To 500 | 495 |
+| Scripts Quarantined | 0; no executable imported scripts found in the 10 live imported roots |
+| Remaining Release Ready Gap To 500 | 490 |
 
 ## Core Flow Result
 
@@ -45,4 +45,4 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 
 ## Signoff
 
-G014 STATUS: FAIL — releaseReadyVisibleAssets remain 5/500 with a 495 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
+G014 STATUS: FAIL — releaseReadyVisibleAssets remain 10/500 with a 490 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
