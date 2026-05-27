@@ -741,3 +741,18 @@ Next action: continue Creator Store batches; next milestone is 150 release-ready
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch027 and pass 150 release-ready assets while keeping `scriptObjectsFound=0`.
+
+## Run G016-R050 — Creator Store import Batch027 — 2026-05-27T18:48Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch027 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: old desk `13011426229`, microwave `96508931775797`, yellow wildflower `13424841380`, slate rock duplicate `14932307872`, small fossil rock `5349336730`. Import quarantine removed `3` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=149`, `releaseReadyVisibleAssets=149`, `placedVisibleAssets=149`, `taggedImportedAssets=149`, `auditedImportedAssets=149`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=149`, `releaseReadyVisibleAssets=149`, expected at least `500`. Remaining gap is `351` release-ready assets plus RBXL save/reopen and fresh all-category proof. Slate rock reused SourceAssetId `14932307872` and was correctly not counted twice, leaving the run one asset short of the 150 milestone.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch027.
+Root cause: four unique assets landed this batch; one duplicate was excluded from unique release count.
+Patch applied: no source patch; Studio place state received Batch027 imported assets under `Workspace.Map.ImportedAssets.G016Batch027` with release/audit/performance-safe attributes.
+Retest result: Batch027 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: run Batch028 to cross 150 assets; avoid slate/obsidian rock queries that repeat SourceAssetId `14932307872`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch028 and cross 150 release-ready assets while keeping `scriptObjectsFound=0`.
