@@ -162,6 +162,59 @@ function CharacterVisualService:_readableScaleForSize(size)
     return math.max(1, heightScale, lengthScale)
 end
 
+function CharacterVisualService:GrowthVisualScaleForState(state)
+    local growth = state and tonumber(state.Growth) or 0
+    growth = math.max(0, math.min(100, growth))
+    return 1 + (growth / 100) * 0.8
+end
+
+function CharacterVisualService:_applyGrowthVisualScale(model, state)
+    local growthScale = self:GrowthVisualScaleForState(state)
+    if growthScale <= 1 then
+        model:SetAttribute("GrowthVisualScale", growthScale)
+        model:SetAttribute("GrowthValue", state and state.Growth or 0)
+        return
+    end
+
+    if model:IsA("Model") then
+        local ok = pcall(function()
+            local currentScale = model.GetScale and model:GetScale() or 1
+            model:ScaleTo(currentScale * growthScale)
+        end)
+        if not ok then
+            local _, center = model:GetBoundingBox()
+            for _, descendant in ipairs(model:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                    descendant.Size = descendant.Size * growthScale
+                    descendant.CFrame = CFrame.new(center.Position + (descendant.Position - center.Position) * growthScale) * descendant.CFrame.Rotation
+                end
+            end
+        end
+        local _, size = model:GetBoundingBox()
+        model:SetAttribute("ReadableHeight", size.Y)
+        model:SetAttribute("ReadableLength", axisMax(size))
+    elseif model:IsA("BasePart") then
+        model.Size = model.Size * growthScale
+        model:SetAttribute("ReadableHeight", model.Size.Y)
+        model:SetAttribute("ReadableLength", axisMax(model.Size))
+    else
+        local parts = getVisibleParts(model)
+        local center, size = boundsFromParts(parts)
+        if center then
+            for _, part in ipairs(parts) do
+                part.Size = part.Size * growthScale
+                part.CFrame = CFrame.new(center + (part.Position - center) * growthScale) * part.CFrame.Rotation
+            end
+            _, size = boundsFromParts(parts)
+        end
+        model:SetAttribute("ReadableHeight", size.Y)
+        model:SetAttribute("ReadableLength", axisMax(size))
+    end
+
+    model:SetAttribute("GrowthVisualScale", growthScale)
+    model:SetAttribute("GrowthValue", state and state.Growth or 0)
+end
+
 function CharacterVisualService:_normalizeDinosaurScale(model)
     if model:IsA("Model") then
         local _, size = model:GetBoundingBox()
@@ -260,10 +313,11 @@ function CharacterVisualService:_createEggVisual(character, root)
     return nil, "invalid_imported_egg_visual"
 end
 
-function CharacterVisualService:_prepareDinosaurClone(model)
+function CharacterVisualService:_prepareDinosaurClone(model, state)
     local clone = self:_prepareVisualClone(model, self.DinosaurVisualName)
     clone:SetAttribute("VisualKind", "ImportedDinosaur")
     self:_normalizeDinosaurScale(clone)
+    self:_applyGrowthVisualScale(clone, state)
     return clone
 end
 
@@ -347,7 +401,7 @@ function CharacterVisualService:ApplyForState(player, state, options)
 
     local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "gallimimus", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
     if sourceModel then
-        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel))
+        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel, state))
         if attached then
             return true, "dinosaur_model"
         end

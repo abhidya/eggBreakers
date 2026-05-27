@@ -126,17 +126,31 @@ Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
 end)
 
 Remotes.RequestEat.OnServerEvent:Connect(function(player, target)
-    local oldStage = SurvivalService:GetState(player) and SurvivalService:GetState(player).GrowthStage
+    local previousState = SurvivalService:GetState(player)
+    local oldStage = previousState and previousState.GrowthStage
+    local oldGrowth = previousState and previousState.Growth
     local ok, result = FoodWaterService:RequestEat(player, target)
     if ok and result.GrowthStage ~= oldStage then
         ProgressionService:OnGrowthStage(player, result.GrowthStage)
+    end
+    if ok and result.Growth ~= oldGrowth then
+        CharacterVisualService:ApplyForState(player, result)
     end
     notifyResult(player, ok, result, "Ate food")
     sendStats(player)
 end)
 
 Remotes.RequestDrink.OnServerEvent:Connect(function(player, target)
+    local previousState = SurvivalService:GetState(player)
+    local oldStage = previousState and previousState.GrowthStage
+    local oldGrowth = previousState and previousState.Growth
     local ok, result = FoodWaterService:RequestDrink(player, target)
+    if ok and result.GrowthStage ~= oldStage then
+        ProgressionService:OnGrowthStage(player, result.GrowthStage)
+    end
+    if ok and result.Growth ~= oldGrowth then
+        CharacterVisualService:ApplyForState(player, result)
+    end
     notifyResult(player, ok, result, "Drank water")
     sendStats(player)
 end)
