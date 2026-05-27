@@ -141,3 +141,18 @@ Next action: owner lane for NPC service should align attribute stamping with `NP
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: fix or reassign the `ActiveNPCBrain` proof marker gap before final QA.
+
+## Run G016-R010 — core integration source repairs — 2026-05-27T12:38Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-core-fixes.rbxl`, `git diff --check`, Studio Integration TestRunner.
+Passed: source syntax/build/diff checks passed.
+Failed: Studio Integration runner still reports 44/49 because current Studio service modules appear require-cached/stale for some patched services; no final PASS claimed.
+Top failing story: US05 Water, US07 Combat/death, US12/Progression persistence, US15 fresh QA.
+Failure: source-level defects found in water growth grant, default Damageable health, and DNA grants without preloaded profile.
+Root cause: live playability work left some server functions using legacy constants/defaults and assuming profiles were preloaded.
+Patch applied: `FoodWaterService:RequestDrink` now uses `WaterGrowthGrant`; `CombatService:ApplyDamage` defaults uninitialized Damageable targets to 25 health so attacks visibly reduce/kill practice targets; `PlayerDataService:GrantDNA/GrantFossils` now initialize profiles through `Get`; `NPCService:Eat` now stamps visible Eat action attributes and depletes nearby matching food sources so active NPC eating is observable.
+Retest result: source checks PASS; Studio runner requires fresh reload before patched services can be trusted.
+Next action: run fresh Studio reload/live proof harness, then handle remaining weather coverage failure if it reproduces without require-cache staleness.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: continue repairing Integration failures and produce fresh live proof attributes; do not claim PASS from source/build only.

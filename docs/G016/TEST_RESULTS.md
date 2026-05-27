@@ -46,3 +46,9 @@ Worker-5 coordinated with worker-3 and reran latest current-head checks at commi
 ## Worker-3 Coordination Addendum — 2026-05-27T12:33Z
 
 Worker-3 replied with source-level L002/L003 evidence and one likely failing test gap. L002 source has `NPCService:Tick`/`TickNPCs`, `RunPreyBrain`, `RunPredatorBrain`, `MoveRecordToward`, and `NPCSpawnService` loop coverage; `NPCSpawnValidation` asserts visible dinosaur/carnivore counts plus active brain movement. Exact gap: `NPCSpawnValidation.lua` asserts `prey:GetAttribute("ActiveNPCBrain") == true`, but current-head `NPCService.lua` only stamps `LastBrainAction`, `BrainTarget`, and `LastBrainMovedAt`; no `ActiveNPCBrain` stamp was found. L003 source checks remain present: 4-species starter pool, anti-repeat `LastStarterSpecies`, `ForwardCorrectionDegrees`, `GrowthVisualScale`, and `PlayActionMotion` for Eat/Drink/Attack/Call/Hide. Worker-3 also confirmed active Studio proof query has `{hasProofFolder=false}`. No final PASS claimed.
+
+## Core Integration Probe — 2026-05-27T12:38Z
+
+Current head after team shutdown: `40dcc25` plus local service fixes. Source checks passed: `luac` over all `src/**/*.lua`; `rojo build default.project.json --output /tmp/eggBreakers-g016-core-fixes.rbxl`; `git diff --check`. Studio Integration TestRunner remains stale/partially failing at 49 total, 44 passed, 5 failed: CombatService default Damageable health, FoodWaterService water growth, NPCService food depletion target, ProgressionService DNA grant without preloaded profile, WeatherBiomeService rain size cache/state. Local patches address the first, second, third, and fourth source causes; Studio require-cache still reported old values until a fresh Studio reload/TestRunner run.
+
+Remaining proof gaps: fresh Studio reload, live Play proof attributes, mobile/controller proof, RBXL save/reopen, 500 asset gate.

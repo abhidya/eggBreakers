@@ -84,7 +84,7 @@ function FoodWaterService:RequestDrink(player, target)
     if not RemoteValidationService:HasTag(target, "WaterSource") then return false, "not_water" end
     if not RemoteValidationService:IsClose(root, target, self.DrinkDistance) then return false, "too_far" end
     state.Thirst = math.min(100, state.Thirst + 35)
-    SurvivalService:AddGrowth(player, 1)
+    SurvivalService:AddGrowth(player, self.WaterGrowthGrant)
     return true, state
 end
 

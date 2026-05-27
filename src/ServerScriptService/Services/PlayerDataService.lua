@@ -69,16 +69,14 @@ end
 
 function PlayerDataService:GrantDNA(player, amount, reason)
     assert(type(amount) == "number" and amount >= 0, "server-only DNA grant amount must be non-negative")
-    local data = self.Profiles[player]
-    if not data then return false end
+    local data = self:Get(player)
     data.DNA = data.DNA + amount
     return true, reason
 end
 
 function PlayerDataService:GrantFossils(player, amount, reason)
     assert(type(amount) == "number" and amount >= 0, "server-only fossil grant amount must be non-negative")
-    local data = self.Profiles[player]
-    if not data then return false end
+    local data = self:Get(player)
     data.Fossils = data.Fossils + amount
     return true, reason
 end

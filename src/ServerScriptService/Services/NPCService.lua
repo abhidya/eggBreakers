@@ -139,10 +139,28 @@ end
 
 function NPCService:Eat(record, food)
     record.Hunger = math.min(100, (record.Hunger or 0) + (food and food:GetAttribute("Nutrition") or 25))
-    if food then food:SetAttribute("Depleted", true) end
+    local position = self:GetRecordPosition(record)
+    local expectedDiet = record.Kind == "Predator" and "Carnivore" or "Herbivore"
+    local depletedCount = 0
+    local function deplete(target)
+        if target and target:GetAttribute("Diet") == expectedDiet and target:GetAttribute("Depleted") ~= true then
+            target:SetAttribute("Depleted", true)
+            target:SetAttribute("LastEatenByNPC", record.Instance and record.Instance.Name or "NPC")
+            depletedCount = depletedCount + 1
+        end
+    end
+    deplete(food)
+    for _, candidate in ipairs(CollectionService:GetTagged("FoodSource")) do
+        local candidatePosition = self:GetInstancePosition(candidate)
+        if candidate ~= food and candidatePosition and (candidatePosition - position).Magnitude <= self.InteractDistance then
+            deplete(candidate)
+        end
+    end
     if record.Instance then
         record.Instance:SetAttribute("Hunger", record.Hunger)
         record.Instance:SetAttribute("LastAction", "Eat")
+        record.Instance:SetAttribute("LastBrainAction", "Eat")
+        record.Instance:SetAttribute("FoodSourcesDepleted", depletedCount)
     end
     return self:Transition(record, "Eat")
 end
