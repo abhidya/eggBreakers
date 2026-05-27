@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
+local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 
 local controllers = script.Parent:WaitForChild("ClientControllers")
 local HUDController = require(controllers:WaitForChild("HUDController"))
@@ -236,7 +238,8 @@ local function wireMobileButtons(result)
                     ClientBootstrap:PlayActionMotion("Eat")
                     InputController:RequestEat(target)
                     showFeedback(gui, "Eating")
-                elseif target:GetAttribute("WaterSource") or target.Name:find("Water") then
+                elseif CollectionService:HasTag(target, Constants.Tags.WaterSource) or target:GetAttribute("WaterSource") or target.Name:find("Water") then
+                    ClientBootstrap:PlayActionMotion("Drink")
                     InputController:RequestDrink(target)
                     showFeedback(gui, "Drinking")
                 end
@@ -246,7 +249,13 @@ local function wireMobileButtons(result)
         end)
     end
     local attack = gui:FindFirstChild("AttackButton")
-    if attack then attack.Activated:Connect(function() InputController:RequestAttack("Claw", nil) end) end
+    if attack then
+        attack.Activated:Connect(function()
+            ClientBootstrap:PlayActionMotion("Attack")
+            InputController:RequestAttack("Claw", nil)
+            showFeedback(gui, "Attacking")
+        end)
+    end
 
     local sprint = gui:FindFirstChild("SprintButton")
     if sprint then
@@ -265,6 +274,7 @@ local function wireMobileButtons(result)
     if call then
         call.Activated:Connect(function()
             local callType = "Friendly"
+            ClientBootstrap:PlayActionMotion("Call")
             InputController:RequestCall(callType)
             local pulse = createLocalCallPulse(callType)
             call:SetAttribute("LastCallType", callType)
@@ -278,6 +288,7 @@ local function wireMobileButtons(result)
         restHide.Activated:Connect(function()
             local isHidden = not player:GetAttribute("Hidden")
             player:SetAttribute("Hidden", isHidden)
+            ClientBootstrap:PlayActionMotion("Hide")
             applyHiddenVisual(isHidden)
             restHide.Text = isHidden and "Hidden" or "Rest/Hide"
             setButtonActive(restHide, isHidden)
