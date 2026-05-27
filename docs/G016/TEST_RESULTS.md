@@ -216,3 +216,9 @@ No final PASS: US14 still needs 400 more release-ready imported assets, plus fre
 Studio MCP imported and audited Batch017: mailbox `7367638865`, trash can `11230320311`, berry bush `120812800271745`, stalagmite `77377316634796`, rib cage `4977968611`. Quarantine removed `2` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=105`, `releaseReadyVisibleAssets=105`, and `placedVisibleAssets=105`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=105; expected at least 500` and `releaseReadyVisibleAssets=105; expected at least 500`.
 
 No final PASS: US14 still needs 395 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch018 Audit — 2026-05-27T17:10Z
+
+Studio MCP imported and audited Batch018: news stand `10336436728`, park trash bin `100363367349137`, lily pads `79823722717297`, rock stack duplicate `5011762570`, claw fossil `9489009978`. Quarantine removed `5` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=109`, `releaseReadyVisibleAssets=109`, and `placedVisibleAssets=109`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=109; expected at least 500` and `releaseReadyVisibleAssets=109; expected at least 500`.
+
+No final PASS: US14 still needs 391 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
