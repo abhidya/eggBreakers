@@ -32,10 +32,15 @@ local function ensureModelPath(path)
                 child = Instance.new("Model")
                 child.Name = segment
                 local part = Instance.new("Part")
-                part.Name = segment .. "VisibleMesh"
+                part.Name = segment .. "VisibleBodyMesh"
                 part.Size = Vector3.new(2, 2, 3)
                 part.Parent = child
                 child.PrimaryPart = part
+                local tail = Instance.new("Part")
+                tail.Name = segment .. "ReadableTailMesh"
+                tail.Size = Vector3.new(1, 1, 3)
+                tail.CFrame = CFrame.new(0, 0, 3)
+                tail.Parent = child
             else
                 child = Instance.new("Folder")
                 child.Name = segment
@@ -129,6 +134,10 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
     Assert.notNil(visual, "dinosaur visual exists")
     Assert.truthy(visual:GetAttribute("ImportedVisual"), "dinosaur visual is imported asset clone")
+    Assert.truthy((visual:GetAttribute("ReadableHeight") or 0) >= CharacterVisualService.MinimumDinosaurHeight, "dinosaur visual height is readable")
+    Assert.truthy((visual:GetAttribute("ReadableLength") or 0) >= CharacterVisualService.MinimumDinosaurLength, "dinosaur visual length is readable")
+    local _, size = visual:GetBoundingBox()
+    Assert.truthy(math.max(size.X, size.Y, size.Z) >= CharacterVisualService.MinimumDinosaurLength, "attached model preserves readable part offsets")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible dinosaur replacement exists")
     cleanup(player)
 end })
@@ -180,6 +189,45 @@ table.insert(suite.tests, { name = "avatar hide preserves existing imported dino
     Assert.equals(body.Transparency, 0, "imported dinosaur remains visible")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible imported dinosaur survives avatar hiding")
     character:Destroy()
+end })
+
+table.insert(suite.tests, { name = "folder based imported dinosaur stays readable after attach", run = function()
+    local player = MockPlayer.new(11004, "FolderDinoVisualTester")
+    local character = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "gallimimus")
+    state.Hatched = true
+
+    local source = Instance.new("Folder")
+    source.Name = "ImportedFolderDinosaur"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "FolderDinoBody"
+    body.Size = Vector3.new(1, 1, 2)
+    body.CFrame = CFrame.new(0, 0, 0)
+    body.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "FolderDinoTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(0, 0, 2)
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source)
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+
+    Assert.notNil(attached, "folder visual attaches")
+    Assert.truthy((attached:GetAttribute("ReadableLength") or 0) >= CharacterVisualService.MinimumDinosaurLength, "folder visual was scaled to readable length")
+    local parts = attached:GetDescendants()
+    local minZ, maxZ = math.huge, -math.huge
+    for _, descendant in ipairs(parts) do
+        if descendant:IsA("BasePart") then
+            minZ = math.min(minZ, descendant.Position.Z - descendant.Size.Z / 2)
+            maxZ = math.max(maxZ, descendant.Position.Z + descendant.Size.Z / 2)
+        end
+    end
+    Assert.truthy((maxZ - minZ) >= CharacterVisualService.MinimumDinosaurLength, "folder attach preserves part offsets instead of collapsing into a block")
+    source:Destroy()
+    cleanup(player)
 end })
 
 return TestRunner.registerSuite(suite)

@@ -3,6 +3,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 local UIFactory = require(script.Parent.Parent.ClientControllers.UIFactory)
+local HUDController = require(script.Parent.Parent.ClientControllers.HUDController)
 
 local suite = { name = "ClientHUDTests.client", category = "Client", tests = {} }
 
@@ -24,6 +25,25 @@ table.insert(suite.tests, { name = "small screen readability gate", run = functi
     Assert.truthy(table.find(payload, "thirst") ~= nil, "StatUpdate includes thirst")
     Assert.truthy(table.find(payload, "stamina") ~= nil, "StatUpdate includes stamina")
     Assert.truthy(table.find(payload, "growthStage") ~= nil, "StatUpdate includes growth stage")
+end })
+
+table.insert(suite.tests, { name = "diet guidance explains species food and water", run = function()
+    local herbivore = HUDController:BuildDietGuidance({
+        species = "gallimimus",
+        diet = "Herbivore",
+        growthStage = "Hatchling",
+    })
+    Assert.truthy(string.find(herbivore, "gallimimus", 1, true) ~= nil, "species appears in guidance")
+    Assert.truthy(string.find(herbivore, "Herbivore", 1, true) ~= nil, "diet appears in guidance")
+    Assert.truthy(string.find(herbivore, "green plant", 1, true) ~= nil, "herbivore food hint appears")
+    Assert.truthy(string.find(herbivore, "blue water", 1, true) ~= nil, "water hint appears")
+
+    local carnivore = HUDController:BuildDietGuidance({
+        species = "velociraptor",
+        diet = "Carnivore",
+        growthStage = "Hatchling",
+    })
+    Assert.truthy(string.find(carnivore, "red carcass", 1, true) ~= nil, "carnivore food hint appears")
 end })
 
 TestRunner.registerSuite(suite)
