@@ -20,6 +20,8 @@ table.insert(suite.tests, { name = "adult nest succeeds", run = function()
     local ok = NestService:RequestNestAction(p, "Create", nest)
     Assert.truthy(ok, "adult can create nest")
     Assert.equals(state.NestRespawn, nest, "nest respawn saved")
+    Assert.equals(state.NestEggSlots, 1, "nest gives egg slot outcome")
+    Assert.notNil(state.HatchlingBuff, "nest gives hatchling buff outcome")
     nest:Destroy()
 end })
 

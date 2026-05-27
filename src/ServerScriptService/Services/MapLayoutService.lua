@@ -228,6 +228,36 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
     end
 end
 
+function MapLayoutService:EnsureCityDiscoveryTriggers(folders)
+    folders = folders or self:EnsureMapFolders()
+    local triggerFolder = self:GetOrCreateFolder(folders.InvisibleGameplayVolumes, "CityDiscoveryTriggers")
+    local zone = self.ZoneTerrain.ApocalypticCity
+    local triggers = {
+        { name = "_INVISIBLE_CityDiscovery_RedstoneGate", position = Vector3.new(620, zone.topY + 5, -325), size = Vector3.new(90, 14, 180) },
+        { name = "_INVISIBLE_CityDiscovery_SwampCauseway", position = Vector3.new(620, zone.topY + 5, 475), size = Vector3.new(90, 14, 180) },
+        { name = "_INVISIBLE_CityDiscovery_CityCore", position = Vector3.new(zone.center.X, zone.topY + 5, zone.center.Z), size = Vector3.new(220, 14, 220) },
+    }
+    for _, spec in ipairs(triggers) do
+        local trigger = triggerFolder:FindFirstChild(spec.name)
+        if not trigger then
+            trigger = Instance.new("Part")
+            trigger.Name = spec.name
+            trigger.Anchored = true
+            trigger.CanCollide = false
+            trigger.CanTouch = true
+            trigger.CanQuery = false
+            trigger.Transparency = 1
+            trigger.Parent = triggerFolder
+        end
+        trigger.Position = spec.position
+        trigger.Size = spec.size
+        trigger:SetAttribute("GameplayVolume", true)
+        trigger:SetAttribute("CityDiscoveryTrigger", true)
+        trigger:SetAttribute("ZoneId", "ApocalypticCity")
+    end
+    return triggerFolder
+end
+
 function MapLayoutService:EnsureFallSafetyVolume(folders)
     local safety = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_FallSafetyCatch")
     if not safety then
@@ -340,6 +370,7 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
+    self:EnsureCityDiscoveryTriggers(folders)
     self:EnsureFallSafetyVolume(folders)
     return spawn
 end
@@ -356,6 +387,10 @@ function MapLayoutService:ValidateLayoutFolders()
     end
     if not folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_FallSafetyCatch") then
         table.insert(missing, "_INVISIBLE_FallSafetyCatch")
+    end
+    local cityTriggers = folders.InvisibleGameplayVolumes:FindFirstChild("CityDiscoveryTriggers")
+    if not cityTriggers or not cityTriggers:FindFirstChild("_INVISIBLE_CityDiscovery_CityCore") then
+        table.insert(missing, "CityDiscoveryTriggers")
     end
     if not folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. self.FullMapUnderlay.name) then
         table.insert(missing, self.FullMapUnderlay.name)

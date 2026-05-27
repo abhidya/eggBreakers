@@ -1,11 +1,13 @@
 local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
-local NPCService = {}
+local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
 NPCService.MaxActive = 30
 NPCService.AllowedStates = { Idle=true, Wander=true, Flee=true, SeekFood=true, SeekWater=true, Chase=true, Attack=true, Dead=true, Despawn=true }
 NPCService.NPCs = {}
+NPCService.FleeDistance = 80
+NPCService.TickSeconds = 1
 
 function NPCService:CanSpawn(positionOk, activeCount)
     activeCount = activeCount or #self.NPCs
@@ -100,6 +102,38 @@ function NPCService:MarkPreyDead(record)
     self:Transition(record, "Dead")
     record.Carcass = self:CreateCarcassFoodSource(record.Instance, 35)
     return true, record.Carcass
+end
+
+function NPCService:TickNPCs(players)
+    for _, record in ipairs(self.NPCs) do
+        if record.State ~= "Dead" and record.Kind == "Prey" then
+            local npc = record.Instance
+            local npcPosition = record.SpawnPosition
+            if npc and npc.GetPivot then npcPosition = npc:GetPivot().Position end
+            for _, player in ipairs(players or {}) do
+                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if root and (root.Position - npcPosition).Magnitude <= self.FleeDistance then
+                    record.State = "Flee"
+                    record.FleeFrom = player
+                    record.LastFleeAt = os.time()
+                    break
+                end
+            end
+        end
+    end
+    return #self.NPCs
+end
+
+function NPCService:StartTickLoop(playersService)
+    if self.TickLoopStarted then return false, "already_started" end
+    self.TickLoopStarted = true
+    task.spawn(function()
+        while self.TickLoopStarted do
+            task.wait(self.TickSeconds)
+            self:TickNPCs((playersService or game:GetService("Players")):GetPlayers())
+        end
+    end)
+    return true
 end
 
 return NPCService

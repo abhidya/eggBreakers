@@ -21,9 +21,15 @@ local StatReplicationService = require(script.Parent.Services.StatReplicationSer
 local MovementLockService = require(script.Parent.Services.MovementLockService)
 local CharacterVisualService = require(script.Parent.Services.CharacterVisualService)
 local RateLimitService = require(script.Parent.Services.RateLimitService)
+local NPCSpawnService = require(script.Parent.Services.NPCSpawnService)
+local NPCService = require(script.Parent.Services.NPCService)
 
 MapLayoutService:EnsureMapFolders()
 MapLayoutService:EnsureSpawnSafety()
+CityDiscoveryService:BindTriggers(workspace)
+SurvivalService:StartNeedsLoop(Players, StatReplicationService)
+NPCSpawnService:StartSpawnLoop()
+NPCService:StartTickLoop(Players)
 
 local function getStarterSpecies(data)
     for speciesId, unlocked in pairs(data.UnlockedSpecies or {}) do
@@ -132,6 +138,11 @@ Remotes.RequestGroupInvite.OnServerEvent:Connect(function(player, targetPlayer)
     local ok, result = GroupService:RequestInvite(player, targetPlayer)
     if ok then StatReplicationService:Notify(targetPlayer, player.Name .. " invited you to a group", "Info", 5) end
     notifyResult(player, ok, result, "Invite sent")
+end)
+
+Remotes.RequestGroupAccept.OnServerEvent:Connect(function(player, fromPlayer)
+    local ok, result = GroupService:AcceptInvite(player, fromPlayer)
+    notifyResult(player, ok, result, "Group joined")
 end)
 
 Remotes.RequestNestAction.OnServerEvent:Connect(function(player, actionType, nestInstance)

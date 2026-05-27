@@ -19,4 +19,15 @@ table.insert(suite.tests, { name = "join leave member list herd pack", run = fun
     Assert.falsy(GroupService.PlayerGroup[p], "member left")
 end })
 
+
+table.insert(suite.tests, { name = "accept invite joins target to inviter group", run = function()
+    local inviter = MockPlayer.new(36003, "Inviter")
+    local target = MockPlayer.new(36004, "Invitee")
+    GroupService.PendingInvites[target] = { [inviter] = { From = inviter, To = target } }
+    local ok, group = GroupService:AcceptInvite(target, inviter)
+    Assert.truthy(ok, "invite accepted")
+    Assert.truthy(group.Members[inviter], "inviter in group")
+    Assert.truthy(group.Members[target], "target joined group")
+end })
+
 return suite

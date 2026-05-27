@@ -1,9 +1,10 @@
 local Workspace = game:GetService("Workspace")
 local NPCService = require(script.Parent.NPCService)
 
-local NPCSpawnService = {}
+local NPCSpawnService = { SpawnLoopStarted = false }
 NPCSpawnService.TargetActive = 12
 NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "Predator" }
+NPCSpawnService.SpawnTickSeconds = 10
 
 function NPCSpawnService:GetSpawnFolder()
     local map = Workspace:FindFirstChild("Map")
@@ -56,6 +57,18 @@ function NPCSpawnService:MaintainMinimumActive()
         end
     end
     return active
+end
+
+function NPCSpawnService:StartSpawnLoop()
+    if self.SpawnLoopStarted then return false, "already_started" end
+    self.SpawnLoopStarted = true
+    task.spawn(function()
+        while self.SpawnLoopStarted do
+            self:MaintainMinimumActive()
+            task.wait(self.SpawnTickSeconds)
+        end
+    end)
+    return true
 end
 
 return NPCSpawnService

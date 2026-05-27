@@ -1,7 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
-local SurvivalService = { States = {} }
+local SurvivalService = { States = {}, TickLoopStarted = false }
+SurvivalService.NeedsTickSeconds = 1
 
 local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
@@ -61,11 +62,40 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
     local stats = species.BaseStats[state.GrowthStage]
     state.Hunger = clamp(state.Hunger - stats.HungerDrain * deltaSeconds, 0, 100)
     state.Thirst = clamp(state.Thirst - stats.ThirstDrain * deltaSeconds, 0, 100)
+    state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
     if state.Hunger <= 0 or state.Thirst <= 0 then
-        state.Health = clamp(state.Health - 3 * deltaSeconds, 0, stats.MaxHealth)
-        if state.Health <= 0 then self:Kill(player, "Starvation/Dehydration") end
+        self:ApplyDamage(player, 3 * deltaSeconds, "Starvation/Dehydration")
     end
     return true, state
+end
+
+function SurvivalService:ApplyDamage(player, amount, cause)
+    local state = self:GetState(player)
+    if not state or state.Dead then return false, "not_alive" end
+    local species = SpeciesConfig[state.SpeciesId]
+    local stats = species.BaseStats[state.GrowthStage]
+    state.Health = clamp(state.Health - math.max(0, amount or 0), 0, stats.MaxHealth)
+    if state.Health <= 0 then
+        self:Kill(player, cause or "Damage")
+    end
+    return true, state
+end
+
+function SurvivalService:StartNeedsLoop(playersService, statReplicationService)
+    if self.TickLoopStarted then return false, "already_started" end
+    self.TickLoopStarted = true
+    task.spawn(function()
+        while self.TickLoopStarted do
+            task.wait(self.NeedsTickSeconds)
+            for _, player in ipairs((playersService or game:GetService("Players")):GetPlayers()) do
+                local ok, state = self:ApplyNeedsTick(player, self.NeedsTickSeconds)
+                if ok and statReplicationService then
+                    statReplicationService:Send(player, state)
+                end
+            end
+        end
+    end)
+    return true
 end
 
 function SurvivalService:AddGrowth(player, amount)
@@ -84,7 +114,8 @@ end
 
 function SurvivalService:ConsumeStamina(player, amount)
     local state = self:GetState(player)
-    if not state or state.Stamina < amount then return false end
+    if not state or not state.Hatched or state.Dead then return false end
+    if state.Stamina < amount then return false end
     state.Stamina = state.Stamina - amount
     return true
 end

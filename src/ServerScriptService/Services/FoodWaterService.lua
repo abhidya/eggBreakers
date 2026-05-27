@@ -12,6 +12,8 @@ function FoodWaterService:RefreshDepletion(target, now)
     if depletedUntil and (now or os.time()) >= depletedUntil then
         target:SetAttribute("Depleted", false)
         target:SetAttribute("DepletedUntil", nil)
+        target.Transparency = target:GetAttribute("RestoredTransparency") or 0
+        target.CanQuery = true
     end
 end
 
@@ -26,7 +28,9 @@ function FoodWaterService:RequestEat(player, target)
     if not ok then return false, reason end
     state.Hunger = math.min(100, state.Hunger + (target:GetAttribute("Nutrition") or 25))
     target:SetAttribute("Depleted", true)
-    local cooldown = target:GetAttribute("RespawnCooldownSeconds")
+    target:SetAttribute("RestoredTransparency", target.Transparency)
+    target.Transparency = math.max(target.Transparency, 0.65)
+    local cooldown = target:GetAttribute("RespawnCooldownSeconds") or target:GetAttribute("RespawnSeconds")
     if cooldown then
         target:SetAttribute("DepletedUntil", os.time() + cooldown)
     end
@@ -37,7 +41,7 @@ end
 function FoodWaterService:RequestDrink(player, target)
     if not RemoteValidationService:CheckRate(player, "RequestDrink") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)
-    if not RemoteValidationService:IsAlive(state) then return false, "not_alive" end
+    if not RemoteValidationService:IsAlive(state) or not RemoteValidationService:IsHatched(state) then return false, "not_alive_hatched" end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not RemoteValidationService:HasTag(target, "WaterSource") then return false, "not_water" end

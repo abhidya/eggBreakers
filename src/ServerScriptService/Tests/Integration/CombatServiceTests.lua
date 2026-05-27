@@ -19,7 +19,8 @@ table.insert(suite.tests, { name = "server applies damage only", run = function(
     local p, target, state = setup(34001)
     local ok = CombatService:RequestAttack(p, "Bite", target)
     Assert.truthy(ok, "server validates attack")
-    Assert.equals(target:GetAttribute("PendingServerDamage"), state.Health and 9 or 9, "hatchling damage applied from config")
+    Assert.equals(target:GetAttribute("LastServerDamage"), state.Health and 9 or 9, "hatchling damage applied from config")
+    Assert.equals(target:GetAttribute("DamageableHealth"), 16, "real damage reduces target health")
     target:Destroy()
 end })
 
@@ -29,10 +30,14 @@ table.insert(suite.tests, { name = "cooldown stamina death/carcass flow", run = 
     local ok, reason = CombatService:RequestAttack(p, "Bite", target)
     Assert.falsy(ok, "no stamina rejects")
     Assert.equals(reason, "no_stamina", "stamina reason")
-    RateLimitService:ClearPlayer(p); state.Stamina = 100; state.Dead = true
+    RateLimitService:ClearPlayer(p); state.Stamina = 100; state.Hatched = false
+    ok, reason = CombatService:RequestAttack(p, "Bite", target)
+    Assert.falsy(ok, "egg player cannot attack")
+    Assert.equals(reason, "not_alive_hatched", "egg attack reason")
+    RateLimitService:ClearPlayer(p); state.Hatched = true; state.Dead = true
     ok, reason = CombatService:RequestAttack(p, "Bite", target)
     Assert.falsy(ok, "dead player cannot attack")
-    Assert.equals(reason, "not_alive", "dead reason")
+    Assert.equals(reason, "not_alive_hatched", "dead reason")
     target:Destroy()
 end })
 

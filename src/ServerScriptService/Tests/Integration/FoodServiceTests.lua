@@ -57,8 +57,19 @@ table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = 
     Assert.truthy(FoodWaterService:RequestEat(p, food), "eat depletes food")
     Assert.equals(food:GetAttribute("Depleted"), true, "food depleted")
     food:SetAttribute("DepletedUntil", os.time() - 1)
+    food.Transparency = 0.8
     FoodWaterService:RefreshDepletion(food)
     Assert.equals(food:GetAttribute("Depleted"), false, "food restored after cooldown")
+    Assert.equals(food.Transparency, 0, "food visibly restored after cooldown")
+    food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "egg cannot eat before hatch", run = function()
+    local p, food = setup(32006, "Herbivore")
+    SurvivalService:GetState(p).Hatched = false
+    local ok, reason = FoodWaterService:RequestEat(p, food)
+    Assert.falsy(ok, "egg cannot eat")
+    Assert.equals(reason, "not_alive_hatched", "egg eat reason")
     food:Destroy()
 end })
 

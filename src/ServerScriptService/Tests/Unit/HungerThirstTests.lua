@@ -9,8 +9,10 @@ table.insert(suite.tests, { name = "needs drain and clamp", run = function()
     local player = MockPlayer.new(201, "NeedsTester")
     local state = SurvivalService:CreateState(player, "gallimimus")
     state.Hatched = true
+    state.Stamina = 0
     SurvivalService:ApplyNeedsTick(player, 10)
     Assert.truthy(state.Hunger < 100, "hunger drains")
+    Assert.truthy(state.Stamina > 0, "stamina regens")
     Assert.truthy(state.Thirst < 100, "thirst drains")
     SurvivalService:ApplyNeedsTick(player, 10000)
     Assert.equals(state.Hunger, 0)

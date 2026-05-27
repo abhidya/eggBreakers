@@ -38,4 +38,19 @@ table.insert(suite.tests, { name = "thirst updates", run = function()
     water:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "egg cannot drink before hatch", run = function()
+    local p = MockPlayer.new(33004, "WaterEgg")
+    RateLimitService:ClearPlayer(p)
+    local state = SurvivalService:CreateState(p, "gallimimus")
+    state.Hatched = false
+    local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
+    local char = Instance.new("Model"); root.Parent = char; p.Character = char
+    local water = Instance.new("Part"); water.Position = Vector3.new(2, 3, 0); water.Parent = workspace; CollectionService:AddTag(water, "WaterSource")
+    local ok, reason = FoodWaterService:RequestDrink(p, water)
+    Assert.falsy(ok, "egg cannot drink")
+    Assert.equals(reason, "not_alive_hatched", "egg drink reason")
+    water:Destroy()
+end })
+
 return suite
