@@ -120,3 +120,9 @@ Studio MCP probe found `game:SavePlace` exists, but calling it failed with `Game
 Source checks passed: `luac` all source, Rojo build to `/tmp/eggBreakers-food-density.rbxl`, and `git diff --check`. Studio MCP Batch002 tagging/audit placed five real Creator Store assets (fossil `577078767`, wrecked car `8027653806`, rock arch `11239705094`, swamp tree `18986634714`, water lily `86198817809169`) with `scriptObjectsFound=0`. Audit counts are now `actuallyImportedAssets=37`, `releaseReadyVisibleAssets=37`, still below 500. Dense starter food proof at actual egg spawn now reports `25` nearby food sources: `17` herbivore and `8` carnivore, plus `1` water. Direct carnivore E2E passed `3/3`; predator kills herbivore prey, carcass is created as carnivore food, and velociraptor eats it. Direct targeted food placement tests passed `2/2` after raising minimums.
 
 No final PASS: US14 asset gate, fresh all-category proof, and RBXL save/reopen proof remain open.
+
+## Creator Store Batch003 Audit — 2026-05-27T14:32Z
+
+Studio MCP imported and audited Batch003: fern `4536575513`, fossil bones `137420276606883`, jungle tree `123664537225262`, nest `12406188391`, carnivore dinosaur `693899377`. Import quarantine removed `6` script objects before audit. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=40`, `releaseReadyVisibleAssets=40`, and `placedVisibleAssets=40`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=40; expected at least 500` and `releaseReadyVisibleAssets=40; expected at least 500`.
+
+No final PASS: US14 still needs 460 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.

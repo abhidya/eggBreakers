@@ -366,3 +366,18 @@ Next action: continue real Creator Store import batches toward 500, and run fres
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit the next Creator Store batch and keep starter-food density tests green.
+
+## Run G016-R025 — Creator Store import Batch003 — 2026-05-27T14:32Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch003; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`.
+Passed: inserted/tagged/placed five Creator Store assets: fern `4536575513`, fossil bones `137420276606883`, jungle tree `123664537225262`, nest `12406188391`, carnivore dinosaur `693899377`. Script quarantine removed `6` script objects from imported assets. Audit reports `scriptObjectsFound=0`, `scriptsQuarantined=0`, `actuallyImportedAssets=40`, `releaseReadyVisibleAssets=40`, `placedVisibleAssets=40`, `taggedImportedAssets=40`, `auditedImportedAssets=40`.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=40`, `releaseReadyVisibleAssets=40`, expected at least `500`. Remaining gap is `460` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch003.
+Root cause: Creator Store imports are real but only three unique release-counting assets in this batch increased the deduplicated audit count.
+Patch applied: no source patch; Studio place state received Batch003 imported assets under `Workspace.Map.ImportedAssets.G016Batch003` with release/audit attributes.
+Retest result: Batch003 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 real release-ready imports exist.
+Next action: continue Creator Store batches and periodically verify no scripts/placeholders count.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch004 or run clean all-category after Studio sync.
