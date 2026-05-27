@@ -411,3 +411,18 @@ Next action: continue Creator Store batches; preserve script quarantine and dupl
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch006 and keep `scriptObjectsFound=0`.
+
+## Run G016-R028 — Creator Store import Batch006 — 2026-05-27T14:58Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch006; corrected Folder-safe tagger after first tagging attempt failed; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`.
+Passed: inserted/tagged/placed five Creator Store assets: jungle vine `8512428623`, cactus `107812886550854`, street light `17064055144`, bones `6934081776`, egg nest duplicate `12406188391`. Import quarantine removed `1` script object before counting. Corrected audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=53`, `releaseReadyVisibleAssets=53`, `placedVisibleAssets=53`, `taggedImportedAssets=53`, `auditedImportedAssets=53`.
+Failed: first tagger attempt errored on a Folder import by reading `PrimaryPart`; corrected by handling Folder assets via descendant BasePart translation. US14 remains below release threshold: `actuallyImportedAssets=53`, `releaseReadyVisibleAssets=53`, expected at least `500`. Remaining gap is `447` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch006.
+Root cause: one nest SourceAssetId duplicated a prior import, and overall unique imported count remains far below the 500 release oracle.
+Patch applied: no source patch; Studio place state received Batch006 imported assets under `Workspace.Map.ImportedAssets.G016Batch006` with release/audit attributes.
+Retest result: Batch006 corrected audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; tagger must keep Folder-safe placement logic for future batches.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch007 with lower duplicate risk and Folder-safe placement.
