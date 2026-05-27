@@ -17,3 +17,8 @@
 | US13 | Client UI/mobile controls | PASS | PASS | BLOCKED | PASS | N/A | PASS | BLOCKED | `ClientBootstrap.client.lua` now loads controllers; fresh mobile device proof still needed. |
 | US14 | Asset import honesty | PASS | PASS | N/A | N/A | PASS | FAIL | FAIL | Live materialized unique primary imports remain 10/500; catalog rows are not counted. |
 | US15 | Fresh full QA gate | PASS | PASS | FAIL | BLOCKED | PASS | FAIL | FAIL | Fresh Studio hatch smoke passed, but full all-category TestRunner and 500 release assets still fail. |
+
+
+## G015 Follow-up Evidence — 2026-05-27
+
+G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.

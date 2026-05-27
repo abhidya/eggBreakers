@@ -109,4 +109,73 @@ UniqueImportPilotReport.Task19Failures = {
     { Query = "first insert attempt for 8 searchIds", Error = "Studio reported play mode; fixed with start_stop_play(false) and retried successful candidates" },
 }
 
+UniqueImportPilotReport.G015Summary = {
+    TaskId = "G015",
+    RecordedAtUtc = "2026-05-27T10:25:00Z",
+    SuccessfulPrimaryImports = 6,
+    UniquePrimarySourceAssetIdsInsertedThisBatch = 4,
+    DuplicatePrimaryIdsVersusTrackedReport = 2,
+    LiveActuallyImportedAssetsAfterAudit = 34,
+    LiveReleaseReadyVisibleAssetsAfterAudit = 34,
+    RemainingGapTo500 = 466,
+    Notes = "G015 live Studio MCP batch inserted primary Creator Store results into eggBreakers2.rbxl, tagged/placed them under Workspace.Map.ImportedAssets, and ran AssetImportAuditService mutate mode. Release remains FAIL.",
+}
+
+UniqueImportPilotReport.G015PrimaryImports = {
+    { Query = "dinosaur nest egg", SearchId = "5361cbc5-c3f6-4971-8a5c-43986e861456", InsertGuid = "10a45030-58c8-4e5b-80d1-bee926492019", SourceAssetId = "4666597044", Category = "Egg/nest/hatch assets" },
+    { Query = "jungle fern plant", SearchId = "36df7352-6529-4717-a9ef-3f4068a47e01", InsertGuid = "dc462af6-edee-459b-972c-e8809c227181", SourceAssetId = "14703400302", Category = "Jungle Basin foliage/vines/logs" },
+    { Query = "swamp reeds plant", SearchId = "09df9430-3005-4ef6-9486-09a88777686f", InsertGuid = "9f41905e-8fdc-4e4a-a8a3-846e19052fe6", SourceAssetId = "13261235137", Category = "Swamp Delta reeds/water plants/logs" },
+    { Query = "apocalypse city ruins", SearchId = "8d7e2acb-ea1c-45db-a300-48aa165a8fcc", InsertGuid = "e0c651df-a78c-4e52-9280-d11cac69b6eb", SourceAssetId = "108178603114720", Category = "Apocalyptic City ruins/cars/rubble/overgrowth", AlreadyInTrackedReportOrManifest = true },
+    { Query = "wrecked car apocalypse", SearchId = "171e2fd5-4757-485c-a599-64a77d56945b", InsertGuid = "94d04fc3-47e7-4528-9d95-c960a02e55ab", SourceAssetId = "111614048167471", Category = "Apocalyptic City ruins/cars/rubble/overgrowth" },
+    { Query = "dinosaur fossil bones", SearchId = "fb21ca5f-44ea-4697-98c5-f91b31b56e5b", InsertGuid = "f0ca3539-aa71-42f9-881d-cb7c77198976", SourceAssetId = "137420276606883", Category = "Redstone Canyon rocks/cliffs/fossils", AlreadyInTrackedReportOrManifest = true },
+}
+
+UniqueImportPilotReport.G015Task1Summary = {
+    TaskId = "g015-task-1",
+    Worker = "worker-1",
+    RecordedAtUtc = "2026-05-27T10:36:00Z",
+    ActivePlace = "eggBreakers2.rbxl",
+    SuccessfulPrimaryImports = 20,
+    UniquePrimarySourceAssetIds = 20,
+    NewPrimaryIdsVersusTrackedReport = 14,
+    DuplicatePrimaryIdsVersusTrackedReport = 6,
+    LiveAuditBeforeBatchReleaseReadyVisibleAssets = 15,
+    LiveAuditAfterBatchActuallyImportedAssets = 34,
+    LiveAuditAfterBatchAuditedImportedAssets = 34,
+    LiveAuditAfterBatchTaggedImportedAssets = 34,
+    LiveAuditAfterBatchPlacedVisibleAssets = 34,
+    LiveAuditAfterBatchReleaseReadyVisibleAssets = 34,
+    LiveAuditAfterBatchScriptObjectsFound = 0,
+    LiveAuditAfterBatchScriptsQuarantined = 0,
+    ScriptsRemovedDuringStudioSanitization = 56,
+    CumulativeTrackedUniquePrimaryIds = 58,
+    RemainingTrackedGapTo500 = 442,
+    RemainingLiveReleaseReadyGapTo500 = 466,
+    PersistenceBlocker = "Studio MCP can mutate the active eggBreakers2.rbxl session and audit counts, but no exposed save API succeeded; game:Save() and StudioService:SavePlace() are unavailable from execute_luau, and keyboard save is play-mode-only in this MCP surface.",
+    Notes = "Continuation batch used real search_creator_store plus insert_from_creator_store primary results in active Studio edit session, then Studio-side Luau moved/tagged sanitized imports into ReplicatedStorage.ImportedAssetLibrary and Workspace/Map/ImportedAssets. Manifest/catalog rows and secondary result IDs are not counted as imports.",
+}
+
+UniqueImportPilotReport.G015Task1PrimaryImports = {
+    { Query = "prehistoric fern", SearchId = "98055891-1916-4f59-836f-a06a52f41da0", InsertGuid = "a0f8108e-1864-476c-9815-f33599b4f622", SourceAssetId = "4536575513", AlreadyInTrackedReport = true },
+    { Query = "prehistoric tree", SearchId = "9a36072f-0175-467f-bc78-fbdb31f4c34d", InsertGuid = "cac4cca6-414d-4d74-93ab-d9a8a4f86b55", SourceAssetId = "112627701279314" },
+    { Query = "dinosaur bones fossil", SearchId = "2c69fdb4-3e1d-458d-a88b-101939c82d33", InsertGuid = "1ebfa80c-04ed-4ca8-98f5-b78cf415c2da", SourceAssetId = "137420276606883", AlreadyInTrackedReport = true, AlreadyLiveBeforeBatch = true },
+    { Query = "jurassic rock arch", SearchId = "25c73994-746b-4444-b6a7-356a1bef94f3", InsertGuid = "40fd6703-da1f-4992-855e-27adf84ff0d9", SourceAssetId = "11239705094" },
+    { Query = "swamp log", SearchId = "aa9dc1a4-3b7b-4c22-8821-392dfc38ae87", InsertGuid = "330c7e7b-e781-4d6d-a7aa-fd9359409401", SourceAssetId = "18497743057" },
+    { Query = "jungle vine", SearchId = "082f349b-7a88-4b84-8c7b-8b1a0b5e073b", InsertGuid = "7e0d7f40-3993-4dc7-8a21-977960f2061d", SourceAssetId = "122280174982594" },
+    { Query = "cycad plant", SearchId = "7d844fab-c964-4263-b579-7691a9e8e334", InsertGuid = "f5d41034-b6cf-42a9-9368-b14fb524981d", SourceAssetId = "994374738" },
+    { Query = "mushroom forest", SearchId = "0a6306f5-035d-44d9-ad49-0406a5fe2b98", InsertGuid = "f4d83c77-a1b7-414b-895f-15ca8e9ccca3", SourceAssetId = "87015816941217" },
+    { Query = "fallen tree log", SearchId = "8696930a-1512-4fb2-8d31-cfafb2e8ac21", InsertGuid = "b60b64fc-09b1-4c5a-ab3d-088918f6376c", SourceAssetId = "16458140435" },
+    { Query = "red canyon rock", SearchId = "128094f5-8ce9-49a7-ae2a-2f2020e61a3b", InsertGuid = "d755be64-a78c-44ad-8f87-73f0c2a06fba", SourceAssetId = "12809476227" },
+    { Query = "ruined stone wall", SearchId = "f1d2bac8-33e7-47d5-9ca7-c138bec14c2e", InsertGuid = "5d165852-60fe-4409-96e1-ca26562f3611", SourceAssetId = "126451747015132" },
+    { Query = "abandoned jeep wreck", SearchId = "4960b8df-1b67-438f-82e4-745d95e53fae", InsertGuid = "2992a932-0b5f-4892-9eb1-b73d6fdbf80c", SourceAssetId = "17288185605" },
+    { Query = "large fossil bones", SearchId = "e9eafa9a-6656-4280-a937-f7652368ff9f", InsertGuid = "68a1a565-e790-4156-b0b5-6f13b7799737", SourceAssetId = "5663348866" },
+    { Query = "swamp cypress", SearchId = "9f865bc8-e560-468b-91ab-8029992191bb", InsertGuid = "633b1730-ce68-416c-b446-669bdd6c95f4", SourceAssetId = "91090488957679", AlreadyInTrackedReport = true },
+    { Query = "marsh reeds", SearchId = "487185f5-1b39-4b46-bbbd-30f6b327e930", InsertGuid = "555dbfbd-850e-4b3f-8357-73465537c5d9", SourceAssetId = "11240906903" },
+    { Query = "boulder rock pack", SearchId = "a6469485-9645-49c7-851e-dd0b74e4ac68", InsertGuid = "ff4cda2b-6390-46d5-a772-7e3f561868b3", SourceAssetId = "97115138298077", AlreadyInTrackedReport = true },
+    { Query = "ancient jungle ruins", SearchId = "b05c83c1-34ee-4f74-9036-73f7a6c04b05", InsertGuid = "3c2009d5-8d3d-4fe5-baa3-1ee96575e1cb", SourceAssetId = "138397836874560", AlreadyInTrackedReport = true },
+    { Query = "tropical flowers pack", SearchId = "3b6577e3-eda0-4ccc-a772-1e0a92bab849", InsertGuid = "f6d2ced7-6361-4692-99fc-ff4f4c220f4a", SourceAssetId = "74395444" },
+    { Query = "pond water nature", SearchId = "e0347602-15b4-4ff8-aa98-fc5ea9d46880", InsertGuid = "b6c7a964-0744-4842-89ea-21d385aa4685", SourceAssetId = "113158550999220" },
+    { Query = "volcano rocks lava", SearchId = "9a1ba0dc-e316-43d4-bd03-1f522295a304", InsertGuid = "431f7eea-29a8-488f-8e8c-ac80c2fbb950", SourceAssetId = "110082641596723", AlreadyInTrackedReport = true },
+}
+
 return UniqueImportPilotReport

@@ -28,3 +28,8 @@ Overall release gate: **FAIL**.
 |---|---|---|
 | G014 import batch | FAIL | Imported and placed 5 additional unique Creator Store assets: 162897134, 7727678976, 108178603114720, 3505076540, 74355704971397. Live audit improved to releaseReadyVisibleAssets=10/500, leaving a 490 gap. |
 | Source verification after import docs | PASS | `luac -p`, `rojo build default.project.json --output /tmp/eggBreakers-g014-import-batch-10.rbxl`, and `git diff --check` passed. |
+
+
+## G015 Follow-up Evidence — 2026-05-27
+
+G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.

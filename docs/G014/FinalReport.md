@@ -46,3 +46,8 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 ## Signoff
 
 G014 STATUS: FAIL — releaseReadyVisibleAssets remain 10/500 with a 490 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
+
+
+## G015 Follow-up Evidence — 2026-05-27
+
+G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.

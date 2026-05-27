@@ -36,3 +36,8 @@ Added and organized 5 more live Creator Store imports in open Studio, then tagge
 | Pond/water source visual | 74355704971397 | SwampDelta |
 
 Live Studio audit after this batch: actuallyImportedAssets=10, auditedImportedAssets=10, taggedImportedAssets=10, placedVisibleAssets=10, releaseReadyVisibleAssets=10, scriptObjectsFound=0, scriptsQuarantined=0. Release validation still fails because the target is 500.
+
+
+## G015 Follow-up Evidence — 2026-05-27
+
+G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
