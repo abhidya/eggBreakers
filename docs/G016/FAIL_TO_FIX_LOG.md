@@ -426,3 +426,18 @@ Next action: continue Creator Store batches; tagger must keep Folder-safe placem
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch007 with lower duplicate risk and Folder-safe placement.
+
+## Run G016-R029 — Creator Store import Batch007 — 2026-05-27T15:07Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch007 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: volcanic rock `15840933033`, bus wreck `11615846709`, large fern `367401485`, skull `6686889517`, rainforest tree `8962924842`. Import quarantine removed `2` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=58`, `releaseReadyVisibleAssets=58`, `placedVisibleAssets=58`, `taggedImportedAssets=58`, `auditedImportedAssets=58`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=58`, `releaseReadyVisibleAssets=58`, expected at least `500`. Remaining gap is `442` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch007.
+Root cause: the import lane is progressing with unique assets, but still far below the 500 release oracle.
+Patch applied: no source patch; Studio place state received Batch007 imported assets under `Workspace.Map.ImportedAssets.G016Batch007` with release/audit attributes.
+Retest result: Batch007 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; keep batch size/audit loop stable and no scripts counted.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch008 and keep `scriptObjectsFound=0`.

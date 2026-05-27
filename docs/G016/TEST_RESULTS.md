@@ -144,3 +144,9 @@ No final PASS: US14 still needs 451 more release-ready imported assets, plus fre
 Studio MCP imported Batch006: jungle vine `8512428623`, cactus `107812886550854`, street light `17064055144`, bones `6934081776`, egg nest duplicate `12406188391`. The first tagger attempt failed on a Folder import because it accessed `PrimaryPart`; the corrected tagger placed Folder assets through descendant BasePart translation. Quarantine removed `1` script object before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=53`, `releaseReadyVisibleAssets=53`, and `placedVisibleAssets=53`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=53; expected at least 500` and `releaseReadyVisibleAssets=53; expected at least 500`.
 
 No final PASS: US14 still needs 447 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch007 Audit — 2026-05-27T15:07Z
+
+Studio MCP imported and audited Batch007: volcanic rock `15840933033`, bus wreck `11615846709`, large fern `367401485`, skull `6686889517`, rainforest tree `8962924842`. Quarantine removed `2` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=58`, `releaseReadyVisibleAssets=58`, and `placedVisibleAssets=58`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=58; expected at least 500` and `releaseReadyVisibleAssets=58; expected at least 500`.
+
+No final PASS: US14 still needs 442 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
