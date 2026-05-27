@@ -516,3 +516,18 @@ Next action: continue Creator Store batches; keep category-diverse low-duplicate
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch013 and keep `scriptObjectsFound=0`.
+
+## Run G016-R035 — Creator Store import Batch013 — 2026-05-27T16:08Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch013 with Folder-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: bench `8439241686`, metal fence `219393243`, glow crystal `117292747165645`, grass tuft `5682333697`, fish bones `13869231006`. Import quarantine removed `2` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=86`, `releaseReadyVisibleAssets=86`, `placedVisibleAssets=86`, `taggedImportedAssets=86`, `auditedImportedAssets=86`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=86`, `releaseReadyVisibleAssets=86`, expected at least `500`. Remaining gap is `414` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch013.
+Root cause: import lane is progressing but 86 unique release-ready assets still does not satisfy the explicit 500 threshold.
+Patch applied: no source patch; Studio place state received Batch013 imported assets under `Workspace.Map.ImportedAssets.G016Batch013` with release/audit attributes.
+Retest result: Batch013 audit PASS for scripts/tagging/placement; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; watch high-part-count assets such as metal fence for performance before final all-category proof.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch014 and keep `scriptObjectsFound=0`.
