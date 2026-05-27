@@ -97,16 +97,19 @@ function CharacterVisualService:_prepareDinosaurClone(model)
 end
 
 function CharacterVisualService:_attachModel(character, root, model)
+    local primary = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if not primary then
+        model:Destroy()
+        return nil
+    end
+
     local folder = self:_visualFolder(character)
     model.Parent = folder
-    local primary = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
-    if primary then
-        model.PrimaryPart = primary
-        model:PivotTo(root.CFrame)
-        for _, descendant in ipairs(model:GetDescendants()) do
-            if descendant:IsA("BasePart") then
-                self:_weldToRoot(descendant, root)
-            end
+    model.PrimaryPart = primary
+    model:PivotTo(root.CFrame)
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            self:_weldToRoot(descendant, root)
         end
     end
     return model
@@ -142,8 +145,10 @@ function CharacterVisualService:ApplyForState(player, state)
 
     local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "gallimimus", state.GrowthStage or "Hatchling")
     if sourceModel then
-        self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel))
-        return true, "dinosaur_model"
+        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel))
+        if attached then
+            return true, "dinosaur_model"
+        end
     end
 
     self:_createFallbackDinosaur(character, root, state)
