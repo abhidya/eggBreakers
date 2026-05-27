@@ -108,6 +108,7 @@ end)
 Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
     if not RateLimitService:Check(player, "RequestHatch", 0.08) then
         StatReplicationService:Notify(player, "Hatch input too fast", "Warning", 1)
+        sendStats(player)
         return
     end
     local ok, result = SurvivalService:RequestHatch(player, inputType)

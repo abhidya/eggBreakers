@@ -47,6 +47,27 @@ table.insert(suite.tests, { name = "rapid tap cadence stays playable under hatch
     Assert.falsy(RateLimitService:Check(p, "RequestHatch", 0.08, 200.04), "true spam below cooldown still rejected")
 end })
 
+table.insert(suite.tests, { name = "rejected hatch taps do not strand egg below threshold", run = function()
+    local p = player(31005)
+    SurvivalService:CreateState(p, "gallimimus")
+    local accepted = 0
+    local now = 300
+
+    for _ = 1, 9 do
+        if RateLimitService:Check(p, "RequestHatch", 0.08, now) then
+            local ok = SurvivalService:RequestHatch(p, "tap")
+            Assert.truthy(ok, "accepted server hatch input applies")
+            accepted = accepted + 1
+        end
+        now = now + 0.04
+    end
+
+    local state = SurvivalService:GetState(p)
+    Assert.equals(accepted, 5, "mixed rapid/local taps still leaves five accepted server inputs")
+    Assert.equals(state.HatchProgress, 100, "server progress reaches hatch threshold")
+    Assert.equals(state.Hatched, true, "server hatches without restart after rejected taps")
+end })
+
 table.insert(suite.tests, { name = "dinosaur/tutorial after hatch", run = function()
     local p = player(31003)
     local state = SurvivalService:CreateState(p, "triceratops")
