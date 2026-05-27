@@ -321,3 +321,18 @@ Next action: fresh Studio sync/reload or real asset import batch; do not count p
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: fresh sync/reload to clear stale Studio audit noise, then continue US14 asset materialization from 30/500.
+
+## Run G016-R022 — post-food live proof stability — 2026-05-27T14:02Z
+
+Tests run: Studio MCP consolidated `G016LiveProofHarness` after food-density/carnivore regression changes, then fresh G016FinalGateSuite check.
+Passed: consolidated live proof passed. US01-US13 proof attributes were all true; `MobileControllerProofPassed=true`; `LiveE2EProofPassed=true`; `ActionMotionProofPassed=true`; `GrowthScaleFromFoodWaterPassed=true`. Current dirty Studio population/proof counts: visible dinosaurs `198`, visible carnivores `80`, visible food `33`, water `4`, trees `20`.
+Failed: G016FinalGate remains `4/8`: missing US14 asset honesty proof, missing fresh all-category TestRunner proof, missing RBXL save/reopen proof, and release count remains `actuallyImportedAssets=30`, `releaseReadyVisibleAssets=30` out of 500.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: post-food gameplay loop is stable, but final release gate cannot pass without real imported assets and persistence/fresh-run proof.
+Root cause: procedural gameplay food/NPC affordances prove playability but intentionally do not count as unique Creator Store imports; no current tool lane has completed the 470 remaining asset imports or save/reopen proof.
+Patch applied: no source patch in this run; fresh verification evidence recorded.
+Retest result: US01-US13 live proof PASS; final gate honest FAIL on US14/US15 release blockers.
+Next action: real asset import/materialization batch or RBXL save/reopen workflow; keep final PASS blocked.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: materialize/import/audit/place real Creator Store assets toward 500 or run save/reopen persistence proof if Studio control allows.

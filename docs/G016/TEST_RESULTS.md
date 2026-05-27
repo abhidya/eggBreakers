@@ -106,3 +106,7 @@ Fresh source checks passed. Studio MCP cloned proof showed enough starter food a
 ## Food Density Regression Tests — 2026-05-27T13:55Z
 
 Fresh source checks passed. Studio E2E category passed `27/28`; only failure remains the intentional 500-asset release gate. Studio Placement category passed `38/40`; new density checks passed for at least 8 nearby tutorial foods, 5 herbivore starter foods, and 3 carnivore meat/carcass sources. The carnivore E2E now proves predator kills herbivore prey, carcass is created, and a carnivore eats it for hunger gain.
+
+## Post-Food Live Proof Stability — 2026-05-27T14:02Z
+
+Studio MCP consolidated `G016LiveProofHarness` passed after the food-density/carnivore regression changes. US01-US13 live proof attributes remained true. Observed proof counts in current Studio state: visible dinosaurs `198`, visible carnivores `80`, visible food `33`, water `4`, trees `20`. Fresh G016FinalGate remains `4/8`: US14 asset proof missing, fresh all-category proof missing, RBXL persistence missing, and release count remains `30/500`.
