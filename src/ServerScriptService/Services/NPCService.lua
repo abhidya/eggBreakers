@@ -4,10 +4,13 @@ local Workspace = game:GetService("Workspace")
 local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
 NPCService.MaxActive = 30
-NPCService.AllowedStates = { Idle=true, Wander=true, Flee=true, SeekFood=true, SeekWater=true, Chase=true, Attack=true, Dead=true, Despawn=true }
+NPCService.AllowedStates = { HatchAtNest=true, Idle=true, Wander=true, SeekFood=true, Eat=true, SeekWater=true, Drink=true, Hide=true, Flee=true, Chase=true, Attack=true, Dead=true, Despawn=true }
 NPCService.NPCs = {}
 NPCService.FleeDistance = 80
 NPCService.TickSeconds = 1
+NPCService.SenseDistance = 90
+NPCService.InteractDistance = 10
+NPCService.MoveStep = 8
 
 function NPCService:CanSpawn(positionOk, activeCount)
     activeCount = activeCount or #self.NPCs
@@ -20,16 +23,38 @@ function NPCService:Register(npc, kind)
     if npc.GetPivot then
         pivotPosition = npc:GetPivot().Position
     end
-    local record = { Instance = npc, Kind = kind, State = "Idle", MaxChaseDistance = 120, DespawnDistance = 350, SpawnPosition = pivotPosition }
+    local record = {
+        Instance = npc,
+        Kind = kind,
+        State = "HatchAtNest",
+        MaxChaseDistance = 120,
+        DespawnDistance = 350,
+        SpawnPosition = pivotPosition,
+        NestPosition = pivotPosition,
+        Hatched = false,
+        Hunger = 65,
+        Thirst = 65,
+        Health = kind == "Predator" and 140 or 80,
+        MaxHealth = kind == "Predator" and 140 or 80,
+    }
+    if npc then
+        npc:SetAttribute("NPCState", record.State)
+        npc:SetAttribute("Hatched", false)
+        npc:SetAttribute("Hunger", record.Hunger)
+        npc:SetAttribute("Thirst", record.Thirst)
+        npc:SetAttribute("Health", record.Health)
+        npc:SetAttribute("NestX", pivotPosition.X)
+        npc:SetAttribute("NestY", pivotPosition.Y)
+        npc:SetAttribute("NestZ", pivotPosition.Z)
+    end
     table.insert(self.NPCs, record)
     return true, record
 end
 
 function NPCService:Transition(record, nextState)
     if not self.AllowedStates[nextState] then return false, "bad_state" end
-    if record.Kind == "Prey" and not ({ Idle=true, Wander=true, Flee=true, Dead=true, Despawn=true })[nextState] then return false, "prey_state_forbidden" end
-    if record.Kind == "Predator" and not ({ Idle=true, Wander=true, Chase=true, Attack=true, Dead=true, Despawn=true })[nextState] then return false, "predator_state_forbidden" end
     record.State = nextState
+    if record.Instance then record.Instance:SetAttribute("NPCState", nextState) end
     if nextState == "Dead" and record.Kind == "Prey" then
         record.Carcass = self:CreateCarcassFoodSource(record)
     end
@@ -44,6 +69,184 @@ function NPCService:GetRecordPosition(record)
         return npc.Position
     end
     return record and record.SpawnPosition or Vector3.new(0, 0, 0)
+end
+
+function NPCService:GetInstancePosition(instance)
+    if not instance then return nil end
+    if instance.GetPivot then
+        return instance:GetPivot().Position
+    elseif instance:IsA("BasePart") then
+        return instance.Position
+    end
+    return nil
+end
+
+function NPCService:MoveToward(record, targetPosition, step)
+    if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
+    local npc = record.Instance
+    local position = self:GetRecordPosition(record)
+    local delta = targetPosition - position
+    if delta.Magnitude <= 0.1 then return true end
+    local nextPosition = position + delta.Unit * math.min(step or self.MoveStep, delta.Magnitude)
+    record.MoveTarget = targetPosition
+    record.LastMoveAt = os.time()
+    if npc then
+        npc:SetAttribute("MoveTargetX", targetPosition.X)
+        npc:SetAttribute("MoveTargetY", targetPosition.Y)
+        npc:SetAttribute("MoveTargetZ", targetPosition.Z)
+        npc:SetAttribute("LastAction", "Move")
+        if npc.PivotTo then
+            npc:PivotTo(CFrame.new(nextPosition))
+        elseif npc:IsA("BasePart") then
+            npc.Position = nextPosition
+        end
+    end
+    return true
+end
+
+function NPCService:FindNearestTagged(record, tagName, maxDistance, predicate)
+    local position = self:GetRecordPosition(record)
+    local best, bestDistance = nil, maxDistance or self.SenseDistance
+    for _, candidate in ipairs(CollectionService:GetTagged(tagName)) do
+        if not predicate or predicate(candidate) then
+            local candidatePosition
+            candidatePosition = self:GetInstancePosition(candidate)
+            if candidatePosition then
+                local distance = (candidatePosition - position).Magnitude
+                if distance <= bestDistance then
+                    best, bestDistance = candidate, distance
+                end
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+function NPCService:ApplyNeeds(record, deltaSeconds)
+    record.Hunger = math.max(0, (record.Hunger or 65) - 2 * (deltaSeconds or 1))
+    record.Thirst = math.max(0, (record.Thirst or 65) - 3 * (deltaSeconds or 1))
+    if record.Instance then
+        record.Instance:SetAttribute("Hunger", record.Hunger)
+        record.Instance:SetAttribute("Thirst", record.Thirst)
+    end
+end
+
+function NPCService:Eat(record, food)
+    record.Hunger = math.min(100, (record.Hunger or 0) + (food and food:GetAttribute("Nutrition") or 25))
+    if food then food:SetAttribute("Depleted", true) end
+    if record.Instance then
+        record.Instance:SetAttribute("Hunger", record.Hunger)
+        record.Instance:SetAttribute("LastAction", "Eat")
+    end
+    return self:Transition(record, "Eat")
+end
+
+function NPCService:Drink(record, water)
+    record.Thirst = math.min(100, (record.Thirst or 0) + 35)
+    if record.Instance then
+        record.Instance:SetAttribute("Thirst", record.Thirst)
+        record.Instance:SetAttribute("LastAction", "Drink")
+    end
+    return self:Transition(record, "Drink")
+end
+
+function NPCService:DamageRecord(record, amount)
+    if not record or record.State == "Dead" then return false, "not_active" end
+    record.Health = math.max(0, (record.Health or record.MaxHealth or 80) - (amount or 10))
+    if record.Instance then record.Instance:SetAttribute("Health", record.Health) end
+    if record.Health <= 0 then
+        return self:Transition(record, "Dead")
+    end
+    return true
+end
+
+function NPCService:AttackRecord(attacker, target)
+    if not attacker or not target or target.State == "Dead" then return false, "bad_target" end
+    attacker.AttackTarget = target.Instance
+    attacker.LastAttackAt = os.time()
+    if attacker.Instance then
+        attacker.Instance:SetAttribute("LastAction", "Attack")
+        attacker.Instance:SetAttribute("AttackTarget", target.Instance and target.Instance.Name or "NPC")
+    end
+    self:Transition(attacker, "Attack")
+    return self:DamageRecord(target, attacker.Kind == "Predator" and 45 or 12)
+end
+
+function NPCService:FindNearestRecord(record, kind, maxDistance)
+    local position = self:GetRecordPosition(record)
+    local best, bestDistance = nil, maxDistance or self.SenseDistance
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.Kind == kind and candidate.State ~= "Dead" then
+            local distance = (self:GetRecordPosition(candidate) - position).Magnitude
+            if distance <= bestDistance then
+                best, bestDistance = candidate, distance
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+function NPCService:TickBrain(record, players, deltaSeconds)
+    if not record or record.State == "Dead" then return false, "not_active" end
+    if record.Hatched ~= true then
+        record.Hatched = true
+        if record.Instance then
+            record.Instance:SetAttribute("Hatched", true)
+            record.Instance:SetAttribute("LastAction", "HatchAtNest")
+        end
+        return self:Transition(record, "Wander")
+    end
+    self:ApplyNeeds(record, deltaSeconds)
+
+    local nearbyPredator = record.Kind == "Prey" and self:FindNearestRecord(record, "Predator", self.FleeDistance) or nil
+    if nearbyPredator then
+        record.FleeFrom = nearbyPredator.Instance
+        if record.Health <= (record.MaxHealth or 80) * 0.35 then
+            if record.Instance then
+                record.Instance:SetAttribute("Hidden", true)
+                record.Instance:SetAttribute("LastAction", "Hide")
+            end
+            return self:Transition(record, "Hide")
+        end
+        local away = self:GetRecordPosition(record) - self:GetRecordPosition(nearbyPredator)
+        if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
+        self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep)
+        return self:Transition(record, "Flee")
+    end
+
+    if (record.Thirst or 0) < 45 then
+        local water, distance = self:FindNearestTagged(record, "WaterSource", self.SenseDistance)
+        if water and distance <= self.InteractDistance then return self:Drink(record, water) end
+        if water then
+            self:MoveToward(record, self:GetInstancePosition(water))
+            return self:Transition(record, "SeekWater")
+        end
+    end
+
+    if (record.Hunger or 0) < 45 then
+        local diet = record.Kind == "Predator" and "Carnivore" or "Herbivore"
+        local food, distance = self:FindNearestTagged(record, "FoodSource", self.SenseDistance, function(candidate)
+            return candidate:GetAttribute("Depleted") ~= true and candidate:GetAttribute("Diet") == diet
+        end)
+        if food and distance <= self.InteractDistance then return self:Eat(record, food) end
+        if food then
+            self:MoveToward(record, self:GetInstancePosition(food))
+            return self:Transition(record, "SeekFood")
+        end
+    end
+
+    if record.Kind == "Predator" then
+        local prey, distance = self:FindNearestRecord(record, "Prey", self.SenseDistance)
+        if prey and distance <= self.InteractDistance then return self:AttackRecord(record, prey) end
+        if prey then
+            self:MoveToward(record, self:GetRecordPosition(prey))
+            return self:Transition(record, "Chase")
+        end
+    end
+
+    local wanderTarget = record.SpawnPosition + Vector3.new(math.sin(os.clock()) * 18, 0, math.cos(os.clock()) * 18)
+    self:MoveToward(record, wanderTarget, self.MoveStep * 0.5)
+    return self:Transition(record, "Wander")
 end
 
 function NPCService:TickPreyFlee(record, threatPosition, fleeDistance)
@@ -165,20 +368,7 @@ end
 
 function NPCService:TickNPCs(players)
     for _, record in ipairs(self.NPCs) do
-        if record.State ~= "Dead" and record.Kind == "Prey" then
-            local npc = record.Instance
-            local npcPosition = record.SpawnPosition
-            if npc and npc.GetPivot then npcPosition = npc:GetPivot().Position end
-            for _, player in ipairs(players or {}) do
-                local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if root and (root.Position - npcPosition).Magnitude <= self.FleeDistance then
-                    record.State = "Flee"
-                    record.FleeFrom = player
-                    record.LastFleeAt = os.time()
-                    break
-                end
-            end
-        end
+        self:TickBrain(record, players, self.TickSeconds)
     end
     return #self.NPCs
 end
