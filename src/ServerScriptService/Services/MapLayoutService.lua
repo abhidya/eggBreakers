@@ -339,6 +339,7 @@ function MapLayoutService:EnsureSpawnSafety()
 
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)
+    self:EnsureFoodSources()
     self:EnsureFallSafetyVolume(folders)
     return spawn
 end
