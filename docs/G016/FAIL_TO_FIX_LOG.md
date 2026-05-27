@@ -38,3 +38,18 @@ Next action: commit focused playability fixes, reconcile/shutdown G016 live team
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: commit playability fixes and continue US14 asset gate / RBXL persistence proof.
+
+Run ID: G016-R003
+Timestamp: 2026-05-27
+Tests run: source syntax, Rojo build, Studio live restart probe
+Passed: tap hatch stability improved; egg tap now has hop motion in client; NPC ecosystem visible in live Workspace; weather effects exist; mobile feedback label exists.
+Failed: biome dressing still needs imported asset batches; final release asset gate still below 500.
+Top failing story: US08/US13/US14
+Failure: owner reported no NPCs, flaky tap hatch, no weather, lacking biomes.
+Root cause: authored NPC spawn markers were incomplete/old place did not surface NPC presence; hatch throttle was too slow for rapid tapping; no weather loop; action buttons lacked movement animation.
+Patch applied: added hatch tap cooldown 0.08 and egg hop; added NPC spawn markers and spawn kind use; added WeatherBiomeService; added eat/drink/attack/call/hide body motion hooks.
+Retest result: PASS focused live restart probe: hatched=true progress=100 after five 0.09s taps; npcs=22; weatherFolder=true; rain=true; visibleParts=104/104; mobile feedback=true.
+Next action: asset/biome dressing batches and full TestRunner/mobile/RBXL persistence gates.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: continue ASSET003 biome dressing and US08 NPC ecosystem behavior proof.
