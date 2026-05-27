@@ -276,3 +276,18 @@ Next action: continue release asset gate or true fresh reload/placement cleanup.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: address US14 30/500 release-ready assets or fresh reload placement-audit blockers.
+
+## Run G016-R019 — invisible helper audit cleanup and dirty workspace scrub — 2026-05-27T13:38Z
+
+Tests run: `luac` all source, `rojo build default.project.json --output /tmp/eggBreakers-g016-invisible-helper-cleanup.rbxl`, `git diff --check`, Studio MCP dirty-workspace cleanup, Studio MCP all-category snapshot.
+Passed: source syntax/build/diff checks passed. Studio cleanup removed 12 transient test artifacts (`Workspace.Part`, `Workspace.DamageablePrey`, `Workspace.TestWater`, mock character model, and `G016CityFossilProof`) and reset map food depletion state. All-category snapshot remains at `159/177`, confirming performance fixes need a synced/fresh Studio reload to affect active TestRunner.
+Failed: active Studio all-category remains 18 failures: stale NPC prey-flee failures, release asset count 30/500, missing G015/G016 fresh/RBXL proof, missing client category in server runner, generated/procedural placement audit issues, and stale unsynced performance/audit code in active Studio.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: invisible helper audit was over-reporting NPC spawn/weather helper volumes as violations, and dirty workspace artifacts added placeholder-noise failures.
+Root cause: audit rules required `_INVISIBLE_` names even for explicit NPC/weather helper attributes, and Studio contained transient test objects from prior probes.
+Patch applied: `AssetAuditService:IsInvisibleHelper` now accepts explicit `NPCSpawn`, `WeatherEffect`, and `ProceduralVFX` invisible helpers; Studio cleanup removed transient test objects and reset food depletion.
+Retest result: source/build PASS; active Studio all-category still FAIL until Rojo sync/fresh reload and asset/RBXL gates are addressed.
+Next action: run a true fresh Studio sync/reload or materialize imported assets; do not mark final PASS.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: fresh Studio reload/sync to test current source, then continue US14 asset materialization from 30/500.

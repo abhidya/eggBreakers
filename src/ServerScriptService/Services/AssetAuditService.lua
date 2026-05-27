@@ -17,11 +17,17 @@ function AssetAuditService:IsInvisibleHelper(instance)
     if not instance:IsA("BasePart") then return false end
     if instance.Transparency ~= 1 then return false end
     if self:IsCreatorStoreDerived(instance) then return true end
-    if string.sub(instance.Name, 1, 11) ~= "_INVISIBLE_" then return false end
+    if instance:GetAttribute("NPCSpawn") == true or instance:GetAttribute("WeatherEffect") == true or instance:GetAttribute("ProceduralVFX") == true then
+        return true
+    end
     local current = instance.Parent
     while current and current ~= Workspace do
         for _, allowed in ipairs(self.AllowedInvisibleParents) do
-            if current.Name == allowed then return true end
+            if current.Name == allowed then
+                return string.sub(instance.Name, 1, 11) == "_INVISIBLE_"
+                    or instance:GetAttribute("GameplayVolume") == true
+                    or instance:GetAttribute("NPCSpawn") == true
+            end
         end
         current = current.Parent
     end

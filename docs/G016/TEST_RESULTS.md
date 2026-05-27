@@ -94,3 +94,7 @@ Fresh source checks passed after NPC/water/test-harness repairs. Studio all-cate
 ## Performance Category Cleanup — 2026-05-27T13:31Z
 
 After adding explicit gameplay-query markers and disabling decorative collision/query on biome dressing, a fresh cloned performance scan passed with zero failures. Studio MCP Performance category also passed `8/8`. This does not clear final release because all-category still has release/asset/RBXL blockers.
+
+## Invisible Helper Cleanup Snapshot — 2026-05-27T13:38Z
+
+Source checks passed after updating `AssetAuditService` to allow explicit invisible NPC/weather/procedural helpers. Studio cleanup removed 12 transient test artifacts and reset food depletion state. Active Studio all-category snapshot stayed `177 total / 159 passed / 18 failed`, indicating remaining failures are dominated by unsynced/stale Studio state plus hard release gates (`30/500` assets, missing RBXL persistence, missing fresh final proof). No final PASS proof attached.
