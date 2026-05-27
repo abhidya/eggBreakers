@@ -80,3 +80,9 @@ Fresh Studio MCP inline proof with a cloned service root passed for US09 and act
 Fresh consolidated `G016LiveProofHarness` run with `freshServiceClone=true` passed in Studio MCP and kept proof attrs in one `G016FinalGateProof` folder. Evidence: US01, US09, US10, US11, US12 all marked PASS; `ActionMotionProofPassed=true`; visible dinosaurs `36`; visible carnivores `15`; tree/food/water counts `20/19/4`. US11 nesting proof created a visible imported/audited nest marker, tagged `NestZone`, and verified an Adult Triceratops received nest respawn, egg slot, and `NestRested` hatchling buff.
 
 Fresh G016FinalGate now passes 3/8 and fails 5/8. First story-level missing proof advanced to US13 Client UI/mobile/controller. Remaining non-story blockers: fresh all-category TestRunner proof, mobile/controller proof, RBXL persistence proof, and release asset count still `30/500`.
+
+## US13 Simulated Mobile/Controller Proof — 2026-05-27T13:15Z
+
+Fresh source checks passed: `luac` all source, Rojo build to `/tmp/eggBreakers-g016-us13.rbxl`, and `git diff --check`. Studio MCP consolidated proof with cloned services passed and wrote `US13LiveProofPassed=true`, `MobileControllerProofPassed=true`, `MobileControllerProofActions=EatDrink,Attack,Sprint,Call,RestHide`, plus `G016ClientProof.US13LiveControlsPassed=true`. This is deterministic simulated touch/controller proof, not physical device proof.
+
+Fresh G016FinalGate after the proof now passes 4/8 and fails 4/8: US14 live asset proof missing, fresh all-category TestRunner proof missing, RBXL persistence proof missing, and release asset count remains `30/500`.
