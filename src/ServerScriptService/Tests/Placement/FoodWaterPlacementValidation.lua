@@ -29,8 +29,8 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialFood:GetAttribute("TutorialSafe"), true, "tutorial food marked safe")
     Assert.equals(tutorialWater:GetAttribute("TutorialSafe"), true, "tutorial water marked safe")
     Assert.equals(tutorialMeat:GetAttribute("TutorialSafe"), true, "tutorial meat marked safe")
-    Assert.equals(tutorialFood:GetAttribute("InteractionHint"), "Eat plant", "plant hint is readable")
-    Assert.equals(tutorialMeat:GetAttribute("InteractionHint"), "Eat carcass", "meat hint is readable")
+    Assert.equals(tutorialFood:GetAttribute("InteractionHint"), "Eat tender fern", "plant hint is readable")
+    Assert.equals(tutorialMeat:GetAttribute("InteractionHint"), "Eat safe carcass", "meat hint is readable")
     Assert.equals(tutorialWater:GetAttribute("InteractionHint"), "Drink water", "water hint is readable")
 end })
 
@@ -110,6 +110,84 @@ table.insert(suite.tests, { name = "placed food sources have diet nutrition tags
     Assert.truthy(counts.FernPlains >= 3, "Fern Plains plant density")
     Assert.truthy(counts.Carnivore >= 10, "carnivore prey/carcass source count")
     Assert.truthy(counts.CityReward >= 2, "city high-risk food rewards")
+end })
+
+
+table.insert(suite.tests, { name = "edible vegetation and tree browse metadata is varied", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    MapLayoutService:EnsureFoodSources()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local vegetationTypes = {}
+    local treeBrowseCount = 0
+    local compactGroups = {}
+    local nurseryBrowse = 0
+    for _, food in ipairs(CollectionService:GetTagged("FoodSource")) do
+        if food:GetAttribute("Diet") == "Herbivore" and food:GetAttribute("EdibleVegetation") == true then
+            local vegetationType = food:GetAttribute("VegetationType")
+            local compactGroup = food:GetAttribute("CompactFoodGroup")
+            Assert.truthy(type(vegetationType) == "string" and vegetationType ~= "", "herbivore food has vegetation type " .. food.Name)
+            Assert.truthy(type(food:GetAttribute("PlantPart")) == "string", "herbivore food has plant part " .. food.Name)
+            Assert.truthy((food:GetAttribute("BrowseHeightStuds") or 0) > 0, "herbivore food has browse height " .. food.Name)
+            Assert.truthy(type(compactGroup) == "string" and compactGroup ~= "", "herbivore food has compact group " .. food.Name)
+            vegetationTypes[vegetationType] = true
+            compactGroups[compactGroup] = true
+            if food:GetAttribute("TreeBrowse") == true then
+                treeBrowseCount = treeBrowseCount + 1
+                Assert.truthy(CollectionService:HasTag(food, "TreeProp"), "tree browse remains tagged as tree prop")
+                Assert.equals(food:GetAttribute("BrowseTier"), "Tree", "tree browse tier is explicit")
+                Assert.equals(food:GetAttribute("InteractionHint"), "Eat tree leaves", "tree browse hint is readable")
+            end
+            if food:GetAttribute("ZoneId") == "NurseryGrove" and food:GetAttribute("CompactFoodGroup") then
+                nurseryBrowse = nurseryBrowse + 1
+            end
+        end
+    end
+
+    local vegetationTypeCount = 0
+    for _ in pairs(vegetationTypes) do vegetationTypeCount = vegetationTypeCount + 1 end
+    local compactGroupCount = 0
+    for _ in pairs(compactGroups) do compactGroupCount = compactGroupCount + 1 end
+    Assert.truthy(vegetationTypeCount >= 5, "herbivore foods use varied vegetation metadata")
+    Assert.truthy(compactGroupCount >= 4, "herbivore foods use varied compact groups")
+    Assert.truthy(treeBrowseCount >= 2, "edible tree browse sources generated")
+    Assert.truthy(nurseryBrowse >= 10, "nursery browse remains compact and dense")
+end })
+
+
+table.insert(suite.tests, { name = "starter food compactness stays bounded around spawn", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    MapLayoutService:EnsureFoodSources()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local spawnPosition = Vector3.new(-2000, 12, 0)
+    local nearFood = 0
+    local nearestSpacing = math.huge
+    local compactGroups = {}
+    local foods = {}
+    for _, food in ipairs(CollectionService:GetTagged("FoodSource")) do
+        local position = food:IsA("BasePart") and food.Position or nil
+        if position and (position - spawnPosition).Magnitude <= 260 then
+            nearFood = nearFood + 1
+            table.insert(foods, food)
+            compactGroups[food:GetAttribute("CompactFoodGroup") or food:GetAttribute("FoodKind") or food.Name] = true
+        end
+    end
+    for i = 1, #foods do
+        for j = i + 1, #foods do
+            local distance = (foods[i].Position - foods[j].Position).Magnitude
+            if distance < nearestSpacing then nearestSpacing = distance end
+        end
+    end
+    local groupCount = 0
+    for _ in pairs(compactGroups) do groupCount = groupCount + 1 end
+
+    Assert.truthy(nearFood >= 16, "spawn radius has dense starter food after browse additions")
+    Assert.truthy(nearFood <= 32, "spawn radius food density remains bounded")
+    Assert.truthy(groupCount >= 3, "spawn food density includes varied compact groups")
+    Assert.truthy(nearestSpacing >= 12, "starter food is compact but not overlapping")
 end })
 
 TestRunner.registerSuite(suite)

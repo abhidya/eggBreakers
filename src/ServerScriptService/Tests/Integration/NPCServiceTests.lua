@@ -126,6 +126,39 @@ table.insert(suite.tests, { name = "predator chases attacks and prey death leave
     predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "hungry herbivore eats tree browse food source", run = function()
+    resetNPCs()
+    local npc = makeNPC("TreeBrowsingPreyNPC", Vector3.new(0, 3, 0))
+    local browse = makeTaggedPart("EdibleCanopyBrowse", "FoodSource", Vector3.new(5, 3, 0))
+    CollectionService:AddTag(browse, "TreeProp")
+    browse:SetAttribute("Diet", "Herbivore")
+    browse:SetAttribute("Nutrition", 26)
+    browse:SetAttribute("FoodKind", "TreeBrowse")
+    browse:SetAttribute("EdibleVegetation", true)
+    browse:SetAttribute("TreeBrowse", true)
+    browse:SetAttribute("VegetationType", "TreeCanopy")
+    browse:SetAttribute("PlantPart", "Leaves")
+    browse:SetAttribute("BrowseTier", "Tree")
+    browse:SetAttribute("BrowseHeightStuds", 7.5)
+    browse:SetAttribute("CompactFoodGroup", "TreeBrowse")
+    browse:SetAttribute("RespawnCooldownSeconds", 75)
+    local ok, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+    record.Hunger = 20
+    record.Thirst = 90
+
+    Assert.truthy(ok, "prey registers")
+    Assert.truthy(NPCService:TickBrain(record, {}, 1), "hungry herbivore tick succeeds")
+    Assert.equals(record.State, "Eat", "hungry herbivore eats nearby tree browse")
+    Assert.equals(browse:GetAttribute("Depleted"), true, "tree browse is depleted by herbivore")
+    Assert.equals(npc:GetAttribute("LastBrainAction"), "Eat", "eat action is visible on NPC")
+    Assert.truthy(record.Hunger > 20, "tree browse restores hunger")
+
+    npc:Destroy(); browse:Destroy()
+end })
+
+
 table.insert(suite.tests, { name = "prey flees then hides when badly hurt", run = function()
     resetNPCs()
     local predator = makeNPC("HidePredatorNPC", Vector3.new(0, 3, 0))
