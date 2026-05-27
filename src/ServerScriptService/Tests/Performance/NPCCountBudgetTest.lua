@@ -12,4 +12,12 @@ table.insert(suite.tests, { name = "active NPC cap and target are configured", r
     Assert.truthy(NPCSpawnService.TargetActive <= NPCService.MaxActive)
 end })
 
+
+table.insert(suite.tests, { name = "minimum active NPC maintenance reaches 12", run = function()
+    NPCService.NPCs = {}
+    local active = NPCSpawnService:MaintainMinimumActive()
+    Assert.equals(active, 12, "maintains exactly target active NPCs")
+    Assert.equals(#NPCService.NPCs, 12, "registered NPC count")
+end })
+
 return TestRunner.registerSuite(suite)
