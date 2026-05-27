@@ -1,7 +1,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-require(script.Parent.Bootstrap)
+local Bootstrap = require(script.Parent.Bootstrap)
+Bootstrap.Init()
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
