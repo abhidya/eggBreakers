@@ -21,9 +21,16 @@ ClientBootstrap.RestHidden = false
 ClientBootstrap.Sprinting = false
 ClientBootstrap.MotionPlaying = false
 
+local function getTargetPosition(target)
+    if not target or not target:IsDescendantOf(workspace) then return nil end
+    if target:IsA("BasePart") then return target.Position end
+    if target.GetPivot then return target:GetPivot().Position end
+    return nil
+end
+
 local function distanceToRoot(root, target)
-    if not root or not target or not target:IsDescendantOf(workspace) then return nil end
-    local targetPosition = target:IsA("BasePart") and target.Position or target:GetPivot().Position
+    local targetPosition = getTargetPosition(target)
+    if not root or not targetPosition then return nil end
     return (root.Position - targetPosition).Magnitude
 end
 
@@ -127,11 +134,27 @@ function ClientBootstrap:ApplyHiddenVisual(isHidden)
     end
 end
 
-function ClientBootstrap:PlayActionMotion(actionName)
+function ClientBootstrap:FaceActionTarget(target)
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local targetPosition = getTargetPosition(target)
+    if not root or not targetPosition then return false end
+    local lookAt = Vector3.new(targetPosition.X, root.Position.Y, targetPosition.Z)
+    if (lookAt - root.Position).Magnitude <= 0.05 then return false, "target_too_close" end
+    root.CFrame = CFrame.lookAt(root.Position, lookAt)
+    root:SetAttribute("LastActionTarget", target.Name)
+    root:SetAttribute("LastActionTargetPosition", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
+    return true
+end
+
+function ClientBootstrap:PlayActionMotion(actionName, target)
     if self.MotionPlaying then return false end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root then return false end
+    if target then
+        self:FaceActionTarget(target)
+    end
     self.MotionPlaying = true
     local original = root.CFrame
     local forward = original.LookVector
@@ -235,11 +258,11 @@ local function wireMobileButtons(result)
             local target = ClientBootstrap:FindNearestEatDrinkTarget(14)
             if target then
                 if CollectionService:HasTag(target, Constants.Tags.FoodSource) then
-                    ClientBootstrap:PlayActionMotion("Eat")
+                    ClientBootstrap:PlayActionMotion("Eat", target)
                     InputController:RequestEat(target)
                     showFeedback(gui, "Eating")
                 elseif CollectionService:HasTag(target, Constants.Tags.WaterSource) or target:GetAttribute("WaterSource") or target.Name:find("Water") then
-                    ClientBootstrap:PlayActionMotion("Drink")
+                    ClientBootstrap:PlayActionMotion("Drink", target)
                     InputController:RequestDrink(target)
                     showFeedback(gui, "Drinking")
                 end
@@ -251,8 +274,9 @@ local function wireMobileButtons(result)
     local attack = gui:FindFirstChild("AttackButton")
     if attack then
         attack.Activated:Connect(function()
-            ClientBootstrap:PlayActionMotion("Attack")
-            InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12))
+            local target = ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12)
+            ClientBootstrap:PlayActionMotion("Attack", target)
+            InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), target)
             showFeedback(gui, "Attacking")
         end)
     end
