@@ -786,3 +786,18 @@ Next action: continue Creator Store batches; avoid duplicate-prone broad rock/ru
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch030 and move US14 from `159/500` toward the next volume milestone while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R053 — Creator Store import Batch030 — 2026-05-27T14:36Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch030 with Folder-safe and performance-safe tagger; targeted repair for food `GameplayQuery`; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five Creator Store assets: lab equipment `2614540047`, street lamp `15323044766`, white wildflower `9217406977`, desert cactus `75258714433176`, dinosaur bones `137420276606883`. Import quarantine left `scriptObjectsFound=0`; Batch030 particles were disabled (`24` disabled, `0` enabled). Audit reports `actuallyImportedAssets=163`, `releaseReadyVisibleAssets=163`, `placedVisibleAssets=163`, `taggedImportedAssets=163`, `auditedImportedAssets=163`. Performance scan passed after repairing the wildflower food query marker: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failures=[]`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=163`, `releaseReadyVisibleAssets=163`, expected at least `500`. Remaining gap is `337` release-ready assets plus RBXL save/reopen and fresh all-category proof. Batch030 added four net unique release-ready assets because one inserted SourceAssetId was already represented in the release audit set.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch030.
+Root cause: release-count growth is still bounded by unique imported assets; duplicate SourceAssetIds do not count.
+Patch applied: no source patch; Studio place state received Batch030 imported assets under `Workspace.Map.ImportedAssets.G016Batch030` with release/audit/performance-safe attributes.
+Retest result: Batch030 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches with more duplicate-resistant category queries.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch031 and move US14 from `163/500` toward 500 while keeping `scriptObjectsFound=0`, food `GameplayQuery` intentional, and performance green.
