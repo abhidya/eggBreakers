@@ -36,15 +36,16 @@ table.insert(suite.tests, { name = "asset manifest placement rules keep biome pr
     for _, entry in ipairs(AssetManifest.Entries) do
         Assert.equals(entry.PlacementPattern, "natural_offset_no_grid", "no grid/square placement for " .. entry.AssetId)
         Assert.truthy(entry.AvoidRouteCenters, "route centers kept clear for " .. entry.AssetId)
-        if entry.PlacementBand == "CityRuinCluster" then
+        local text = string.lower(table.concat({ entry.Name or "", entry.CreatorStoreSearchQuery or "", entry.SourceCategoryPath or "" }, " "))
+        if string.find(text, "city", 1, true) or string.find(text, "car", 1, true) or string.find(text, "rubble", 1, true) or string.find(text, "ruin", 1, true) then
             Assert.equals(entry.UsedIn, "ApocalypticCity", "city prop belongs in Apocalyptic City: " .. entry.AssetId)
             cityCount = cityCount + 1
         end
-        if entry.PlacementBand == "SwampBankEdge" then
+        if string.find(text, "swamp", 1, true) or string.find(text, "water lily", 1, true) then
             Assert.equals(entry.UsedIn, "SwampDelta", "swamp prop belongs in Swamp Delta: " .. entry.AssetId)
             swampCount = swampCount + 1
         end
-        if entry.PlacementBand == "CanyonEdge" or entry.PlacementBand == "CliffEdge" then
+        if string.find(text, "rock", 1, true) or string.find(text, "cliff", 1, true) or string.find(text, "boulder", 1, true) then
             Assert.truthy(entry.UsedIn == "RedstoneCanyon" or entry.UsedIn == "MountainNestingCliffs", "rock/cliff prop belongs in redstone or mountain: " .. entry.AssetId)
             rockCount = rockCount + 1
         end
