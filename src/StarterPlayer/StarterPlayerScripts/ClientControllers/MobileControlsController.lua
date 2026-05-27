@@ -6,9 +6,13 @@ MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sp
 
 MobileControlsController.DefaultButtonColor = Color3.fromRGB(35, 45, 35)
 MobileControlsController.EffectStyles = {
+    EatDrink = { ActiveText = "Eat/Drink", ActiveColor = Color3.fromRGB(66, 140, 82) },
+    Attack = { ActiveText = "Attack!", ActiveColor = Color3.fromRGB(190, 78, 62) },
     Sprint = { ActiveText = "Sprint!", ActiveColor = Color3.fromRGB(72, 128, 255) },
     Call = { ActiveText = "Calling", ActiveColor = Color3.fromRGB(255, 196, 76) },
     RestHide = { ActiveText = "Hidden", ActiveColor = Color3.fromRGB(56, 92, 68) },
+    Flight = { ActiveText = "Flying", ActiveColor = Color3.fromRGB(96, 170, 255) },
+    Swim = { ActiveText = "Swimming", ActiveColor = Color3.fromRGB(56, 160, 210) },
 }
 
 function MobileControlsController:SetButtonEffect(button, actionName, active)
@@ -16,7 +20,7 @@ function MobileControlsController:SetButtonEffect(button, actionName, active)
     if not button or not style then return false end
     button:SetAttribute("EffectActive", active == true)
     button.BackgroundColor3 = active and style.ActiveColor or self.DefaultButtonColor
-    button.Text = active and style.ActiveText or actionName
+    button.Text = active and style.ActiveText or (button:GetAttribute("DefaultText") or actionName)
     return true
 end
 
@@ -56,6 +60,7 @@ function MobileControlsController:CreateControls(settings)
     if self.Gui then return self.Gui end
     local scale = settings and settings.MobileButtonScale or 1.0
     local gui = UIFactory:CreateRootGui("MobileControls")
+    local buttonSize = UDim2.fromOffset(112 * scale, 64 * scale)
     local positions = {
         EatDrink = UDim2.new(1, -368 * scale, 1, -170 * scale),
         Attack = UDim2.new(1, -246 * scale, 1, -170 * scale),
@@ -67,8 +72,8 @@ function MobileControlsController:CreateControls(settings)
     }
     local thumbstick = Instance.new("Frame")
     thumbstick.Name = "MoveThumbstick"
-    thumbstick.Size = UDim2.fromOffset(110 * scale, 110 * scale)
-    thumbstick.Position = UDim2.new(0, 25, 1, -140 * scale)
+    thumbstick.Size = UDim2.fromOffset(132 * scale, 132 * scale)
+    thumbstick.Position = UDim2.new(0, 25, 1, -158 * scale)
     thumbstick.BackgroundTransparency = 0.5
     thumbstick.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     thumbstick.Parent = gui
@@ -119,6 +124,8 @@ function MobileControlsController:CreateControls(settings)
     feedback.TextColor3 = Color3.new(1, 1, 1)
     feedback.TextScaled = true
     feedback.Visible = false
+    feedback:SetAttribute("MobileReadable", true)
+    feedback:SetAttribute("LastFeedback", "")
     feedback.Parent = gui
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
