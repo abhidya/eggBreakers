@@ -65,6 +65,23 @@ table.insert(suite.tests, { name = "water updates thirst and growth state", run 
     food:Destroy(); water:Destroy()
 end })
 
+table.insert(suite.tests, { name = "sprint toggles and drains stamina progression", run = function()
+    local p, food = setup(32008, "Herbivore")
+    local state = SurvivalService:GetState(p)
+    state.Stamina = 80
+    local ok = SurvivalService:SetSprinting(p, true)
+    Assert.truthy(ok, "sprint enables for hatched player")
+    Assert.equals(state.Sprinting, true, "sprinting state replicated")
+    SurvivalService:ApplyNeedsTick(p, 2)
+    Assert.truthy(state.Stamina < 80, "sprinting drains stamina over time")
+    ok = SurvivalService:SetSprinting(p, false)
+    Assert.truthy(ok, "sprint disables")
+    local afterDrain = state.Stamina
+    SurvivalService:ApplyNeedsTick(p, 1)
+    Assert.truthy(state.Stamina > afterDrain, "stamina regenerates after sprint off")
+    food:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = function()
     local p, food = setup(32005, "Herbivore")

@@ -6,7 +6,7 @@ local MobileControlsController = require(script.Parent.Parent.ClientControllers.
 
 local suite = { name = "MobileControlsTests.client", category = "Client", tests = {} }
 
-local expectedButtons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide" }
+local expectedButtons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide", "Flight", "Swim" }
 
 table.insert(suite.tests, { name = "thumbstick and buttons exist", run = function()
     local gui = UIFactory:CreateRootGui("MobileControls")
@@ -30,10 +30,22 @@ end })
 
 table.insert(suite.tests, { name = "buttons do not overlap HUD", run = function()
     local button = UIFactory:CreateButton(Instance.new("Frame"), "AttackButton", "Attack", UDim2.new(1, -195, 1, -150))
-    Assert.equals(button.Size.X.Offset, 86, "mobile button width contract")
-    Assert.equals(button.Size.Y.Offset, 48, "mobile button height contract")
+    Assert.equals(button.Size.X.Offset, 112, "mobile button width contract")
+    Assert.equals(button.Size.Y.Offset, 64, "mobile button height contract")
     Assert.truthy(button.Position.X.Offset < 0, "action buttons anchor from right edge")
     button.Parent:Destroy()
+end })
+
+table.insert(suite.tests, { name = "phone guidance exposes real asset directions", run = function()
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
+    local controlsGui = result.Gui
+    Assert.notNil(controlsGui:FindFirstChild("DialoguePromptLabel"), "dialogue prompt exists")
+    Assert.notNil(controlsGui:FindFirstChild("NearestActionHintLabel"), "nearest action hint exists")
+    Assert.equals(controlsGui:FindFirstChild("DialoguePromptLabel"):GetAttribute("GuidesToActionableAssets"), true, "dialogue guides to non-NPC action assets")
+    Assert.equals(controlsGui:FindFirstChild("NearestActionHintLabel"):GetAttribute("NonNpcActionHint"), true, "target hint excludes NPCs")
+    Assert.truthy(string.find(controlsGui:FindFirstChild("EatDrinkButton").Text, "EAT", 1, true) ~= nil, "eat/drink button starts explicit")
+    controlsGui:Destroy()
+    MobileControlsController.Gui = nil
 end })
 
 

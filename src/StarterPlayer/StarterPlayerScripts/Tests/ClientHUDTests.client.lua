@@ -13,6 +13,7 @@ table.insert(suite.tests, { name = "stat update renders HUD bars", run = functio
     Assert.equals(fill.Name, "Fill", "bar exposes fill frame")
     Assert.notNil(root:FindFirstChild("HealthLabel"), "label created")
     Assert.notNil(root:FindFirstChild("HealthBar"), "bar created")
+    Assert.notNil(root:FindFirstChild("HealthValueLabel"), "numeric value label created")
     fill.Size = UDim2.fromScale(math.clamp(75 / 100, 0, 1), 1)
     Assert.equals(fill.Size.X.Scale, 0.75, "75 health maps to 75% bar fill")
     root:Destroy()
@@ -28,8 +29,21 @@ table.insert(suite.tests, { name = "small screen readability gate", run = functi
     Assert.truthy(table.find(payload, "maxOxygen") ~= nil, "StatUpdate includes max oxygen")
     Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate includes creature category")
     Assert.truthy(table.find(payload, "movementModes") ~= nil, "StatUpdate includes movement modes")
+    Assert.truthy(table.find(payload, "sprinting") ~= nil, "StatUpdate includes sprinting")
     Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate includes ecosystem profile")
     Assert.truthy(table.find(payload, "growthStage") ~= nil, "StatUpdate includes growth stage")
+end })
+
+table.insert(suite.tests, { name = "stat delta text makes progression readable", run = function()
+    local delta = HUDController:BuildDeltaText(
+        { health = 80, hunger = 40, thirst = 40, stamina = 80, growth = 10 },
+        { health = 80, hunger = 65, thirst = 75, stamina = 70, growth = 18, sprinting = true }
+    )
+    Assert.truthy(string.find(delta, "Food%+25") ~= nil, "food increase shown")
+    Assert.truthy(string.find(delta, "Water%+35") ~= nil, "water increase shown")
+    Assert.truthy(string.find(delta, "Stam%-10") ~= nil, "stamina decrease shown")
+    Assert.truthy(string.find(delta, "Grow%+8") ~= nil, "growth increase shown")
+    Assert.truthy(string.find(delta, "Sprint drains stamina", 1, true) ~= nil, "sprint drain hint shown")
 end })
 
 table.insert(suite.tests, { name = "diet guidance explains species food and water", run = function()

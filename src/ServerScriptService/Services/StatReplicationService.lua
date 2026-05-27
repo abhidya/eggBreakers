@@ -21,6 +21,7 @@ function StatReplicationService:BuildPayload(state)
         maxOxygen = state.MaxOxygen or 100,
         swimming = state.Swimming == true,
         flying = state.Flying == true,
+        sprinting = state.Sprinting == true,
         movementModes = state.MovementModes or { swimming = state.Swimming == true, flying = state.Flying == true },
         ecosystemProfile = state.EcosystemProfile or {},
         statusEffects = state.StatusEffects or {},

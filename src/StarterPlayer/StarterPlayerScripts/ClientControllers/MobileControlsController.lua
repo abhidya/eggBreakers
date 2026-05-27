@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local UIFactory = require(script.Parent.UIFactory)
 
 local MobileControlsController = {}
-MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide" }
+MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide", "Flight", "Swim" }
 
 MobileControlsController.DefaultButtonColor = Color3.fromRGB(35, 45, 35)
 MobileControlsController.EffectStyles = {
@@ -57,11 +57,13 @@ function MobileControlsController:CreateControls(settings)
     local scale = settings and settings.MobileButtonScale or 1.0
     local gui = UIFactory:CreateRootGui("MobileControls")
     local positions = {
-        EatDrink = UDim2.new(1, -290 * scale, 1, -150 * scale),
-        Attack = UDim2.new(1, -195 * scale, 1, -150 * scale),
-        Sprint = UDim2.new(1, -100 * scale, 1, -150 * scale),
-        Call = UDim2.new(1, -195 * scale, 1, -95 * scale),
-        RestHide = UDim2.new(1, -100 * scale, 1, -95 * scale),
+        EatDrink = UDim2.new(1, -368 * scale, 1, -170 * scale),
+        Attack = UDim2.new(1, -246 * scale, 1, -170 * scale),
+        Sprint = UDim2.new(1, -124 * scale, 1, -170 * scale),
+        Call = UDim2.new(1, -368 * scale, 1, -96 * scale),
+        RestHide = UDim2.new(1, -246 * scale, 1, -96 * scale),
+        Flight = UDim2.new(1, -124 * scale, 1, -96 * scale),
+        Swim = UDim2.new(1, -124 * scale, 1, -244 * scale),
     }
     local thumbstick = Instance.new("Frame")
     thumbstick.Name = "MoveThumbstick"
@@ -70,14 +72,48 @@ function MobileControlsController:CreateControls(settings)
     thumbstick.BackgroundTransparency = 0.5
     thumbstick.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     thumbstick.Parent = gui
+    local labels = {
+        EatDrink = "EAT / DRINK\nfind marker",
+        Attack = "ATTACK\nnearest dino",
+        Sprint = "SPRINT\nuses stamina",
+        Call = "CALL\nsignal herd",
+        RestHide = "HIDE/REST\nsafe spot",
+        Flight = "FLY\nstamina",
+        Swim = "SWIM\noxygen",
+    }
     for name, position in pairs(positions) do
-        local button = UIFactory:CreateButton(gui, name .. "Button", name, position)
+        local button = UIFactory:CreateButton(gui, name .. "Button", labels[name] or name, position)
         button:SetAttribute("ActionName", name)
+        button:SetAttribute("DefaultText", labels[name] or name)
     end
+    local dialogue = Instance.new("TextLabel")
+    dialogue.Name = "DialoguePromptLabel"
+    dialogue.Size = UDim2.fromOffset(360 * scale, 52 * scale)
+    dialogue.Position = UDim2.new(0.5, -180 * scale, 1, -238 * scale)
+    dialogue.BackgroundTransparency = 0.18
+    dialogue.BackgroundColor3 = Color3.fromRGB(16, 28, 20)
+    dialogue.TextColor3 = Color3.fromRGB(240, 255, 220)
+    dialogue.TextScaled = true
+    dialogue.TextWrapped = true
+    dialogue.Text = "Guide: follow FOOD / WATER markers. Eat plants or carcasses, drink blue water."
+    dialogue:SetAttribute("GuidesToActionableAssets", true)
+    dialogue.Parent = gui
+    local targetHint = Instance.new("TextLabel")
+    targetHint.Name = "NearestActionHintLabel"
+    targetHint.Size = UDim2.fromOffset(360 * scale, 38 * scale)
+    targetHint.Position = UDim2.new(0.5, -180 * scale, 1, -294 * scale)
+    targetHint.BackgroundTransparency = 0.15
+    targetHint.BackgroundColor3 = Color3.fromRGB(32, 44, 28)
+    targetHint.TextColor3 = Color3.fromRGB(255, 255, 255)
+    targetHint.TextScaled = true
+    targetHint.TextWrapped = true
+    targetHint.Text = "Nearest: scanning for real food/water..."
+    targetHint:SetAttribute("NonNpcActionHint", true)
+    targetHint.Parent = gui
     local feedback = Instance.new("TextLabel")
     feedback.Name = "ActionFeedbackLabel"
-    feedback.Size = UDim2.fromOffset(260 * scale, 34 * scale)
-    feedback.Position = UDim2.new(1, -290 * scale, 1, -205 * scale)
+    feedback.Size = UDim2.fromOffset(360 * scale, 42 * scale)
+    feedback.Position = UDim2.new(0.5, -180 * scale, 1, -352 * scale)
     feedback.BackgroundTransparency = 0.25
     feedback.BackgroundColor3 = Color3.fromRGB(20, 35, 24)
     feedback.TextColor3 = Color3.new(1, 1, 1)

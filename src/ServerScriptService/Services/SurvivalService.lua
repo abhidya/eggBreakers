@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1, DeathCallbacks = {} }
+SurvivalService.SprintDrainPerSecond = 7
 
 local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
@@ -68,12 +69,33 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
     local stats = species.BaseStats[state.GrowthStage]
     state.Hunger = clamp(state.Hunger - stats.HungerDrain * deltaSeconds, 0, 100)
     state.Thirst = clamp(state.Thirst - stats.ThirstDrain * deltaSeconds, 0, 100)
-    state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
+    if state.Sprinting == true then
+        state.Stamina = clamp(state.Stamina - self.SprintDrainPerSecond * deltaSeconds, 0, stats.MaxStamina)
+        if state.Stamina <= 0 then
+            state.Sprinting = false
+        end
+    else
+        state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
+    end
     state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
     state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) + (stats.OxygenRegen or 12) * deltaSeconds, 0, state.MaxOxygen)
     if state.Hunger <= 0 or state.Thirst <= 0 then
         self:ApplyDamage(player, 3 * deltaSeconds, "Starvation/Dehydration")
     end
+    return true, state
+end
+
+function SurvivalService:SetSprinting(player, enabled)
+    local state = self:GetState(player)
+    if not state or state.Dead or state.Hatched ~= true then return false, "not_alive_hatched" end
+    local species = SpeciesConfig[state.SpeciesId]
+    local stats = species.BaseStats[state.GrowthStage]
+    if enabled == true and (state.Stamina or 0) <= 3 then
+        state.Sprinting = false
+        return false, "low_stamina"
+    end
+    state.Sprinting = enabled == true
+    state.CurrentWalkSpeed = state.Sprinting and math.floor((stats.WalkSpeed or 16) * 1.35) or stats.WalkSpeed
     return true, state
 end
 

@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local controllers = script.Parent:WaitForChild("ClientControllers")
 local HUDController = require(controllers:WaitForChild("HUDController"))
@@ -20,6 +21,8 @@ ClientBootstrap.LastStats = nil
 ClientBootstrap.RestHidden = false
 ClientBootstrap.Sprinting = false
 ClientBootstrap.MotionPlaying = false
+ClientBootstrap.LastTargetScanAt = 0
+ClientBootstrap.TargetScanSeconds = 0.5
 
 local function getTargetPosition(target)
     if not target or not target:IsDescendantOf(workspace) then return nil end
@@ -34,29 +37,58 @@ local function distanceToRoot(root, target)
     return (root.Position - targetPosition).Magnitude
 end
 
-function ClientBootstrap:FindNearestEatDrinkTarget(maxDistance)
+function ClientBootstrap:DescribeTarget(target)
+    if not target then return "None", "none" end
+    local display = target:GetAttribute("InteractionHint") or target:GetAttribute("DisplayName") or target.Name
+    if CollectionService:HasTag(target, Constants.Tags.FoodSource) then
+        local diet = target:GetAttribute("Diet") or "Food"
+        return tostring(display), tostring(diet)
+    end
+    if CollectionService:HasTag(target, Constants.Tags.WaterSource) or target:GetAttribute("WaterSource") then
+        return tostring(display), "Water"
+    end
+    return tostring(display), "Target"
+end
+
+function ClientBootstrap:IsFoodAllowedForDiet(target, diet)
+    if not target or not CollectionService:HasTag(target, Constants.Tags.FoodSource) then return false end
+    local foodDiet = tostring(target:GetAttribute("Diet") or "")
+    if diet == "Omnivore" then return true end
+    if foodDiet == diet then return true end
+    if diet == "Herbivore" and target:GetAttribute("TreeBrowse") == true then return true end
+    return false
+end
+
+function ClientBootstrap:FindNearestEatDrinkTarget(maxDistance, preferredMode)
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
 
     local bestTarget = nil
     local bestDistance = maxDistance or 14
-    local function consider(target)
+    local bestType = nil
+    local diet = self.LastStats and self.LastStats.diet
+    local function consider(target, targetType)
         if target:GetAttribute("Depleted") == true then return end
+        if target:GetAttribute("ActiveNPCBrain") == true or target:GetAttribute("NPCId") then return end
+        if targetType == "Food" and not self:IsFoodAllowedForDiet(target, diet) then return end
+        if preferredMode == "Food" and targetType ~= "Food" then return end
+        if preferredMode == "Water" and targetType ~= "Water" then return end
         local distance = distanceToRoot(root, target)
         if distance and distance <= bestDistance then
             bestTarget = target
             bestDistance = distance
+            bestType = targetType
         end
     end
 
     for _, target in ipairs(CollectionService:GetTagged(Constants.Tags.FoodSource)) do
-        consider(target)
+        consider(target, "Food")
     end
     for _, target in ipairs(CollectionService:GetTagged(Constants.Tags.WaterSource)) do
-        consider(target)
+        consider(target, "Water")
     end
-    return bestTarget
+    return bestTarget, bestType, bestDistance
 end
 
 function ClientBootstrap:FindNearestTagged(tag, maxDistance)
@@ -98,6 +130,54 @@ function ClientBootstrap:ShowActionFeedback(gui, message)
     label.Text = message
     label.Visible = true
     label:SetAttribute("LastFeedback", message)
+    return true
+end
+
+function ClientBootstrap:UpdateActionGuidance(gui)
+    if not gui then return false end
+    local target, targetType, distance = self:FindNearestEatDrinkTarget(80)
+    local hint = gui:FindFirstChild("NearestActionHintLabel")
+    local dialogue = gui:FindFirstChild("DialoguePromptLabel")
+    local eatDrink = gui:FindFirstChild("EatDrinkButton")
+    local stats = self.LastStats or {}
+    if target then
+        local targetName, targetDiet = self:DescribeTarget(target)
+        local verb = targetType == "Water" and "DRINK" or "EAT"
+        local text = string.format("%s: %s (%s) %.0fm", verb, targetName, targetDiet, distance or 0)
+        if hint then
+            hint.Text = "Nearest real asset: " .. text
+            hint:SetAttribute("TargetName", target.Name)
+            hint:SetAttribute("TargetType", targetType)
+            hint:SetAttribute("DistanceStuds", math.floor((distance or 0) + 0.5))
+        end
+        if eatDrink then
+            eatDrink.Text = verb .. "\n" .. targetName
+            eatDrink:SetAttribute("CurrentTargetName", target.Name)
+            eatDrink:SetAttribute("CurrentTargetType", targetType)
+        end
+        if dialogue then
+            if targetType == "Water" then
+                dialogue.Text = "Guide: drink this blue water to raise THIRST and gain Growth."
+            else
+                dialogue.Text = "Guide: eat this real " .. string.lower(targetDiet) .. " food to raise HUNGER and grow."
+            end
+        end
+    else
+        if hint then
+            hint.Text = "No food/water close. Move toward glowing plants, tree browse, carcasses, or blue water — not NPC labels."
+            hint:SetAttribute("TargetName", "")
+            hint:SetAttribute("TargetType", "None")
+        end
+        if eatDrink then
+            local need = (tonumber(stats.thirst) or 100) < (tonumber(stats.hunger) or 100) and "DRINK" or "EAT"
+            eatDrink.Text = need .. "\nfind marker"
+            eatDrink:SetAttribute("CurrentTargetName", "")
+            eatDrink:SetAttribute("CurrentTargetType", "None")
+        end
+        if dialogue then
+            dialogue.Text = "Guide: look for non-NPC action markers: green plants/tree leaves, red carcasses, fish, or blue water."
+        end
+    end
     return true
 end
 
@@ -255,20 +335,21 @@ local function wireMobileButtons(result)
     local eatDrink = gui:FindFirstChild("EatDrinkButton")
     if eatDrink then
         eatDrink.Activated:Connect(function()
-            local target = ClientBootstrap:FindNearestEatDrinkTarget(14)
+            local target, targetType = ClientBootstrap:FindNearestEatDrinkTarget(14)
             if target then
-                if CollectionService:HasTag(target, Constants.Tags.FoodSource) then
+                if targetType == "Food" then
                     ClientBootstrap:PlayActionMotion("Eat", target)
                     InputController:RequestEat(target)
-                    showFeedback(gui, "Eating")
-                elseif CollectionService:HasTag(target, Constants.Tags.WaterSource) or target:GetAttribute("WaterSource") or target.Name:find("Water") then
+                    showFeedback(gui, "Eating: hunger + growth should rise")
+                elseif targetType == "Water" then
                     ClientBootstrap:PlayActionMotion("Drink", target)
                     InputController:RequestDrink(target)
-                    showFeedback(gui, "Drinking")
+                    showFeedback(gui, "Drinking: thirst + growth should rise")
                 end
             else
-                ClientBootstrap:ShowActionFeedback(gui, "No food or water nearby")
+                ClientBootstrap:ShowActionFeedback(gui, "No real food/water nearby — follow FOOD/WATER marker")
             end
+            ClientBootstrap:UpdateActionGuidance(gui)
         end)
     end
     local attack = gui:FindFirstChild("AttackButton")
@@ -286,11 +367,12 @@ local function wireMobileButtons(result)
         sprint.Activated:Connect(function()
             local isSprinting = not player:GetAttribute("Sprinting")
             player:SetAttribute("Sprinting", isSprinting)
+            InputController:RequestSprint(isSprinting)
             local humanoid = getHumanoid()
             if humanoid then humanoid.WalkSpeed = isSprinting and SPRINT_WALK_SPEED or DEFAULT_WALK_SPEED end
-            sprint.Text = isSprinting and "Sprint ON" or "Sprint"
+            sprint.Text = isSprinting and "SPRINT ON\nstamina ↓" or "SPRINT\nuses stamina"
             setButtonActive(sprint, isSprinting)
-            showFeedback(gui, isSprinting and "Sprint speed active" or "Sprint off")
+            showFeedback(gui, isSprinting and "Sprint ON: stamina drains while moving" or "Sprint off: stamina recovers")
         end)
     end
 
@@ -319,15 +401,47 @@ local function wireMobileButtons(result)
             showFeedback(gui, isHidden and "Hidden/resting" or "Visible")
         end)
     end
+
+    local flight = gui:FindFirstChild("FlightButton")
+    if flight then
+        flight.Activated:Connect(function()
+            local enabled = not player:GetAttribute("Flying")
+            player:SetAttribute("Flying", enabled)
+            InputController:RequestFlight(enabled)
+            flight.Text = enabled and "FLYING\nstamina ↓" or "FLY\nstamina"
+            setButtonActive(flight, enabled)
+            showFeedback(gui, enabled and "Flight ON: stamina drains" or "Flight off / landing")
+        end)
+    end
+
+    local swim = gui:FindFirstChild("SwimButton")
+    if swim then
+        swim.Activated:Connect(function()
+            local water = ClientBootstrap:FindNearestEatDrinkTarget(18, "Water")
+            InputController:RequestSwim(water)
+            swim:SetAttribute("LastWaterTarget", water and water.Name or "")
+            showFeedback(gui, water and "Swimming: watch oxygen" or "No water close enough to swim")
+            ClientBootstrap:UpdateActionGuidance(gui)
+        end)
+    end
 end
 
 function ClientBootstrap:Init()
     HUDController:EnsureGui()
     HatchUIController:Show()
-    wireMobileButtons(MobileControlsController:CreateControls({ MobileButtonScale = 1 }))
+    local mobile = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
+    wireMobileButtons(mobile)
+    RunService.Heartbeat:Connect(function()
+        local now = os.clock()
+        if now - ClientBootstrap.LastTargetScanAt >= ClientBootstrap.TargetScanSeconds then
+            ClientBootstrap.LastTargetScanAt = now
+            ClientBootstrap:UpdateActionGuidance(mobile.Gui)
+        end
+    end)
     Remotes:WaitForChild("StatUpdate").OnClientEvent:Connect(function(payload)
         if type(payload) ~= "table" then return end
         ClientBootstrap.LastStats = payload
+        ClientBootstrap:UpdateActionGuidance(mobile.Gui)
         if type(payload.hatchProgress) == "number" then HatchUIController:SetProgress(payload.hatchProgress) end
         if payload.hatched == true and HatchUIController.Gui then HatchUIController.Gui.Enabled = false end
     end)

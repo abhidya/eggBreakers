@@ -177,6 +177,20 @@ if Remotes:FindFirstChild("RequestFlight") then
     end)
 end
 
+if Remotes:FindFirstChild("RequestSprint") then
+    Remotes.RequestSprint.OnServerEvent:Connect(function(player, enabled)
+        local ok, result = SurvivalService:SetSprinting(player, enabled == true)
+        if ok and player.Character then
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = result.CurrentWalkSpeed or humanoid.WalkSpeed
+            end
+        end
+        notifyResult(player, ok, result, enabled == true and "Sprint draining stamina" or "Sprint off")
+        sendStats(player)
+    end)
+end
+
 Remotes.RequestAttack.OnServerEvent:Connect(function(player, attackType, target)
     local ok, result = CombatService:RequestAttack(player, attackType, target)
     notifyResult(player, ok, result, "Attack attempted")
