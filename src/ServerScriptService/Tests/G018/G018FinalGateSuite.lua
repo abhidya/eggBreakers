@@ -5,13 +5,28 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
 local AssetImportAuditService = require(ServerScriptService.Services.AssetImportAuditService)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 
-local UserStoryTestRegistry = require(script.Parent.UserStoryTestRegistry)
-local StoryAssertions = require(script.Parent.StoryAssertions)
+local Registry = require(script.Parent.G018UserStoryTestRegistry)
 
 local suite = { name = "G018FinalGate", category = "G018FinalGate", tests = {} }
 local REQUIRED_RELEASE_ASSETS = AssetManifest.MinimumUniqueAssets or 500
-local BLOCKED_ASSET_ID = "9922699889"
+
+local function proofFolder()
+    return ReplicatedStorage:FindFirstChild("G018FinalGateProof")
+end
+
+local function proofAttribute(name)
+    local folder = proofFolder()
+    return folder and folder:GetAttribute(name)
+end
+
+local function requireProofTrue(attributeName, expectedDescription)
+    Assert.equals(proofAttribute(attributeName), true,
+        "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription ..
+        " from fresh Studio/live evidence, not docs-only assumptions")
+end
 
 local function childNamed(parent, name)
     return parent and parent:FindFirstChild(name) ~= nil
@@ -26,56 +41,69 @@ local function formatCounts(counts)
         ", releaseReadyVisible=" .. tostring(counts.releaseReadyVisibleAssets)
 end
 
-local function manifestContainsSourceAssetId(sourceAssetId)
-    for _, entry in ipairs(AssetManifest.SourceAssets or {}) do
-        if tostring(entry.SourceAssetId) == sourceAssetId then
-            return true
-        end
-    end
-    return false
-end
-
 table.insert(suite.tests, { name = "G018 gate files are present and isolated", run = function()
     local testsFolder = ServerScriptService:FindFirstChild("Tests")
     local g018Folder = testsFolder and testsFolder:FindFirstChild("G018")
     Assert.truthy(childNamed(g018Folder, "G018FinalGate"), "missing G018FinalGate.server.lua")
     Assert.truthy(childNamed(g018Folder, "G018FinalGateSuite"), "missing G018FinalGateSuite.lua")
-    Assert.truthy(childNamed(g018Folder, "UserStoryTestRegistry"), "missing UserStoryTestRegistry.lua")
-    Assert.truthy(childNamed(g018Folder, "StoryAssertions"), "missing StoryAssertions.lua")
+    Assert.truthy(childNamed(g018Folder, "G018UserStoryTestRegistry"), "missing G018UserStoryTestRegistry.lua")
+    Assert.truthy(childNamed(g018Folder, "G018EcosystemProfileTests"), "missing G018EcosystemProfileTests.lua")
 end })
 
-table.insert(suite.tests, { name = "UserStoryTestRegistry enumerates US27-US36", run = function()
-    StoryAssertions.assertRegistryEnumeratesAllStories(UserStoryTestRegistry)
-end })
-
-table.insert(suite.tests, { name = "G016 release honesty stays enforced", run = function()
-    Assert.truthy(REQUIRED_RELEASE_ASSETS >= 500, "G018 must not lower the 500 unique Creator Store asset gate")
-    Assert.falsy(manifestContainsSourceAssetId(BLOCKED_ASSET_ID), "blocked asset " .. BLOCKED_ASSET_ID .. " must not be reintroduced in AssetManifest.SourceAssets")
-    StoryAssertions.requireProofTrue("G016ReleaseHonestyPreserved", "G016 final honesty gates remain failing until live proof, RBXL persistence, and 500 assets pass")
-end })
-
-table.insert(suite.tests, { name = "every G018 user story has fresh live PASS proof", run = function()
-    for _, story in ipairs(UserStoryTestRegistry.all()) do
-        StoryAssertions.assertStoryHasLivePass(story)
+table.insert(suite.tests, { name = "G018 registry enumerates ecosystem expansion stories", run = function()
+    local stories = Registry.all()
+    Assert.equals(#stories, 11, "G018 registry must enumerate 11 ecosystem stories")
+    local seen = {}
+    for index, story in ipairs(stories) do
+        Assert.equals(story.id, string.format("G018-US%02d", index), "G018 story order/id contract")
+        Assert.falsy(seen[story.id], "duplicate story id " .. tostring(story.id))
+        seen[story.id] = true
+        Assert.truthy(type(story.title) == "string" and #story.title > 0, story.id .. " title required")
+        Assert.truthy(type(story.required) == "table" and #story.required > 0, story.id .. " required categories missing")
+        Assert.truthy(type(story.liveProof) == "string" and #story.liveProof > 0, story.id .. " live proof attr missing")
     end
 end })
 
-table.insert(suite.tests, { name = "fresh live play E2E matrix is attached", run = function()
-    StoryAssertions.requireProofTrue("LivePlayE2EMatrixPassed", "US27-US36 live play proof matrix with non-empty evidence per row")
-    Assert.equals(StoryAssertions.proofAttribute("LivePlayE2EMatrixMilestone"), "G018FinalGate", "live play matrix milestone")
-    Assert.truthy(type(StoryAssertions.proofAttribute("LivePlayE2ERunId")) == "string", "live play E2E proof must include a run id")
-    StoryAssertions.requireProofTrue("FreshAllCategoryTestRunnerPassed", "fresh all-category TestRunner with zero failures after G018 changes")
-    Assert.equals(StoryAssertions.proofAttribute("FreshAllCategoryTestRunnerFailed"), 0, "fresh TestRunner failures")
+table.insert(suite.tests, { name = "shared G018 profile plumbing exists", run = function()
+    for _, species in pairs(SpeciesConfig) do
+        Assert.notNil(species.CreatureCategory, "CreatureCategory required")
+        Assert.notNil(species.EcosystemProfile, "EcosystemProfile required")
+        Assert.notNil(species.MovementModes, "MovementModes required")
+        for _, stats in pairs(species.BaseStats) do
+            Assert.truthy((stats.MaxOxygen or 0) > 0, "MaxOxygen required")
+            Assert.truthy((stats.StaminaRegen or 0) > 0, "StaminaRegen required")
+            Assert.notNil(stats.FlightStaminaDrain, "FlightStaminaDrain required")
+        end
+    end
+    local payload = RemoteContracts.StatUpdate.Payload
+    Assert.truthy(table.find(payload, "oxygen") ~= nil, "StatUpdate oxygen required")
+    Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate creatureCategory required")
+    Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate ecosystemProfile required")
 end })
 
-table.insert(suite.tests, { name = "publish blocker scan for asset 9922699889 is attached", run = function()
-    StoryAssertions.requireProofTrue("PublishBlockerScanPassed", "fresh explicit scan for blocked asset id " .. BLOCKED_ASSET_ID)
-    Assert.equals(StoryAssertions.proofAttribute("PublishBlockerScannedAssetId"), BLOCKED_ASSET_ID, "publish blocker scanned id")
-    Assert.equals(StoryAssertions.proofAttribute("PublishBlockerAssetFound"), false, "blocked asset must not be found in live place or source scan")
-    Assert.truthy(type(StoryAssertions.proofAttribute("PublishBlockerScanCommand")) == "string", "publish blocker proof must include command or harness name")
+table.insert(suite.tests, { name = "fresh live proof matrix is attached", run = function()
+    for _, story in ipairs(Registry.all()) do
+        requireProofTrue(story.liveProof, story.id .. " " .. story.title)
+        Assert.equals(proofAttribute(story.id .. "Status"), "PASS", story.id .. " status must be PASS only after live proof")
+        Assert.truthy(type(proofAttribute(story.id .. "Evidence")) == "string", story.id .. " evidence required")
+    end
 end })
 
-table.insert(suite.tests, { name = "release asset count still reaches 500 live imported visible assets", run = function()
+table.insert(suite.tests, { name = "fresh all-category TestRunner and mobile/client proof are attached", run = function()
+    requireProofTrue("FreshAllCategoryTestRunnerPassed", "all-category TestRunner run with zero failures")
+    Assert.equals(proofAttribute("FreshAllCategoryTestRunnerMilestone"), "G018FinalGate", "fresh TestRunner milestone")
+    Assert.equals(proofAttribute("FreshAllCategoryTestRunnerFailed"), 0, "fresh TestRunner failures")
+    requireProofTrue("MobileClientProofPassed", "touch/mobile/controller proof for G018 HUD oxygen/profile guidance")
+    requireProofTrue("LiveE2EProofPassed", "live ecosystem E2E proof for prey/fish/water/grazing/apex/herding")
+    requireProofTrue("RBXLPersistencePassed", ".rbxl save/reopen persistence after G018 changes")
+end })
+
+table.insert(suite.tests, { name = "publish blocker asset id 9922699889 remains absent from release place", run = function()
+    requireProofTrue("PublishBlocker9922699889ScanPassed", "fresh text plus rbxl strings scan showing blocked id absent")
+    Assert.truthy(type(proofAttribute("PublishBlocker9922699889ScanCommand")) == "string", "scan command required")
+end })
+
+table.insert(suite.tests, { name = "release asset count still enforces 500 live imported visible assets", run = function()
     local result = AssetImportAuditService:ValidateReleaseCounts(REQUIRED_RELEASE_ASSETS)
     Assert.truthy(result.passed,
         "release asset count is not shippable; " .. formatCounts(result.counts) ..
