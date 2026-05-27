@@ -1,7 +1,7 @@
 # G011 Test Results
 
 - PASS: `luac -p` on modified Lua files.
-- PASS: `rojo sourcemap default.project.json --output /tmp/eggBreakers-sourcemap-task2.json`.
-- PASS: local Lua manifest + placement validation: 500 entries, 500 unique `SourceAssetId`, 143 audited script-bearing sources, city=219, swamp=45, rock=71, fossil=47, foliage=163.
-- PASS: Roblox Studio patched-source validation for the active place: 500 entries, 500 unique `SourceAssetId`, 143 audited script-bearing sources, city=219, swamp=45, rock=71, fossil=47, foliage=163.
-- PARTIAL: active Studio targeted suite execution can retain cached module requires; validation used a fresh temporary ModuleScript with the current source text to avoid stale cache.
+- PASS: `rojo sourcemap default.project.json --output /tmp/eggBreakers-sourcemap.json`.
+- PASS: local Lua manifest validation: 500 entries, 500 unique `SourceAssetId`, 123 audited script-bearing sources.
+- PASS: Roblox Studio fresh-clone `AssetManifest` validation: 500 entries, 500 unique `SourceAssetId`, `CS-4596418748` probe marked `ScriptsRemoved`.
+- PARTIAL: active Studio targeted suite execution used cached old requires for test modules; fresh-clone manifest validation passed and a clean Studio/Rojo reload should exercise the new tests.

@@ -4,4 +4,3 @@
 - `PerformanceAuditService` continues to cap decorative collision, imported touch, particle emitters, and NPC counts.
 - Manifest entries record `PerformanceNotes` for collision/query/touch audit at import.
 - Full-map terrain underlay is a single terrain fill operation plus route/biome overlays, avoiding many collidable baseplate parts.
-- Validation count: 143 script-bearing Creator Store sources are marked removed/sandbox-audited before runtime placement.
