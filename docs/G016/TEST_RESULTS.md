@@ -114,3 +114,9 @@ Studio MCP consolidated `G016LiveProofHarness` passed after the food-density/car
 ## RBXL Save/Reopen Capability Probe — 2026-05-27T14:08Z
 
 Studio MCP probe found `game:SavePlace` exists, but calling it failed with `Game:SavePlace placeID is not valid!` because the current local session has `PlaceId=0`. Before/after asset counts were stable at `30` actually imported and `30` release-ready visible assets, but no close/reopen tool is available in this MCP lane, so RBXL persistence remains BLOCKED and not PASS. See `docs/G016/RBXL_SAVE_REOPEN_AUDIT.md`.
+
+## Creator Store Batch002 + Dense Food Proof — 2026-05-27T14:24Z
+
+Source checks passed: `luac` all source, Rojo build to `/tmp/eggBreakers-food-density.rbxl`, and `git diff --check`. Studio MCP Batch002 tagging/audit placed five real Creator Store assets (fossil `577078767`, wrecked car `8027653806`, rock arch `11239705094`, swamp tree `18986634714`, water lily `86198817809169`) with `scriptObjectsFound=0`. Audit counts are now `actuallyImportedAssets=37`, `releaseReadyVisibleAssets=37`, still below 500. Dense starter food proof at actual egg spawn now reports `25` nearby food sources: `17` herbivore and `8` carnivore, plus `1` water. Direct carnivore E2E passed `3/3`; predator kills herbivore prey, carcass is created as carnivore food, and velociraptor eats it. Direct targeted food placement tests passed `2/2` after raising minimums.
+
+No final PASS: US14 asset gate, fresh all-category proof, and RBXL save/reopen proof remain open.

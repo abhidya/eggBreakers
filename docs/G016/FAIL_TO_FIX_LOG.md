@@ -351,3 +351,18 @@ Next action: use a Studio lane with local save-as/close/reopen control, or publi
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: materialize real Creator Store assets toward 500 or move to a Studio control lane capable of local save/reopen.
+
+## Run G016-R024 — Creator Store import Batch001/Batch002 and denser starter food — 2026-05-27T14:24Z
+
+Tests run: Studio MCP Creator Store insertion/audit for Batch001 and Batch002; `luac` all source; `rojo build default.project.json --output /tmp/eggBreakers-food-density.rbxl`; `git diff --check`; Studio MCP direct food-density probe at actual egg spawn `Vector3.new(-2000,12,0)`; direct `E2E_CarnivoreSurvival` suite run; direct targeted `FoodWaterPlacementValidation` food tests.
+Passed: source syntax/build/diff checks passed. Batch002 assets were tagged/placed/audited under `Workspace.Map.ImportedAssets.G016Batch002` with `scriptObjectsFound=0`. Studio food proof now sees `25` visible starter food sources within the egg-spawn tutorial radius: `17` herbivore foods and `8` carnivore meat/carcass foods, plus `1` water source. Direct carnivore suite passed `3/3`, including predator kills herbivore prey -> carcass `Diet=Carnivore` -> velociraptor eats carcass. Targeted food placement tests passed `2/2` after raising the required threshold to dense starter food.
+Failed: US14 remains blocked: `actuallyImportedAssets=37`, `releaseReadyVisibleAssets=37`, expected at least `500`. RBXL save/reopen still blocked by local `PlaceId=0`; fresh all-category final proof still not complete.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: owner reported not enough food; release asset gate also remains far below target.
+Root cause: starter radius needed denser redundant food/carcass affordances, and real Creator Store imports are still in small batches below the 500 release target.
+Patch applied: added four more close nursery starter fern foods, two more close nursery tutorial meat caches, four more visible fern-patch foods, and two more tutorial carcass blocks in source; mirrored them into the open Studio session for live proof. Tagged/placed Creator Store Batch002 assets: fossil, wrecked car, rock arch, swamp tree, water lily.
+Retest result: food density and carnivore-eats-herbivore-carcass proof PASS; final release remains honest FAIL on US14/RBXL/fresh all-category.
+Next action: continue real Creator Store import batches toward 500, and run fresh all-category after a clean Studio reload/sync.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit the next Creator Store batch and keep starter-food density tests green.

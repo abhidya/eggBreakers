@@ -63,9 +63,9 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
         end
     end
 
-    Assert.truthy(counts.food >= 8, "tutorial radius has enough visible food for repeated early attempts")
-    Assert.truthy(counts.herbivoreFood >= 5, "tutorial radius has enough herbivore starter plants")
-    Assert.truthy(counts.carnivoreFood >= 3, "tutorial radius has enough carnivore starter meat/carcass")
+    Assert.truthy(counts.food >= 14, "tutorial radius has dense visible food for repeated early attempts")
+    Assert.truthy(counts.herbivoreFood >= 9, "tutorial radius has dense herbivore starter plants")
+    Assert.truthy(counts.carnivoreFood >= 5, "tutorial radius has enough carnivore starter meat/carcass")
     Assert.truthy(counts.water >= 1, "tutorial radius has visible water")
     Assert.truthy(counts.trees >= 2, "tutorial radius has visible tree trunk/canopy")
 end })
@@ -106,9 +106,9 @@ table.insert(suite.tests, { name = "placed food sources have diet nutrition tags
             if zone == "ApocalypticCity" then counts.CityReward = counts.CityReward + 1 end
         end
     end
-    Assert.truthy(counts.NurseryGrove >= 8, "nursery starter food density")
+    Assert.truthy(counts.NurseryGrove >= 14, "nursery starter food density")
     Assert.truthy(counts.FernPlains >= 3, "Fern Plains plant density")
-    Assert.truthy(counts.Carnivore >= 8, "carnivore prey/carcass source count")
+    Assert.truthy(counts.Carnivore >= 10, "carnivore prey/carcass source count")
     Assert.truthy(counts.CityReward >= 2, "city high-risk food rewards")
 end })
 
