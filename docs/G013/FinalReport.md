@@ -22,3 +22,5 @@ This report is intentionally conservative: the current repository has useful sta
 
 ## Stop Condition
 Do not change this report to PASS until `src/ServerScriptService/Tests/E2E/G013FinalGate.lua` passes in a fresh synced Studio run and docs/G013/TestResults.md contains only PASS rows for release-critical gates.
+
+G013 STATUS: FAIL — release visuals still use visible Part fallback paths; drinking before hatch is not blocked; combat still uses PendingServerDamage-only target damage; NPCs can be empty Models; carcass/food/city/player-facing assets still include generic Part placeholders; materialized Creator Store imports are 44/500; fresh all-category Studio TestRunner proof is blocked by current Studio MCP timeouts/stale runtime instability.
