@@ -1,7 +1,7 @@
 local stages = { "Hatchling", "Juvenile", "SubAdult", "Adult" }
 
-local function stats(maxHealth, walkSpeed, sprintSpeed, stamina, hungerDrain, thirstDrain, damage)
-    return {
+local function stats(maxHealth, walkSpeed, sprintSpeed, stamina, hungerDrain, thirstDrain, damage, extras)
+    local result = {
         MaxHealth = maxHealth,
         WalkSpeed = walkSpeed,
         SprintSpeed = sprintSpeed,
@@ -10,6 +10,10 @@ local function stats(maxHealth, walkSpeed, sprintSpeed, stamina, hungerDrain, th
         ThirstDrain = thirstDrain,
         Damage = damage,
     }
+    for key, value in pairs(extras or {}) do
+        result[key] = value
+    end
+    return result
 end
 
 local SpeciesConfig = {
@@ -17,14 +21,17 @@ local SpeciesConfig = {
         SpeciesId = "gallimimus",
         DisplayName = "Gallimimus",
         Diet = "Herbivore",
+        CreatureCategory = "SmallPrey",
+        EcosystemProfile = { CanGraze = true, Herding = true, SmallPrey = true, PreferredBiome = "FernPlains" },
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "small fast herbivore / ornithomimid scout",
         UnlockCostDNA = 0,
         AllowedGrowthStages = stages,
         BaseStats = {
-            Hatchling = stats(45, 12, 20, 80, 0.7, 0.8, 4),
-            Juvenile = stats(65, 15, 24, 95, 0.8, 0.9, 7),
-            SubAdult = stats(85, 17, 27, 110, 0.9, 1.0, 10),
-            Adult = stats(110, 18, 29, 125, 1.0, 1.1, 13),
+            Hatchling = stats(45, 12, 20, 80, 0.7, 0.8, 4, { StaminaRegen = 11, MaxOxygen = 55, FlightStaminaDrain = 0 }),
+            Juvenile = stats(65, 15, 24, 95, 0.8, 0.9, 7, { StaminaRegen = 12, MaxOxygen = 60, FlightStaminaDrain = 0 }),
+            SubAdult = stats(85, 17, 27, 110, 0.9, 1.0, 10, { StaminaRegen = 13, MaxOxygen = 65, FlightStaminaDrain = 0 }),
+            Adult = stats(110, 18, 29, 125, 1.0, 1.1, 13, { StaminaRegen = 14, MaxOxygen = 70, FlightStaminaDrain = 0 }),
         },
         Abilities = { PrimaryAttack = "Nibble", SecondaryAbility = "QuickDash", CallSet = { "Friendly", "Warning", "Threat", "BabyDistress" } },
         ModelPaths = { Hatchling = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Hatchling", Juvenile = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Juvenile", SubAdult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/SubAdult", Adult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Adult" },
@@ -35,14 +42,17 @@ local SpeciesConfig = {
         SpeciesId = "triceratops",
         DisplayName = "Triceratops",
         Diet = "Herbivore",
+        CreatureCategory = "DefensiveHerbivore",
+        EcosystemProfile = { CanGraze = true, Herding = true, PreferredBiome = "FernPlains" },
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "medium defensive ceratopsian herbivore",
         UnlockCostDNA = 0,
         AllowedGrowthStages = stages,
         BaseStats = {
-            Hatchling = stats(60, 10, 16, 75, 0.8, 0.8, 5),
-            Juvenile = stats(95, 12, 18, 90, 0.9, 0.9, 10),
-            SubAdult = stats(140, 13, 20, 105, 1.0, 1.0, 16),
-            Adult = stats(190, 14, 21, 120, 1.1, 1.1, 24),
+            Hatchling = stats(60, 10, 16, 75, 0.8, 0.8, 5, { StaminaRegen = 8, MaxOxygen = 50, FlightStaminaDrain = 0 }),
+            Juvenile = stats(95, 12, 18, 90, 0.9, 0.9, 10, { StaminaRegen = 8, MaxOxygen = 55, FlightStaminaDrain = 0 }),
+            SubAdult = stats(140, 13, 20, 105, 1.0, 1.0, 16, { StaminaRegen = 9, MaxOxygen = 60, FlightStaminaDrain = 0 }),
+            Adult = stats(190, 14, 21, 120, 1.1, 1.1, 24, { StaminaRegen = 9, MaxOxygen = 65, FlightStaminaDrain = 0 }),
         },
         Abilities = { PrimaryAttack = "Headbutt", SecondaryAbility = "DefensiveShove", CallSet = { "Friendly", "Warning", "Threat", "BabyDistress" } },
         ModelPaths = { Hatchling = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/Hatchling", Juvenile = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/Juvenile", SubAdult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/SubAdult", Adult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/Adult" },
@@ -53,14 +63,17 @@ local SpeciesConfig = {
         SpeciesId = "velociraptor",
         DisplayName = "Velociraptor",
         Diet = "Carnivore",
+        CreatureCategory = "PackPredator",
+        EcosystemProfile = { PackHunter = true, OmnivoreCompatiblePrey = true, PreferredBiome = "JungleBasin" },
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "small pack carnivore / raptor ambusher",
         UnlockCostDNA = 0,
         AllowedGrowthStages = stages,
         BaseStats = {
-            Hatchling = stats(50, 12, 21, 85, 1.0, 0.8, 7),
-            Juvenile = stats(75, 15, 25, 100, 1.1, 0.9, 13),
-            SubAdult = stats(100, 17, 28, 115, 1.2, 1.0, 20),
-            Adult = stats(130, 18, 30, 130, 1.3, 1.1, 28),
+            Hatchling = stats(50, 12, 21, 85, 1.0, 0.8, 7, { StaminaRegen = 10, MaxOxygen = 45, FlightStaminaDrain = 0 }),
+            Juvenile = stats(75, 15, 25, 100, 1.1, 0.9, 13, { StaminaRegen = 11, MaxOxygen = 50, FlightStaminaDrain = 0 }),
+            SubAdult = stats(100, 17, 28, 115, 1.2, 1.0, 20, { StaminaRegen = 12, MaxOxygen = 55, FlightStaminaDrain = 0 }),
+            Adult = stats(130, 18, 30, 130, 1.3, 1.1, 28, { StaminaRegen = 12, MaxOxygen = 60, FlightStaminaDrain = 0 }),
         },
         Abilities = { PrimaryAttack = "Claw", SecondaryAbility = "Lunge", CallSet = { "Friendly", "Warning", "Threat", "BabyDistress" } },
         ModelPaths = { Hatchling = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling", Juvenile = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Juvenile", SubAdult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/SubAdult", Adult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Adult" },
@@ -71,14 +84,17 @@ local SpeciesConfig = {
         SpeciesId = "carnotaurus",
         DisplayName = "Carnotaurus",
         Diet = "Carnivore",
+        CreatureCategory = "ApexCandidate",
+        EcosystemProfile = { ApexEventEligible = true, PreferredBiome = "RedstoneCanyon" },
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "medium solo carnivore / chase predator",
         UnlockCostDNA = 0,
         AllowedGrowthStages = stages,
         BaseStats = {
-            Hatchling = stats(65, 10, 17, 80, 1.2, 0.8, 9),
-            Juvenile = stats(100, 13, 21, 95, 1.4, 0.9, 18),
-            SubAdult = stats(145, 15, 24, 110, 1.6, 1.0, 30),
-            Adult = stats(200, 16, 26, 125, 1.8, 1.1, 44),
+            Hatchling = stats(65, 10, 17, 80, 1.2, 0.8, 9, { StaminaRegen = 8, MaxOxygen = 45, FlightStaminaDrain = 0 }),
+            Juvenile = stats(100, 13, 21, 95, 1.4, 0.9, 18, { StaminaRegen = 9, MaxOxygen = 50, FlightStaminaDrain = 0 }),
+            SubAdult = stats(145, 15, 24, 110, 1.6, 1.0, 30, { StaminaRegen = 9, MaxOxygen = 55, FlightStaminaDrain = 0 }),
+            Adult = stats(200, 16, 26, 125, 1.8, 1.1, 44, { StaminaRegen = 10, MaxOxygen = 60, FlightStaminaDrain = 0 }),
         },
         Abilities = { PrimaryAttack = "Bite", SecondaryAbility = "HeavyBite", CallSet = { "Friendly", "Warning", "Threat", "BabyDistress" } },
         ModelPaths = { Hatchling = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling", Juvenile = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Juvenile", SubAdult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/SubAdult", Adult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Adult" },
