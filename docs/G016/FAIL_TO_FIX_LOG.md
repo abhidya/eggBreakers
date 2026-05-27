@@ -591,3 +591,18 @@ Next action: continue Creator Store imports and repeat performance/placeholder s
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch017, preserving touch/query/collision/particle cleanup rules.
+
+## Run G016-R040 — Creator Store import Batch017 — 2026-05-27T16:58Z
+
+Tests run: Studio MCP Creator Store search/insert/tag/place/audit for Batch017 with Folder-safe and performance-safe tagger; `AssetImportAuditService:AuditAndRepair({ mutate = true })`; `AssetImportAuditService:ValidateReleaseCounts(500)`; `PerformanceAuditService:Scan()`; `luac` all source; `git diff --check`.
+Passed: inserted/tagged/placed five unique Creator Store assets: mailbox `7367638865`, trash can `11230320311`, berry bush `120812800271745`, stalagmite `77377316634796`, rib cage `4977968611`. Import quarantine removed `2` script objects before counting. Audit reports `scriptObjectsFound=0`, `actuallyImportedAssets=105`, `releaseReadyVisibleAssets=105`, `placedVisibleAssets=105`, `taggedImportedAssets=105`, `auditedImportedAssets=105`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source syntax and diff checks passed.
+Failed: US14 remains below release threshold: `actuallyImportedAssets=105`, `releaseReadyVisibleAssets=105`, expected at least `500`. Remaining gap is `395` release-ready assets plus RBXL save/reopen and fresh all-category proof.
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports.
+Failure: asset gate still below target after Batch017.
+Root cause: unique imports and performance-safe tagging are working, but the release threshold still requires 395 more assets.
+Patch applied: no source patch; Studio place state received Batch017 imported assets under `Workspace.Map.ImportedAssets.G016Batch017` with release/audit attributes and touch/query/collision/particle safeguards.
+Retest result: Batch017 audit and performance PASS; final release gate FAIL until at least 500 unique release-ready imports exist.
+Next action: continue Creator Store batches; watch very high-part imports such as stalagmite during later performance sweeps.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: import/tag/place/audit Batch018 with performance-safe tagging and keep `scriptObjectsFound=0`.

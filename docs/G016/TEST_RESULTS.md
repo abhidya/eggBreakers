@@ -210,3 +210,9 @@ No final PASS: US14 still needs 400 more release-ready imported assets, plus fre
 After reaching `100/500` release-ready imports, Studio MCP `PerformanceAuditService:Scan()` found imported touch/query and particle-budget pressure. Cleanup disabled touch/query where safe on imported/decorative parts, disabled decorative collision, and disabled `48` imported particle emitters. Final scan passed with `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, and `failureCount=0`.
 
 No final PASS: US14 still needs 400 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
+
+## Creator Store Batch017 Audit — 2026-05-27T16:58Z
+
+Studio MCP imported and audited Batch017: mailbox `7367638865`, trash can `11230320311`, berry bush `120812800271745`, stalagmite `77377316634796`, rib cage `4977968611`. Quarantine removed `2` script objects before release counting. `AssetImportAuditService` reports `scriptObjectsFound=0`, `actuallyImportedAssets=105`, `releaseReadyVisibleAssets=105`, and `placedVisibleAssets=105`. Performance scan stayed green after the import: `decorativeCollidable=0`, `importedTouchEnabled=0`, `importedRuntimeScriptCount=0`, `failureCount=0`. Source sanity checks also passed: `luac` all source and `git diff --check`. `ValidateReleaseCounts(500)` still fails: `actuallyImportedAssets=105; expected at least 500` and `releaseReadyVisibleAssets=105; expected at least 500`.
+
+No final PASS: US14 still needs 395 more release-ready imported assets, plus fresh all-category and RBXL persistence proof.
