@@ -98,6 +98,7 @@ local SpeciesConfig = {
         },
         Abilities = { PrimaryAttack = "Bite", SecondaryAbility = "HeavyBite", CallSet = { "Friendly", "Warning", "Threat", "BabyDistress" } },
         ModelPaths = { Hatchling = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling", Juvenile = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Juvenile", SubAdult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/SubAdult", Adult = "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Adult" },
+        VisualOrientationCorrection = { PitchDegrees = 180, Reason = "Imported Carnotaurus asset is upside down in source orientation" },
         AnimationIds = { Idle = "", Walk = "", Run = "", Attack = "", Eat = "", Drink = "", Call = "" },
         Sounds = { CallFriendly = "", CallWarning = "", CallThreat = "", BabyDistress = "" },
     },

@@ -203,15 +203,18 @@ local function signedYawBetween(fromVector, toVector)
     return math.atan2(from:Cross(to).Y, from:Dot(to))
 end
 
-local function rotateLooseVisualAroundPivot(instance, pivotCFrame, yawRadians)
-    local rotation = CFrame.Angles(0, yawRadians, 0)
+local function transformLooseVisualAroundPivot(instance, pivotCFrame, transform)
     if instance:IsA("BasePart") then
-        instance.CFrame = pivotCFrame * rotation * pivotCFrame:ToObjectSpace(instance.CFrame)
+        instance.CFrame = pivotCFrame * transform * pivotCFrame:ToObjectSpace(instance.CFrame)
         return
     end
     for _, part in ipairs(getVisibleParts(instance)) do
-        part.CFrame = pivotCFrame * rotation * pivotCFrame:ToObjectSpace(part.CFrame)
+        part.CFrame = pivotCFrame * transform * pivotCFrame:ToObjectSpace(part.CFrame)
     end
+end
+
+local function rotateLooseVisualAroundPivot(instance, pivotCFrame, yawRadians)
+    transformLooseVisualAroundPivot(instance, pivotCFrame, CFrame.Angles(0, yawRadians, 0))
 end
 
 function CharacterVisualService:_readableScaleForSize(size)
@@ -371,11 +374,49 @@ function CharacterVisualService:_createEggVisual(character, root)
     return nil, "invalid_imported_egg_visual"
 end
 
+function CharacterVisualService:_orientationCorrectionForSpecies(speciesId)
+    local species = SpeciesConfig[speciesId or ""]
+    local correction = species and species.VisualOrientationCorrection
+    if type(correction) ~= "table" then
+        return CFrame.new(), 0, 0, 0, nil
+    end
+    local pitch = tonumber(correction.PitchDegrees) or 0
+    local yaw = tonumber(correction.YawDegrees) or 0
+    local roll = tonumber(correction.RollDegrees) or 0
+    return CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll)), pitch, yaw, roll, correction.Reason
+end
+
+function CharacterVisualService:_applySpeciesOrientationCorrection(model, speciesId)
+    local correction, pitch, yaw, roll, reason = self:_orientationCorrectionForSpecies(speciesId)
+    if pitch == 0 and yaw == 0 and roll == 0 then
+        model:SetAttribute("SpeciesOrientationCorrected", false)
+        return false
+    end
+
+    if model:IsA("Model") then
+        model:PivotTo(model:GetPivot() * correction)
+    elseif model:IsA("BasePart") then
+        model.CFrame = model.CFrame * correction
+    else
+        local center = boundsFromParts(getVisibleParts(model))
+        transformLooseVisualAroundPivot(model, CFrame.new(center or Vector3.new(0, 0, 0)), correction)
+    end
+    model:SetAttribute("SpeciesOrientationCorrected", true)
+    model:SetAttribute("OrientationCorrectionSpecies", speciesId)
+    model:SetAttribute("OrientationCorrectionPitchDegrees", pitch)
+    model:SetAttribute("OrientationCorrectionYawDegrees", yaw)
+    model:SetAttribute("OrientationCorrectionRollDegrees", roll)
+    model:SetAttribute("OrientationCorrectionReason", reason or "species_config")
+    return true
+end
+
 function CharacterVisualService:_prepareDinosaurClone(model, state)
     local clone = self:_prepareVisualClone(model, self.DinosaurVisualName)
     clone:SetAttribute("VisualKind", "ImportedDinosaur")
+    clone:SetAttribute("SpeciesId", state and state.SpeciesId or "unknown")
     self:_normalizeDinosaurScale(clone)
     self:_applyGrowthVisualScale(clone, state)
+    self:_applySpeciesOrientationCorrection(clone, state and state.SpeciesId)
     return clone
 end
 
