@@ -9,6 +9,8 @@ CharacterVisualService.EggVisualName = "EggVisual"
 CharacterVisualService.DinosaurVisualName = "DinosaurVisual"
 CharacterVisualService.MinimumDinosaurHeight = 4
 CharacterVisualService.MinimumDinosaurLength = 7
+CharacterVisualService.DinosaurForwardCorrection = CFrame.Angles(0, math.rad(180), 0)
+CharacterVisualService.DinosaurForwardCorrectionDegrees = 180
 CharacterVisualService.ReleaseMode = true
 CharacterVisualService.AllowDebugFallback = false
 CharacterVisualService.EggModelCandidatePaths = {
@@ -282,14 +284,19 @@ function CharacterVisualService:_attachModel(character, root, model)
         end
     end
     model.Parent = folder
+    local attachCFrame = root.CFrame
+    if model:GetAttribute("VisualKind") == "ImportedDinosaur" then
+        attachCFrame = root.CFrame * self.DinosaurForwardCorrection
+        model:SetAttribute("ForwardCorrectionDegrees", self.DinosaurForwardCorrectionDegrees)
+    end
     if model:IsA("Model") then
         model.PrimaryPart = primary
-        model:PivotTo(root.CFrame)
+        model:PivotTo(attachCFrame)
     elseif model:IsA("BasePart") then
-        model.CFrame = root.CFrame
+        model.CFrame = attachCFrame
     else
         for part, offset in pairs(offsets) do
-            part.CFrame = root.CFrame * offset
+            part.CFrame = attachCFrame * offset
         end
     end
     for _, descendant in ipairs(model:GetDescendants()) do

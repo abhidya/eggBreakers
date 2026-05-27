@@ -30,6 +30,23 @@ table.insert(suite.tests, { name = "hatch rejects invalid state/input", run = fu
     Assert.equals(reason, "invalid_hatch_state", "already hatched reason")
 end })
 
+table.insert(suite.tests, { name = "rapid tap cadence stays playable under hatch cooldown", run = function()
+    local p = player(31004)
+    local accepted = 0
+    local now = 100
+    for _ = 1, 5 do
+        if RateLimitService:Check(p, "RequestHatch", 0.08, now) then
+            accepted = accepted + 1
+        end
+        now = now + 0.09
+    end
+    Assert.equals(accepted, 5, "five deliberate taps at 0.09s cadence are accepted")
+
+    RateLimitService:ClearPlayer(p)
+    Assert.truthy(RateLimitService:Check(p, "RequestHatch", 0.08, 200), "first tap accepted")
+    Assert.falsy(RateLimitService:Check(p, "RequestHatch", 0.08, 200.04), "true spam below cooldown still rejected")
+end })
+
 table.insert(suite.tests, { name = "dinosaur/tutorial after hatch", run = function()
     local p = player(31003)
     local state = SurvivalService:CreateState(p, "triceratops")

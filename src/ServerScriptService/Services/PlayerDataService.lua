@@ -31,6 +31,7 @@ function PlayerDataService.DefaultData(now)
         EquippedCosmetics = {},
         BadgesEarnedLocal = {},
         Settings = { MusicVolume = 0.7, SFXVolume = 0.8, CameraShake = true, MobileButtonScale = 1.0 },
+        LastStarterSpecies = nil,
         LastPlayedAt = now or os.time(),
     }
 end

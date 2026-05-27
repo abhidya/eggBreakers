@@ -53,3 +53,31 @@ Next action: asset/biome dressing batches and full TestRunner/mobile/RBXL persis
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: continue ASSET003 biome dressing and US08 NPC ecosystem behavior proof.
+## Run G016-R004 — 2026-05-27T12:05:13Z
+
+Tests run: team state/mailbox lookup, git status, owner live reports triage.
+Passed: old injected team state is not active (`omx team status g016-eggbreakers-live-df77b17a` => no team state found); active work queue now has leader-owned live failures L001-L005.
+Failed: live hatch reliability, active NPC CPU behavior, random species/diet variety, dinosaur orientation/animation, biome readability remain unproven.
+Top failing story: US01 Hatch reliability.
+Failure: owner reports eggs still do not hatch reliably; no worker may claim PASS until fresh Studio Play E2E reproduces and fixes it.
+Root cause: not accepted by leader yet; must be proven by live E2E, not guessed.
+Patch applied: no gameplay patch in this run; orchestration reset and concrete worker queue written.
+Retest result: pending team run.
+Next action: launch fresh OMX team with 5 lanes: hatch E2E, NPC brain, species/orientation, biome food-water-weather, QA gate.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: start team and assign L001-L005, then run luac/rojo/live probes as gates.
+## Run G016-R005 — 2026-05-27T12:06:06Z
+
+Tests run: owner live play report triage.
+Passed: none claimed.
+Failed: no visible trees, no visible action movement, fewer than expected visible dinosaurs/carnivores, hatchling growth from food+water not readable.
+Top failing story: US06 Survival growth + US08 NPC ecosystem + US13 visible controls.
+Failure: game does not yet read as dinosaur survival; world lacks visible ecology and growth feedback.
+Root cause: active team needs explicit tasks for >=10 visible dinos/carnivores, tree/biome dressing, action motion, and food+water growth scaling.
+Patch applied: active work queue updated before team launch.
+Retest result: pending team lanes.
+Next action: commit clean preflight, launch team, assign L001-L005 with new owner deltas.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: launch fresh OMX team after clean commit, then run live probes for hatch/growth/NPC/biome/action motion.

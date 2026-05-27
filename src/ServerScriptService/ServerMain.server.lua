@@ -23,6 +23,7 @@ local CharacterVisualService = require(script.Parent.Services.CharacterVisualSer
 local RateLimitService = require(script.Parent.Services.RateLimitService)
 local NPCSpawnService = require(script.Parent.Services.NPCSpawnService)
 local WeatherBiomeService = require(script.Parent.Services.WeatherBiomeService)
+local StarterSpeciesService = require(script.Parent.Services.StarterSpeciesService)
 
 MapLayoutService:EnsureMapFolders()
 MapLayoutService:EnsureSpawnSafety()
@@ -33,10 +34,7 @@ NPCSpawnService:StartSpawnLoop(3)
 WeatherBiomeService:StartLoop(90)
 
 local function getStarterSpecies(data)
-    for speciesId, unlocked in pairs(data.UnlockedSpecies or {}) do
-        if unlocked and SpeciesConfig[speciesId] then return speciesId end
-    end
-    return "gallimimus"
+    return StarterSpeciesService:ChooseStarterSpecies(data)
 end
 
 local function notifyResult(player, ok, resultOrReason, successMessage)

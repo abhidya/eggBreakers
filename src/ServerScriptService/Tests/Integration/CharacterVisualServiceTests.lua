@@ -136,6 +136,7 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     Assert.truthy(visual:GetAttribute("ImportedVisual"), "dinosaur visual is imported asset clone")
     Assert.truthy((visual:GetAttribute("ReadableHeight") or 0) >= CharacterVisualService.MinimumDinosaurHeight, "dinosaur visual height is readable")
     Assert.truthy((visual:GetAttribute("ReadableLength") or 0) >= CharacterVisualService.MinimumDinosaurLength, "dinosaur visual length is readable")
+    Assert.equals(visual:GetAttribute("ForwardCorrectionDegrees"), CharacterVisualService.DinosaurForwardCorrectionDegrees, "imported dinosaur receives forward-facing correction")
     local _, size = visual:GetBoundingBox()
     Assert.truthy(math.max(size.X, size.Y, size.Z) >= CharacterVisualService.MinimumDinosaurLength, "attached model preserves readable part offsets")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible dinosaur replacement exists")

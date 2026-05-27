@@ -4,6 +4,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local NPCService = require(ServerScriptService.Services.NPCService)
 local NPCSpawnService = require(ServerScriptService.Services.NPCSpawnService)
+local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
 
 local suite = { name = "NPCSpawnValidation.server", category = "Placement", tests = {} }
 
@@ -23,6 +24,39 @@ table.insert(suite.tests, { name = "spawn loop can materialize active NPC record
     local active = NPCSpawnService:MaintainMinimumActive()
     Assert.truthy(active >= NPCSpawnService.TargetActive, "spawn loop reaches target")
     NPCSpawnService.TargetActive = old
+end })
+
+table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and predators", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureNPCSpawnMarkers(folders)
+    local prey = 0
+    local predators = 0
+    for _, marker in ipairs(folders.NPCSpawns:GetChildren()) do
+        if marker:GetAttribute("NPCKind") == "Prey" then
+            prey = prey + 1
+        elseif marker:GetAttribute("NPCKind") == "Predator" then
+            predators = predators + 1
+        end
+        Assert.truthy(marker:GetAttribute("NPCSpawn") == true, marker.Name .. " marked as NPC spawn")
+        Assert.truthy(type(marker:GetAttribute("ZoneId")) == "string", marker.Name .. " has zone id")
+    end
+    Assert.truthy(#folders.NPCSpawns:GetChildren() >= 12, "map has enough authored NPC spawn markers for live population")
+    Assert.truthy(prey >= 6, "prey spawns exist across biomes")
+    Assert.truthy(predators >= 4, "predator spawns exist outside nursery")
+end })
+
+table.insert(suite.tests, { name = "spawn loop reaches visible world target from authored markers", run = function()
+    MapLayoutService:EnsureSpawnSafety()
+    local oldTarget = NPCSpawnService.TargetActive
+    local oldRecords = NPCService.NPCs
+    NPCService.NPCs = {}
+    NPCSpawnService.TargetActive = 12
+    local active = NPCSpawnService:MaintainMinimumActive()
+    Assert.truthy(active >= 12, "spawn loop reaches 12 active NPCs")
+    local folder = workspace:FindFirstChild("NPCs")
+    Assert.truthy(folder and #folder:GetChildren() >= 12, "visible NPC instances exist in Workspace.NPCs")
+    NPCSpawnService.TargetActive = oldTarget
+    NPCService.NPCs = oldRecords
 end })
 
 table.insert(suite.tests, { name = "prey flees nearby players", run = function()
