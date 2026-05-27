@@ -21,8 +21,35 @@ table.insert(suite.tests, { name = "biomes contain imported identity props and m
     Assert.notNil(folders.FoodSources, "food source folder exists")
     Assert.notNil(folders.WaterSources, "water source folder exists")
     Assert.notNil(folders.NPCSpawns, "NPC spawn folder exists")
+    Assert.notNil(folders.BiomeDressing, "biome dressing folder exists")
 end })
 
+
+
+table.insert(suite.tests, { name = "visible trees and biome dressing are materialized", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local visibleTrees = 0
+    local visibleDressingZones = {}
+    for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if instance:IsA("BasePart") and instance:GetAttribute("BiomeDressing") == true and instance.Transparency < 1 then
+            local zoneId = instance:GetAttribute("ZoneId")
+            visibleDressingZones[zoneId] = true
+            if instance:GetAttribute("DressingKind") == "Tree" then
+                visibleTrees = visibleTrees + 1
+            end
+            Assert.truthy(instance:GetAttribute("AvoidRouteCenters"), "dressing keeps route centers clear: " .. instance.Name)
+        end
+    end
+
+    local zoneCount = 0
+    for _ in pairs(visibleDressingZones) do
+        zoneCount = zoneCount + 1
+    end
+    Assert.truthy(visibleTrees >= 8, "four visible trees create trunk/canopy parts")
+    Assert.truthy(zoneCount >= 7, "dressing covers every major biome")
+end })
 
 table.insert(suite.tests, { name = "asset manifest placement rules keep biome props coherent", run = function()
     local result = AssetManifest.Validate({ minimum = 500 })

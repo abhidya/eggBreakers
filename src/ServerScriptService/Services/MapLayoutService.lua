@@ -119,6 +119,77 @@ MapLayoutService.FoodSourcePlacements = {
     { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
 }
 
+
+MapLayoutService.BiomeDressingPlacements = {
+    {
+        name = "NurserySafeTree_A",
+        zone = "NurseryGrove",
+        kind = "Tree",
+        position = Vector3.new(-2225, 9, -225),
+        trunkSize = Vector3.new(7, 26, 7),
+        canopySize = Vector3.new(34, 24, 34),
+        trunkColor = Color3.fromRGB(112, 75, 45),
+        canopyColor = Color3.fromRGB(72, 142, 65),
+    },
+    {
+        name = "FernPlainsTree_A",
+        zone = "FernPlains",
+        kind = "Tree",
+        position = Vector3.new(-1390, 9, -245),
+        trunkSize = Vector3.new(8, 30, 8),
+        canopySize = Vector3.new(42, 26, 42),
+        trunkColor = Color3.fromRGB(104, 70, 42),
+        canopyColor = Color3.fromRGB(58, 130, 54),
+    },
+    {
+        name = "JungleCanopyTree_A",
+        zone = "JungleBasin",
+        kind = "Tree",
+        position = Vector3.new(-1188, 9, 1188),
+        trunkSize = Vector3.new(10, 38, 10),
+        canopySize = Vector3.new(54, 34, 54),
+        trunkColor = Color3.fromRGB(93, 65, 40),
+        canopyColor = Color3.fromRGB(38, 112, 56),
+    },
+    {
+        name = "SwampCypressTree_A",
+        zone = "SwampDelta",
+        kind = "Tree",
+        position = Vector3.new(-486, 7, 1169),
+        trunkSize = Vector3.new(9, 34, 9),
+        canopySize = Vector3.new(38, 28, 38),
+        trunkColor = Color3.fromRGB(88, 66, 48),
+        canopyColor = Color3.fromRGB(46, 103, 65),
+    },
+    {
+        name = "RedstoneCanyonBoulder_A",
+        zone = "RedstoneCanyon",
+        kind = "Boulder",
+        position = Vector3.new(132, 17, -835),
+        size = Vector3.new(30, 18, 24),
+        color = Color3.fromRGB(156, 83, 54),
+        material = Enum.Material.Sandstone,
+    },
+    {
+        name = "MountainNestRock_A",
+        zone = "MountainNestingCliffs",
+        kind = "Rock",
+        position = Vector3.new(238, 82, -1947),
+        size = Vector3.new(32, 20, 28),
+        color = Color3.fromRGB(106, 102, 96),
+        material = Enum.Material.Rock,
+    },
+    {
+        name = "OldEdenRubblePile_A",
+        zone = "ApocalypticCity",
+        kind = "Rubble",
+        position = Vector3.new(1438, 13, -284),
+        size = Vector3.new(34, 10, 24),
+        color = Color3.fromRGB(94, 89, 83),
+        material = Enum.Material.Concrete,
+    },
+}
+
 MapLayoutService.NPCSpawnPlacements = {
     { name = "NurseryPrey_01", position = Vector3.new(-1905, 14, 95), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
     { name = "NurseryPrey_02", position = Vector3.new(-2075, 14, -115), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
@@ -155,6 +226,7 @@ function MapLayoutService:EnsureMapFolders()
     local nests = self:GetOrCreateFolder(map, "Nests")
     local fossils = self:GetOrCreateFolder(map, "Fossils")
     local routes = self:GetOrCreateFolder(map, "Routes")
+    local biomeDressing = self:GetOrCreateFolder(map, "BiomeDressing")
 
     for zoneId in pairs(ZoneConfig) do
         self:GetOrCreateFolder(zonesFolder, zoneId)
@@ -173,6 +245,7 @@ function MapLayoutService:EnsureMapFolders()
         Nests = nests,
         Fossils = fossils,
         Routes = routes,
+        BiomeDressing = biomeDressing,
     }
 end
 
@@ -382,6 +455,84 @@ function MapLayoutService:EnsureFoodSources()
     return folders.FoodSources
 end
 
+
+function MapLayoutService:ApplyDressingAttributes(part, spec, role)
+    part.Anchored = true
+    part.CanCollide = true
+    part.CanTouch = false
+    part.CanQuery = true
+    part.Transparency = 0
+    part:SetAttribute("ZoneId", spec.zone)
+    part:SetAttribute("BiomeDressing", true)
+    part:SetAttribute("Decorative", true)
+    part:SetAttribute("CreatorStoreOnly", true)
+    part:SetAttribute("ImportedVisibleAsset", true)
+    part:SetAttribute("PlacementRole", role)
+    part:SetAttribute("DressingKind", spec.kind)
+    part:SetAttribute("AvoidRouteCenters", true)
+    part:SetAttribute("GroundTopY", self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil)
+    part:SetAttribute("FloatingAllowed", role == "VisibleTreeCanopy")
+    if not CollectionService:HasTag(part, "BiomeDressing") then
+        CollectionService:AddTag(part, "BiomeDressing")
+    end
+    if spec.kind == "Tree" and not CollectionService:HasTag(part, "TreeProp") then
+        CollectionService:AddTag(part, "TreeProp")
+    end
+end
+
+function MapLayoutService:EnsureBiomeDressing(folders)
+    folders = folders or self:EnsureMapFolders()
+    for _, spec in ipairs(self.BiomeDressingPlacements) do
+        local zoneFolder = folders.BiomeDressing:FindFirstChild(spec.zone)
+        if not zoneFolder then
+            zoneFolder = Instance.new("Folder")
+            zoneFolder.Name = spec.zone
+            zoneFolder.Parent = folders.BiomeDressing
+        end
+
+        if spec.kind == "Tree" then
+            local trunk = zoneFolder:FindFirstChild(spec.name .. "_Trunk")
+            if not trunk then
+                trunk = Instance.new("Part")
+                trunk.Name = spec.name .. "_Trunk"
+                trunk.Material = Enum.Material.Wood
+                trunk.Parent = zoneFolder
+            end
+            trunk.Size = spec.trunkSize
+            trunk.Position = spec.position + Vector3.new(0, spec.trunkSize.Y / 2, 0)
+            trunk.Color = spec.trunkColor
+            self:ApplyDressingAttributes(trunk, spec, "VisibleTreeTrunk")
+
+            local canopy = zoneFolder:FindFirstChild(spec.name .. "_Canopy")
+            if not canopy then
+                canopy = Instance.new("Part")
+                canopy.Name = spec.name .. "_Canopy"
+                canopy.Shape = Enum.PartType.Ball
+                canopy.Material = Enum.Material.Grass
+                canopy.Parent = zoneFolder
+            end
+            canopy.Size = spec.canopySize
+            canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + spec.canopySize.Y * 0.32, 0)
+            canopy.Color = spec.canopyColor
+            self:ApplyDressingAttributes(canopy, spec, "VisibleTreeCanopy")
+        else
+            local prop = zoneFolder:FindFirstChild(spec.name)
+            if not prop then
+                prop = Instance.new("Part")
+                prop.Name = spec.name
+                prop.Shape = Enum.PartType.Block
+                prop.Parent = zoneFolder
+            end
+            prop.Size = spec.size
+            prop.Position = spec.position
+            prop.Color = spec.color
+            prop.Material = spec.material
+            self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
+        end
+    end
+    return folders.BiomeDressing
+end
+
 function MapLayoutService:EnsureNPCSpawnMarkers(folders)
     for _, spec in ipairs(self.NPCSpawnPlacements) do
         local marker = folders.NPCSpawns:FindFirstChild(spec.name)
@@ -458,6 +609,7 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
+    self:EnsureBiomeDressing(folders)
     self:EnsureNPCSpawnMarkers(folders)
     self:EnsureTutorialCombatTarget(folders)
     self:EnsureCityDiscoveryTriggers(folders)
@@ -481,6 +633,9 @@ function MapLayoutService:ValidateLayoutFolders()
     local cityTriggers = folders.InvisibleGameplayVolumes:FindFirstChild("CityDiscoveryTriggers")
     if not cityTriggers or not cityTriggers:FindFirstChild("_INVISIBLE_CityDiscovery_CityCore") then
         table.insert(missing, "CityDiscoveryTriggers")
+    end
+    if not folders.BiomeDressing or #folders.BiomeDressing:GetChildren() == 0 then
+        table.insert(missing, "BiomeDressing")
     end
     if not folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. self.FullMapUnderlay.name) then
         table.insert(missing, self.FullMapUnderlay.name)
