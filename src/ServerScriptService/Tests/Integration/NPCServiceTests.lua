@@ -77,6 +77,34 @@ table.insert(suite.tests, { name = "NPC hatches at nest then seeks needs and eat
     npc:Destroy(); food:Destroy(); water:Destroy()
 end })
 
+
+table.insert(suite.tests, { name = "hungry herbivore seeks food with target and facing orientation", run = function()
+    resetNPCs()
+    local npc = makeNPC("GrazingPreyNPC", Vector3.new(0, 3, 0))
+    local food = makeTaggedPart("DistantGrazingFern", "FoodSource", Vector3.new(30, 3, 0))
+    food:SetAttribute("Diet", "Herbivore")
+    food:SetAttribute("Nutrition", 30)
+    local ok, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+    record.Hunger = 20
+    record.Thirst = 90
+
+    Assert.truthy(ok, "prey registers")
+    NPCService:TickBrain(record, {}, 1)
+
+    Assert.equals(record.State, "SeekFood", "hungry herbivore seeks matching plant food")
+    Assert.equals(record.FoodTarget, food, "record tracks concrete food target")
+    Assert.equals(npc:GetAttribute("FoodTarget"), "DistantGrazingFern", "food target name is visible on NPC")
+    Assert.equals(npc:GetAttribute("FoodTargetDiet"), "Herbivore", "food target diet is visible on NPC")
+    Assert.equals(npc:GetAttribute("LastBrainAction"), "SeekFood", "seek-food action is visible on NPC")
+    Assert.equals(npc:GetAttribute("BrainTargetName"), "DistantGrazingFern", "brain target names the food source")
+    Assert.equals(npc:GetAttribute("BrainActionTarget"), "30.0,3.0,0.0", "brain target position recorded")
+    local directionToFood = (food.Position - NPCService:GetRecordPosition(record)).Unit
+    Assert.truthy(npc:GetPivot().LookVector:Dot(directionToFood) > 0.95, "NPC faces the food target while grazing")
+
+    npc:Destroy(); food:Destroy()
+end })
+
 table.insert(suite.tests, { name = "predator chases attacks and prey death leaves carcass", run = function()
     resetNPCs()
     ensureCarcassAsset()

@@ -186,7 +186,36 @@ table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs ar
     Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "sideways source is rotated to face forward")
     Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward proof attr set")
     Assert.truthy(math.abs(attached:GetAttribute("ForwardCorrectionDegrees") or 0) >= 80, "non-zero yaw correction applied")
+
+    CharacterVisualService:ClearVisual(character)
+    local backwardSource = Instance.new("Model")
+    backwardSource.Name = "BackwardDinosaur"
+    backwardSource.Parent = ReplicatedStorage
+    local backwardBody = Instance.new("Part")
+    backwardBody.Name = "BackwardBody"
+    backwardBody.Size = Vector3.new(2, 2, 3)
+    backwardBody.Parent = backwardSource
+    backwardSource.PrimaryPart = backwardBody
+    local backwardHead = Instance.new("Part")
+    backwardHead.Name = "BackwardHead"
+    backwardHead.Size = Vector3.new(1, 1, 1)
+    backwardHead.CFrame = CFrame.new(0, 0, 3)
+    backwardHead.Parent = backwardSource
+    local backwardTail = Instance.new("Part")
+    backwardTail.Name = "BackwardTail"
+    backwardTail.Size = Vector3.new(1, 1, 2)
+    backwardTail.CFrame = CFrame.new(0, 0, -3)
+    backwardTail.Parent = backwardSource
+
+    local backwardClone = CharacterVisualService:_prepareDinosaurClone(backwardSource, { Growth = 0 })
+    local backwardAttached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, backwardClone)
+
+    Assert.notNil(backwardAttached, "backward dinosaur attaches")
+    Assert.truthy((backwardAttached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "backward source is rotated to face forward")
+    Assert.truthy(backwardAttached:GetAttribute("ForwardFacingVerified"), "backward forward proof attr set")
+    Assert.truthy(math.abs(backwardAttached:GetAttribute("ForwardCorrectionDegrees") or 0) >= 170, "backward yaw correction applied")
     source:Destroy()
+    backwardSource:Destroy()
     cleanup(player)
 end })
 
