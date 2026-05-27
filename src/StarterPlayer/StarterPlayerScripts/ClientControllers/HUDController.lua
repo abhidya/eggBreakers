@@ -2,8 +2,29 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIFactory = require(script.Parent.UIFactory)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
+
+local stageOrder = { Hatchling = 1, Juvenile = 2, SubAdult = 3, Adult = 4 }
+
+function HUDController:BuildGrowthBadge(payload)
+    local stage = tostring(payload.growthStage or "Hatchling")
+    local growth = math.clamp(tonumber(payload.growth) or 0, 0, 100)
+    local level = stageOrder[stage] or 1
+    local nextHint = level >= 4 and "Max level" or string.format("%.0f%% to next stage", math.max(0, 100 - growth))
+    return string.format("LV %d %s • %.0f%% growth • %s", level, stage, growth, nextHint)
+end
+
+function HUDController:BuildRoleCard(payload)
+    local speciesId = tostring(payload.species or "gallimimus")
+    local species = SpeciesConfig[speciesId] or SpeciesConfig[string.lower(speciesId)]
+    local displayName = species and species.DisplayName or speciesId
+    local diet = tostring(payload.diet or (species and species.Diet) or "Unknown diet")
+    local role = tostring((species and species.Role) or payload.creatureCategory or "survivor")
+    local attack = tostring(species and species.Abilities and species.Abilities.PrimaryAttack or "basic attack")
+    return string.format("%s • %s\nRole: %s\nMain action: %s", displayName, diet, role, attack)
+end
 
 function HUDController:BuildDietGuidance(payload)
     local species = tostring(payload.species or "Unknown species")
@@ -20,9 +41,9 @@ function HUDController:BuildDietGuidance(payload)
     local category = tostring(payload.creatureCategory or "Ecosystem")
     local movementHint = ""
     local movementModes = payload.movementModes or {}
-    if movementModes.Flight then
+    if movementModes.Flight or movementModes.flight or movementModes.flying then
         movementHint = " Flight drains stamina."
-    elseif movementModes.Swim or payload.maxOxygen then
+    elseif movementModes.Swim or movementModes.swim or movementModes.swimming or payload.maxOxygen then
         movementHint = " Watch oxygen in deep water."
     end
     return string.format("%s %s [%s] is a %s — %s, drink blue water.%s", growthStage, species, category, diet, foodHint, movementHint)
@@ -47,6 +68,31 @@ function HUDController:EnsureGui()
     self.SpeciesLabel.TextScaled = true
     self.SpeciesLabel.Text = "Species"
     self.SpeciesLabel.Parent = root
+    self.GrowthBadge = Instance.new("TextLabel")
+    self.GrowthBadge.Name = "GrowthLevelBadge"
+    self.GrowthBadge.Size = UDim2.fromOffset(400, 26)
+    self.GrowthBadge.Position = UDim2.fromOffset(10, 28)
+    self.GrowthBadge.BackgroundTransparency = 0.2
+    self.GrowthBadge.BackgroundColor3 = Color3.fromRGB(26, 72, 40)
+    self.GrowthBadge.TextColor3 = Color3.fromRGB(255, 245, 175)
+    self.GrowthBadge.TextScaled = true
+    self.GrowthBadge.Text = "LV 1 Hatchling • 0% growth"
+    self.GrowthBadge:SetAttribute("MobileReadable", true)
+    self.GrowthBadge.Parent = root
+
+    self.RoleCard = Instance.new("TextLabel")
+    self.RoleCard.Name = "SpeciesRoleCard"
+    self.RoleCard.Size = UDim2.fromOffset(400, 52)
+    self.RoleCard.Position = UDim2.fromOffset(10, 58)
+    self.RoleCard.BackgroundTransparency = 0.2
+    self.RoleCard.BackgroundColor3 = Color3.fromRGB(18, 34, 22)
+    self.RoleCard.TextColor3 = Color3.fromRGB(230, 255, 230)
+    self.RoleCard.TextWrapped = true
+    self.RoleCard.TextScaled = true
+    self.RoleCard.Text = "Pick a species to see diet, role, and main action."
+    self.RoleCard:SetAttribute("MobileReadable", true)
+    self.RoleCard.Parent = root
+
     self.GuidanceLabel = Instance.new("TextLabel")
     self.GuidanceLabel.Name = "DietGuidanceLabel"
     self.GuidanceLabel.Size = UDim2.fromOffset(410, 40)
@@ -141,6 +187,10 @@ function HUDController:ApplyStatUpdate(payload)
     local previous = self.LastStats
     self.LastStats = payload
     self.SpeciesLabel.Text = string.format("%s | %s | %s", tostring(payload.species), tostring(payload.diet), tostring(payload.growthStage))
+    self.GrowthBadge.Text = self:BuildGrowthBadge(payload)
+    self.GrowthBadge:SetAttribute("LevelText", self.GrowthBadge.Text)
+    self.RoleCard.Text = self:BuildRoleCard(payload)
+    self.RoleCard:SetAttribute("RoleText", self.RoleCard.Text)
     self.GuidanceLabel.Text = self:BuildDietGuidance(payload)
     local level = math.floor((tonumber(payload.growth) or 0) / 25) + 1
     self.LevelBadge.Text = string.format("Level %d %s • Growth %d%% • %s", level, tostring(payload.growthStage or "Hatchling"), round(payload.growth), tostring(payload.diet or "Diet"))

@@ -37,8 +37,9 @@ function UIFactory:CreateBar(parent, name, yOffset)
     return fill
 end
 
-function UIFactory:CreateButton(parent, name, text, position)
+function UIFactory:CreateButton(parent, name, text, position, options)
     local button = Instance.new("TextButton")
+    local size = options and options.Size or UDim2.fromOffset(112, 64)
     button.Name = name
     button.Text = text
     button.Size = UDim2.fromOffset(112, 64)

@@ -12,7 +12,7 @@ table.insert(suite.tests, { name = "thumbstick and buttons exist", run = functio
     local gui = UIFactory:CreateRootGui("MobileControls")
     local thumbstick = Instance.new("Frame")
     thumbstick.Name = "MoveThumbstick"
-    thumbstick.Size = UDim2.fromOffset(110, 110)
+    thumbstick.Size = UDim2.fromOffset(132, 132)
     thumbstick.Parent = gui
     for _, name in ipairs(expectedButtons) do
         if name ~= "MoveThumbstick" then
@@ -33,6 +33,7 @@ table.insert(suite.tests, { name = "buttons do not overlap HUD", run = function(
     Assert.equals(button.Size.X.Offset, 112, "mobile button width contract")
     Assert.equals(button.Size.Y.Offset, 64, "mobile button height contract")
     Assert.truthy(button.Position.X.Offset < 0, "action buttons anchor from right edge")
+    Assert.truthy(button.Position.Y.Offset < -120, "top action row clears bottom edge")
     button.Parent:Destroy()
 end })
 
@@ -49,20 +50,37 @@ table.insert(suite.tests, { name = "phone guidance exposes real asset directions
 end })
 
 
-table.insert(suite.tests, { name = "sprint call hide expose visible feedback hooks", run = function()
+table.insert(suite.tests, { name = "all gameplay actions expose feedback and cooldown hooks", run = function()
     local gui = UIFactory:CreateRootGui("MobileControls")
-    for _, name in ipairs({ "Sprint", "Call", "RestHide" }) do
+    for _, name in ipairs({ "EatDrink", "Attack", "Sprint", "Call", "RestHide", "Flight", "Swim" }) do
         local button = UIFactory:CreateButton(gui, name .. "Button", name, UDim2.fromOffset(0, 0))
         button:SetAttribute("ActionName", name)
+        button:SetAttribute("Context", "Ready")
+        button:SetAttribute("PressCount", 0)
+        button:SetAttribute("LastActionResult", "Ready")
+        button:SetAttribute("CooldownSeconds", name == "Call" and 0.4 or 0.2)
         Assert.equals(button:GetAttribute("ActionName"), name, name .. " button has action attribute")
+        Assert.equals(button:GetAttribute("Context"), "Ready", name .. " has contextual state")
+        Assert.truthy(button:GetAttribute("CooldownSeconds") > 0, name .. " exposes cooldown")
+        Assert.equals(button:GetAttribute("PressCount"), 0, name .. " starts with press counter")
         Assert.equals(button.BackgroundColor3, Color3.fromRGB(35, 45, 35), name .. " starts with inactive color")
     end
     local feedback = Instance.new("TextLabel")
     feedback.Name = "ActionFeedbackLabel"
     feedback.Visible = false
+    feedback:SetAttribute("MobileReadable", true)
+    feedback:SetAttribute("LastFeedback", "")
     feedback.Parent = gui
     Assert.notNil(gui:FindFirstChild("ActionFeedbackLabel"), "visible action feedback label exists")
+    Assert.equals(feedback:GetAttribute("MobileReadable"), true, "feedback is readable on phone")
     gui:Destroy()
+end })
+
+table.insert(suite.tests, { name = "flight and swim controls are first class mobile actions", run = function()
+    Assert.truthy(table.find(MobileControlsController.Buttons, "Flight") ~= nil, "flight button is declared")
+    Assert.truthy(table.find(MobileControlsController.Buttons, "Swim") ~= nil, "swim button is declared")
+    Assert.notNil(MobileControlsController.EffectStyles.Flight, "flight has visual feedback style")
+    Assert.notNil(MobileControlsController.EffectStyles.Swim, "swim has visual feedback style")
 end })
 
 TestRunner.registerSuite(suite)

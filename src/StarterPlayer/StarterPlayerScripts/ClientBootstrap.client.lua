@@ -124,12 +124,15 @@ function ClientBootstrap:SetButtonText(button, text)
     end
 end
 
-function ClientBootstrap:ShowActionFeedback(gui, message)
+function ClientBootstrap:ShowActionFeedback(gui, message, button)
     local label = gui and gui:FindFirstChild("ActionFeedbackLabel")
     if not label then return false end
     label.Text = message
     label.Visible = true
     label:SetAttribute("LastFeedback", message)
+    if button then
+        button:SetAttribute("LastActionResult", message)
+    end
     return true
 end
 
@@ -283,12 +286,27 @@ local function getCharacterRoot()
     return character:FindFirstChild("HumanoidRootPart")
 end
 
-local function showFeedback(gui, message)
-    local label = gui and gui:FindFirstChild("ActionFeedbackLabel")
-    if not label then return end
-    label.Text = message
-    label.Visible = true
-    label:SetAttribute("LastFeedback", message)
+local function showFeedback(gui, message, button)
+    ClientBootstrap:ShowActionFeedback(gui, message, button)
+end
+
+local function markButtonPressed(button, resultText)
+    if not button then return end
+    local now = os.clock()
+    local cooldown = button:GetAttribute("CooldownSeconds") or 0.2
+    button:SetAttribute("LastPressedAt", now)
+    button:SetAttribute("CooldownUntil", now + cooldown)
+    button:SetAttribute("PressCount", (button:GetAttribute("PressCount") or 0) + 1)
+    button:SetAttribute("LastActionResult", resultText)
+end
+
+local function setButtonContext(button, context, enabled)
+    if not button then return end
+    button:SetAttribute("Context", context)
+    button:SetAttribute("ContextEnabled", enabled ~= false)
+    button.AutoButtonColor = enabled ~= false
+    button.Active = enabled ~= false
+    button.BackgroundTransparency = enabled == false and 0.35 or 0
 end
 
 local function setButtonActive(button, isActive)
@@ -332,6 +350,20 @@ end
 local function wireMobileButtons(result)
     local gui = result and result.Gui
     if not gui then return end
+    local function refreshContext()
+        local stats = ClientBootstrap.LastStats or {}
+        local modes = stats.movementModes or {}
+        setButtonContext(gui:FindFirstChild("EatDrinkButton"), stats.diet and ("Find food/water as " .. tostring(stats.diet)) or "Find food/water", true)
+        setButtonContext(gui:FindFirstChild("AttackButton"), "Primary: " .. ClientBootstrap:GetPrimaryAttack(), true)
+        setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "Low stamina" or "Hold speed", stats.stamina == nil or stats.stamina >= 5)
+        setButtonContext(gui:FindFirstChild("CallButton"), "Friendly herd call", true)
+        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "Hidden" or "Hide/rest", true)
+        local canFly = modes.Flight == true or modes.flight == true or modes.flying == true
+        local canSwim = modes.Swim == true or modes.swim == true or modes.swimming == true
+        setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "Take off / land" or "No flight for species", canFly)
+        setButtonContext(gui:FindFirstChild("SwimButton"), (canSwim or stats.maxOxygen) and "Enter water" or "No swim bonus", canSwim or stats.maxOxygen ~= nil)
+    end
+    refreshContext()
     local eatDrink = gui:FindFirstChild("EatDrinkButton")
     if eatDrink then
         eatDrink.Activated:Connect(function()
@@ -358,7 +390,8 @@ local function wireMobileButtons(result)
             local target = ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12)
             ClientBootstrap:PlayActionMotion("Attack", target)
             InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), target)
-            showFeedback(gui, "Attacking")
+            markButtonPressed(attack, "Attacking")
+            showFeedback(gui, "Attacking", attack)
         end)
     end
 
@@ -385,7 +418,8 @@ local function wireMobileButtons(result)
             local pulse = createLocalCallPulse(callType)
             call:SetAttribute("LastCallType", callType)
             call:SetAttribute("VisibleEffectCreated", pulse ~= nil)
-            showFeedback(gui, "Friendly call sent")
+            markButtonPressed(call, "Friendly call sent")
+            showFeedback(gui, "Friendly call sent", call)
         end)
     end
 
@@ -398,7 +432,8 @@ local function wireMobileButtons(result)
             applyHiddenVisual(isHidden)
             restHide.Text = isHidden and "Hidden" or "Rest/Hide"
             setButtonActive(restHide, isHidden)
-            showFeedback(gui, isHidden and "Hidden/resting" or "Visible")
+            markButtonPressed(restHide, isHidden and "Hidden/resting" or "Visible")
+            showFeedback(gui, isHidden and "Hidden/resting" or "Visible", restHide)
         end)
     end
 

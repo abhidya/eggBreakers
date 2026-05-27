@@ -69,5 +69,24 @@ table.insert(suite.tests, { name = "diet guidance explains species food and wate
     Assert.truthy(string.find(carnivore, "red carcass", 1, true) ~= nil, "carnivore food hint appears")
 end })
 
+
+table.insert(suite.tests, { name = "growth badge makes dinosaur leveling clear", run = function()
+    local badge = HUDController:BuildGrowthBadge({ growthStage = "Juvenile", growth = 45 })
+    Assert.truthy(string.find(badge, "LV 2", 1, true) ~= nil, "juvenile maps to level 2")
+    Assert.truthy(string.find(badge, "45% growth", 1, true) ~= nil, "growth percent appears")
+    Assert.truthy(string.find(badge, "next stage", 1, true) ~= nil, "next stage hint appears")
+
+    local adult = HUDController:BuildGrowthBadge({ growthStage = "Adult", growth = 100 })
+    Assert.truthy(string.find(adult, "Max level", 1, true) ~= nil, "adult shows max level")
+end })
+
+table.insert(suite.tests, { name = "species role card explains diet role and action", run = function()
+    local card = HUDController:BuildRoleCard({ species = "velociraptor", diet = "Carnivore" })
+    Assert.truthy(string.find(card, "Velociraptor", 1, true) ~= nil, "display name appears")
+    Assert.truthy(string.find(card, "Carnivore", 1, true) ~= nil, "diet appears")
+    Assert.truthy(string.find(card, "Role:", 1, true) ~= nil, "role label appears")
+    Assert.truthy(string.find(card, "Claw", 1, true) ~= nil, "primary action appears")
+end })
+
 TestRunner.registerSuite(suite)
 return suite
