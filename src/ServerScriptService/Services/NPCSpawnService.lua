@@ -6,16 +6,24 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
-NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "Omnivore", "Predator", "Apex" }
+NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "AerialPrey", "Omnivore", "Predator", "AerialPredator", "Apex" }
 NPCSpawnService.SpawnTickSeconds = 10
 NPCSpawnService.NPCModelCandidatePaths = {
     Prey = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/Hatchling",
     },
+    AerialPrey = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Hatchling",
+    },
     Predator = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling",
+    },
+    AerialPredator = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Pterodactyl_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
     },
     Apex = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Tyrannosaurus_Model_Set/Hatchling",
@@ -53,7 +61,7 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true)) and hasVisiblePart(descendant) then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
                 return descendant
             end
         end
@@ -73,6 +81,10 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
     clone:SetAttribute("Carnivore", profile.Diet == "Carnivore")
     clone:SetAttribute("ApexCategory", profile.Apex == true)
     clone:SetAttribute("HerdingEnabled", profile.Herding == true)
+    clone:SetAttribute("FlightCapable", profile.FlightCapable == true)
+    clone:SetAttribute("Flying", profile.FlightCapable == true)
+    clone:SetAttribute("AerialPrey", kind == "AerialPrey")
+    clone:SetAttribute("PreferredAltitude", profile.PreferredAltitude)
     clone:SetAttribute("ImportedVisibleAsset", true)
     clone:SetAttribute("CreatorStoreOnly", true)
     clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
@@ -105,6 +117,10 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         wrapper:SetAttribute("Carnivore", profile.Diet == "Carnivore")
         wrapper:SetAttribute("ApexCategory", profile.Apex == true)
         wrapper:SetAttribute("HerdingEnabled", profile.Herding == true)
+        wrapper:SetAttribute("FlightCapable", profile.FlightCapable == true)
+        wrapper:SetAttribute("Flying", profile.FlightCapable == true)
+        wrapper:SetAttribute("AerialPrey", kind == "AerialPrey")
+        wrapper:SetAttribute("PreferredAltitude", profile.PreferredAltitude)
         wrapper:SetAttribute("ImportedVisibleAsset", true)
         wrapper:SetAttribute("CreatorStoreOnly", true)
         wrapper:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))

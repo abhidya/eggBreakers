@@ -20,7 +20,9 @@ NPCService.HerdRadius = 65
 NPCService.ApexThreatRadius = 140
 NPCService.KindProfiles = {
     Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "gallimimus" },
+    AerialPrey = { Diet = "Herbivore", Health = 45, Damage = 6, Herding = true, SpeciesId = "gallimimus", FlightCapable = true, PreferredAltitude = 32, AerialPrey = true },
     Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "carnotaurus" },
+    AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pterodactyl", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true },
     Apex = { Diet = "Carnivore", Health = 260, Damage = 80, Apex = true, SpeciesId = "tyrannosaurus", ThreatRadius = 140 },
     Omnivore = { Diet = "Omnivore", Health = 95, Damage = 18, Herding = true, SpeciesId = "oviraptor" },
 }
@@ -35,8 +37,15 @@ function NPCService:GetKindProfile(kind)
         profile.Herding = profile.Herding or species.EcosystemProfile.Herding == true
         profile.ThreatRadius = profile.ThreatRadius or species.EcosystemProfile.ThreatRadius
         profile.HerdRadius = profile.HerdRadius or species.EcosystemProfile.HerdRadius
+        profile.FlightCapable = profile.FlightCapable or (species.MovementModes and species.MovementModes.Flight == true)
+        profile.HuntsAerialPrey = profile.HuntsAerialPrey or species.EcosystemProfile.HuntsAerialPrey == true
+        profile.PreferredAltitude = profile.PreferredAltitude or species.EcosystemProfile.PreferredAltitude
     end
     return profile
+end
+
+function NPCService:IsPreyKind(kind)
+    return kind == "Prey" or kind == "AerialPrey"
 end
 
 function NPCService:GetRecordDiet(record)
@@ -80,6 +89,10 @@ function NPCService:Register(npc, kind)
         Herding = profile.Herding == true,
         ThreatRadius = profile.ThreatRadius or self.ApexThreatRadius,
         HerdRadius = profile.HerdRadius or self.HerdRadius,
+        FlightCapable = profile.FlightCapable == true,
+        PreferredAltitude = profile.PreferredAltitude or pivotPosition.Y,
+        HuntsAerialPrey = profile.HuntsAerialPrey == true,
+        AerialPrey = profile.AerialPrey == true or kind == "AerialPrey",
     }
     if npc then
         npc:SetAttribute("ActiveNPCBrain", true)
@@ -88,6 +101,10 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("SpeciesId", record.SpeciesId)
         npc:SetAttribute("ApexCategory", record.Apex)
         npc:SetAttribute("HerdingEnabled", record.Herding)
+        npc:SetAttribute("FlightCapable", record.FlightCapable)
+        npc:SetAttribute("Flying", record.FlightCapable)
+        npc:SetAttribute("AerialPrey", record.AerialPrey)
+        npc:SetAttribute("PreferredAltitude", record.PreferredAltitude)
         npc:SetAttribute("BrainMoveCount", 0)
         npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)
@@ -112,10 +129,19 @@ function NPCService:Transition(record, nextState)
         record.Instance:SetAttribute("BrainState", nextState)
         record.Instance:SetAttribute("LastBrainAction", nextState)
     end
-    if nextState == "Dead" and record.Kind == "Prey" then
+    if nextState == "Dead" and self:IsPreyKind(record.Kind) then
         record.Carcass = self:CreateCarcassFoodSource(record)
     end
     return true
+end
+
+function NPCService:GetFlightTarget(record, targetPosition, actionName)
+    if not record or record.FlightCapable ~= true or typeof(targetPosition) ~= "Vector3" then return targetPosition end
+    local altitude = record.PreferredAltitude or targetPosition.Y
+    if actionName == "Flee" then
+        altitude = math.max(altitude, targetPosition.Y + 8)
+    end
+    return Vector3.new(targetPosition.X, altitude, targetPosition.Z)
 end
 
 function NPCService:GetRecordPosition(record)
@@ -172,6 +198,11 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
     if delta.Magnitude <= 0.1 then
         return self:OrientToward(record, targetPosition, actionName or "Move")
     end
+    targetPosition = self:GetFlightTarget(record, targetPosition, actionName)
+    delta = targetPosition - position
+    if delta.Magnitude <= 0.1 then
+        return self:OrientToward(record, targetPosition, actionName or "Move")
+    end
     local nextPosition = position + delta.Unit * math.min(step or self.MoveStep, delta.Magnitude)
     local lookAt = Vector3.new(targetPosition.X, nextPosition.Y, targetPosition.Z)
     if (lookAt - nextPosition).Magnitude <= 0.05 then
@@ -194,6 +225,8 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
         npc:SetAttribute("LastBrainAction", brainAction)
         npc:SetAttribute("LastAction", brainAction)
         npc:SetAttribute("ActiveNPCBrain", true)
+        npc:SetAttribute("Flying", record.FlightCapable == true)
+        npc:SetAttribute("FlightTarget", record.FlightCapable == true and formattedTarget or nil)
         if targetInstance then
             npc:SetAttribute("BrainTargetName", targetInstance.Name)
         end
@@ -315,11 +348,28 @@ function NPCService:FindNearestRecord(record, kind, maxDistance)
     return best, bestDistance
 end
 
+function NPCService:FindNearestHuntTarget(record, maxDistance)
+    local position = self:GetRecordPosition(record)
+    local best, bestDistance = nil, maxDistance or self.SenseDistance
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and self:IsPreyKind(candidate.Kind) then
+            local canHunt = candidate.Kind == "Prey" or record.FlightCapable == true or record.HuntsAerialPrey == true
+            if canHunt then
+                local distance = (self:GetRecordPosition(candidate) - position).Magnitude
+                if distance <= bestDistance then
+                    best, bestDistance = candidate, distance
+                end
+            end
+        end
+    end
+    return best, bestDistance
+end
+
 function NPCService:FindNearestThreat(record, maxDistance)
     local best, bestDistance = nil, maxDistance or self.FleeDistance
     local position = self:GetRecordPosition(record)
     for _, candidate in ipairs(self.NPCs) do
-        if candidate ~= record and candidate.State ~= "Dead" and (candidate.Kind == "Predator" or candidate.Apex == true) then
+        if candidate ~= record and candidate.State ~= "Dead" and (candidate.Kind == "Predator" or candidate.Kind == "AerialPredator" or candidate.Apex == true) then
             local distance = (self:GetRecordPosition(candidate) - position).Magnitude
             if distance <= bestDistance then
                 best, bestDistance = candidate, distance
@@ -408,12 +458,16 @@ function NPCService:TickBrain(record, players, deltaSeconds)
     end
     self:ApplyNeeds(record, deltaSeconds)
 
-    if record.Kind == "Prey" then
+    if self:IsPreyKind(record.Kind) then
         local playerRoot = self.FindNearestPlayerRoot and self:FindNearestPlayerRoot(record, players, self.FleeDistance)
         if playerRoot then
             local away = self:GetRecordPosition(record) - playerRoot.Position
             if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
-            self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep, self.MoveStep, "Flee")
+            local fleeTarget = self:GetRecordPosition(record) + away.Unit * self.MoveStep
+            if record.FlightCapable == true then
+                fleeTarget = Vector3.new(fleeTarget.X, math.max(record.PreferredAltitude or fleeTarget.Y, fleeTarget.Y + 8), fleeTarget.Z)
+            end
+            self:MoveToward(record, fleeTarget, self.MoveStep, "Flee")
             record.FleeFrom = playerRoot.Position
             record.LastFleeAt = os.time()
             return self:Transition(record, "Flee")
@@ -425,7 +479,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         if apexEventOk then return true end
     end
 
-    local nearbyPredator = (record.Kind == "Prey" or record.Kind == "Omnivore") and self:FindNearestThreat(record, self.FleeDistance) or nil
+    local nearbyPredator = (self:IsPreyKind(record.Kind) or record.Kind == "Omnivore") and self:FindNearestThreat(record, self.FleeDistance) or nil
     if nearbyPredator then
         record.FleeFrom = nearbyPredator.Instance
         if record.Health <= (record.MaxHealth or 80) * 0.35 then
@@ -437,7 +491,11 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end
         local away = self:GetRecordPosition(record) - self:GetRecordPosition(nearbyPredator)
         if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
-        self:MoveToward(record, self:GetRecordPosition(record) + away.Unit * self.MoveStep, self.MoveStep, "Flee")
+        local fleeTarget = self:GetRecordPosition(record) + away.Unit * self.MoveStep
+        if record.FlightCapable == true then
+            fleeTarget = Vector3.new(fleeTarget.X, math.max(record.PreferredAltitude or fleeTarget.Y, fleeTarget.Y + 8), fleeTarget.Z)
+        end
+        self:MoveToward(record, fleeTarget, self.MoveStep, "Flee")
         return self:Transition(record, "Flee")
     end
 
@@ -467,8 +525,8 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         end
     end
 
-    if record.Kind == "Predator" or record.Apex == true then
-        local prey, distance = self:FindNearestRecord(record, "Prey", self.SenseDistance)
+    if record.Kind == "Predator" or record.Kind == "AerialPredator" or record.Apex == true then
+        local prey, distance = self:FindNearestHuntTarget(record, self.SenseDistance)
         if prey and distance <= self.InteractDistance then return self:AttackRecord(record, prey) end
         if prey then
             self:MoveToward(record, self:GetRecordPosition(prey), self.MoveStep, "Chase", prey.Instance)
@@ -664,7 +722,7 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
     end
     carcass:SetAttribute("Diet", "Carnivore")
     carcass:SetAttribute("Nutrition", nutrition or 35)
-    carcass:SetAttribute("FoodKind", "PreyCarcass")
+    carcass:SetAttribute("FoodKind", record and record.Kind == "AerialPrey" and "AerialPreyCarcass" or "PreyCarcass")
     carcass:SetAttribute("Depleted", false)
     carcass:SetAttribute("RespawnCooldownSeconds", 180)
     carcass:SetAttribute("CreatorStoreOnly", true)
@@ -677,7 +735,7 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
 end
 
 function NPCService:MarkPreyDead(record)
-    if not record or record.Kind ~= "Prey" then return false, "not_prey" end
+    if not record or not self:IsPreyKind(record.Kind) then return false, "not_prey" end
     self:Transition(record, "Dead")
     if not record.Carcass then
         record.Carcass = self:CreateCarcassFoodSource(record, 35)

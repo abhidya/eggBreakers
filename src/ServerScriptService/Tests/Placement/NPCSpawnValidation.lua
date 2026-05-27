@@ -39,11 +39,20 @@ table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and pr
     MapLayoutService:EnsureNPCSpawnMarkers(folders)
     local prey = 0
     local predators = 0
+    local aerialPrey = 0
+    local aerialPredators = 0
     for _, marker in ipairs(folders.NPCSpawns:GetChildren()) do
         if marker:GetAttribute("NPCKind") == "Prey" then
             prey = prey + 1
         elseif marker:GetAttribute("NPCKind") == "Predator" then
             predators = predators + 1
+        elseif marker:GetAttribute("NPCKind") == "AerialPrey" then
+            aerialPrey = aerialPrey + 1
+            Assert.equals(marker:GetAttribute("AerialSpawn"), true, marker.Name .. " marked as aerial spawn")
+            Assert.truthy((marker:GetAttribute("PreferredAltitude") or 0) > 0, marker.Name .. " has preferred altitude")
+        elseif marker:GetAttribute("NPCKind") == "AerialPredator" then
+            aerialPredators = aerialPredators + 1
+            Assert.equals(marker:GetAttribute("AerialSpawn"), true, marker.Name .. " marked as aerial predator spawn")
         end
         Assert.truthy(marker:GetAttribute("NPCSpawn") == true, marker.Name .. " marked as NPC spawn")
         Assert.truthy(type(marker:GetAttribute("ZoneId")) == "string", marker.Name .. " has zone id")
@@ -51,6 +60,8 @@ table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and pr
     Assert.truthy(#folders.NPCSpawns:GetChildren() >= 12, "map has enough authored NPC spawn markers for live population")
     Assert.truthy(prey >= 6, "prey spawns exist across biomes")
     Assert.truthy(predators >= 4, "predator spawns exist outside nursery")
+    Assert.truthy(aerialPrey >= 2, "aerial prey spawns exist near cliffs/canyons")
+    Assert.truthy(aerialPredators >= 1, "pterodactyl/aerial predator spawn exists")
 end })
 
 table.insert(suite.tests, { name = "spawn loop reaches visible world target from authored markers", run = function()
@@ -66,9 +77,9 @@ table.insert(suite.tests, { name = "spawn loop reaches visible world target from
     local visibleDinosaurs = 0
     local carnivores = 0
     for _, npc in ipairs(folder:GetChildren()) do
-        if npc:GetAttribute("NPCKind") == "Prey" or npc:GetAttribute("NPCKind") == "Predator" then
+        if npc:GetAttribute("NPCKind") == "Prey" or npc:GetAttribute("NPCKind") == "Predator" or npc:GetAttribute("NPCKind") == "AerialPrey" or npc:GetAttribute("NPCKind") == "AerialPredator" then
             if hasVisiblePart(npc) then visibleDinosaurs = visibleDinosaurs + 1 end
-            if npc:GetAttribute("NPCKind") == "Predator" or npc:GetAttribute("Carnivore") == true or npc:GetAttribute("Diet") == "Carnivore" then
+            if npc:GetAttribute("NPCKind") == "Predator" or npc:GetAttribute("NPCKind") == "AerialPredator" or npc:GetAttribute("Carnivore") == true or npc:GetAttribute("Diet") == "Carnivore" then
                 carnivores = carnivores + 1
             end
         end
