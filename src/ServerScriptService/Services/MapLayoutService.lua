@@ -50,7 +50,7 @@ MapLayoutService.ZoneTerrain = {
         material = Enum.Material.Mud,
     },
     ApocalypticCity = {
-        center = Vector3.new(1050, 0, 0),
+        center = Vector3.new(700, 0, 0),
         size = Vector3.new(860, 18, 700),
         topY = 9,
         material = Enum.Material.Asphalt,
@@ -76,9 +76,9 @@ MapLayoutService.RouteTerrain = {
     { name = "FernToJungle", center = Vector3.new(-1300, 0, 475), size = Vector3.new(260, 18, 960), material = Enum.Material.Grass },
     { name = "FernToRedstoneCanyon", center = Vector3.new(-675, 0, -325), size = Vector3.new(950, 18, 220), material = Enum.Material.Sandstone },
     { name = "JungleToSwampDelta", center = Vector3.new(-800, 0, 950), size = Vector3.new(1320, 14, 220), material = Enum.Material.LeafyGrass },
-    { name = "RedstoneCanyonGateToCity", center = Vector3.new(430, 0, -325), size = Vector3.new(1320, 18, 220), material = Enum.Material.Sandstone, cityRoute = true },
-    { name = "SwampDeltaCausewayToCity", center = Vector3.new(450, 0, 475), size = Vector3.new(1360, 14, 240), material = Enum.Material.Mud, cityRoute = true },
-    { name = "CityCrossRoute", center = Vector3.new(1050, 0, 0), size = Vector3.new(900, 18, 190), material = Enum.Material.Asphalt, cityRoute = true },
+    { name = "RedstoneCanyonGateToCity", center = Vector3.new(275, 0, -325), size = Vector3.new(950, 18, 220), material = Enum.Material.Sandstone, cityRoute = true },
+    { name = "SwampDeltaCausewayToCity", center = Vector3.new(300, 0, 475), size = Vector3.new(950, 14, 240), material = Enum.Material.Mud, cityRoute = true },
+    { name = "CityCrossRoute", center = Vector3.new(700, 0, 0), size = Vector3.new(900, 18, 190), material = Enum.Material.Asphalt, cityRoute = true },
     { name = "MountainNestApproach", center = Vector3.new(-140, 6, -1040), size = Vector3.new(360, 18, 300), material = Enum.Material.Rock },
     { name = "MountainNestLowerRamp", center = Vector3.new(-140, 17, -1190), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
     { name = "MountainNestMidRamp", center = Vector3.new(-140, 33, -1340), size = Vector3.new(360, 22, 300), material = Enum.Material.Rock },
@@ -184,8 +184,8 @@ MapLayoutService.FoodPlacements = {
     { name = "CarnivoreTutorialCarcass_01", zone = "FernPlains", diet = "Carnivore", nutrition = 34, position = Vector3.new(-930, 12, -120), size = Vector3.new(8, 3, 5), kind = "TutorialCarcass", cooldown = 120 },
     { name = "RedstonePreyCarcass_01", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 42, position = Vector3.new(-125, 13, -760), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
     { name = "SwampPreyCarcass_01", zone = "SwampDelta", diet = "Carnivore", nutrition = 38, position = Vector3.new(55, 10, 1065), size = Vector3.new(9, 3, 5), kind = "PreyCarcass", cooldown = 150 },
-    { name = "OldEdenHighRiskCarcass_01", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 55, position = Vector3.new(1110, 12, -210), size = Vector3.new(10, 3, 6), kind = "HighRiskCarcass", cooldown = 180 },
-    { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(1285, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120, vegetationType = "CityOvergrowth" },
+    { name = "OldEdenHighRiskCarcass_01", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 55, position = Vector3.new(760, 12, -210), size = Vector3.new(10, 3, 6), kind = "HighRiskCarcass", cooldown = 180 },
+    { name = "OldEdenOvergrowthReward_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 28, position = Vector3.new(935, 12, 245), size = Vector3.new(9, 3, 9), kind = "HighRiskPlant", cooldown = 120, vegetationType = "CityOvergrowth" },
     { name = "NurseryStarterFern_03", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2045, 12, 30), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryStarterFern_04", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-1934, 12, -52), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
     { name = "NurseryStarterFern_05", zone = "NurseryGrove", diet = "Herbivore", nutrition = 28, position = Vector3.new(-2008, 12, 86), size = Vector3.new(7, 3, 7), kind = "StarterPlant", cooldown = 45 },
@@ -206,7 +206,7 @@ MapLayoutService.ShallowWater = {
     { name = "FernPlainsPond", center = Vector3.new(-1080, 10, 205), size = Vector3.new(190, 5, 120) },
     { name = "SwampDeltaChannel", center = Vector3.new(-80, 8, 950), size = Vector3.new(760, 4, 115) },
     { name = "CityCanalShallow", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
-    { name = "FernLakeSwimZone", center = Vector3.new(-1080, 10, 250), size = Vector3.new(220, 7, 150), swimZone = true, fishSpawnAllowed = true },
+    { name = "FernLakeSwimZone", center = Vector3.new(-1080, 10, 250), size = Vector3.new(220, 5, 150), swimZone = true, fishSpawnAllowed = true },
     { name = "SwampRiverFishRun", center = Vector3.new(-70, 8, 970), size = Vector3.new(820, 5, 70), swimZone = true, fishSpawnAllowed = true },
     { name = "JungleRiverCrossing", center = Vector3.new(-1320, 10, 780), size = Vector3.new(360, 5, 64), swimZone = true, fishSpawnAllowed = true },
 }
@@ -220,16 +220,16 @@ MapLayoutService.FoodSourcePlacements = {
     { name = "NurseryTutorialMeatCache", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1870, 13, -92), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(126, 62, 48), tutorialSafe = true },
     { name = "FernPlainsPreyCarcass_A", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1080, 12, -255), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
     { name = "RedstonePreyCarcass_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 55, respawnSeconds = 150, position = Vector3.new(-120, 13, -755), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(120, 64, 52) },
-    { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
+    { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(685, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
     { name = "NurseryStarterFernPatch_C", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-2058, 13, 70), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(74, 156, 68) },
     { name = "NurseryStarterFernPatch_D", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1935, 13, -86), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(88, 164, 76) },
     { name = "NurseryStarterFernPatch_E", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-2092, 13, -38), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(84, 166, 78) },
     { name = "NurseryStarterFernPatch_F", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-2030, 13, -118), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(74, 152, 72) },
-    { name = "NurseryStarterFernPatch_G", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1978, 13, 128), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(92, 170, 84) },
+    { name = "NurseryStarterFernPatch_G", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1978, 13, 140), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(92, 170, 84) },
     { name = "NurseryStarterFernPatch_H", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1888, 13, 82), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(78, 158, 72) },
     { name = "NurseryTutorialMeatCache_B", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1835, 13, -48), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(132, 64, 50), tutorialSafe = true },
-    { name = "NurseryTutorialMeatCache_C", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1816, 13, 44), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(134, 66, 50), tutorialSafe = true },
-    { name = "NurseryTutorialMeatCache_D", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1962, 13, -142), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(128, 62, 48), tutorialSafe = true },
+    { name = "NurseryTutorialMeatCache_C", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1816, 13, 50), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(134, 66, 50), tutorialSafe = true },
+    { name = "NurseryTutorialMeatCache_D", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1962, 13, -170), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(128, 62, 48), tutorialSafe = true },
     { name = "FernPlainsPreyCarcass_B", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1015, 12, -185), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
     { name = "SwampPreyCarcass_B", zone = "SwampDelta", diet = "Carnivore", nutrition = 42, respawnSeconds = 150, position = Vector3.new(-35, 10, 1015), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(110, 58, 50) },
 }
@@ -362,7 +362,7 @@ MapLayoutService.BiomeDressingPlacements = {
         name = "OldEdenRubblePile_A",
         zone = "ApocalypticCity",
         kind = "Rubble",
-        position = Vector3.new(1438, 13, -284),
+        position = Vector3.new(1088, 13, -284),
         size = Vector3.new(34, 10, 24),
         color = Color3.fromRGB(94, 89, 83),
         material = Enum.Material.Concrete,
@@ -558,12 +558,12 @@ MapLayoutService.NPCSpawnPlacements = {
     { name = "JunglePrey_01", position = Vector3.new(-1460, 14, 1010), kind = "Prey", zone = "JungleBasin" },
     { name = "SwampPrey_01", position = Vector3.new(-230, 11, 1040), kind = "Prey", zone = "SwampDelta" },
     { name = "RedstonePredator_01", position = Vector3.new(-280, 16, -720), kind = "Predator", zone = "RedstoneCanyon", dangerous = true },
-    { name = "CityPredator_01", position = Vector3.new(980, 14, -160), kind = "Predator", zone = "ApocalypticCity", dangerous = true },
+    { name = "CityPredator_01", position = Vector3.new(630, 14, -160), kind = "Predator", zone = "ApocalypticCity", dangerous = true },
     { name = "MountainPrey_01", position = Vector3.new(-90, 79, -1660), kind = "Prey", zone = "MountainNestingCliffs" },
     { name = "MountainAerialPrey_01", position = Vector3.new(-40, 96, -1715), kind = "AerialPrey", zone = "MountainNestingCliffs", aerial = true, preferredAltitude = 34 },
     { name = "MountainAerialPredator_01", position = Vector3.new(-155, 104, -1605), kind = "AerialPredator", zone = "MountainNestingCliffs", dangerous = true, aerial = true, preferredAltitude = 42 },
     { name = "FernPredator_01", position = Vector3.new(-980, 14, -260), kind = "Predator", zone = "FernPlains", dangerous = true },
-    { name = "RedstoneAerialPrey_01", position = Vector3.new(-180, 44, -875), kind = "AerialPrey", zone = "RedstoneCanyon", aerial = true, preferredAltitude = 32 },
+    { name = "RedstoneAerialPrey_01", position = Vector3.new(-180, 60, -875), kind = "AerialPrey", zone = "RedstoneCanyon", aerial = true, preferredAltitude = 32 },
     { name = "JunglePredator_01", position = Vector3.new(-1340, 14, 1110), kind = "Predator", zone = "JungleBasin", dangerous = true },
     { name = "SwampPredator_01", position = Vector3.new(65, 11, 1010), kind = "Predator", zone = "SwampDelta", dangerous = true },
     { name = "MountainNestHerdPrey_01", position = Vector3.new(-168, 79, -1605), kind = "Prey", zone = "MountainNestingCliffs", nestingHerd = true },
@@ -588,7 +588,7 @@ MapLayoutService.PlayerSpawnPlacements = {
     { name = "VelociraptorNurserySpawn_01", speciesId = "velociraptor", zone = "NurseryGrove", position = Vector3.new(-1870, 15, -78), yawDegrees = 118 },
 
     { name = "CarnotaurusRedstoneSpawn_01", speciesId = "carnotaurus", zone = "RedstoneCanyon", position = Vector3.new(-260, 17, -720), yawDegrees = 64 },
-    { name = "CarnotaurusCitySpawn_01", speciesId = "carnotaurus", zone = "ApocalypticCity", position = Vector3.new(990, 15, -175), yawDegrees = -92 },
+    { name = "CarnotaurusCitySpawn_01", speciesId = "carnotaurus", zone = "ApocalypticCity", position = Vector3.new(640, 15, -175), yawDegrees = -92 },
     { name = "CarnotaurusNurserySpawn_01", speciesId = "carnotaurus", zone = "NurseryGrove", position = Vector3.new(-1832, 15, 20), yawDegrees = 122 },
 }
 
@@ -750,6 +750,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("ShallowWater", true)
     marker:SetAttribute("WaterSource", true)
     marker:SetAttribute("ProceduralWaterSource", true)
+    marker:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    marker:SetAttribute("ReleaseVisibleGeneratedPartReason", "Procedural shallow water source representation")
     marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
     marker:SetAttribute("SwimZone", water.swimZone == true)
@@ -959,15 +961,25 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part.CanCollide = false
     part.CanTouch = false
     part.CanQuery = false
-    part.Transparency = 1
+
+    local isVisible = (role == "VisibleTreeTrunk" or role == "HiddenTreeCanopy" or role == "VisibleBiomeProp")
+    if isVisible then
+        part.Transparency = 0
+        part:SetAttribute("ProceduralGameplayVisual", true)
+        part:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+        part:SetAttribute("ReleaseVisibleGeneratedPartReason", "Procedural biome dressing representation")
+    else
+        part.Transparency = 1
+        part:SetAttribute("ReleaseHiddenProceduralVisual", true)
+        part:SetAttribute("InvisibleQueryHelper", true)
+    end
+
     part:SetAttribute("ZoneId", spec.zone)
     part:SetAttribute("BiomeDressing", true)
     part:SetAttribute("Decorative", true)
     part:SetAttribute("CreatorStoreOnly", nil)
     part:SetAttribute("ImportedVisibleAsset", nil)
     part:SetAttribute("AssetManifestId", nil)
-    part:SetAttribute("ReleaseHiddenProceduralVisual", true)
-    part:SetAttribute("InvisibleQueryHelper", true)
     part:SetAttribute("PlacementRole", role)
     part:SetAttribute("DressingKind", spec.kind)
     part:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
@@ -980,7 +992,7 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     if not CollectionService:HasTag(part, "BiomeDressing") then
         CollectionService:AddTag(part, "BiomeDressing")
     end
-    if spec.kind == "Tree" and not CollectionService:HasTag(part, "TreeProp") then
+    if role == "TreeBrowseQuery" and not CollectionService:HasTag(part, "TreeProp") then
         CollectionService:AddTag(part, "TreeProp")
     end
 end
@@ -1051,8 +1063,21 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             prop.Color = spec.color
             prop.Material = spec.material
             self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
+
             if self:IsVegetationBrowseSpec(spec) then
-                self:ApplyBrowseFoodAttributes(prop, spec, { treeBrowse = false })
+                local browse = zoneFolder:FindFirstChild(spec.name .. "_Browse")
+                if not browse then
+                    browse = Instance.new("Part")
+                    browse.Name = spec.name .. "_Browse"
+                    browse.Shape = Enum.PartType.Block
+                    browse.Material = spec.material
+                    browse.Parent = zoneFolder
+                end
+                browse.Size = spec.size
+                browse.Position = spec.position
+                browse.Color = spec.color
+                self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery")
+                self:ApplyBrowseFoodAttributes(browse, spec, { treeBrowse = false })
             end
         end
     end

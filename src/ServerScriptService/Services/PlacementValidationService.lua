@@ -77,13 +77,13 @@ PlacementValidationService.ReferencePlan = {
     { id = "RedstoneBoulderA", biome = "RedstoneCanyon", category = "Rock", position = Vector3.new(132, 11, -835), rotationY = 82 },
     { id = "SwampCypressA", biome = "SwampDelta", category = "SwampTree", position = Vector3.new(-486, 9, 1169), rotationY = 21 },
     { id = "SwampReedsA", biome = "SwampDelta", category = "Reed", position = Vector3.new(196, 9, 744), rotationY = 116 },
-    { id = "OldEdenTowerRuinA", biome = "ApocalypticCity", category = "CityRuin", position = Vector3.new(735, 11, 170), rotationY = 7 },
-    { id = "OldEdenCarWreckA", biome = "ApocalypticCity", category = "CarWreck", position = Vector3.new(1268, 11, 308), rotationY = 63 },
-    { id = "OldEdenRubbleA", biome = "ApocalypticCity", category = "Rubble", position = Vector3.new(1438, 11, -284), rotationY = 137 },
+    { id = "OldEdenTowerRuinA", biome = "ApocalypticCity", category = "CityRuin", position = Vector3.new(385, 11, 170), rotationY = 7 },
+    { id = "OldEdenCarWreckA", biome = "ApocalypticCity", category = "CarWreck", position = Vector3.new(918, 11, 308), rotationY = 63 },
+    { id = "OldEdenRubbleA", biome = "ApocalypticCity", category = "Rubble", position = Vector3.new(1088, 11, -284), rotationY = 137 },
     { id = "MountainCliffA", biome = "MountainNestingCliffs", category = "Cliff", position = Vector3.new(-432, 78, -1918), rotationY = 31 },
     { id = "MountainRockA", biome = "MountainNestingCliffs", category = "Rock", position = Vector3.new(238, 78, -1947), rotationY = 74 },
     { id = "MountainFossilA", biome = "MountainNestingCliffs", category = "Fossil", position = Vector3.new(154, 78, -1464), rotationY = 109 },
-    { id = "CityFossilA", biome = "ApocalypticCity", category = "Fossil", position = Vector3.new(925, 11, 277), rotationY = 157 },
+    { id = "CityFossilA", biome = "ApocalypticCity", category = "Fossil", position = Vector3.new(575, 11, 277), rotationY = 157 },
 }
 
 local function abs(value)

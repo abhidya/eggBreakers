@@ -43,6 +43,10 @@ end
 local isGlowingBallPart
 local looksLikeRectangleBallTree
 
+local function isPartShape(instance, shape)
+    return instance.ClassName == "Part" and instance.Shape == shape
+end
+
 local function nameLooksLowQuality(instance)
     local text = string.lower(instance.Name or "")
     for _, pattern in ipairs(LOW_QUALITY_NAME_PATTERNS) do
@@ -73,7 +77,7 @@ end
 
 isGlowingBallPart = function(instance)
     if not isA(instance, "BasePart") then return false end
-    if not instanceNameContains(instance, "ball") and instance.Shape ~= Enum.PartType.Ball then return false end
+    if not instanceNameContains(instance, "ball") and not isPartShape(instance, Enum.PartType.Ball) then return false end
     if instance.Material == Enum.Material.Neon then return true end
     if instance.GetDescendants then
         for _, descendant in ipairs(instance:GetDescendants()) do
@@ -90,10 +94,8 @@ looksLikeRectangleBallTree = function(instance)
     local hasBlock = false
     local hasBall = false
     local function visit(part)
-        if isA(part, "Part") then
-            hasBlock = hasBlock or part.Shape == Enum.PartType.Block
-            hasBall = hasBall or part.Shape == Enum.PartType.Ball
-        end
+        hasBlock = hasBlock or isPartShape(part, Enum.PartType.Block)
+        hasBall = hasBall or isPartShape(part, Enum.PartType.Ball)
     end
     visit(instance)
     if instance.GetDescendants then
@@ -201,9 +203,6 @@ end
 function AssetImportAuditService:GetQualityExclusionKind(instance)
     if looksLowQualityGeneratedFoodOrVegetation(instance) then
         return "lowQuality"
-    end
-    if containsMeshPart(instance) then
-        return "mesh"
     end
 
     local current = instance

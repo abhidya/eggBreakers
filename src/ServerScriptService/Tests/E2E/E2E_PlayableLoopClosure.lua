@@ -44,7 +44,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     local player = MockPlayer.new(49001, "LoopClosure")
     RateLimitService:ClearPlayer(player)
     PlayerDataService:Get(player)
-    rootFor(player)
+    local root = rootFor(player)
 
     local state = SurvivalService:CreateState(player, "velociraptor")
     local eggFood = Instance.new("Part")
@@ -110,6 +110,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
 
     record.Health = 1
     state.Stamina = 100
+    root.Position = preyRoot.Position + Vector3.new(2, 0, 0)
     RateLimitService:ClearPlayer(player)
     Assert.truthy(CombatService:RequestAttack(player, "Claw", preyModel), "player can attack registered dinosaur NPC")
     Assert.equals(record.State, "Dead", "player attack kills NPC prey")

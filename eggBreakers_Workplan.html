@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eggBreakers — Movement, Animation & Combat Workplan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+
+  :root{
+    --dark:#141413; --light:#faf9f5; --mid:#b0aea5; --lightgray:#e8e6dc;
+    --orange:#d97757; --blue:#6a9bcc; --green:#788c5d;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--light); color:var(--dark);
+    font-family:'Lora',Georgia,serif;
+    line-height:1.55; padding:48px 40px 80px;
+    max-width:1180px; margin:0 auto;
+  }
+  h1,h2,h3,h4,.k{font-family:'Poppins',Arial,sans-serif;}
+  .eyebrow{font-family:'Poppins',sans-serif; font-weight:600; letter-spacing:.22em;
+    text-transform:uppercase; font-size:11px; color:var(--orange);}
+  h1{font-size:38px; font-weight:600; line-height:1.1; margin:10px 0 14px; letter-spacing:-.01em;}
+  .lede{font-size:17px; color:#3a3a37; max-width:760px;}
+  header{border-bottom:3px solid var(--dark); padding-bottom:28px; margin-bottom:8px;}
+  .meta{display:flex; gap:28px; flex-wrap:wrap; margin-top:22px; font-family:'Poppins',sans-serif; font-size:12px;}
+  .meta div span{display:block; color:var(--mid); font-weight:500; letter-spacing:.08em; text-transform:uppercase; font-size:10px; margin-bottom:3px;}
+  .meta div b{font-weight:600; font-size:15px;}
+
+  section{margin-top:52px;}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:22px;}
+  .sec-head .num{font-family:'Poppins',sans-serif; font-weight:700; font-size:13px; color:var(--light);
+    background:var(--dark); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+  .sec-head h2{font-size:23px; font-weight:600;}
+  .sec-head .tag{margin-left:auto; font-family:'Poppins',sans-serif; font-size:11px; color:var(--mid); font-weight:500;}
+
+  /* diagnosis cards */
+  .diag{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .dcard{background:var(--card); border:1px solid var(--lightgray); border-radius:14px; padding:22px; position:relative; overflow:hidden;}
+  .dcard::before{content:''; position:absolute; top:0; left:0; width:5px; height:100%;}
+  .dcard.red::before{background:var(--orange);}
+  .dcard.amber::before{background:#c9a227;}
+  .dcard.blue::before{background:var(--blue);}
+  .dcard h3{font-size:15px; font-weight:600; margin-bottom:6px;}
+  .dcard .sev{font-family:'Poppins',sans-serif; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; padding:3px 9px; border-radius:20px; display:inline-block; margin-bottom:12px;}
+  .sev.crit{background:#fbe9e2; color:#b5482c;}
+  .sev.high{background:#f7eecb; color:#8a6d12;}
+  .sev.info{background:#e3edf7; color:#3f6790;}
+  .dcard p{font-size:13.5px; color:#44443f;}
+  .dcard .code{font-family:'Poppins',sans-serif; font-size:11.5px; background:#f3f1ea; padding:1px 6px; border-radius:5px; color:#6a4434;}
+
+  /* phases */
+  .phase{background:var(--card); border:1px solid var(--lightgray); border-radius:16px; padding:26px 28px; margin-bottom:20px;}
+  .phase-top{display:flex; align-items:center; gap:14px; margin-bottom:4px;}
+  .phase-top .pill{font-family:'Poppins',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; padding:5px 12px; border-radius:20px; color:#fff;}
+  .p1 .pill{background:var(--orange);} .p2 .pill{background:var(--blue);} .p3 .pill{background:var(--green);} .p4 .pill{background:var(--dark);}
+  .phase-top h3{font-size:19px; font-weight:600;}
+  .phase-top .eta{margin-left:auto; font-family:'Poppins',sans-serif; font-size:12px; color:var(--mid); font-weight:500;}
+  .phase .goal{font-style:italic; color:#55554f; font-size:14px; margin:6px 0 18px; padding-left:14px; border-left:3px solid var(--lightgray);}
+  table{width:100%; border-collapse:collapse;}
+  th{font-family:'Poppins',sans-serif; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--mid); text-align:left; padding:0 10px 8px 0; border-bottom:1px solid var(--lightgray);}
+  td{font-size:13.5px; padding:11px 10px 11px 0; border-bottom:1px solid #f0eee6; vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  td.id{font-family:'Poppins',sans-serif; font-weight:600; color:var(--orange); white-space:nowrap; font-size:12px;}
+  td.task b{font-weight:600;}
+  td.task span{display:block; color:#6c6c64; font-size:12.5px; margin-top:2px;}
+  .effort{font-family:'Poppins',sans-serif; font-size:11px; font-weight:600; padding:3px 10px; border-radius:6px; white-space:nowrap;}
+  .e-s{background:#eef3e8; color:#54703a;} .e-m{background:#e3edf7; color:#3f6790;} .e-l{background:#fbe9e2; color:#b5482c;}
+  .file{font-family:'Poppins',sans-serif; font-size:11.5px; color:#7a7a70; white-space:nowrap;}
+
+  .foot{margin-top:56px; padding-top:24px; border-top:3px solid var(--dark); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;}
+  .foot .k{font-size:11px; color:var(--mid); letter-spacing:.1em; text-transform:uppercase; font-weight:500;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; font-family:'Poppins',sans-serif; font-size:11px; color:#6c6c64;}
+  .legend b{font-weight:600;}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">eggBreakers · Technical Workplan</div>
+  <h1>Bringing the Dinosaurs to Life</h1>
+  <p class="lede">A staged plan to fix static-floating &amp; teleporting NPCs, add real animation, and tighten the combat &amp; gameplay UX — now that two genuine Creator-Store dino packs (5,767 MeshParts) are in the place.</p>
+  <div class="meta">
+    <div><span>Place</span><b>eggBreakers2.rbxl</b></div>
+    <div><span>Test status</span><b>199 / 228 passing</b></div>
+    <div><span>Live NPCs</span><b>50 (anchored)</b></div>
+    <div><span>New mesh assets</span><b>2 packs · 5,767 meshes</b></div>
+    <div><span>Generated by</span><b>Code review via Studio MCP</b></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><div class="num">1</div><h2>Diagnosis — why dinosaurs float &amp; teleport</h2><div class="tag">Root causes confirmed in-engine</div></div>
+  <div class="diag">
+    <div class="dcard red">
+      <span class="sev crit">Critical</span>
+      <h3>NPCs teleport, not walk</h3>
+      <p>The brain moves each NPC with <span class="code">PivotTo(CFrame.lookAt())</span> in discrete 8-stud jumps once per second. No interpolation between ticks → visible snapping/teleport.</p>
+    </div>
+    <div class="dcard red">
+      <span class="sev crit">Critical</span>
+      <h3>No physics, no rig</h3>
+      <p>Sample NPC = <b>104 parts, all anchored</b>, <b>no Humanoid</b>, no Animator. Anchored bodies ignore gravity, so any altitude reads as "static floating."</p>
+    </div>
+    <div class="dcard amber">
+      <span class="sev high">High</span>
+      <h3>Zero animation</h3>
+      <p>NPC models contain <b>0 Animation objects</b> and no AnimationController. Legs never move — a sliding statue even when position changes.</p>
+    </div>
+    <div class="dcard amber">
+      <span class="sev high">High</span>
+      <h3>Brain runs on a 1s server tick</h3>
+      <p><span class="code">TickSeconds = 1</span> drives all sensing &amp; movement. Even with smoothing, decisions feel laggy. Movement cadence and decision cadence are coupled.</p>
+    </div>
+    <div class="dcard blue">
+      <span class="sev info">Opportunity</span>
+      <h3>Old NPCs are primitive CSG</h3>
+      <p>Gameplay spawns the block/union-built dinos — not the new packs. The rigged mesh dinos sit unused in Workspace, ungoverned by <span class="code">NPCService</span>.</p>
+    </div>
+    <div class="dcard blue">
+      <span class="sev info">Opportunity</span>
+      <h3>Combat is data-only</h3>
+      <p>Attacks resolve as server attribute math (<span class="code">CombatService</span>) with no hit feedback, animation, or telegraph — functional, but invisible to the player.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><div class="num">2</div><h2>The workplan</h2><div class="tag">4 phases · sequenced by dependency</div></div>
+
+  <div class="phase p1">
+    <div class="phase-top"><span class="pill">Phase 1</span><h3>Make movement physical &amp; smooth</h3><span class="eta">Foundational · unblocks everything</span></div>
+    <p class="goal">Replace teleporting CFrame steps with rigged, Humanoid-driven locomotion using the new mesh packs.</p>
+    <table>
+      <thead><tr><th>ID</th><th>Task</th><th style="width:90px">Effort</th><th style="width:150px">Touches</th></tr></thead>
+      <tbody>
+        <tr><td class="id">M1</td><td class="task"><b>Adopt a canonical rigged model per species</b><span>Pick one pack as source of truth; ensure each has Humanoid + HumanoidRootPart + Animator. Standardize a Hatchling→Adult scale set.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">Workspace.Dino Pack!</td></tr>
+        <tr><td class="id">M2</td><td class="task"><b>Stop anchoring NPC bodies</b><span>Unanchor everything except a control root; let the Humanoid stand on terrain via HipHeight instead of fixed Y.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">NPCSpawnService</td></tr>
+        <tr><td class="id">M3</td><td class="task"><b>Move via Humanoid:MoveTo, not PivotTo</b><span>Brain emits a destination; pathing/locomotion handled by the Humanoid each frame. Removes per-second snapping entirely.</span></td><td><span class="effort e-l">Large</span></td><td class="file">NPCService:MoveToward</td></tr>
+        <tr><td class="id">M4</td><td class="task"><b>Decouple brain tick from motion</b><span>Keep 1s decision cadence, but interpolate/steer continuously between decisions (Heartbeat-driven).</span></td><td><span class="effort e-m">Medium</span></td><td class="file">NPCService:Tick</td></tr>
+        <tr><td class="id">M5</td><td class="task"><b>Ground vs. flight model</b><span>Flyers use BodyVelocity/AlignPosition to hold PreferredAltitude; grounded species obey gravity. Replaces faux "Flying" attribute float.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">FlightService · NPCService</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="phase p2">
+    <div class="phase-top"><span class="pill">Phase 2</span><h3>Animate everything that moves</h3><span class="eta">Depends on Phase 1 rigs</span></div>
+    <p class="goal">Give every state (idle, walk, run, eat, attack, death) a looping or one-shot animation track.</p>
+    <table>
+      <thead><tr><th>ID</th><th>Task</th><th style="width:90px">Effort</th><th style="width:150px">Touches</th></tr></thead>
+      <tbody>
+        <tr><td class="id">A1</td><td class="task"><b>Source/author an animation set per rig</b><span>Idle, Walk, Run, Eat, Attack, Hurt, Death. Reuse pack-bundled anims where present; author missing ones in the Animation Editor.</span></td><td><span class="effort e-l">Large</span></td><td class="file">ReplicatedStorage.Animations</td></tr>
+        <tr><td class="id">A2</td><td class="task"><b>NPC animation controller</b><span>Map brain state (NPCState attribute) → animation track. Drives speed-based blend between Walk and Run.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">new: NPCAnimationService</td></tr>
+        <tr><td class="id">A3</td><td class="task"><b>Player character animations</b><span>Audit existing LoadAnimation paths (player-only today); ensure hatchling/adult locomotion + attack anims fire client-side.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">CharacterVisualBootstrap</td></tr>
+        <tr><td class="id">A4</td><td class="task"><b>Replicate cleanly</b><span>Play NPC anims on the server Animator so all clients see them; verify no per-client desync.</span></td><td><span class="effort e-s">Small</span></td><td class="file">NPCAnimationService</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="phase p3">
+    <div class="phase-top"><span class="pill">Phase 3</span><h3>Combat &amp; gameplay feel</h3><span class="eta">Player-facing UX layer</span></div>
+    <p class="goal">Turn invisible attribute-math combat into readable, responsive action with feedback.</p>
+    <table>
+      <thead><tr><th>ID</th><th>Task</th><th style="width:90px">Effort</th><th style="width:150px">Touches</th></tr></thead>
+      <tbody>
+        <tr><td class="id">C1</td><td class="task"><b>Attack telegraph + animation</b><span>Wind-up anim before damage applies; gives prey a reaction window and makes predators readable.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">CombatService · client</td></tr>
+        <tr><td class="id">C2</td><td class="task"><b>Hit feedback</b><span>Damage numbers, hit flash, blood/impact VFX, camera shake, bite SFX. Fixes "did my attack land?" ambiguity.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">HUDController</td></tr>
+        <tr><td class="id">C3</td><td class="task"><b>NPC health &amp; threat HUD</b><span>Overhead health bar on damaged NPCs; apex-threat indicator when a Tyrannosaurus stamps its ApexEvent radius.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">HUDController</td></tr>
+        <tr><td class="id">C4</td><td class="task"><b>Fix E2E attack-registration bug</b><span>Failing test: "player can attack registered dinosaur NPC." Reconcile NPCService record lookup with new rigged instances.</span></td><td><span class="effort e-s">Small</span></td><td class="file">E2E_PlayableLoopClosure</td></tr>
+        <tr><td class="id">C5</td><td class="task"><b>Death &amp; carcass polish</b><span>Death animation → ragdoll/settle → carcass food source. Currently snaps to an imported carcass visual.</span></td><td><span class="effort e-s">Small</span></td><td class="file">NPCService:Transition</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="phase p4">
+    <div class="phase-top"><span class="pill">Phase 4</span><h3>Integrate packs &amp; satisfy the asset gate</h3><span class="eta">Cleanup · unblocks release tests</span></div>
+    <p class="goal">Make the new genuine imports the gameplay dinos and reconcile the import-honesty audit.</p>
+    <table>
+      <thead><tr><th>ID</th><th>Task</th><th style="width:90px">Effort</th><th style="width:150px">Touches</th></tr></thead>
+      <tbody>
+        <tr><td class="id">G1</td><td class="task"><b>Retire primitive CSG dinos</b><span>Swap NPCSpawnService source from block/union builds to the rigged mesh species. Keep the brain, replace the body.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">NPCSpawnService</td></tr>
+        <tr><td class="id">G2</td><td class="task"><b>Tag &amp; organize new packs</b><span>Move loose Workspace models into Map/ImportedAssets; stamp SourceAssetId / AssetManifestId / CreatorStoreOnly so the audit counts them.</span></td><td><span class="effort e-m">Medium</span></td><td class="file">AssetManifest</td></tr>
+        <tr><td class="id">G3</td><td class="task"><b>Resolve placeholder/naming failures</b><span>Tag water-source parts with ReleaseVisibleGeneratedPartAllowed; fix invisible tree trunk/canopy naming rule violations.</span></td><td><span class="effort m e-m">Medium</span></td><td class="file">MapLayoutService</td></tr>
+        <tr><td class="id">G4</td><td class="task"><b>Re-run gate suites</b><span>Drive releaseReadyVisibleAssets toward the 500 target; capture the live-proof artifacts the G015/G016/G018 gates expect.</span></td><td><span class="effort e-s">Small</span></td><td class="file">Tests.TestRunner</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="k">eggBreakers · movement / animation / combat · staged delivery</div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--orange)"></span><b>Phase 1</b> Movement</span>
+    <span><span class="dot" style="background:var(--blue)"></span><b>Phase 2</b> Animation</span>
+    <span><span class="dot" style="background:var(--green)"></span><b>Phase 3</b> Combat UX</span>
+    <span><span class="dot" style="background:var(--dark)"></span><b>Phase 4</b> Assets</span>
+  </div>
+</div>
+
+</body>
+</html>

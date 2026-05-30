@@ -87,6 +87,16 @@ table.insert(suite.tests, { name = "vegetation and NPC deferred food candidates 
     AssetAuditService:ValidatePotentialFoodCandidate(npc, failures)
     Assert.equals(#failures, 0, "NPCs can be potential carnivore food through defeated/carcass attributes")
 
+
+    local compactFood = Instance.new("Part")
+    compactFood.Name = "CompactGroupOnlyFood"
+    compactFood:SetAttribute("FoodKind", "PlantPatch")
+    compactFood:SetAttribute("CompactFoodGroup", "PlainsGrazingPatch")
+    failures = {}
+    AssetAuditService:ValidatePotentialFoodCandidate(compactFood, failures)
+    Assert.truthy(AssetAuditService:IsPotentialFoodCandidate(compactFood), "FoodKind/CompactFoodGroup enters food audit")
+    Assert.truthy(#failures >= 1, "compact food grouping alone cannot bypass concrete food affordance metadata")
+
     local bad = Instance.new("Part")
     bad.Name = "AmbiguousFoodCandidate"
     bad:SetAttribute("FoodSourceCandidate", true)

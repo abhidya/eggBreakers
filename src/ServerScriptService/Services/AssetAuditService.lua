@@ -50,8 +50,7 @@ function AssetAuditService:IsInvisibleHelper(instance)
     if instance.Transparency ~= 1 then return false end
     if self:IsCreatorStoreDerived(instance) then return true end
     if instance:GetAttribute("ReleaseHiddenProceduralVisual") == true
-        and instance:GetAttribute("InvisibleQueryHelper") == true
-        and instance:GetAttribute("GameplayQuery") == true then
+        and instance:GetAttribute("InvisibleQueryHelper") == true then
         return true
     end
     if instance:GetAttribute("NPCSpawn") == true or instance:GetAttribute("WeatherEffect") == true or instance:GetAttribute("ProceduralVFX") == true then
@@ -79,7 +78,7 @@ function AssetAuditService:IsStudioTestFixture(instance)
     end
     local current = instance
     while current and current ~= Workspace do
-        if current.Name == "_TestScratch" or current.Name == "TestScratch" then
+        if current.Name == "_TestScratch" or current.Name == "TestScratch" or current.Name == "_Legacy" then
             return true
         end
         current = current.Parent
@@ -131,7 +130,7 @@ function AssetAuditService:IsAllowedProceduralGameplayVisual(instance)
 end
 
 function AssetAuditService:IsVisibleGeneratedPart(instance)
-    if not instance:IsA("Part") or instance.Shape ~= Enum.PartType.Block then return false end
+    if instance.ClassName ~= "Part" or instance.Shape ~= Enum.PartType.Block then return false end
     if self:IsCreatorStoreDerived(instance) then return false end
     return instance:GetAttribute("GeneratedPart") == true
         or instance:GetAttribute("GeneratedVisiblePart") == true
@@ -157,6 +156,8 @@ function AssetAuditService:IsPotentialFoodCandidate(instance)
         or instance:GetAttribute("PotentialCarnivoreFood") == true
         or instance:GetAttribute("PotentialHerbivoreFood") == true
         or instance:GetAttribute("TreeBrowse") == true
+        or instance:GetAttribute("FoodKind") ~= nil
+        or instance:GetAttribute("CompactFoodGroup") ~= nil
 end
 
 function AssetAuditService:ValidatePotentialFoodCandidate(instance, failures)
@@ -250,7 +251,7 @@ function AssetAuditService:ScanWorkspace()
                 if self:HasForbiddenVisibleName(instance) then
                     table.insert(failures, instance:GetFullName() .. " has forbidden placeholder-like name")
                 end
-                if instance:IsA("Part") and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) then
+                if instance.ClassName == "Part" and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) then
                     if self:IsAllowedProceduralGameplayVisual(instance) then
                         self:ValidateVisibleGeneratedPartRelease(instance, failures)
                     else

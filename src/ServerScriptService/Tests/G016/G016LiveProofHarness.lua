@@ -269,7 +269,7 @@ function G016LiveProofHarness:Run(options)
         NPCService.NPCs = oldRecords
 
         local treeCount, foodCount, waterCount = 0, 0, 0
-        for _, tree in ipairs(CollectionService:GetTagged("TreeProp")) do if tree:IsA("BasePart") and tree.Transparency < 1 then treeCount = treeCount + 1 end end
+        for _, tree in ipairs(folders.BiomeDressing:GetDescendants()) do if tree:IsA("BasePart") and tree:GetAttribute("DressingKind") == "Tree" and tree.Transparency < 1 then treeCount = treeCount + 1 end end
         for _, item in ipairs(CollectionService:GetTagged("FoodSource")) do if item:IsA("BasePart") and item.Transparency < 1 then foodCount = foodCount + 1 end end
         for _, item in ipairs(CollectionService:GetTagged("WaterSource")) do if item:IsA("BasePart") and item.Transparency < 1 then waterCount = waterCount + 1 end end
         assertTrue(treeCount >= 20 and foodCount >= 2 and waterCount >= 1, "tree/food/water visibility proof failed")

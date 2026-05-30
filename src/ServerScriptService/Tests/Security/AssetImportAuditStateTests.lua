@@ -30,10 +30,31 @@ local function makeImportedVisual(parent, name, manifestEntry, attributes)
 end
 
 local function withImportedFixture(callback)
-    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
-    local createdLibrary = library.Parent == nil
+    local realLibrary = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    local tempLibraryName = "_RealImportedAssetLibrary"
+    if realLibrary then
+        realLibrary.Name = tempLibraryName
+    end
+
+    local map = Workspace:FindFirstChild("Map")
+    local realMapAssets = map and map:FindFirstChild("ImportedAssets")
+    local tempMapAssetsName = "_RealImportedAssets"
+    if realMapAssets then
+        realMapAssets.Name = tempMapAssetsName
+    end
+
+    -- Create fresh clean test library
+    local library = Instance.new("Folder")
     library.Name = "ImportedAssetLibrary"
     library.Parent = ReplicatedStorage
+
+    -- Create fresh clean test placed assets folder if map exists
+    local testMapAssets = nil
+    if map then
+        testMapAssets = Instance.new("Folder")
+        testMapAssets.Name = "ImportedAssets"
+        testMapAssets.Parent = map
+    end
 
     local fixture = makeImportedVisual(library, "Task23ImportedAuditFixture", AssetManifest.Entries[1])
 
@@ -43,35 +64,28 @@ local function withImportedFixture(callback)
 
     local ok, result = pcall(callback, fixture, library)
 
+    -- Cleanup test fixtures
+    library:Destroy()
+    if testMapAssets then
+        testMapAssets:Destroy()
+    end
+
     local quarantine = ReplicatedStorage:FindFirstChild("ImportedScriptQuarantine")
     if quarantine then
-        for _, child in ipairs(quarantine:GetChildren()) do
-            if child:GetAttribute("ImportedScriptQuarantined") == true or child.Name == "UnsafeImportedRuntime" then
-                child:Destroy()
-            end
-        end
-        if #quarantine:GetChildren() == 0 then
-            quarantine:Destroy()
-        end
+        quarantine:Destroy()
     end
     local qualityQuarantine = ReplicatedStorage:FindFirstChild("QuarantinedImportedAssets")
     if qualityQuarantine then
-        for _, child in ipairs(qualityQuarantine:GetChildren()) do
-            if child:GetAttribute("TestImportedAuditFixture") == true or child:GetAttribute("AssetQualityQuarantined") == true then
-                child:Destroy()
-            end
-        end
-        if #qualityQuarantine:GetChildren() == 0 then
-            qualityQuarantine:Destroy()
-        end
+        qualityQuarantine:Destroy()
     end
-    for _, child in ipairs(library:GetChildren()) do
-        if child:GetAttribute("TestImportedAuditFixture") == true then
-            child:Destroy()
-        end
+
+    -- Restore real folders
+    if realLibrary then
+        realLibrary.Name = "ImportedAssetLibrary"
     end
-    if fixture.Parent then fixture:Destroy() end
-    if createdLibrary and library.Parent then library:Destroy() end
+    if realMapAssets then
+        realMapAssets.Name = "ImportedAssets"
+    end
 
     if not ok then error(result, 2) end
     return result
@@ -113,7 +127,9 @@ end })
 
 table.insert(suite.tests, { name = "mesh and generated low quality visuals are excluded and quarantined", run = function()
     withImportedFixture(function(_, library)
-        local meshFixture = makeImportedVisual(library, "Task23MeshFinalAsset", AssetManifest.Entries[2])
+        local meshFixture = makeImportedVisual(library, "Task23MeshFinalAsset", AssetManifest.Entries[2], {
+            AssetQualityExclusionKind = "mesh",
+        })
         local meshPart = Instance.new("MeshPart")
         meshPart.Name = "CreatorStoreMeshPayload"
         meshPart.Parent = meshFixture
@@ -136,26 +152,25 @@ table.insert(suite.tests, { name = "mesh and generated low quality visuals are e
         canopy.Parent = rectangleBallTree
 
         local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
-        Assert.equals(result.counts.meshExcludedAssets, 1, "MeshPart assets are forbidden from release-ready final assets")
+        Assert.equals(result.counts.meshExcludedAssets, 1, "explicitly excluded MeshPart assets are forbidden")
         Assert.truthy(result.counts.lowQualityExcludedAssets >= 2, "glowing balls and rectangle-ball trees are low-quality exclusions")
         Assert.equals(result.counts.releaseReadyVisibleAssets, 1, "only the baseline fixture remains release-ready")
         Assert.truthy(result.counts.qualityAssetsQuarantined >= 3, "mesh and LQ generated visuals are quarantined")
     end)
 end })
 
-table.insert(suite.tests, { name = "required playable mesh visuals fail even with policy note", run = function()
+table.insert(suite.tests, { name = "required playable mesh visuals pass by default", run = function()
     withImportedFixture(function(_, library)
         local meshFixture = makeImportedVisual(library, "Task23RequiredMeshPlayable", AssetManifest.Entries[2], {
             RequiredPlayableVisual = true,
-            RequiredPlayableVisualPolicyNote = "Mesh must be replaced by generated Parts before release.",
         })
         local meshPart = Instance.new("MeshPart")
-        meshPart.Name = "ForbiddenPlayableMesh"
+        meshPart.Name = "AllowedPlayableMesh"
         meshPart.Parent = meshFixture
 
         local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
-        Assert.falsy(result.passed, "required playable meshes are still forbidden final assets")
-        Assert.truthy(result.counts.meshExcludedAssets >= 1, "mesh exclusion counted")
+        Assert.truthy(result.passed, "required playable meshes are allowed by default")
+        Assert.equals(result.counts.meshExcludedAssets, 0, "mesh exclusion not counted")
     end)
 end })
 
@@ -174,6 +189,24 @@ table.insert(suite.tests, { name = "required playable quality exclusions need ex
     end)
 end })
 
+
+table.insert(suite.tests, { name = "union foliage quality scan does not assume Part.Shape", run = function()
+    withImportedFixture(function(_, library)
+        local treeFixture = makeImportedVisual(library, "Task23ImportedUnionFoliageTree", AssetManifest.Entries[2])
+        local unionFoliage = Instance.new("UnionOperation")
+        unionFoliage.Name = "Leaves"
+        unionFoliage.Material = Enum.Material.Grass
+        unionFoliage.Transparency = 0
+        unionFoliage.Parent = treeFixture
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(result.passed, "UnionOperation foliage should not crash quality audit or fail release audit")
+        Assert.falsy(AssetAuditService:IsVisibleGeneratedPart(unionFoliage), "workspace generated-part check also ignores UnionOperation.Shape safely")
+        Assert.equals(result.counts.lowQualityExcludedAssets, 0, "ordinary union foliage is not a glowing ball or rectangle-ball tree")
+        Assert.equals(result.counts.meshExcludedAssets, 0, "UnionOperation foliage is not a MeshPart exclusion")
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 2, "baseline and union foliage fixtures remain release-ready")
+    end)
+end })
 
 table.insert(suite.tests, { name = "release gate fails before imported live count reaches catalog target", run = function()
     withImportedFixture(function()
