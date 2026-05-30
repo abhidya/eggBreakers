@@ -6,7 +6,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 ## Source-of-truth split
 
 - `src/ReplicatedStorage/Shared/AssetManifest.lua` / `docs/G011/AssetManifest.md` remain the G011 catalog source of truth: 500 manifest entries and 500 unique Creator Store `SourceAssetId` values.
-- `docs/G014/AssetMaterializationReport.md` remains the G014 live materialization source of truth: 78 release-ready visible imported assets in the active Studio audit, so the release gap is 422 assets.
+- `docs/G014/AssetMaterializationReport.md` remains the G014 live materialization source of truth: 23 quality-approved release-ready visible imported assets after quarantine, so the release gap is 477 assets.
 - Catalog membership is not required for a later live import to count as a materialized asset or release-ready asset when the imported instance already has explicit `SourceAssetId`, `CreatorStoreOnly`, script-audit, and visible-placement proof. Catalog rows alone never count as imported assets.
 
 ## Consistency findings

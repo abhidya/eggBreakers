@@ -15,9 +15,10 @@ Owner policy for the final playable build:
 - Unique counts are keyed by `SourceAssetId`, so duplicates do not inflate imported or release-ready totals.
 - Assets explicitly marked with `AssetQualityExclusionKind = "low-quality"` (or equivalent LQ attributes) are reported under low-quality exclusions and withheld from `releaseReadyVisibleAssets`.
 - Assets explicitly marked with `AssetQualityExclusionKind = "mesh"` are reported under mesh exclusions separately from low-quality exclusions.
-- MeshPart usage alone is not a quality failure. Many valid Creator Store imports are mesh-based; only a deliberate mesh-exclusion policy mark with a reason should withhold them.
+- Current owner direction is stricter for this patch: imported `MeshPart` roots are treated as mesh-excluded by default and moved to `ReplicatedStorage/QuarantinedImportedAssets` during mutate audits unless an ancestor is protected as a required playable visual.
+- Imported names matching food/glowing balls, rectangle/ball trees, placeholders, debug fallbacks, or simple-generated patterns are treated as low-quality exclusions even when the imported asset was not manually tagged.
 - Required playable visuals marked `RequiredPlayableVisual = true` must not be quality-excluded without a non-empty `RequiredPlayableVisualPolicyNote` or `AssetQualityPolicyNote` explaining the temporary exception/replacement plan.
-- The audit reports exclusions; it must not erase/delete required playable visuals as a side effect of quality policy. Script quarantine remains limited to imported executable scripts.
+- The audit reports exclusions and, during mutate runs, quarantines non-required excluded imported roots. It must not erase/delete required playable visuals as a side effect of quality policy. Script quarantine remains limited to imported executable scripts.
 
 ## Reporting requirements
 
@@ -30,6 +31,7 @@ Every G019 asset quarantine/audit report must include separate counts for:
 5. mesh exclusions,
 6. low-quality/simple-generated exclusions,
 7. debug-looking/fallback exclusions,
-8. any required playable visuals excluded under an explicit policy note.
+8. quality asset roots quarantined during mutate runs,
+9. any required playable visuals excluded under an explicit policy note.
 
 If release-ready totals drop after quality exclusions, report the lower number. Do not backfill with duplicates, catalog-only rows, or temporary generated visuals.

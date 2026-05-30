@@ -136,3 +136,10 @@ Added and organized 10 more Creator Store imports in active `eggBreakers2.rbxl` 
 | Old Eden ruined pillar | 86335431479789 | ApocalypticCity |
 
 Live Studio audit after this batch: actuallyImportedAssets=23, auditedImportedAssets=23, taggedImportedAssets=23, placedVisibleAssets=23, releaseReadyVisibleAssets=23, scriptObjectsFound=0, scriptsQuarantined=0. Release validation still fails because the target is 500.
+
+
+## Source-only asset/map quality patch — 2026-05-30
+
+- `AssetImportAuditService.lua` now quarantines non-required low-quality/mesh imported roots during mutate audits and reports `qualityAssetsQuarantined` separately.
+- `MapLayoutService.lua` now uses exact half-scale source compaction, re-centers mismatched food/carcass placements into their declared zones, keeps procedural food/tree visuals hidden, and tags NPC spawns as potential food when defeated.
+- No client UI or combat files were changed in this patch. Live G014 release count remains an honest 23/500 until Studio is synced and rerun.

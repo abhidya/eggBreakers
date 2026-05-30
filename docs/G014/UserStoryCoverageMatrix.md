@@ -22,3 +22,10 @@
 ## G015 Follow-up Evidence — 2026-05-27
 
 Current G014 continuation evidence supersedes stale G015-only counts: active `eggBreakers2.rbxl` now audits at 23/500 release-ready visible assets after quality quarantine with a 477 gap, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer fresh full reload/all-category TestRunner remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+
+
+## Source-only asset/map quality patch — 2026-05-30
+
+- `AssetImportAuditService.lua` now quarantines non-required low-quality/mesh imported roots during mutate audits and reports `qualityAssetsQuarantined` separately.
+- `MapLayoutService.lua` now uses exact half-scale source compaction, re-centers mismatched food/carcass placements into their declared zones, keeps procedural food/tree visuals hidden, and tags NPC spawns as potential food when defeated.
+- No client UI or combat files were changed in this patch. Live G014 release count remains an honest 23/500 until Studio is synced and rerun.

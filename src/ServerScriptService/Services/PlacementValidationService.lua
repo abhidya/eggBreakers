@@ -359,7 +359,18 @@ function PlacementValidationService:ValidateNoFloatingVisibleAssets(root)
 end
 
 function PlacementValidationService:GetReferencePlan()
-    return self.ReferencePlan
+    local plan = {}
+    for _, record in ipairs(self.ReferencePlan) do
+        local copy = {}
+        for key, value in pairs(record) do
+            copy[key] = value
+        end
+        if copy.position and typeof(copy.position) == "Vector3" then
+            copy.position = MapLayoutService:CompactPosition(copy.position)
+        end
+        table.insert(plan, copy)
+    end
+    return plan
 end
 
 return PlacementValidationService

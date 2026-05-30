@@ -7,6 +7,58 @@ TestRunner.Categories = { "Unit", "Integration", "Placement", "E2E", "Security",
 TestRunner._registeredSuites = {}
 TestRunner._registeredByName = {}
 
+TestRunner.StudioFixtureRootNames = {
+    BrainPredator = true,
+    BrainPredatorNPC = true,
+    BrainPrey = true,
+    BrainPreyNPC = true,
+    BoundedStepNPC = true,
+    CandidatePredatorNPC = true,
+    CandidatePreyNPC = true,
+    DamageablePrey = true,
+    DefaultRobloxAvatar = true,
+    DistantGrazingFern = true,
+    EdibleCanopyBrowse = true,
+    GrazingPreyNPC = true,
+    HidePredatorNPC = true,
+    HidePreyNPC = true,
+    LoopPredatorNPC = true,
+    LoopPreyNPC = true,
+    MixedCarcass = true,
+    MixedFern = true,
+    MovementModeWater = true,
+    NeedsFern = true,
+    NeedsPreyNPC = true,
+    NeedsWater = true,
+    NestScrapsOmnivoreFood = true,
+    OmnivoreReachabilityRoot = true,
+    OviraptorHerdMateNPC = true,
+    OviraptorOmnivoreNPC = true,
+    TestFood = true,
+    TreeBrowsingPreyNPC = true,
+}
+
+function TestRunner:_cleanupStudioFixtures()
+    if not RunService:IsStudio() then return 0 end
+    local workspaceService = game:GetService("Workspace")
+    local removed = 0
+    for _, child in ipairs(workspaceService:GetChildren()) do
+        if child:GetAttribute("TestFixture") == true
+            or child:GetAttribute("TestOnly") == true
+            or self.StudioFixtureRootNames[child.Name] == true
+            or (child:IsA("BasePart")
+                and child.Name == "Part"
+                and child:GetAttribute("CreatorStoreOnly") ~= true
+                and child:GetAttribute("ImportedVisibleAsset") ~= true
+                and child:GetAttribute("GameplayVolume") ~= true
+                and child:GetAttribute("WaterSource") ~= true) then
+            child:Destroy()
+            removed = removed + 1
+        end
+    end
+    return removed
+end
+
 function TestRunner.registerSuite(suite)
     assert(type(suite) == "table", "suite must be a table")
     assert(type(suite.name) == "string", "suite.name required")
@@ -35,6 +87,7 @@ function TestRunner:_runSuite(suite, context, results)
         return
     end
     for _, testCase in ipairs(suite.tests) do
+        self:_cleanupStudioFixtures()
         results.total = results.total + 1
         local passed, err = pcall(testCase.run, context)
         if passed then
@@ -43,6 +96,7 @@ function TestRunner:_runSuite(suite, context, results)
             results.failed = results.failed + 1
             table.insert(results.failures, { module = suite.name, test = testCase.name, message = tostring(err) })
         end
+        self:_cleanupStudioFixtures()
     end
 end
 

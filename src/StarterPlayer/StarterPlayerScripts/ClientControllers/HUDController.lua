@@ -7,13 +7,20 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
 
 local stageOrder = { Hatchling = 1, Juvenile = 2, SubAdult = 3, Adult = 4 }
+local dietIcons = { Herbivore = "🌿", Carnivore = "🍖", Omnivore = "🌿🍖" }
+
+function HUDController:GetSpeciesDisplayName(speciesId)
+    local id = tostring(speciesId or "gallimimus")
+    local species = SpeciesConfig[id] or SpeciesConfig[string.lower(id)]
+    return species and species.DisplayName or id
+end
 
 function HUDController:BuildGrowthBadge(payload)
     local stage = tostring(payload.growthStage or "Hatchling")
     local growth = math.clamp(tonumber(payload.growth) or 0, 0, 100)
     local level = stageOrder[stage] or 1
     local nextHint = level >= 4 and "★" or "→"
-    return string.format("LV %d • %s • %.0f%% %s", level, stage, growth, nextHint)
+    return string.format("⭐ LV %d  %.0f%% %s", level, growth, nextHint)
 end
 
 function HUDController:BuildRoleCard(payload)
@@ -22,26 +29,26 @@ function HUDController:BuildRoleCard(payload)
     local displayName = species and species.DisplayName or speciesId
     local diet = tostring(payload.diet or (species and species.Diet) or "Food")
     local attack = tostring(species and species.Abilities and species.Abilities.PrimaryAttack or "Nibble")
-    return string.format("%s • %s • %s", displayName, diet, attack)
+    return string.format("🦖 %s  %s  🦷 %s", displayName, dietIcons[diet] or "🍽️", attack)
 end
 function HUDController:BuildDietGuidance(payload)
     local diet = tostring(payload.diet or "Food")
-    local foodHint = "🍽️ Find snacks"
+    local foodIcon = "🍽️"
     if diet == "Herbivore" then
-        foodHint = "🌿 Eat green plants"
+        foodIcon = "🌿"
     elseif diet == "Carnivore" then
-        foodHint = "🍖 Eat red meat"
+        foodIcon = "🍖"
     elseif diet == "Omnivore" then
-        foodHint = "🌿🍖 Eat plants or meat"
+        foodIcon = "🌿🍖"
     end
     local movementModes = payload.movementModes or {}
-    local movementHint = ""
+    local movementHint = "⭐"
     if movementModes.Flight or movementModes.flight or movementModes.flying then
-        movementHint = " • 🪽 Fly uses energy"
+        movementHint = "🪽⚡"
     elseif movementModes.Swim or movementModes.swim or movementModes.swimming then
-        movementHint = " • 🌊 Watch air"
+        movementHint = "🌊🫧"
     end
-    return string.format("%s • 💧 Drink blue water%s", foodHint, movementHint)
+    return string.format("%s + 💧 = %s", foodIcon, movementHint)
 end
 
 function HUDController:EnsureGui()
@@ -49,37 +56,38 @@ function HUDController:EnsureGui()
     local gui = UIFactory:CreateRootGui("MainHUD")
     local root = Instance.new("Frame")
     root.Name = "HUDRoot"
-    root.Size = UDim2.fromOffset(430, 236)
+    root.Size = UDim2.fromOffset(338, 242)
     root.Position = UDim2.fromOffset(10, 10)
-    root.BackgroundTransparency = 0.35
-    root.BackgroundColor3 = Color3.fromRGB(10, 20, 12)
+    root.BackgroundTransparency = 0.18
+    root.BackgroundColor3 = Color3.fromRGB(8, 24, 16)
+    root:SetAttribute("CompactKidHUD", true)
     root.Parent = gui
     self.SpeciesLabel = Instance.new("TextLabel")
     self.SpeciesLabel.Name = "SpeciesLabel"
-    self.SpeciesLabel.Size = UDim2.fromOffset(410, 22)
+    self.SpeciesLabel.Size = UDim2.fromOffset(318, 22)
     self.SpeciesLabel.Position = UDim2.fromOffset(10, 4)
     self.SpeciesLabel.BackgroundTransparency = 1
     self.SpeciesLabel.TextColor3 = Color3.new(1,1,1)
     self.SpeciesLabel.TextScaled = true
-    self.SpeciesLabel.Text = "Dino"
+    self.SpeciesLabel.Text = "🦖 Dino"
     self.SpeciesLabel.Parent = root
     self.GrowthBadge = Instance.new("TextLabel")
     self.GrowthBadge.Name = "GrowthLevelBadge"
-    self.GrowthBadge.Size = UDim2.fromOffset(400, 26)
+    self.GrowthBadge.Size = UDim2.fromOffset(154, 30)
     self.GrowthBadge.Position = UDim2.fromOffset(10, 30)
-    self.GrowthBadge.BackgroundTransparency = 0.2
-    self.GrowthBadge.BackgroundColor3 = Color3.fromRGB(26, 72, 40)
+    self.GrowthBadge.BackgroundTransparency = 0.05
+    self.GrowthBadge.BackgroundColor3 = Color3.fromRGB(38, 96, 48)
     self.GrowthBadge.TextColor3 = Color3.fromRGB(255, 245, 175)
     self.GrowthBadge.TextScaled = true
-    self.GrowthBadge.Text = "LV 1 • Hatchling • 0% →"
+    self.GrowthBadge.Text = "⭐ LV 1  0% →"
     self.GrowthBadge:SetAttribute("MobileReadable", true)
     self.GrowthBadge.Parent = root
 
     self.RoleCard = Instance.new("TextLabel")
     self.RoleCard.Name = "SpeciesRoleCard"
-    self.RoleCard.Size = UDim2.fromOffset(400, 30)
-    self.RoleCard.Position = UDim2.fromOffset(10, 62)
-    self.RoleCard.BackgroundTransparency = 0.2
+    self.RoleCard.Size = UDim2.fromOffset(160, 30)
+    self.RoleCard.Position = UDim2.fromOffset(168, 30)
+    self.RoleCard.BackgroundTransparency = 0.05
     self.RoleCard.BackgroundColor3 = Color3.fromRGB(18, 34, 22)
     self.RoleCard.TextColor3 = Color3.fromRGB(230, 255, 230)
     self.RoleCard.TextWrapped = true
@@ -90,36 +98,48 @@ function HUDController:EnsureGui()
 
     self.GuidanceLabel = Instance.new("TextLabel")
     self.GuidanceLabel.Name = "DietGuidanceLabel"
-    self.GuidanceLabel.Size = UDim2.fromOffset(410, 30)
-    self.GuidanceLabel.Position = UDim2.fromOffset(10, 96)
+    self.GuidanceLabel.Size = UDim2.fromOffset(154, 32)
+    self.GuidanceLabel.Position = UDim2.fromOffset(10, 66)
     self.GuidanceLabel.BackgroundTransparency = 1
     self.GuidanceLabel.TextColor3 = Color3.fromRGB(220, 255, 220)
     self.GuidanceLabel.TextWrapped = true
     self.GuidanceLabel.TextScaled = true
-    self.GuidanceLabel.Text = "🌿 Eat • 💧 Drink • ⭐ Grow"
+    self.GuidanceLabel.Text = "🌿 + 💧 = ⭐"
+    self.GuidanceLabel:SetAttribute("IconOnlyTracker", true)
     self.GuidanceLabel.Parent = root
     self.StatusDeltaLabel = Instance.new("TextLabel")
     self.StatusDeltaLabel.Name = "StatusDeltaLabel"
-    self.StatusDeltaLabel.Size = UDim2.fromOffset(410, 24)
-    self.StatusDeltaLabel.Position = UDim2.fromOffset(10, 130)
+    self.StatusDeltaLabel.Size = UDim2.fromOffset(160, 32)
+    self.StatusDeltaLabel.Position = UDim2.fromOffset(168, 66)
     self.StatusDeltaLabel.BackgroundTransparency = 1
     self.StatusDeltaLabel.TextColor3 = Color3.fromRGB(180, 245, 255)
     self.StatusDeltaLabel.TextScaled = true
-    self.StatusDeltaLabel.Text = "Eat + drink = grow"
+    self.StatusDeltaLabel.Text = "🍎 + 💧 → ⭐"
+    self.StatusDeltaLabel:SetAttribute("IconOnlyTracker", true)
     self.StatusDeltaLabel.Parent = root
-    self.Bars.health = UIFactory:CreateBar(root, "Health", 158)
-    self.Bars.hunger = UIFactory:CreateBar(root, "Hunger", 180)
-    self.Bars.thirst = UIFactory:CreateBar(root, "Thirst", 202)
-    self.Bars.stamina = UIFactory:CreateBar(root, "Stamina", 224)
-    self.Bars.oxygen = UIFactory:CreateBar(root, "Oxygen", 246)
-    self.Bars.growth = UIFactory:CreateBar(root, "Growth", 268)
-    root.HealthLabel.Text = "Health"
-    root.HungerLabel.Text = "Food"
-    root.ThirstLabel.Text = "Water"
-    root.StaminaLabel.Text = "Energy"
-    root.OxygenLabel.Text = "Air"
-    root.GrowthLabel.Text = "Grow"
-    root.Size = UDim2.fromOffset(430, 292)
+    local barOptions = {
+        LabelX = 12,
+        LabelWidth = 44,
+        BarX = 62,
+        BarWidth = 188,
+        ValueX = 256,
+        ValueWidth = 60,
+        Height = 18,
+        BarHeight = 12,
+        BarYOffset = 3,
+    }
+    self.Bars.health = UIFactory:CreateBar(root, "Health", 112, barOptions)
+    self.Bars.hunger = UIFactory:CreateBar(root, "Hunger", 132, barOptions)
+    self.Bars.thirst = UIFactory:CreateBar(root, "Thirst", 152, barOptions)
+    self.Bars.stamina = UIFactory:CreateBar(root, "Stamina", 172, barOptions)
+    self.Bars.oxygen = UIFactory:CreateBar(root, "Oxygen", 192, barOptions)
+    self.Bars.growth = UIFactory:CreateBar(root, "Growth", 212, barOptions)
+    root.HealthLabel.Text = "❤️"
+    root.HungerLabel.Text = "🍎"
+    root.ThirstLabel.Text = "💧"
+    root.StaminaLabel.Text = "⚡"
+    root.OxygenLabel.Text = "🫧"
+    root.GrowthLabel.Text = "⭐"
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
     return gui
@@ -151,7 +171,7 @@ function HUDController:SetBar(name, value)
 end
 
 function HUDController:BuildDeltaText(previous, current)
-    if not previous then return "Follow arrows: eat + drink to grow." end
+    if not previous then return "↗ 🍎 + 💧 → ⭐" end
     local parts = {}
     local function appendDelta(key, label)
         local oldValue = tonumber(previous[key])
@@ -164,12 +184,12 @@ function HUDController:BuildDeltaText(previous, current)
         end
     end
     appendDelta("health", "HP")
-    appendDelta("hunger", "Food")
-    appendDelta("thirst", "Water")
-    appendDelta("stamina", "Stam")
-    appendDelta("growth", "Grow")
-    if current.sprinting == true then table.insert(parts, "Zoom uses energy") end
-    if #parts == 0 then return "All good. Eat, drink, play, grow." end
+    appendDelta("hunger", "🍎")
+    appendDelta("thirst", "💧")
+    appendDelta("stamina", "⚡")
+    appendDelta("growth", "⭐")
+    if current.sprinting == true then table.insert(parts, "⚡↓") end
+    if #parts == 0 then return "🍎 + 💧 → ⭐" end
     return table.concat(parts, "  ")
 end
 
@@ -177,7 +197,7 @@ function HUDController:ApplyStatUpdate(payload)
     self:EnsureGui()
     local previous = self.LastStats
     self.LastStats = payload
-    self.SpeciesLabel.Text = string.format("%s • %s", tostring(payload.species), tostring(payload.growthStage))
+    self.SpeciesLabel.Text = string.format("🦖 %s", self:GetSpeciesDisplayName(payload.species))
     self.GrowthBadge.Text = self:BuildGrowthBadge(payload)
     self.GrowthBadge:SetAttribute("LevelText", self.GrowthBadge.Text)
     self.RoleCard.Text = self:BuildRoleCard(payload)

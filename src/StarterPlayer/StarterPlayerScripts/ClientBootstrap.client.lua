@@ -152,29 +152,29 @@ function ClientBootstrap:UpdateActionGuidance(gui)
         local verb = targetType == "Water" and "DRINK" or "EAT"
         local icon = iconForTarget(targetType)
         if hint then
-            hint.Text = string.format("↗ %s %.0fm", icon, distance or 0)
+            hint.Text = MobileControlsController:BuildWaypointText(targetType, distance)
             hint:SetAttribute("TargetName", target.Name)
             hint:SetAttribute("TargetType", targetType)
             hint:SetAttribute("DistanceStuds", math.floor((distance or 0) + 0.5))
+            hint:SetAttribute("IconOnlyTracker", true)
         end
         if eatDrink then
-            eatDrink.Text = icon .. " " .. string.lower(verb)
+            eatDrink.Text = icon .. " " .. (targetType == "Water" and "Drink" or "Snack")
             eatDrink:SetAttribute("CurrentTargetName", target.Name)
             eatDrink:SetAttribute("CurrentTargetLabel", targetName)
             eatDrink:SetAttribute("CurrentTargetType", targetType)
+            eatDrink:SetAttribute("ActionVerb", verb)
         end
         if dialogue then
-            if targetType == "Water" then
-                dialogue.Text = "💧 Drink blue water"
-            else
-                dialogue.Text = "🍎 Snack here to grow"
-            end
+            dialogue.Text = targetType == "Water" and "💧 → ⭐" or "🍎 → ⭐"
+            dialogue:SetAttribute("IconOnlyTracker", true)
         end
     else
         if hint then
-            hint.Text = "↗ 🍎 / 💧"
+            hint.Text = MobileControlsController:BuildWaypointText("None")
             hint:SetAttribute("TargetName", "")
             hint:SetAttribute("TargetType", "None")
+            hint:SetAttribute("IconOnlyTracker", true)
         end
         if eatDrink then
             local need = (tonumber(stats.thirst) or 100) < (tonumber(stats.hunger) or 100) and "💧 Drink" or "🍎 Snack"
@@ -183,7 +183,8 @@ function ClientBootstrap:UpdateActionGuidance(gui)
             eatDrink:SetAttribute("CurrentTargetType", "None")
         end
         if dialogue then
-            dialogue.Text = "Follow arrows: 🍎 snack • 💧 drink"
+            dialogue.Text = MobileControlsController:BuildFoodWaterLegend(stats)
+            dialogue:SetAttribute("IconOnlyTracker", true)
         end
     end
     return true
@@ -365,15 +366,15 @@ local function wireMobileButtons(result)
     local function refreshContext()
         local stats = ClientBootstrap.LastStats or {}
         local modes = stats.movementModes or {}
-        setButtonContext(gui:FindFirstChild("EatDrinkButton"), stats.diet and ("Snack for " .. tostring(stats.diet)) or "Find snack/water", true)
-        setButtonContext(gui:FindFirstChild("AttackButton"), "Chomp: " .. ClientBootstrap:GetPrimaryAttack(), true)
-        setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "Low energy" or "Zoom", stats.stamina == nil or stats.stamina >= 5)
-        setButtonContext(gui:FindFirstChild("CallButton"), "Friendly roar", true)
-        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "Cozy" or "Rest", true)
+        setButtonContext(gui:FindFirstChild("EatDrinkButton"), "🍎💧", true)
+        setButtonContext(gui:FindFirstChild("AttackButton"), "🦷 " .. ClientBootstrap:GetPrimaryAttack(), true)
+        setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "⚡ low" or "⚡", stats.stamina == nil or stats.stamina >= 5)
+        setButtonContext(gui:FindFirstChild("CallButton"), "📣", true)
+        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "🌿 cozy" or "🌿", true)
         local canFly = modes.Flight == true or modes.flight == true or modes.flying == true
         local canSwim = modes.Swim == true or modes.swim == true or modes.swimming == true
-        setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "Fly" or "", canFly, true)
-        setButtonContext(gui:FindFirstChild("SwimButton"), canSwim and "Swim" or "", canSwim, true)
+        setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "🪽" or "", canFly, true)
+        setButtonContext(gui:FindFirstChild("SwimButton"), canSwim and "🌊" or "", canSwim, true)
     end
     ClientBootstrap.RefreshMobileContext = refreshContext
     refreshContext()
@@ -385,14 +386,14 @@ local function wireMobileButtons(result)
                 if targetType == "Food" then
                     ClientBootstrap:PlayActionMotion("Eat", target)
                     InputController:RequestEat(target)
-                    showFeedback(gui, "Yum! Food up")
+                    showFeedback(gui, "🍎 +")
                 elseif targetType == "Water" then
                     ClientBootstrap:PlayActionMotion("Drink", target)
                     InputController:RequestDrink(target)
-                    showFeedback(gui, "Splash! Water up")
+                    showFeedback(gui, "💧 +")
                 end
             else
-                ClientBootstrap:ShowActionFeedback(gui, "Follow ↗ to 🍎 or 💧")
+                ClientBootstrap:ShowActionFeedback(gui, "↗ 🍎 💧")
             end
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
@@ -418,7 +419,7 @@ local function wireMobileButtons(result)
             if humanoid then humanoid.WalkSpeed = isSprinting and SPRINT_WALK_SPEED or DEFAULT_WALK_SPEED end
             sprint.Text = isSprinting and "⚡ Zoom!" or "⚡ Zoom"
             setButtonActive(sprint, isSprinting)
-            showFeedback(gui, isSprinting and "Zoom uses energy" or "Energy refills")
+            showFeedback(gui, isSprinting and "⚡↓" or "⚡+")
         end)
     end
 
@@ -432,7 +433,7 @@ local function wireMobileButtons(result)
             call:SetAttribute("LastCallType", callType)
             call:SetAttribute("VisibleEffectCreated", pulse ~= nil)
             markButtonPressed(call, "Roar sent")
-            showFeedback(gui, "Roar!", call)
+            showFeedback(gui, "📣!", call)
         end)
     end
 
@@ -446,7 +447,7 @@ local function wireMobileButtons(result)
             restHide.Text = isHidden and "🌿 Cozy" or "🌿 Rest"
             setButtonActive(restHide, isHidden)
             markButtonPressed(restHide, isHidden and "Cozy" or "Ready")
-            showFeedback(gui, isHidden and "Cozy rest" or "Ready", restHide)
+            showFeedback(gui, isHidden and "🌿💤" or "✅", restHide)
         end)
     end
 
@@ -458,7 +459,7 @@ local function wireMobileButtons(result)
             InputController:RequestFlight(enabled)
             flight.Text = enabled and "🪽 Flying" or "🪽 Fly"
             setButtonActive(flight, enabled)
-            showFeedback(gui, enabled and "Flying uses energy" or "Landed")
+            showFeedback(gui, enabled and "🪽⚡" or "🦶")
         end)
     end
 
@@ -468,7 +469,7 @@ local function wireMobileButtons(result)
             local water = ClientBootstrap:FindNearestEatDrinkTarget(18, "Water")
             InputController:RequestSwim(water)
             swim:SetAttribute("LastWaterTarget", water and water.Name or "")
-            showFeedback(gui, water and "Swim! Watch air" or "Find water first")
+            showFeedback(gui, water and "🌊🫧" or "↗ 💧")
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
     end

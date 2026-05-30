@@ -216,10 +216,10 @@ MapLayoutService.FoodSourcePlacements = {
     { name = "NurseryStarterFernPatch_B", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1918, 13, 58), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(82, 160, 74) },
     { name = "FernPlainsGrazingPatch_A", zone = "FernPlains", diet = "Herbivore", nutrition = 40, respawnSeconds = 60, position = Vector3.new(-1515, 12, -155), size = Vector3.new(12, 2, 10), color = Color3.fromRGB(78, 170, 72) },
     { name = "FernPlainsGrazingPatch_B", zone = "FernPlains", diet = "Herbivore", nutrition = 40, respawnSeconds = 60, position = Vector3.new(-1260, 12, 210), size = Vector3.new(14, 2, 10), color = Color3.fromRGB(68, 145, 60) },
-    { name = "JungleBasinLeafCluster", zone = "JungleBasin", diet = "Herbivore", nutrition = 30, respawnSeconds = 80, position = Vector3.new(-640, 13, -430), size = Vector3.new(10, 2, 10), color = Color3.fromRGB(44, 132, 65) },
+    { name = "JungleBasinLeafCluster", zone = "JungleBasin", diet = "Herbivore", nutrition = 30, respawnSeconds = 80, position = Vector3.new(-1480, 13, 1025), size = Vector3.new(10, 2, 10), color = Color3.fromRGB(44, 132, 65) },
     { name = "NurseryTutorialMeatCache", zone = "NurseryGrove", diet = "Carnivore", nutrition = 30, respawnSeconds = 90, position = Vector3.new(-1870, 13, -92), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(126, 62, 48), tutorialSafe = true },
     { name = "FernPlainsPreyCarcass_A", zone = "FernPlains", diet = "Carnivore", nutrition = 45, respawnSeconds = 120, position = Vector3.new(-1080, 12, -255), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(116, 58, 46) },
-    { name = "RedstonePreyCarcass_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 55, respawnSeconds = 150, position = Vector3.new(260, 18, -940), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(120, 64, 52) },
+    { name = "RedstonePreyCarcass_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 55, respawnSeconds = 150, position = Vector3.new(-120, 13, -755), size = Vector3.new(8, 1.5, 4), color = Color3.fromRGB(120, 64, 52) },
     { name = "OldEdenRiskCarcass", zone = "ApocalypticCity", diet = "Carnivore", nutrition = 65, respawnSeconds = 180, position = Vector3.new(1035, 14, 92), size = Vector3.new(9, 1.5, 5), color = Color3.fromRGB(112, 56, 46), highRisk = true },
     { name = "NurseryStarterFernPatch_C", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-2058, 13, 70), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(74, 156, 68) },
     { name = "NurseryStarterFernPatch_D", zone = "NurseryGrove", diet = "Herbivore", nutrition = 35, respawnSeconds = 45, position = Vector3.new(-1935, 13, -86), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(88, 164, 76) },
@@ -575,7 +575,7 @@ MapLayoutService.PlayerSpawnPlacements = {
 
 MapLayoutService.CompactLayout = {
     origin = Vector3.new(-2000, 0, 0),
-    scaleXZ = 0.45,
+    scaleXZ = 0.5,
     minimumTerrainXZ = 240,
     minimumRouteXZ = 96,
     minimumWaterXZ = 42,
@@ -604,9 +604,9 @@ function MapLayoutService:ApplyCompactLayout()
     self._compactLayoutApplied = true
 
     self.FullMapUnderlay.center = self:CompactPosition(self.FullMapUnderlay.center)
-    self.FullMapUnderlay.size = self:CompactSize(self.FullMapUnderlay.size, 1800)
+    self.FullMapUnderlay.size = self:CompactSize(self.FullMapUnderlay.size, 0)
     self.FullMapTerrainUnderlay.center = self:CompactPosition(self.FullMapTerrainUnderlay.center)
-    self.FullMapTerrainUnderlay.size = self:CompactSize(self.FullMapTerrainUnderlay.size, 1800)
+    self.FullMapTerrainUnderlay.size = self:CompactSize(self.FullMapTerrainUnderlay.size, 0)
 
     for _, zone in pairs(self.ZoneTerrain) do
         zone.center = self:CompactPosition(zone.center)
@@ -1062,7 +1062,10 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("NestingHerd", spec.nestingHerd == true)
         marker:SetAttribute("FlyingPrey", spec.flyingPrey == true)
         marker:SetAttribute("FlightTarget", spec.flyingPrey == true)
-        marker:SetAttribute("PotentialCarnivoreFood", spec.kind == "Prey" or spec.kind == "AerialPrey" or spec.kind == "FlyingPrey")
+        marker:SetAttribute("PotentialCarnivoreFood", true)
+        marker:SetAttribute("FoodWhenDefeated", true)
+        marker:SetAttribute("CarnivoreFoodKind", spec.dangerous == true and "HighRiskCarcass" or "PreyCarcass")
+        marker:SetAttribute("FoodSourceCandidate", true)
     end
     return folders.NPCSpawns
 end

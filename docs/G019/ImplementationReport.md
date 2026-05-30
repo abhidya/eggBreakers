@@ -11,8 +11,9 @@ Status: IN PROGRESS / HONEST FAIL for release.
 - Kid-friendly mobile/HUD cleanup: compact labels (`Snack`, `Chomp`, `Zoom`, `Roar`, `Rest`), less text, no debug-shell wording, optional Flight/Swim hidden unless species supports them, visual arrow/icon food-water tracker.
 - Species-biome spawn points: Gallimimus/Fern, Triceratops/Fern+Jungle, Velociraptor/Jungle+Fern, Carnotaurus/Redstone+City, plus nursery fallback spawns. Server routes initial spawn/respawn to species spawns.
 - Carnotaurus orientation: source now forces upright correction after attachment and records verification attributes.
-- Food loop cleanup: procedural food balls and glowing practice target are hidden query helpers, not visible final food. Vegetation/tree browse helpers become potential herbivore food. Prey/flying prey/NPC carcasses are marked carnivore-food candidates.
-- Asset quality policy: live low-quality/mesh/simple-generated audit now separates quarantined/excluded assets from release-ready counts and requires policy notes for required playable visuals.
+- Food loop cleanup: procedural food balls and glowing practice target are hidden query helpers, not visible final food. Vegetation/tree browse helpers become potential herbivore food. All NPC spawn markers are now tagged as potential food when defeated, with prey/high-risk carcass kinds.
+- Map layout cleanup: source compact layout is exact half-scale (`scaleXZ=0.5`) and keeps terrain, routes, water, food, dressing, NPC spawns, and player spawns transformed together. Two incoherent legacy placements were re-centered into their declared Jungle/Redstone zones.
+- Asset quality policy: source audit now auto-detects low-quality food/glow balls, placeholder/simple-generated imports, rectangle/ball tree names, and MeshPart imports; non-required excluded roots are moved to `ReplicatedStorage/QuarantinedImportedAssets` during mutate runs, while required playable visuals need policy notes.
 
 ## Live Studio evidence
 
@@ -60,3 +61,31 @@ G019 STATUS: FAIL — release-ready quality-approved imported assets are 23/500;
 - Source remained syntactically valid and built with Rojo.
 - Live Studio audit still fails release at 23/500 quality-approved assets.
 - A Rojo serve attempt on port 34873 did not produce authoritative fresh Studio evidence; MCP inspection showed `ServerScriptService` empty afterward, so the open place must be reloaded/re-synced before final Studio TestRunner evidence can count.
+
+## Source-only patch note — 2026-05-30
+
+This forked-workspace patch edited only asset/map quality source and G019/G014 docs. No client UI or combat source was touched. Fresh live Studio counts remain unproven until the updated source is synced and `AssetImportAuditService:AuditAndRepair({ mutate = true })` plus placement tests are rerun in Studio.
+
+
+## Continuation live Studio TestRunner — 2026-05-30T01:13:33Z
+
+Active Studio: `eggBreakers2.rbxl` (`23b8836a-ed22-4397-9a96-75b0a4a96eed`).
+
+OMX team runtime attempt remained blocked in this non-tmux pane (`Team mode requires running inside tmux current leader pane`), so native parallel worker lanes and direct MCP/source verification continued under the same tracked scope.
+
+Fresh live TestRunner before runtime cleanup: `220 total / 180 passed / 40 failed`.
+
+Runtime cleanup + source-aligned hot patch applied in Studio:
+- removed 104 stale Workspace test fixtures/default Parts that were polluting release sweeps;
+- normalized 47 procedural food/tree helpers as invisible gameplay query helpers;
+- restored live MovementModes/CreatureCategory defaults for stale Studio SpeciesConfig cache;
+- patched live asset audit helper rules to ignore Studio-only fixtures and accept hidden procedural query helpers.
+
+Fresh live TestRunner after cleanup: `220 total / 185 passed / 35 failed`.
+
+Remaining live failures are still real release blockers:
+- 500 unique release-ready Creator Store materialized imports not met (`23/500`, gap `477`);
+- mobile/touch proof and RBXL save/reopen proof missing;
+- G016/G018 proof attributes missing because final all-category run is not green;
+- stale open Studio cache still has source mismatches for several NPC/carnotaurus/food placement checks until a clean source sync/reopen is performed;
+- client category remains `0` in server-side TestRunner coverage, so client proof must be run through the client test path.

@@ -8,6 +8,7 @@ local AssetImportAuditService = {}
 AssetImportAuditService.ImportedLibraryName = "ImportedAssetLibrary"
 AssetImportAuditService.WorkspaceImportedPath = { "Map", "ImportedAssets" }
 AssetImportAuditService.QuarantineFolderName = "ImportedScriptQuarantine"
+AssetImportAuditService.QualityQuarantineFolderName = "QuarantinedImportedAssets"
 
 local SCRIPT_CLASS_NAMES = {
     Script = true,
@@ -19,6 +20,45 @@ local EXECUTABLE_CLASS_NAMES = {
     Script = true,
     LocalScript = true,
 }
+
+local LOW_QUALITY_NAME_PATTERNS = {
+    "food[%s_%-]*ball",
+    "glow[%w%s_%-]*ball",
+    "glowing[%w%s_%-]*ball",
+    "ball[%s_%-]*tree",
+    "rectangle[%w%s_%-]*tree",
+    "simple[%s_%-]*generated",
+    "debug[%s_%-]*fallback",
+    "placeholder",
+}
+
+local function isA(instance, className)
+    local ok, result = pcall(function()
+        return instance:IsA(className)
+    end)
+    return ok and result == true
+end
+
+local function nameLooksLowQuality(instance)
+    local text = string.lower(instance.Name or "")
+    for _, pattern in ipairs(LOW_QUALITY_NAME_PATTERNS) do
+        if string.find(text, pattern) then
+            return true
+        end
+    end
+    return false
+end
+
+local function containsMeshPart(instance)
+    if isA(instance, "MeshPart") then return true end
+    if not instance.GetDescendants then return false end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if isA(descendant, "MeshPart") then
+            return true
+        end
+    end
+    return false
+end
 
 local function isScriptInstance(instance)
     return SCRIPT_CLASS_NAMES[instance.ClassName] == true
@@ -104,6 +144,13 @@ function AssetImportAuditService:IsVisibleImportedAsset(instance)
 end
 
 function AssetImportAuditService:GetQualityExclusionKind(instance)
+    if nameLooksLowQuality(instance) then
+        return "lowQuality"
+    end
+    if containsMeshPart(instance) and not self:HasRequiredPlayableVisual(instance) then
+        return "mesh"
+    end
+
     local current = instance
     while current do
         local kind = normalizeQualityExclusionKind(current:GetAttribute("AssetQualityExclusionKind"))
@@ -120,6 +167,15 @@ function AssetImportAuditService:GetQualityExclusionKind(instance)
         current = current.Parent
     end
     return nil
+end
+
+function AssetImportAuditService:HasRequiredPlayableVisual(instance)
+    local current = instance
+    while current do
+        if current:GetAttribute("RequiredPlayableVisual") == true then return true end
+        current = current.Parent
+    end
+    return false
 end
 
 function AssetImportAuditService:HasRequiredPlayableVisualPolicyNote(instance)
@@ -175,6 +231,39 @@ function AssetImportAuditService:_ensureQuarantineFolder()
     return getOrCreateFolder(ReplicatedStorage, self.QuarantineFolderName)
 end
 
+function AssetImportAuditService:_ensureQualityQuarantineFolder()
+    return getOrCreateFolder(ReplicatedStorage, self.QualityQuarantineFolderName)
+end
+
+
+function AssetImportAuditService:_hasQualityExcludedAncestor(instance)
+    local current = instance.Parent
+    while current do
+        if self:IsImportedCandidate(current) and self:GetQualityExclusionKind(current) ~= nil then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+function AssetImportAuditService:_quarantineQualityAsset(instance, quarantineFolder, records, kind)
+    if instance == quarantineFolder or instance:IsDescendantOf(quarantineFolder) then return end
+    if self:HasRequiredPlayableVisual(instance) then return end
+    if self:_hasQualityExcludedAncestor(instance) then return end
+
+    table.insert(records, {
+        path = instance:GetFullName(),
+        className = instance.ClassName,
+        sourceAssetId = instance:GetAttribute("SourceAssetId"),
+        qualityExclusionKind = kind,
+    })
+
+    instance:SetAttribute("AssetQualityQuarantined", true)
+    instance:SetAttribute("ReleaseReadyBlockedReason", kind == "mesh" and "mesh-excluded" or "low-quality-excluded")
+    instance.Parent = quarantineFolder
+end
+
 function AssetImportAuditService:_quarantineScript(scriptInstance, quarantineFolder, records)
     local record = {
         path = scriptInstance:GetFullName(),
@@ -197,6 +286,7 @@ function AssetImportAuditService:AuditAndRepair(options)
     local importedRecords = {}
     local scriptRecords = {}
     local quarantinedScripts = {}
+    local quarantinedQualityAssets = {}
     local catalogedSourceIds = {}
     local importedSourceIds = {}
     local auditedSourceIds = {}
@@ -213,8 +303,10 @@ function AssetImportAuditService:AuditAndRepair(options)
     end
 
     local quarantineFolder = nil
+    local qualityQuarantineFolder = nil
     if mutate then
         quarantineFolder = self:_ensureQuarantineFolder()
+        qualityQuarantineFolder = self:_ensureQualityQuarantineFolder()
     end
 
     for _, rootInfo in ipairs(self:GetImportedRoots()) do
@@ -275,8 +367,10 @@ function AssetImportAuditService:AuditAndRepair(options)
                 else
                     addUnique(lowQualityExcludedSourceIds, sourceAssetId)
                 end
-                if instance:GetAttribute("RequiredPlayableVisual") == true and not self:HasRequiredPlayableVisualPolicyNote(instance) then
+                if self:HasRequiredPlayableVisual(instance) and not self:HasRequiredPlayableVisualPolicyNote(instance) then
                     table.insert(failures, instance:GetFullName() .. " required playable visual has quality exclusion without explicit policy note")
+                elseif mutate and qualityQuarantineFolder then
+                    self:_quarantineQualityAsset(instance, qualityQuarantineFolder, quarantinedQualityAssets, qualityExclusionKind)
                 end
             end
 
@@ -317,6 +411,7 @@ function AssetImportAuditService:AuditAndRepair(options)
         debugExcludedAssets = countSet(debugExcludedSourceIds),
         scriptObjectsFound = #scriptRecords,
         scriptsQuarantined = #quarantinedScripts,
+        qualityAssetsQuarantined = #quarantinedQualityAssets,
     }
 
     if counts.actuallyImportedAssets >= counts.catalogedSourceAssetIds and counts.placedVisibleAssets == 0 then
@@ -330,6 +425,7 @@ function AssetImportAuditService:AuditAndRepair(options)
         importedRecords = importedRecords,
         scriptRecords = scriptRecords,
         quarantinedScripts = quarantinedScripts,
+        quarantinedQualityAssets = quarantinedQualityAssets,
     }
 end
 
@@ -370,12 +466,13 @@ function AssetImportAuditService:ToMarkdown(result)
         "| Debug Excluded Assets | " .. tostring(counts.debugExcludedAssets or 0) .. " |",
         "| Script Objects Found | " .. tostring(counts.scriptObjectsFound) .. " |",
         "| Scripts Quarantined | " .. tostring(counts.scriptsQuarantined) .. " |",
+        "| Quality Assets Quarantined | " .. tostring(counts.qualityAssetsQuarantined or 0) .. " |",
         "",
         "## Release Rule",
         "",
         "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and mesh/LQ exclusions do not count as release-ready.",
         "",
-        "Mesh exclusions and low-quality exclusions are reported separately. MeshPart usage alone is not a failure; only assets explicitly marked by policy as mesh-excluded are withheld from release-ready counts. Required playable visuals must not be removed or excluded without an explicit policy note/replacement rationale.",
+        "Mesh exclusions and low-quality exclusions are reported separately. Imported MeshPart roots, food/glowing ball placeholders, rectangle/ball tree placeholders, and simple-generated/debug fallback names are withheld from release-ready counts and quarantined on mutate unless protected as required playable visuals. Required playable visuals must not be removed or excluded without an explicit policy note/replacement rationale.",
     }
     return table.concat(lines, "\n") .. "\n"
 end

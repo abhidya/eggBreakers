@@ -1,10 +1,11 @@
 local UIFactory = {}
 
-function UIFactory:CreateBar(parent, name, yOffset)
+function UIFactory:CreateBar(parent, name, yOffset, options)
+    options = options or {}
     local label = Instance.new("TextLabel")
     label.Name = name .. "Label"
-    label.Size = UDim2.fromOffset(120, 18)
-    label.Position = UDim2.fromOffset(10, yOffset)
+    label.Size = UDim2.fromOffset(options.LabelWidth or 120, options.Height or 18)
+    label.Position = UDim2.fromOffset(options.LabelX or 10, yOffset)
     label.BackgroundTransparency = 1
     label.Text = name
     label.TextColor3 = Color3.new(1, 1, 1)
@@ -13,8 +14,8 @@ function UIFactory:CreateBar(parent, name, yOffset)
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Name = name .. "ValueLabel"
-    valueLabel.Size = UDim2.fromOffset(82, 18)
-    valueLabel.Position = UDim2.fromOffset(320, yOffset)
+    valueLabel.Size = UDim2.fromOffset(options.ValueWidth or 82, options.Height or 18)
+    valueLabel.Position = UDim2.fromOffset(options.ValueX or 320, yOffset)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = "100%"
     valueLabel.TextColor3 = Color3.fromRGB(235, 255, 235)
@@ -24,8 +25,8 @@ function UIFactory:CreateBar(parent, name, yOffset)
 
     local bar = Instance.new("Frame")
     bar.Name = name .. "Bar"
-    bar.Size = UDim2.fromOffset(180, 12)
-    bar.Position = UDim2.fromOffset(135, yOffset + 3)
+    bar.Size = UDim2.fromOffset(options.BarWidth or 180, options.BarHeight or 12)
+    bar.Position = UDim2.fromOffset(options.BarX or 135, yOffset + (options.BarYOffset or 3))
     bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     bar.Parent = parent
 
@@ -42,7 +43,7 @@ function UIFactory:CreateButton(parent, name, text, position, options)
     local size = options and options.Size or UDim2.fromOffset(112, 64)
     button.Name = name
     button.Text = text
-    button.Size = UDim2.fromOffset(112, 64)
+    button.Size = size
     button.Position = position
     button.TextScaled = true
     button.TextWrapped = true
