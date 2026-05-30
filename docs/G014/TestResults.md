@@ -140,3 +140,35 @@ Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (no placeholder/d
 Live all-category TestRunner after the batch: `220 total / 185 passed / 35 failed`. Asset-count failures now honestly report `27/500`. Remaining failures include known proof gates, stale open-Studio module cache/source mismatch, and still-missing mobile/RBXL persistence evidence.
 
 Source change included in this continuation: `MapLayoutService:EnsureNPCSpawnMarkers` now stamps `AerialSpawn`, `PreferredAltitude`, `FlyingPrey`, and `FlightTarget` consistently for aerial prey/predator markers.
+
+
+## G020 import/materialization continuation B — 2026-05-30T01:20:53Z
+
+Inserted, sanitized, tagged, and intentionally placed 6 additional Creator Store assets:
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 8788719671 | G020_Imported_ClassicTree_02 | FernPlains | TreeBrowseVisual | 0 | non-mesh |
+| 4536575513 | G020_Imported_FernBush_02 | NurseryGrove | HerbivoreFoodVisual | 0 | non-mesh |
+| 267220625 | G020_Imported_JungleVine_02 | JungleBasin | JungleBrowseVisual | 0 | non-mesh |
+| 751054565 | G020_Imported_SwampTree_02 | SwampDelta | SwampBrowseVisual | 0 | non-mesh |
+| 8370969390 | G020_Imported_RockBoulder_02 | RedstoneCanyon | CanyonRockVisual | 1 removed | MeshPart detected; source policy will exclude until replacement/exception |
+| 71324147289761 | G020_Imported_RuinedWall_02 | ApocalypticCity | CityRuinVisual | 0 | MeshPart detected; source policy will exclude until replacement/exception |
+
+Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after this second batch:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 33 |
+| Audited Imported Assets | 33 |
+| Tagged Imported Assets | 33 |
+| Placed Visible Assets | 33 |
+| Release Ready Visible Assets | 33 |
+| Script Objects Found | 0 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 467 |
+
+Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCount=0`).
+
+Release still fails honestly because the materialized live count is `33/500`.
