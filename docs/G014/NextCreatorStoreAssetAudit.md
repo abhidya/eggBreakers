@@ -6,7 +6,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 ## Source-of-truth split
 
 - `src/ReplicatedStorage/Shared/AssetManifest.lua` / `docs/G011/AssetManifest.md` remain the G011 catalog source of truth: 500 manifest entries and 500 unique Creator Store `SourceAssetId` values.
-- `docs/G014/AssetMaterializationReport.md` remains the G014 live materialization source of truth: 48 release-ready visible imported assets in the active Studio audit, so the release gap is 442 assets.
+- `docs/G014/AssetMaterializationReport.md` remains the G014 live materialization source of truth: 48 release-ready visible imported assets in the active Studio audit, so the release gap is 432 assets.
 - Catalog membership is not required for a later live import to count as a materialized asset or release-ready asset when the imported instance already has explicit `SourceAssetId`, `CreatorStoreOnly`, script-audit, and visible-placement proof. Catalog rows alone never count as imported assets.
 
 ## Consistency findings
@@ -15,7 +15,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 |---|---|---|
 | G011 catalog count | PASS | `AssetManifest.SourceAssets` validates at 500 entries / 500 unique `SourceAssetId` values. |
 | G014 live count | PASS/FAIL-honest | G014 docs consistently report 48 release-ready visible imports, below the 500 release target. |
-| G013/G015 plan freshness | FAIL-stale | Older plans still mention 44/500 or 34/500 baselines; those are superseded by G014's 58/500 audit and must not be used for the next batch gap. |
+| G013/G015 plan freshness | FAIL-stale | Older plans still mention 44/500 or 34/500 baselines; those are superseded by G014's 68/500 audit and must not be used for the next batch gap. |
 | G014 batch IDs vs G011 catalog | INFO | 6 of 25 documented G014 batch rows are in the G011 catalog; 19 are post-catalog live imports. This is acceptable only if reports keep cataloged vs live-imported states separate and preserve explicit live tagging/audit proof. |
 
 ## G014 documented batch IDs checked against G011 catalog
@@ -41,7 +41,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 | Jungle mossy boulder | 8421400545 | JungleBasin | no |
 | Old Eden street light | 14205708 | ApocalypticCity | no |
 | Old Eden rusty barrel | 13304723548 | ApocalypticCity | yes |
-| Swamp bridge | 9016344250 | SwampDelta | no |
+| Swamp bridge | 9016343250 | SwampDelta | no |
 | Redstone rock arch | 122586576789991 | RedstoneCanyon | no |
 | Swamp lily pad / water marker | 79823722717297 | SwampDelta | no |
 | Jungle flower herbivore food | 7935277298 | JungleBasin | no |
@@ -52,7 +52,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 
 The next worker with live Creator Store insert access should use the G014 baseline, not older G013/G015 baselines:
 
-1. Start from `releaseReadyVisibleAssets=58`; the current honest gap is `500 - 48 = 442`.
+1. Start from `releaseReadyVisibleAssets=68`; the current honest gap is `500 - 48 = 432`.
 2. Prefer categories with zero or low proven release-ready coverage, especially carnivore carcass/food and NPC creature assets, before adding more city/foliage duplicates.
 3. For each inserted primary result, dedupe against:
    - G014 documented live rows above,

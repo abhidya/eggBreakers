@@ -17,14 +17,14 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 | State | Count |
 |---|---:|
 | Cataloged SourceAssetIds | 500 |
-| Actually Imported Assets | 58 live imported assets from Studio audit |
-| Audited Imported Assets | 58 live assets marked script-audited; below target |
-| Tagged Imported Assets | 58 live tagged imported assets; below target |
-| Placed Visible Assets | 58 live placed/visible imported assets; below target |
-| Release Ready Visible Assets | 58 live release-ready visible assets |
+| Actually Imported Assets | 68 live imported assets from Studio audit |
+| Audited Imported Assets | 68 live assets marked script-audited; below target |
+| Tagged Imported Assets | 68 live tagged imported assets; below target |
+| Placed Visible Assets | 68 live placed/visible imported assets; below target |
+| Release Ready Visible Assets | 68 live release-ready visible assets |
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
-| Scripts Quarantined | 0; no executable imported scripts found in the 58 live imported roots |
-| Remaining Release Ready Gap To 500 | 442 |
+| Scripts Quarantined | 0; no executable imported scripts found in the 68 live imported roots |
+| Remaining Release Ready Gap To 500 | 432 |
 
 ## Core Flow Result
 
@@ -45,16 +45,16 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 
 ## Signoff
 
-G014 STATUS: FAIL — releaseReadyVisibleAssets remain 58/500 with a 442 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
+G014 STATUS: FAIL — releaseReadyVisibleAssets remain 68/500 with a 432 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
 
 
 ## G015 Follow-up Evidence — 2026-05-27
 
-Current G014 continuation evidence supersedes stale G015-only counts: active `eggBreakers2.rbxl` now audits at 58/500 release-ready visible assets with a 442 gap, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer fresh full reload/all-category TestRunner remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+Current G014 continuation evidence supersedes stale G015-only counts: active `eggBreakers2.rbxl` now audits at 68/500 release-ready visible assets with a 432 gap, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer fresh full reload/all-category TestRunner remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
 
 
 ## Current evidence reconciliation — 2026-05-29
 
-- Exact current release asset evidence: 58/500 release-ready visible imported assets; remaining gap 442.
+- Exact current release asset evidence: 68/500 release-ready visible imported assets; remaining gap 432.
 - Superseded stale baselines: 34/500 from the G015 live batch and 30/500 session baseline are historical only.
 - Still FAIL: fresh full Studio TestRunner, mobile/controller E2E proof, release placement/import audit to 500, and `.rbxl` save/reopen persistence.
