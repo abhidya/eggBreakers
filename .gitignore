@@ -1,0 +1,6 @@
+# Local Studio backup snapshots (not source — kept on disk, not committed)
+*_old.rbxl
+
+# OS / Studio lock noise
+.DS_Store
+*.rbxl.lock
