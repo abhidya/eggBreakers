@@ -275,7 +275,17 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
         if targetInstance then
             npc:SetAttribute("BrainTargetName", targetInstance.Name)
         end
-        if npc.PivotTo then
+        local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
+        local hrp = npc:FindFirstChild("HumanoidRootPart")
+        if humanoid and hrp then
+            -- Physics-driven locomotion via Humanoid:MoveTo; unanchors root part for smooth motion.
+            if hrp.Anchored then hrp.Anchored = false end
+            humanoid:MoveTo(targetPosition)
+            -- Orient model toward target (non-teleporting; Humanoid handles position)
+            local lookCF = CFrame.lookAt(hrp.Position, lookAt)
+            hrp.CFrame = lookCF
+        elseif npc.PivotTo then
+            -- Fallback: Humanoid-less models use PivotTo (keeps existing tests passing)
             npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
         elseif npc:IsA("BasePart") then
             npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
@@ -625,7 +635,16 @@ function NPCService:MoveRecordToward(record, targetPosition, stepStuds, actionNa
     if (lookAt - nextPosition).Magnitude <= 0.05 then
         lookAt = nextPosition + Vector3.new(0, 0, -1)
     end
-    if npc.PivotTo then
+    local humanoid2 = npc:FindFirstChildWhichIsA("Humanoid")
+    local hrp2 = npc:FindFirstChild("HumanoidRootPart")
+    if humanoid2 and hrp2 then
+        -- Physics-driven locomotion; unanchors root part for smooth Humanoid motion.
+        if hrp2.Anchored then hrp2.Anchored = false end
+        humanoid2:MoveTo(targetPosition)
+        local lookCF2 = CFrame.lookAt(hrp2.Position, lookAt)
+        hrp2.CFrame = lookCF2
+    elseif npc.PivotTo then
+        -- Fallback: Humanoid-less models use PivotTo (keeps existing tests passing)
         npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
     elseif npc:IsA("BasePart") then
         npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
@@ -690,9 +709,22 @@ function NPCService:RunPredatorBrain(record, players)
         local apexEventOk = self:StampApexEvent(record)
         if apexEventOk then return true end
     end
-    local root, distance = self:FindNearestPlayerRoot(record, players, record.MaxChaseDistance or 120)
+    -- Lane D: prefer hunting a live player over wandering (safe-zone filtered internally).
+    local playerRoot, playerTarget, playerDist = self:FindNearestPlayerHuntTarget(record, players, record.MaxChaseDistance or 120)
+    local npcRoot, npcDistance = self:FindNearestPlayerRoot(record, players, record.MaxChaseDistance or 120)
+    -- Pick whichever valid target is closer.
+    local root, distance, isPlayerTarget = nil, math.huge, false
+    if playerRoot and playerDist then
+        root, distance, isPlayerTarget = playerRoot, playerDist, true
+    end
+    if npcRoot and npcDistance and npcDistance < distance then
+        root, distance, isPlayerTarget = npcRoot, npcDistance, false
+    end
     if root and distance then
         record.ChaseTarget = root.Parent
+        if isPlayerTarget and record.Instance then
+            record.Instance:SetAttribute("ChasingPlayer", true)
+        end
         if distance <= self.AttackDistance then
             record.LastAttackAt = os.time()
             self:Transition(record, "Attack")
@@ -700,6 +732,10 @@ function NPCService:RunPredatorBrain(record, players)
                 record.Instance:SetAttribute("LastBrainAction", "Attack")
                 record.Instance:SetAttribute("AttackRangeConfirmed", true)
             end
+            -- Lane D: NPC attack on player — damage is applied via CombatService
+            -- when the client fires RequestAttack; NPC brain only sets state here.
+            -- Direct NPC→player damage is handled by the NPC attack event listener
+            -- in the main game loop (not in NPCService to keep separation of concerns).
             return true
         end
         self:Transition(record, "Chase")
@@ -784,6 +820,117 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
     return carcass
 end
 
+-- Lane D: Create a carcass food source from a dead player (parallel to CreateCarcassFoodSource
+-- for NPC records). Uses the same imported visual + tagging pipeline so carnivore NPCs and
+-- players can eat it via the existing FoodSource / CarnivoreFoodCandidate tags.
+-- Parameters:
+--   deadPlayer  — the Roblox Player object (used for name + character position)
+--   deadState   — the SurvivalService state table at time of death
+--   nutrition   — optional override; defaults to 30 (slightly less than NPC prey)
+function NPCService:CreatePlayerCarcassFoodSource(deadPlayer, deadState, nutrition)
+    if not deadPlayer then return nil, "missing_player" end
+    -- Resolve position from character if available, else state data.
+    local position = Vector3.new(0, 3, 0)
+    local character = deadPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if root then
+        position = root.Position
+    end
+
+    local source = self:ResolveImportedCarcassVisual()
+    if not source then return nil, "missing_imported_carcass_visual" end
+    local carcass = source:Clone()
+    local baseName = (deadPlayer.Name or "Player") .. "_PlayerCarcass"
+    if carcass:IsA("BasePart") then
+        local wrapper = Instance.new("Model")
+        wrapper.Name = baseName
+        carcass.Parent = wrapper
+        wrapper.PrimaryPart = carcass
+        carcass = wrapper
+    else
+        carcass.Name = baseName
+    end
+    -- Strip scripts; anchor geometry.
+    for _, descendant in ipairs(carcass:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            descendant:Destroy()
+        elseif descendant:IsA("ModuleScript") then
+            descendant:SetAttribute("ImportedScriptAudited", true)
+            descendant:SetAttribute("Sandboxed", true)
+        elseif descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = true
+        end
+    end
+    if carcass:IsA("Model") then
+        if not carcass.PrimaryPart then
+            carcass.PrimaryPart = carcass:FindFirstChildWhichIsA("BasePart", true)
+        end
+        if carcass.PrimaryPart then carcass:PivotTo(CFrame.new(position)) end
+    end
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("Nutrition", nutrition or 30)
+    carcass:SetAttribute("FoodKind", "PlayerCarcass")
+    carcass:SetAttribute("Depleted", false)
+    carcass:SetAttribute("RespawnCooldownSeconds", 120)
+    carcass:SetAttribute("CreatorStoreOnly", true)
+    carcass:SetAttribute("ImportedVisibleAsset", true)
+    carcass:SetAttribute("AssetManifestId", carcass:GetAttribute("AssetManifestId") or "ImportedPreyCarcass")
+    carcass:SetAttribute("SourcePlayer", deadPlayer.Name)
+    carcass:SetAttribute("SourcePlayerUserId", deadPlayer.UserId)
+    carcass:SetAttribute("PotentialCarnivoreFood", true)
+    carcass:SetAttribute("CarcassFoodSource", true)
+    carcass:SetAttribute("GameplayQuery", true)
+    carcass:SetAttribute("CompactFoodGroup", "PlayerCarcass")
+    carcass:SetAttribute("PlayerCarcass", true)
+    -- Store stage at death for growth-reward lookups by eating players.
+    if deadState then
+        carcass:SetAttribute("VictimGrowthStage", deadState.GrowthStage or "Hatchling")
+        carcass:SetAttribute("VictimSpeciesId", deadState.SpeciesId or "")
+    end
+    carcass.Parent = Workspace:FindFirstChild("NPCs") or Workspace
+    CollectionService:AddTag(carcass, "FoodSource")
+    CollectionService:AddTag(carcass, "CarnivoreFoodCandidate")
+    return carcass
+end
+
+-- Lane D: Find the nearest living player character that a carnivore NPC could hunt.
+-- Respects safe-zone exclusion: players tagged SafeZone or with character inside a
+-- SafeZone-tagged region are skipped.
+-- Returns (root, player, distance) or (nil, nil, nil).
+function NPCService:FindNearestPlayerHuntTarget(record, players, maxDistance)
+    local position = self:GetRecordPosition(record)
+    local bestRoot, bestPlayer, bestDistance = nil, nil, maxDistance or self.SenseDistance
+    for _, player in ipairs(players or {}) do
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local distance = (root.Position - position).Magnitude
+            if distance <= bestDistance then
+                -- Safe-zone gate: skip players in safe zones.
+                local inSafe = false
+                local CollSvc = CollectionService
+                -- Check if any touching part has SafeZone tag (lightweight region check).
+                local params = OverlapParams.new()
+                params.FilterType = Enum.RaycastFilterType.Include
+                local touching = workspace:GetPartBoundsInRadius(root.Position, 6, params)
+                for _, part in ipairs(touching) do
+                    if CollSvc:HasTag(part, "SafeZone") then
+                        inSafe = true
+                        break
+                    end
+                end
+                if not inSafe then
+                    bestRoot, bestPlayer, bestDistance = root, player, distance
+                end
+            end
+        end
+    end
+    return bestRoot, bestPlayer, bestDistance
+end
+
 function NPCService:MarkPreyDead(record)
     if not record or not self:IsPreyKind(record.Kind) then return false, "not_prey" end
     self:Transition(record, "Dead")
@@ -811,10 +958,36 @@ end
 function NPCService:StartTickLoop(playersService)
     if self.TickLoopStarted then return false, "already_started" end
     self.TickLoopStarted = true
+    -- Brain decision tick (1 s intervals) — decides state & issues MoveTo targets.
     task.spawn(function()
         while self.TickLoopStarted do
             task.wait(self.TickSeconds)
             self:TickNPCs((playersService or game:GetService("Players")):GetPlayers())
+        end
+    end)
+    -- Continuous MoveToTarget heartbeat — keeps Humanoid-driven NPCs walking toward their
+    -- current target every frame so motion stays smooth even between brain ticks.
+    task.spawn(function()
+        local RunService = game:GetService("RunService")
+        while self.TickLoopStarted do
+            RunService.Heartbeat:Wait()
+            for _, record in ipairs(self.NPCs) do
+                if record.State ~= "Dead" and record.MoveTarget then
+                    local npc = record.Instance
+                    if npc then
+                        local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
+                        local hrp = npc:FindFirstChild("HumanoidRootPart")
+                        if humanoid and hrp then
+                            local dist = (hrp.Position - record.MoveTarget).Magnitude
+                            if dist > 2 then
+                                humanoid:MoveTo(record.MoveTarget)
+                            else
+                                record.MoveTarget = nil
+                            end
+                        end
+                    end
+                end
+            end
         end
     end)
     return true

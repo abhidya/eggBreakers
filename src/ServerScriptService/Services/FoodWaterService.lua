@@ -9,6 +9,26 @@ FoodWaterService.DrinkDistance = 14
 FoodWaterService.FoodGrowthGrant = 4
 FoodWaterService.WaterGrowthGrant = 4
 
+-- Foliage food defaults: applied when a FoodSource tagged part has no explicit Diet/FoodKind.
+-- Herbivore and Omnivore players/NPCs can eat foliage; Carnivores cannot.
+FoodWaterService.FoliageDefaultDiet      = "Herbivore"  -- herbivore-compatible; omnivores pass via ValidateFoodTarget
+FoodWaterService.FoliageDefaultFoodKind  = "Foliage"
+FoodWaterService.FoliageDefaultNutrition = 20
+FoodWaterService.FoliageDefaultRespawnCooldownSeconds = 60
+
+-- Diet labels considered plant/foliage (used when auto-tagging unknown FoodSource parts)
+local FOLIAGE_FOOD_KINDS = {
+    Foliage    = true,
+    Fern       = true,
+    TreeBrowse = true,
+    Shrub      = true,
+    Grass      = true,
+    Berry      = true,
+}
+
+-- ─────────────────────────────────────────────────────────────
+-- Visual helpers (public, stable API)
+-- ─────────────────────────────────────────────────────────────
 function FoodWaterService:SetDepletedVisual(target, depleted)
     if target and target:IsA("BasePart") then
         if depleted then
@@ -26,6 +46,9 @@ function FoodWaterService:SetDepletedVisual(target, depleted)
     end
 end
 
+-- ─────────────────────────────────────────────────────────────
+-- Depletion / regrowth (public, stable API)
+-- ─────────────────────────────────────────────────────────────
 function FoodWaterService:RefreshDepletion(target, now)
     if not target or target:GetAttribute("Depleted") ~= true then return end
     local depletedUntil = target:GetAttribute("DepletedUntil")
@@ -55,6 +78,93 @@ function FoodWaterService:StopDepletionLoop()
     self.DepletionLoopRunning = false
 end
 
+-- ─────────────────────────────────────────────────────────────
+-- Foliage metadata normalisation (NEW, additive)
+-- Ensures every FoodSource foliage part has consistent Diet /
+-- FoodKind / Nutrition / RespawnCooldownSeconds attributes so
+-- FoodServiceTests and diet-validation logic agree.
+-- ─────────────────────────────────────────────────────────────
+
+--- Returns true if the instance looks like a foliage food source
+--- (either its FoodKind is a known plant kind, or it has no Diet
+--- set yet and is not tagged as a carcass/carnivore food).
+local function isFoliageFoodSource(target)
+    local foodKind = target:GetAttribute("FoodKind")
+    if foodKind and FOLIAGE_FOOD_KINDS[foodKind] then return true end
+    local diet = target:GetAttribute("Diet")
+    -- If it explicitly says Carnivore it is a carcass, not foliage.
+    if diet == "Carnivore" then return false end
+    -- Unlabelled FoodSource parts default to foliage.
+    if not diet then return true end
+    -- Herbivore/Omnivore tagged parts are foliage.
+    return diet == "Herbivore" or diet == "Omnivore"
+end
+
+--- Stamp consistent metadata onto a single FoodSource instance.
+--- Only writes attributes that are not already set (additive, safe to call multiple times).
+function FoodWaterService:NormaliseFoliageMetadata(target)
+    if not target then return false, "nil_target" end
+    if not CollectionService:HasTag(target, "FoodSource") then return false, "not_food_source" end
+    if not isFoliageFoodSource(target) then return false, "not_foliage" end
+
+    -- Diet: must be "Herbivore" so omnivores (pass via ValidateFoodTarget's omnivore branch)
+    -- and herbivores both accept it, while carnivores are correctly rejected.
+    if not target:GetAttribute("Diet") then
+        target:SetAttribute("Diet", self.FoliageDefaultDiet)
+    elseif target:GetAttribute("Diet") == "Omnivore" then
+        -- Re-tag to Herbivore so the food itself is consistently labelled;
+        -- omnivore players/NPCs still eat it because ValidateFoodTarget treats
+        -- a Herbivore-labelled food as edible by omnivores (targetDiet ~= diet
+        -- only blocks non-omnivore players from wrong-diet food; omnivore
+        -- players skip that branch entirely).
+        target:SetAttribute("Diet", "Herbivore")
+    end
+
+    if not target:GetAttribute("FoodKind") then
+        -- Infer from collection tags or default
+        local fk = self.FoliageDefaultFoodKind
+        if CollectionService:HasTag(target, "TreeProp") then fk = "TreeBrowse" end
+        target:SetAttribute("FoodKind", fk)
+    end
+
+    if not target:GetAttribute("Nutrition") then
+        target:SetAttribute("Nutrition", self.FoliageDefaultNutrition)
+    end
+
+    if not target:GetAttribute("RespawnCooldownSeconds") then
+        target:SetAttribute("RespawnCooldownSeconds", self.FoliageDefaultRespawnCooldownSeconds)
+    end
+
+    -- Mark as EdibleVegetation so NPCService brain can also detect it.
+    if not target:GetAttribute("EdibleVegetation") then
+        target:SetAttribute("EdibleVegetation", true)
+    end
+
+    return true
+end
+
+--- Scan all currently tagged FoodSource instances and normalise foliage ones.
+--- Call once at game init (before the depletion loop starts) and whenever new
+--- terrain chunks are loaded.
+function FoodWaterService:NormaliseAllFoliageMetadata()
+    local count = 0
+    for _, target in ipairs(CollectionService:GetTagged("FoodSource")) do
+        local ok = self:NormaliseFoliageMetadata(target)
+        if ok then count = count + 1 end
+    end
+    -- Also watch for future tagged instances (terrain streaming / placement).
+    CollectionService:GetInstanceAddedSignal("FoodSource"):Connect(function(inst)
+        -- Yield one frame so the instance's attributes may be set by the placer first.
+        task.defer(function()
+            self:NormaliseFoliageMetadata(inst)
+        end)
+    end)
+    return count
+end
+
+-- ─────────────────────────────────────────────────────────────
+-- Core eat / drink (public, stable API — unchanged signatures)
+-- ─────────────────────────────────────────────────────────────
 function FoodWaterService:RequestEat(player, target)
     self:RefreshDepletion(target)
     if not RemoteValidationService:CheckRate(player, "RequestEat") then return false, "rate_limited" end

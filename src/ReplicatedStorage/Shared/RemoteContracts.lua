@@ -13,6 +13,7 @@ local RemoteContracts = {
     RequestCollectFossil = { Direction = "ClientToServer", Arguments = { fossilInstance = "Instance" }, RateLimitSeconds = 0.75 },
     StatUpdate = { Direction = "ServerToClient", Payload = { "health", "hunger", "thirst", "stamina", "oxygen", "maxOxygen", "growth", "growthStage", "diet", "species", "creatureCategory", "swimming", "flying", "sprinting", "movementModes", "ecosystemProfile", "statusEffects" } },
     ClientNotification = { Direction = "ServerToClient", Payload = { "message", "type", "duration", "icon" } },
+    CombatFeedback = { Direction = "ServerToClient", Payload = { "targetName", "position", "damage", "targetHealth", "targetMaxHealth", "isCrit" } },
 }
 
 return RemoteContracts

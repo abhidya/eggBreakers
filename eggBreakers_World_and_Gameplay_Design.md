@@ -126,9 +126,74 @@ Searches run through the Studio MCP. **✅** = strong category matches returned;
 | Apocalyptic city | "post apocalyptic ruined city buildings pack" | ◇ no strong types — use rubble/vehicle/wall results above | combine refined queries |
 | Realistic water | "realistic water lake river" | ◇ no strong types — prefer **Terrain water** | use Terrain water + shoreline meshes |
 
-**Search-completeness note:** still un-queried and worth a pass before build — dedicated **Audio/SFX** assets (Creator Store audio is a separate index), and **egg/nest** props. Everything else above has a confirmed category match.
+**Search-completeness note:** the catalog is now category-complete across creatures, terrain (canyon/jungle/volcano/meadow/swamp), food (foliage/berries/carcass/egg-nest), city, and VFX — all with confirmed Creator Store matches. **One open item:** dedicated **Audio/SFX** (Creator Store audio is a separate index, run at insert). "Overgrown-moss ruins" returned no distinct type but is covered by the rubble/vehicle/wall results.
 
 **Sourcing rule (locked):** insert → run `AssetImportAuditService:AuditAndRepair({mutate=true})` to strip/quarantine bundled scripts → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly` → keep mesh+rig only → behavior from our services. Verify free/commercial license before shipping.
+
+---
+
+## 5b. Dino Pack Deep Audit (what to salvage vs strip)
+
+The 21 dino roots are **two very different tiers**:
+
+**Tier 1 — keep (genuine mesh, clean):** `Dino Pack!` holds **8 real mesh dinosaurs** — Velociraptor, Acrocanthosaurus, Tyrannosaurus Rex, Spinosaurus, Brachiosaurus, Triceratops, Dilophosaurus, Gallimimus. These are the beautiful, realistic bodies we build the roster on.
+
+**Tier 2 — salvage rig only / mostly cut:** the loose free-models (`rex`, `Barosaurus`, `Stegoceratops` = 161 unions, `Ankylodocus` = 117 unions, `Carnotaurus`, `Indominus Rex`, etc.) are union/primitive builds of inconsistent quality. Keep a rig/animation reference at most; don't ship the geometry.
+
+**Scripts — strip 100%.** Behavior-script tally confirms pure free-model bloat: **`Cloak Script` ×298**, `HurtScript` ×119, `qPerfectionWeld` ×103, plus `RandomlyWalk`, `AttackPeople`, `Roar`, `Health`, `Respawn`, `ragdollDeath`, `BloodS`, `SoundScript`. All conflict with our server-authoritative engine and cause the buzzing + teleport. None ship.
+
+**Salvage the animations.** The pack scripts/Animation objects reference **17 distinct dinosaur animation asset IDs** (walk/run/roar/attack/idle), e.g. `rbxassetid://2914393495`, `2914138808`, `2911668948`, `2914742341`, `2914158644`, `2914173919`. These are **reusable** — wire them into `SpeciesConfig.AnimationIds` + `NPCAnimationService` instead of authoring from scratch. (Validate each plays cleanly on our rigs; replace any low-quality ones with a dedicated animation-pack import.)
+
+---
+
+## 5c. Fine-Grained Asset Catalog (every asset earns its UX value)
+
+Each asset is chosen for a specific experiential job — **beautiful, simple, dynamic, alive, realistic**. Queries below are validated live (✅ = confirmed Creator Store category match).
+
+### Creatures & life (alive, realistic)
+| Asset | In-game usage | UX value | Source |
+|-------|--------------|----------|--------|
+| 8 mesh dinos (Dino Pack!) | Playable + NPC roster, 4 stages | Real bodies you recognize and bond with | ✅ owned |
+| Reused dino anims (17 ids) | Idle/walk/run/roar/attack/eat | Movement = life; kills the static-statue feel | ✅ owned (validate) |
+| Creature animation pack | Fill gaps / higher-fidelity anims | Smooth, weighty locomotion | ✅ "dinosaur creature animation pack" |
+| Ambient prey/birds | Background fauna | World feels inhabited, not staged | ✅ "rigged animated dinosaur"/animal |
+
+### Terrain & biomes (realistic, awesome)
+| Asset | Usage | UX value | Source |
+|-------|-------|----------|--------|
+| Nature pack (trees/rocks/bushes) | Dress all 6 biomes to density | Lush, hand-crafted, not empty | ✅ "low poly nature trees rocks environment pack" |
+| Canyon cliffs / mesa / butte | RedstoneCanyon walls & frontier | Dramatic verticality, scale | ✅ "red rock canyon mesa butte cliff" (landscape/terrain) |
+| Jungle vines / hanging canopy | JungleBasin cover & ambush feel | Dense, dynamic, alive cover | ✅ "jungle vines hanging plants" (plant/vine) |
+| Volcano / mountain peak | Horizon landmarks & wayfinding | Awe + navigation anchor | ✅ "volcano mountain peak" (mountain/terrain) |
+| Meadow grass / wildflowers | FernPlains ground cover | Soft, swaying, living plains | ✅ "grass clumps wildflowers meadow" (grass/flowers/field) |
+| Swamp reeds/cattails/lily/pond | SwampDelta shorelines | Living wetland, soft motion | ✅ "swamp reeds cattails water lily marsh" |
+| Custom skybox + Atmosphere | Per-region mood/time | Instant emotional tone, depth | ✅ "skybox sky atmosphere" |
+| Boundary walls + far silhouettes | Enclose map, fake horizon | No drop-off; believable edge | ✅ "stone wall fence boundary ruins" |
+
+### Food, water & survival (simple, dynamic)
+| Asset | Usage | UX value | Source |
+|-------|-------|----------|--------|
+| Ferns/bushes/fruit foliage | Herbivore food sources | Clear, readable "eat me" targets | ✅ "low poly plants ferns bushes foliage food" |
+| Berry bush / fruit tree | Forageable high-value food | Rewarding, dynamic foraging | ✅ "berry bush fruit tree forageable" (fruit/bush/raspberry) |
+| Animal skeleton/carcass/bones | Carnivore food + scenery | Visceral predation payoff | ✅ "animal carcass bones skeleton remains" |
+| Dino egg & nest | Hatch & nesting beats | Birth moment; ownership of a home | ✅ "dinosaur egg nest hatching" |
+| Terrain water (engine) | Lakes/rivers/swamp/drinking | Real depth, reflections, swim | engine (Terrain water) |
+
+### City & landmark (awesome, dynamic)
+| Asset | Usage | UX value | Source |
+|-------|-------|----------|--------|
+| Ruined buildings / rubble | ApocalypticCity core | Mystery, scale, endgame draw | ✅ "rubble debris wrecked car ruins destroyed" |
+| Wrecked vehicles | City scatter | Story without words | ✅ vehicle/car/prop |
+| Volcano / mountain vista | Horizon landmarks | Wayfinding + awe | ✅ nature/mountain |
+
+### Feedback & polish (dynamic, alive)
+| Asset | Usage | UX value | Source |
+|-------|-------|----------|--------|
+| Impact/blood/dust VFX | Hit + footfall feedback | Combat feels responsive & real | ✅ "impact hit blood particle VFX" |
+| Creature SFX (roar/bite/ambient) | Calls, combat, biome ambience | Sound = presence & tension | ◇ dedicated Audio search |
+| Custom HUD (in-house) | Survival stats, damage, threat | Legible, kid-friendly, beautiful | build (3D store has no UI) |
+
+**Standing rule for every insert:** beautiful (high-rated mesh), simple (readable silhouette), dynamic (animated/interactive where it lives), alive (creatures move, foliage sways), realistic (cohesive scale & material), awesome (landmark moments). Strip scripts + embedded sounds, tag, ground-place, audit.
 
 ---
 

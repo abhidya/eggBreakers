@@ -159,7 +159,7 @@ table.insert(suite.tests, { name = "mesh and generated low quality visuals are e
     end)
 end })
 
-table.insert(suite.tests, { name = "required playable mesh visuals pass by default", run = function()
+table.insert(suite.tests, { name = "required playable mesh visuals pass and are not quarantined", run = function()
     withImportedFixture(function(_, library)
         local meshFixture = makeImportedVisual(library, "Task23RequiredMeshPlayable", AssetManifest.Entries[2], {
             RequiredPlayableVisual = true,
@@ -170,7 +170,29 @@ table.insert(suite.tests, { name = "required playable mesh visuals pass by defau
 
         local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
         Assert.truthy(result.passed, "required playable meshes are allowed by default")
-        Assert.equals(result.counts.meshExcludedAssets, 0, "mesh exclusion not counted")
+        Assert.equals(result.counts.meshExcludedAssets, 0, "mesh exclusion not counted for untagged MeshPart import")
+        -- Required playable mesh should not be quarantined
+        Assert.truthy(meshFixture.Parent ~= nil and not meshFixture:GetAttribute("AssetQualityQuarantined"),
+            "required playable mesh fixture must not be quarantined")
+    end)
+end })
+
+table.insert(suite.tests, { name = "genuine tagged MeshPart import without exclusion flags is release-ready", run = function()
+    withImportedFixture(function(_, library)
+        -- A properly-tagged mesh asset: all 4 required attributes set, no exclusion flags
+        local genuineMesh = makeImportedVisual(library, "Task23GenuineMeshDinoPack", AssetManifest.Entries[2])
+        local meshPart = Instance.new("MeshPart")
+        meshPart.Name = "DinoMeshBody"
+        meshPart.Parent = genuineMesh
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(result.passed, "genuine tagged mesh import should not fail audit")
+        Assert.equals(result.counts.meshExcludedAssets, 0, "unexcluded genuine mesh is not mesh-excluded")
+        -- Both the baseline fixture and the genuine mesh should be release-ready
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 2,
+            "genuine tagged MeshPart import counts toward release gate alongside baseline fixture")
+        Assert.truthy(genuineMesh.Parent ~= nil and not genuineMesh:GetAttribute("AssetQualityQuarantined"),
+            "genuine mesh import must not be quarantined")
     end)
 end })
 

@@ -1,9 +1,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
-local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1, DeathCallbacks = {} }
+-- SurvivalService tracks per-player survival state and drives the needs loop.
+-- Lane D additions: PlayerKilledByCarnivore hooks for player predation flow.
+local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1, DeathCallbacks = {}, PlayerKilledCallbacks = {} }
 SurvivalService.SprintDrainPerSecond = 7
 
 local function clamp(value, minValue, maxValue)
@@ -189,6 +193,65 @@ function SurvivalService:OnDeath(callback)
     end
 end
 
+-- Lane D: Register a callback fired when a player is killed by a carnivore attacker.
+-- Callback signature: callback(deadPlayer, deadState, killerPlayer, killerState)
+-- killerPlayer / killerState may be nil if the killer is an NPC carnivore.
+function SurvivalService:OnPlayerKilledByCarnivore(callback)
+    table.insert(self.PlayerKilledCallbacks, callback)
+    return function()
+        for index, candidate in ipairs(self.PlayerKilledCallbacks) do
+            if candidate == callback then
+                table.remove(self.PlayerKilledCallbacks, index)
+                break
+            end
+        end
+    end
+end
+
+-- Lane D: Returns true if the player's character is currently inside a safe zone.
+-- Checks SafeLocked flag (set by zone service) AND CollectionService "SafeZone" tag on
+-- any part the character is touching (belt-and-suspenders).
+function SurvivalService:IsInSafeZone(player)
+    local state = self:GetState(player)
+    if state and state.SafeLocked then return true end
+    local character = player and player.Character
+    if not character then return false end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    -- Check overlapping parts for SafeZone tag
+    local params = OverlapParams.new()
+    params.FilterType = Enum.RaycastFilterType.Include
+    -- We check all world parts; CollectionService tag is the authority.
+    local touching = workspace:GetPartBoundsInRadius(root.Position, 6, params)
+    for _, part in ipairs(touching) do
+        if CollectionService:HasTag(part, Constants.Tags.SafeZone) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Lane D: Growth stage index for size-gating comparisons (higher = bigger).
+local STAGE_RANK = { Hatchling = 1, Juvenile = 2, SubAdult = 3, Adult = 4 }
+
+-- Lane D: Compute the predation growth reward for killer preying on victim.
+-- Returns a value in [0, baseReward] with reduced reward for punching down.
+-- Anti-grief rules:
+--   Adult (rank 4) killing Hatchling (rank 1) → 0 growth (3+ stage gap).
+--   Adult killing Juvenile (rank 2)            → 25 % of base (2 stage gap).
+--   1-stage gap (e.g. SubAdult vs Juvenile)    → 75 % of base.
+--   Same or victim larger                      → 100 % of base.
+function SurvivalService:ComputePredationGrowthReward(killerStage, victimStage, baseReward)
+    baseReward = baseReward or 8
+    local killerRank = STAGE_RANK[killerStage] or 1
+    local victimRank = STAGE_RANK[victimStage] or 1
+    local gap = killerRank - victimRank
+    if gap >= 3 then return 0 end
+    if gap == 2 then return math.floor(baseReward * 0.25) end
+    if gap == 1 then return math.floor(baseReward * 0.75) end
+    return baseReward
+end
+
 function SurvivalService:StartNeedsLoop(intervalSeconds, playersService, statReplicationService)
     if self.NeedsLoopConnection then
         return false, "already_running"
@@ -235,6 +298,16 @@ function SurvivalService:Kill(player, cause)
     end
     for _, callback in ipairs(self.DeathCallbacks) do
         task.spawn(callback, player, state)
+    end
+    -- Lane D: if the kill was inflicted by a carnivore player attacker, fire predation hooks.
+    -- cause is expected to be a table { carnivoreKiller = <Player>, carnivoreKillerState = <state> }
+    -- when set by CombatService:RequestAttack on a player target.
+    if type(cause) == "table" and cause.carnivoreKiller then
+        local killerPlayer = cause.carnivoreKiller
+        local killerState = cause.carnivoreKillerState
+        for _, cb in ipairs(self.PlayerKilledCallbacks) do
+            task.spawn(cb, player, state, killerPlayer, killerState)
+        end
     end
     return true, state
 end

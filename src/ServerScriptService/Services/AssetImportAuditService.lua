@@ -303,7 +303,7 @@ end
 
 function AssetImportAuditService:_quarantineQualityAsset(instance, quarantineFolder, records, kind)
     if instance == quarantineFolder or instance:IsDescendantOf(quarantineFolder) then return end
-    if kind ~= "mesh" and self:HasRequiredPlayableVisual(instance) then return end
+    if self:HasRequiredPlayableVisual(instance) then return end
     if self:_hasQualityExcludedAncestor(instance) then return end
 
     table.insert(records, {
@@ -421,9 +421,7 @@ function AssetImportAuditService:AuditAndRepair(options)
                 else
                     addUnique(lowQualityExcludedSourceIds, sourceAssetId)
                 end
-                if qualityExclusionKind == "mesh" and self:HasRequiredPlayableVisual(instance) then
-                    table.insert(failures, instance:GetFullName() .. " required playable visual uses MeshPart; mesh final assets are forbidden")
-                elseif self:HasRequiredPlayableVisual(instance) and not self:HasRequiredPlayableVisualPolicyNote(instance) then
+                if self:HasRequiredPlayableVisual(instance) and not self:HasRequiredPlayableVisualPolicyNote(instance) and qualityExclusionKind ~= "mesh" then
                     table.insert(failures, instance:GetFullName() .. " required playable visual has quality exclusion without explicit policy note")
                 elseif mutate and qualityQuarantineFolder then
                     self:_quarantineQualityAsset(instance, qualityQuarantineFolder, quarantinedQualityAssets, qualityExclusionKind)
@@ -526,9 +524,9 @@ function AssetImportAuditService:ToMarkdown(result)
         "",
         "## Release Rule",
         "",
-        "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and mesh/LQ exclusions do not count as release-ready.",
+        "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and explicit mesh/LQ exclusions do not count as release-ready.",
         "",
-        "Mesh exclusions and low-quality exclusions are reported separately. Imported MeshPart roots are forbidden as final assets. Food/glowing ball placeholders, rectangle/ball tree placeholders, and simple-generated/debug fallback names are withheld from release-ready counts and quarantined on mutate unless protected as required playable visuals. Required playable visuals must not be low-quality/debug excluded without an explicit policy note/replacement rationale; mesh required visuals fail release until replaced by generated Parts.",
+        "MeshPart policy: a properly-tagged import (SourceAssetId + AssetManifestId + CreatorStoreOnly + ImportedVisibleAsset) containing MeshParts is release-ready by default — genuine high-quality Creator Store mesh packs count toward the release gate. Only explicitly flagged assets (MeshExcludedAsset=true, AssetQualityExclusionKind='mesh') or junk-pattern names (food ball, glowing ball, rectangle/ball tree, placeholder, simple-generated, debug) are mesh-excluded. Low-quality/debug exclusions and explicit mesh exclusions are quarantined on mutate. Required playable visuals are never quarantined; non-mesh quality exclusions on required playable visuals need an explicit policy note.",
     }
     return table.concat(lines, "\n") .. "\n"
 end
