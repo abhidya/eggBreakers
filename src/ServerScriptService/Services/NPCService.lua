@@ -195,6 +195,18 @@ function NPCService:OrientToward(record, targetPosition, actionName)
     return true
 end
 
+function NPCService:GetFlightTarget(record, targetPosition, actionName)
+    if not record or record.FlightCapable ~= true or typeof(targetPosition) ~= "Vector3" then
+        return targetPosition
+    end
+    local preferredAltitude = record.PreferredAltitude or targetPosition.Y
+    local y = math.max(preferredAltitude, targetPosition.Y)
+    if actionName == "Flee" then
+        y = math.max(y, self:GetRecordPosition(record).Y + 8)
+    end
+    return Vector3.new(targetPosition.X, y, targetPosition.Z)
+end
+
 function NPCService:MoveToward(record, targetPosition, step, actionName, targetInstance)
     if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
     local npc = record.Instance

@@ -9,6 +9,9 @@ local function stats(maxHealth, walkSpeed, sprintSpeed, stamina, hungerDrain, th
         HungerDrain = hungerDrain,
         ThirstDrain = thirstDrain,
         Damage = damage,
+        StaminaRegen = 10,
+        MaxOxygen = 60,
+        FlightStaminaDrain = 0,
     }
     for key, value in pairs(extras or {}) do
         result[key] = value
@@ -106,6 +109,8 @@ local SpeciesConfig = {
         SpeciesId = "tyrannosaurus",
         DisplayName = "Tyrannosaurus",
         Diet = "Carnivore",
+        CreatureCategory = "Apex",
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "apex carnivore / territory event predator",
         UnlockCostDNA = 3000,
         FossilRequirement = "Apex",
@@ -126,6 +131,8 @@ local SpeciesConfig = {
         SpeciesId = "oviraptor",
         DisplayName = "Oviraptor",
         Diet = "Omnivore",
+        CreatureCategory = "Omnivore",
+        MovementModes = { Ground = true, Swim = false, Flight = false },
         Role = "omnivore opportunist / nest-edge scavenger",
         UnlockCostDNA = 900,
         AllowedGrowthStages = stages,

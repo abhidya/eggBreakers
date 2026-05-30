@@ -4,9 +4,11 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 local AssetImportAuditService = require(ServerScriptService.Services.AssetImportAuditService)
 
-local UserStoryTestRegistry = require(script.Parent.UserStoryTestRegistry)
+local Registry = require(script.Parent.G018UserStoryTestRegistry)
 local StoryAssertions = require(script.Parent.StoryAssertions)
 
 local suite = { name = "G018FinalGate", category = "G018FinalGate", tests = {} }
@@ -19,18 +21,6 @@ end
 
 local function requireProofTrue(attributeName, expectedDescription)
     return StoryAssertions.requireProofTrue(attributeName, expectedDescription)
-end
-
-local function requireNonEmptyString(attributeName, expectedDescription)
-    local value = proofAttribute(attributeName)
-    Assert.truthy(type(value) == "string" and #value > 0,
-        "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
-end
-
-local function requireNonEmptyString(attributeName, expectedDescription)
-    local value = proofAttribute(attributeName)
-    Assert.truthy(type(value) == "string" and #value > 0,
-        "missing G018FinalGateProof." .. attributeName .. " proof; expected " .. expectedDescription)
 end
 
 local function requireNonEmptyString(attributeName, expectedDescription)

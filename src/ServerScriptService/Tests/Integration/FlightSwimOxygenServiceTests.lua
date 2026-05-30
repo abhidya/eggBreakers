@@ -60,7 +60,7 @@ table.insert(suite.tests, { name = "US32 swim remote path enters water and initi
     Assert.truthy(ok, "near water swim succeeds")
     Assert.equals(state.Swimming, true, "state enters swimming")
     Assert.equals(state.Flying, false, "swim cancels flying")
-    Assert.equals(state.Oxygen, OxygenService.MaxOxygen, "oxygen initialized")
+    Assert.equals(state.Oxygen, state.MaxOxygen, "oxygen initialized to species oxygen reserve")
     Assert.equals(state.Stamina, 16, "swim stroke consumes stamina")
     water:Destroy(); character:Destroy()
 end })
