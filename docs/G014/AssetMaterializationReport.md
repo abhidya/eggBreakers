@@ -4,7 +4,7 @@ Latest Commit: 5553ade plus current live Studio import batch docs pending commit
 
 | State | Count |
 |---|---:|
-| Cataloged SourceAssetIds | 500+ |
+| Cataloged SourceAssetIds | 500 |
 | Actually Imported Assets | 48 live imported assets from Studio audit |
 | Audited Imported Assets | 48 live assets marked script-audited; below target |
 | Tagged Imported Assets | 48 live tagged imported assets; below target |
@@ -13,6 +13,8 @@ Latest Commit: 5553ade plus current live Studio import batch docs pending commit
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
 | Scripts Quarantined | 0; no executable imported scripts found in the 48 live imported roots |
 | Remaining Release Ready Gap To 500 | 452 |
+
+Plan/manifest consistency audit: see `docs/G014/NextCreatorStoreAssetAudit.md`. The audit confirms G011 remains a 500-ID catalog, while G014 live materialization remains 48/500; post-catalog live imports are not manifest errors, and catalog-only rows are not counted as imported assets.
 
 G014 imported these/organized these required gameplay visuals in Studio for smoke proof:
 - `Imported_Dinosaur_Egg_Nest` from Creator Store asset `8895193`.
