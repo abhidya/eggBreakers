@@ -172,3 +172,41 @@ Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after this seco
 Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCount=0`).
 
 Release still fails honestly because the materialized live count is `33/500`.
+
+
+## G021 import/materialization continuation — 2026-05-30T01:24:46Z
+
+Inserted, sanitized, tagged, and intentionally placed 10 additional Creator Store assets:
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 4536575513 | G021_Imported_FernPlant_01 | FernPlains | HerbivoreFoodVisual | 0 | non-mesh; duplicate SourceAssetId already present so unique count did not increase |
+| 3198452967 | G021_Imported_BushPlant_01 | NurseryGrove | HerbivoreFoodVisual | 0 | non-mesh |
+| 44380873 | G021_Imported_JunglePlant_01 | JungleBasin | JungleBrowseVisual | 0 | non-mesh |
+| 1784440735 | G021_Imported_SwampReeds_01 | SwampDelta | SwampBrowseVisual | 0 | non-mesh |
+| 75926765575812 | G021_Imported_TreeStump_01 | RedstoneCanyon | CanyonBrowseVisual | 0 | MeshPart detected; source policy will exclude until replacement/exception |
+| 107209332 | G021_Imported_RuinedWall_01 | ApocalypticCity | CityRuinVisual | 39 removed | non-mesh |
+| 288799473 | G021_Imported_WreckedCar_01 | ApocalypticCity | CityCarWreckVisual | 5 removed | non-mesh |
+| 7175045109 | G021_Imported_RockNature_01 | MountainNestingCliffs | MountainRockVisual | 0 | MeshPart detected; source policy will exclude until replacement/exception |
+| 2555886764 | G021_Imported_DinoFossil_01 | MountainNestingCliffs | FossilVisual | 0 | non-mesh |
+| 24648974 | G021_Imported_NestEggs_01 | NurseryGrove | EggNestVisual | 0 | non-mesh |
+
+Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after this batch:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 42 |
+| Audited Imported Assets | 42 |
+| Tagged Imported Assets | 42 |
+| Placed Visible Assets | 42 |
+| Release Ready Visible Assets | 42 |
+| Script Objects Found | 0 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 458 |
+
+Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCount=0`).
+
+Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g021-import-batch.rbxl` PASS.
+
+Release still fails honestly because materialized live count is `42/500` and final mobile/RBXL/fresh all-category proof remains missing.
