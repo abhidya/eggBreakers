@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService        = game:GetService("RunService")
 local TweenService      = game:GetService("TweenService")
 local Workspace         = game:GetService("Workspace")
+local Debris            = game:GetService("Debris")
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 
@@ -101,6 +102,29 @@ local function spawnDamageNumber(position, damage, isCrit)
         spawnTime = tick(),
         position  = position,
     })
+end
+
+-- ── hit particles vfx ──────────────────────────────────────────────────────
+
+local function spawnHitParticles(position)
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    local template = library and library:FindFirstChild("CombatHitVFXTemplate")
+    if not template then return end
+
+    local effect = template:Clone()
+    effect.Position = position
+    effect.Parent = Workspace
+
+    local attachment = effect:FindFirstChild("ImpactPoint")
+    if attachment then
+        for _, emitter in ipairs(attachment:GetChildren()) do
+            if emitter:IsA("ParticleEmitter") then
+                emitter:Emit(math.random(8, 15))
+            end
+        end
+    end
+
+    Debris:AddItem(effect, 2)
 end
 
 -- ── hit flash ──────────────────────────────────────────────────────────────
@@ -380,6 +404,9 @@ local function onCombatFeedback(payload)
 
     -- Spawn floating damage number slightly above the hit position
     spawnDamageNumber(position + Vector3.new(0, 3, 0), damage, isCrit)
+
+    -- Spawn hit particles at the hit position
+    spawnHitParticles(position)
 
     -- Find the model in Workspace for flash / health bar (best-effort by name)
     local targetModel = nil
