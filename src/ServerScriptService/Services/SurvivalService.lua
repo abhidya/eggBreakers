@@ -315,7 +315,12 @@ end
 function SurvivalService:Respawn(player)
     local old = self:GetState(player)
     local speciesId = old and old.SpeciesId or "gallimimus"
-    return self:CreateState(player, speciesId)
+    local nest = old and old.NestRespawn
+    local newState = self:CreateState(player, speciesId)
+    if nest and nest.Parent then
+        newState.NestRespawn = nest
+    end
+    return newState
 end
 
 return SurvivalService

@@ -50,12 +50,24 @@ end
 
 local function routeCharacterToSpeciesSpawn(player, state)
     if not player or not state then return false end
-    local spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies(state.SpeciesId, preferredSpawnBiome(state))
+    local spawn, spawnCFrame = nil, nil
+    if state.NestRespawn and state.NestRespawn.Parent then
+        local nest = state.NestRespawn
+        spawnCFrame = nest:IsA("Model") and nest:GetPivot() or nest.CFrame
+        spawnCFrame = spawnCFrame + Vector3.new(0, 3, 0)
+    else
+        spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies(state.SpeciesId, preferredSpawnBiome(state))
+    end
+
     if spawn then
         player.RespawnLocation = spawn
         state.LastSpawnName = spawn.Name
         state.LastSpawnZoneId = spawn:GetAttribute("ZoneId")
+    elseif state.NestRespawn and state.NestRespawn.Parent then
+        state.LastSpawnName = state.NestRespawn.Name
+        state.LastSpawnZoneId = state.NestRespawn:GetAttribute("ZoneId") or "NurseryGrove"
     end
+
     local character = player.Character
     if character and spawnCFrame then
         local root = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
@@ -64,7 +76,7 @@ local function routeCharacterToSpeciesSpawn(player, state)
             return true
         end
     end
-    return spawn ~= nil
+    return spawn ~= nil or (state.NestRespawn ~= nil and state.NestRespawn.Parent ~= nil)
 end
 
 local function notifyResult(player, ok, resultOrReason, successMessage)
