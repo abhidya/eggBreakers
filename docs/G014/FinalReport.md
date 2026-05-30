@@ -1,6 +1,6 @@
 # G014 Final Report
 
-Latest Commit: af9fd05 plus current live Studio import batch docs pending commit.
+Latest Commit: 8c22854 plus current live Studio import batch docs pending commit.
 RBXL Audit: PASS for open/responding Studio; FAIL for release persistence/full 500-asset audit.
 Bootstrap Status: PASS — `Bootstrap.lua` ModuleScript and `Bootstrap.Init()` create required RemoteEvents.
 Client Playability Status: FAIL — keyboard hatch smoke works and HUD/Hatch/Mobile UI appear, but full touch/controller device proof remains unproven.
@@ -17,14 +17,14 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 | State | Count |
 |---|---:|
 | Cataloged SourceAssetIds | 500 |
-| Actually Imported Assets | 68 live imported assets from Studio audit |
-| Audited Imported Assets | 68 live assets marked script-audited; below target |
-| Tagged Imported Assets | 68 live tagged imported assets; below target |
-| Placed Visible Assets | 68 live placed/visible imported assets; below target |
-| Release Ready Visible Assets | 68 live release-ready visible assets |
+| Actually Imported Assets | 23 live imported assets from Studio audit after quality quarantine |
+| Audited Imported Assets | 23 live assets marked script-audited after quality quarantine; below target |
+| Tagged Imported Assets | 23 live tagged imported assets after quality quarantine; below target |
+| Placed Visible Assets | 23 live placed/visible imported assets after quality quarantine; below target |
+| Release Ready Visible Assets | 23 live release-ready visible assets after quality quarantine |
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
-| Scripts Quarantined | 0; no executable imported scripts found in the 68 live imported roots |
-| Remaining Release Ready Gap To 500 | 432 |
+| Scripts Quarantined | 0; no executable imported scripts found in the 23 live imported roots after quality quarantine |
+| Remaining Release Ready Gap To 500 | 477 |
 
 ## Core Flow Result
 
@@ -45,16 +45,16 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 
 ## Signoff
 
-G014 STATUS: FAIL — releaseReadyVisibleAssets remain 68/500 with a 432 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
+G014 STATUS: FAIL — releaseReadyVisibleAssets are now 23/500 after quality quarantine with a 477 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
 
 
 ## G015 Follow-up Evidence — 2026-05-27
 
-Current G014 continuation evidence supersedes stale G015-only counts: active `eggBreakers2.rbxl` now audits at 68/500 release-ready visible assets with a 432 gap, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer fresh full reload/all-category TestRunner remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+Current G014 continuation evidence supersedes stale G015-only counts: active `eggBreakers2.rbxl` now audits at 23/500 release-ready visible assets after quality quarantine with a 477 gap, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer fresh full reload/all-category TestRunner remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
 
 
 ## Current evidence reconciliation — 2026-05-29
 
-- Exact current release asset evidence: 68/500 release-ready visible imported assets; remaining gap 432.
+- Exact current release asset evidence: 23/500 release-ready visible imported assets after quality quarantine; remaining gap 477.
 - Superseded stale baselines: 34/500 from the G015 live batch and 30/500 session baseline are historical only.
 - Still FAIL: fresh full Studio TestRunner, mobile/controller E2E proof, release placement/import audit to 500, and `.rbxl` save/reopen persistence.

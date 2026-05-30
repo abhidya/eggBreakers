@@ -9,28 +9,39 @@ local SecurityAuditService = require(ServerScriptService.Services.SecurityAuditS
 
 local suite = { name = "AssetImportAuditStateTests", category = "Security", tests = {} }
 
+local function makeImportedVisual(parent, name, manifestEntry, attributes)
+    local fixture = Instance.new("Model")
+    fixture.Name = name
+    fixture:SetAttribute("AssetManifestId", manifestEntry.AssetId)
+    fixture:SetAttribute("SourceAssetId", manifestEntry.SourceAssetId)
+    fixture:SetAttribute("CreatorStoreOnly", true)
+    fixture:SetAttribute("ImportedVisibleAsset", true)
+    fixture:SetAttribute("TestImportedAuditFixture", true)
+    for key, value in pairs(attributes or {}) do
+        fixture:SetAttribute(key, value)
+    end
+    fixture.Parent = parent
+
+    local visiblePart = Instance.new("Part")
+    visiblePart.Name = "VisibleImportedPart"
+    visiblePart.Transparency = 0
+    visiblePart.Parent = fixture
+    return fixture
+end
+
 local function withImportedFixture(callback)
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
     local createdLibrary = library.Parent == nil
     library.Name = "ImportedAssetLibrary"
     library.Parent = ReplicatedStorage
 
-    local fixture = Instance.new("Model")
-    fixture.Name = "Task23ImportedAuditFixture"
-    fixture:SetAttribute("AssetManifestId", AssetManifest.Entries[1].AssetId)
-    fixture:SetAttribute("TestImportedAuditFixture", true)
-    fixture.Parent = library
-
-    local visiblePart = Instance.new("Part")
-    visiblePart.Name = "VisibleImportedPart"
-    visiblePart.Transparency = 0
-    visiblePart.Parent = fixture
+    local fixture = makeImportedVisual(library, "Task23ImportedAuditFixture", AssetManifest.Entries[1])
 
     local runtimeScript = Instance.new("Script")
     runtimeScript.Name = "UnsafeImportedRuntime"
     runtimeScript.Parent = fixture
 
-    local ok, result = pcall(callback, fixture)
+    local ok, result = pcall(callback, fixture, library)
 
     local quarantine = ReplicatedStorage:FindFirstChild("ImportedScriptQuarantine")
     if quarantine then
@@ -41,6 +52,11 @@ local function withImportedFixture(callback)
         end
         if #quarantine:GetChildren() == 0 then
             quarantine:Destroy()
+        end
+    end
+    for _, child in ipairs(library:GetChildren()) do
+        if child:GetAttribute("TestImportedAuditFixture") == true then
+            child:Destroy()
         end
     end
     if fixture.Parent then fixture:Destroy() end
@@ -61,6 +77,43 @@ table.insert(suite.tests, { name = "audit separates cataloged imported tagged pl
         Assert.equals(result.counts.scriptsQuarantined, 1, "unsafe runtime script quarantined")
     end)
 end })
+
+
+
+table.insert(suite.tests, { name = "quality exclusions are separated and withheld from release counts", run = function()
+    withImportedFixture(function(_, library)
+        makeImportedVisual(library, "Task23ImportedDuplicate", AssetManifest.Entries[1])
+        makeImportedVisual(library, "Task23ImportedLowQualityFoodBall", AssetManifest.Entries[2], {
+            AssetQualityExclusionKind = "low-quality",
+        })
+        makeImportedVisual(library, "Task23ImportedMeshExcludedTree", AssetManifest.Entries[3], {
+            AssetQualityExclusionKind = "mesh",
+        })
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.equals(result.counts.actuallyImportedAssets, 3, "duplicate SourceAssetIds do not inflate imported count")
+        Assert.equals(result.counts.releaseReadyVisibleAssets, 1, "quality-excluded assets do not count as release-ready")
+        Assert.equals(result.counts.qualityExcludedAssets, 2, "all quality exclusions counted separately")
+        Assert.equals(result.counts.lowQualityExcludedAssets, 1, "low-quality/simple generated exclusion separated")
+        Assert.equals(result.counts.meshExcludedAssets, 1, "mesh exclusion separated from LQ")
+    end)
+end })
+
+table.insert(suite.tests, { name = "required playable quality exclusions need explicit policy note", run = function()
+    withImportedFixture(function(fixture)
+        fixture:SetAttribute("RequiredPlayableVisual", true)
+        fixture:SetAttribute("AssetQualityExclusionKind", "low-quality")
+
+        local blocked = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.falsy(blocked.passed, "required playable visual exclusion without note is blocked")
+
+        fixture:SetAttribute("RequiredPlayableVisualPolicyNote", "Temporary quarantine: replacement playable visual required before release.")
+        local noted = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(noted.passed, "explicit policy note allows audit reporting without accidental deletion")
+        Assert.equals(noted.counts.releaseReadyVisibleAssets, 0, "noted quality exclusion still cannot count as release-ready")
+    end)
+end })
+
 
 table.insert(suite.tests, { name = "release gate fails before imported live count reaches catalog target", run = function()
     withImportedFixture(function()

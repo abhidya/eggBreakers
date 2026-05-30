@@ -124,6 +124,10 @@ function ClientBootstrap:SetButtonText(button, text)
     end
 end
 
+local function iconForTarget(targetType)
+    return targetType == "Water" and "💧" or "🍎"
+end
+
 function ClientBootstrap:ShowActionFeedback(gui, message, button)
     local label = gui and gui:FindFirstChild("ActionFeedbackLabel")
     if not label then return false end
@@ -144,41 +148,42 @@ function ClientBootstrap:UpdateActionGuidance(gui)
     local eatDrink = gui:FindFirstChild("EatDrinkButton")
     local stats = self.LastStats or {}
     if target then
-        local targetName, targetDiet = self:DescribeTarget(target)
+        local targetName = self:DescribeTarget(target)
         local verb = targetType == "Water" and "DRINK" or "EAT"
-        local text = string.format("%s: %s (%s) %.0fm", verb, targetName, targetDiet, distance or 0)
+        local icon = iconForTarget(targetType)
         if hint then
-            hint.Text = "Nearest real asset: " .. text
+            hint.Text = string.format("↗ %s %.0fm", icon, distance or 0)
             hint:SetAttribute("TargetName", target.Name)
             hint:SetAttribute("TargetType", targetType)
             hint:SetAttribute("DistanceStuds", math.floor((distance or 0) + 0.5))
         end
         if eatDrink then
-            eatDrink.Text = verb .. "\n" .. targetName
+            eatDrink.Text = icon .. " " .. string.lower(verb)
             eatDrink:SetAttribute("CurrentTargetName", target.Name)
+            eatDrink:SetAttribute("CurrentTargetLabel", targetName)
             eatDrink:SetAttribute("CurrentTargetType", targetType)
         end
         if dialogue then
             if targetType == "Water" then
-                dialogue.Text = "Guide: drink this blue water to raise THIRST and gain Growth."
+                dialogue.Text = "💧 Drink blue water"
             else
-                dialogue.Text = "Guide: eat this real " .. string.lower(targetDiet) .. " food to raise HUNGER and grow."
+                dialogue.Text = "🍎 Snack here to grow"
             end
         end
     else
         if hint then
-            hint.Text = "No food/water close. Move toward glowing plants, tree browse, carcasses, or blue water — not NPC labels."
+            hint.Text = "↗ 🍎 / 💧"
             hint:SetAttribute("TargetName", "")
             hint:SetAttribute("TargetType", "None")
         end
         if eatDrink then
-            local need = (tonumber(stats.thirst) or 100) < (tonumber(stats.hunger) or 100) and "DRINK" or "EAT"
-            eatDrink.Text = need .. "\nfind marker"
+            local need = (tonumber(stats.thirst) or 100) < (tonumber(stats.hunger) or 100) and "💧 Drink" or "🍎 Snack"
+            eatDrink.Text = need
             eatDrink:SetAttribute("CurrentTargetName", "")
             eatDrink:SetAttribute("CurrentTargetType", "None")
         end
         if dialogue then
-            dialogue.Text = "Guide: look for non-NPC action markers: green plants/tree leaves, red carcasses, fish, or blue water."
+            dialogue.Text = "Follow arrows: 🍎 snack • 💧 drink"
         end
     end
     return true
@@ -300,13 +305,20 @@ local function markButtonPressed(button, resultText)
     button:SetAttribute("LastActionResult", resultText)
 end
 
-local function setButtonContext(button, context, enabled)
+local function setButtonContext(button, context, enabled, hideWhenUnavailable)
     if not button then return end
+    local isEnabled = enabled ~= false
     button:SetAttribute("Context", context)
-    button:SetAttribute("ContextEnabled", enabled ~= false)
-    button.AutoButtonColor = enabled ~= false
-    button.Active = enabled ~= false
-    button.BackgroundTransparency = enabled == false and 0.35 or 0
+    button:SetAttribute("ContextEnabled", isEnabled)
+    button:SetAttribute("HiddenWhenUnavailable", hideWhenUnavailable == true)
+    button.AutoButtonColor = isEnabled
+    button.Active = isEnabled
+    if hideWhenUnavailable then
+        button.Visible = isEnabled
+        button.BackgroundTransparency = 0
+    else
+        button.BackgroundTransparency = isEnabled and 0 or 0.2
+    end
 end
 
 local function setButtonActive(button, isActive)
@@ -353,16 +365,17 @@ local function wireMobileButtons(result)
     local function refreshContext()
         local stats = ClientBootstrap.LastStats or {}
         local modes = stats.movementModes or {}
-        setButtonContext(gui:FindFirstChild("EatDrinkButton"), stats.diet and ("Find food/water as " .. tostring(stats.diet)) or "Find food/water", true)
-        setButtonContext(gui:FindFirstChild("AttackButton"), "Primary: " .. ClientBootstrap:GetPrimaryAttack(), true)
-        setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "Low stamina" or "Hold speed", stats.stamina == nil or stats.stamina >= 5)
-        setButtonContext(gui:FindFirstChild("CallButton"), "Friendly herd call", true)
-        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "Hidden" or "Hide/rest", true)
+        setButtonContext(gui:FindFirstChild("EatDrinkButton"), stats.diet and ("Snack for " .. tostring(stats.diet)) or "Find snack/water", true)
+        setButtonContext(gui:FindFirstChild("AttackButton"), "Chomp: " .. ClientBootstrap:GetPrimaryAttack(), true)
+        setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "Low energy" or "Zoom", stats.stamina == nil or stats.stamina >= 5)
+        setButtonContext(gui:FindFirstChild("CallButton"), "Friendly roar", true)
+        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "Cozy" or "Rest", true)
         local canFly = modes.Flight == true or modes.flight == true or modes.flying == true
         local canSwim = modes.Swim == true or modes.swim == true or modes.swimming == true
-        setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "Take off / land" or "No flight for species", canFly)
-        setButtonContext(gui:FindFirstChild("SwimButton"), (canSwim or stats.maxOxygen) and "Enter water" or "No swim bonus", canSwim or stats.maxOxygen ~= nil)
+        setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "Fly" or "", canFly, true)
+        setButtonContext(gui:FindFirstChild("SwimButton"), canSwim and "Swim" or "", canSwim, true)
     end
+    ClientBootstrap.RefreshMobileContext = refreshContext
     refreshContext()
     local eatDrink = gui:FindFirstChild("EatDrinkButton")
     if eatDrink then
@@ -372,14 +385,14 @@ local function wireMobileButtons(result)
                 if targetType == "Food" then
                     ClientBootstrap:PlayActionMotion("Eat", target)
                     InputController:RequestEat(target)
-                    showFeedback(gui, "Eating: hunger + growth should rise")
+                    showFeedback(gui, "Yum! Food up")
                 elseif targetType == "Water" then
                     ClientBootstrap:PlayActionMotion("Drink", target)
                     InputController:RequestDrink(target)
-                    showFeedback(gui, "Drinking: thirst + growth should rise")
+                    showFeedback(gui, "Splash! Water up")
                 end
             else
-                ClientBootstrap:ShowActionFeedback(gui, "No real food/water nearby — follow FOOD/WATER marker")
+                ClientBootstrap:ShowActionFeedback(gui, "Follow ↗ to 🍎 or 💧")
             end
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
@@ -390,8 +403,8 @@ local function wireMobileButtons(result)
             local target = ClientBootstrap:FindNearestTagged(Constants.Tags.Damageable, 12)
             ClientBootstrap:PlayActionMotion("Attack", target)
             InputController:RequestAttack(ClientBootstrap:GetPrimaryAttack(), target)
-            markButtonPressed(attack, "Attacking")
-            showFeedback(gui, "Attacking", attack)
+            markButtonPressed(attack, "Chomp")
+            showFeedback(gui, "Chomp!", attack)
         end)
     end
 
@@ -403,9 +416,9 @@ local function wireMobileButtons(result)
             InputController:RequestSprint(isSprinting)
             local humanoid = getHumanoid()
             if humanoid then humanoid.WalkSpeed = isSprinting and SPRINT_WALK_SPEED or DEFAULT_WALK_SPEED end
-            sprint.Text = isSprinting and "SPRINT ON\nstamina ↓" or "SPRINT\nuses stamina"
+            sprint.Text = isSprinting and "⚡ Zoom!" or "⚡ Zoom"
             setButtonActive(sprint, isSprinting)
-            showFeedback(gui, isSprinting and "Sprint ON: stamina drains while moving" or "Sprint off: stamina recovers")
+            showFeedback(gui, isSprinting and "Zoom uses energy" or "Energy refills")
         end)
     end
 
@@ -418,8 +431,8 @@ local function wireMobileButtons(result)
             local pulse = createLocalCallPulse(callType)
             call:SetAttribute("LastCallType", callType)
             call:SetAttribute("VisibleEffectCreated", pulse ~= nil)
-            markButtonPressed(call, "Friendly call sent")
-            showFeedback(gui, "Friendly call sent", call)
+            markButtonPressed(call, "Roar sent")
+            showFeedback(gui, "Roar!", call)
         end)
     end
 
@@ -430,10 +443,10 @@ local function wireMobileButtons(result)
             player:SetAttribute("Hidden", isHidden)
             ClientBootstrap:PlayActionMotion("Hide")
             applyHiddenVisual(isHidden)
-            restHide.Text = isHidden and "Hidden" or "Rest/Hide"
+            restHide.Text = isHidden and "🌿 Cozy" or "🌿 Rest"
             setButtonActive(restHide, isHidden)
-            markButtonPressed(restHide, isHidden and "Hidden/resting" or "Visible")
-            showFeedback(gui, isHidden and "Hidden/resting" or "Visible", restHide)
+            markButtonPressed(restHide, isHidden and "Cozy" or "Ready")
+            showFeedback(gui, isHidden and "Cozy rest" or "Ready", restHide)
         end)
     end
 
@@ -443,9 +456,9 @@ local function wireMobileButtons(result)
             local enabled = not player:GetAttribute("Flying")
             player:SetAttribute("Flying", enabled)
             InputController:RequestFlight(enabled)
-            flight.Text = enabled and "FLYING\nstamina ↓" or "FLY\nstamina"
+            flight.Text = enabled and "🪽 Flying" or "🪽 Fly"
             setButtonActive(flight, enabled)
-            showFeedback(gui, enabled and "Flight ON: stamina drains" or "Flight off / landing")
+            showFeedback(gui, enabled and "Flying uses energy" or "Landed")
         end)
     end
 
@@ -455,7 +468,7 @@ local function wireMobileButtons(result)
             local water = ClientBootstrap:FindNearestEatDrinkTarget(18, "Water")
             InputController:RequestSwim(water)
             swim:SetAttribute("LastWaterTarget", water and water.Name or "")
-            showFeedback(gui, water and "Swimming: watch oxygen" or "No water close enough to swim")
+            showFeedback(gui, water and "Swim! Watch air" or "Find water first")
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
     end
@@ -476,6 +489,9 @@ function ClientBootstrap:Init()
     Remotes:WaitForChild("StatUpdate").OnClientEvent:Connect(function(payload)
         if type(payload) ~= "table" then return end
         ClientBootstrap.LastStats = payload
+        if ClientBootstrap.RefreshMobileContext then
+            ClientBootstrap.RefreshMobileContext()
+        end
         ClientBootstrap:UpdateActionGuidance(mobile.Gui)
         if type(payload.hatchProgress) == "number" then HatchUIController:SetProgress(payload.hatchProgress) end
         if payload.hatched == true and HatchUIController.Gui then HatchUIController.Gui.Enabled = false end

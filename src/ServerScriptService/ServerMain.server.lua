@@ -39,6 +39,34 @@ local function getStarterSpecies(data)
     return StarterSpeciesService:ChooseStarterSpecies(data)
 end
 
+local function preferredSpawnBiome(state)
+    local species = state and SpeciesConfig[state.SpeciesId]
+    local spawnBiomes = species and species.SpawnBiomes
+    if type(spawnBiomes) == "table" then
+        return spawnBiomes.Primary or spawnBiomes.Nursery or spawnBiomes.Secondary
+    end
+    return nil
+end
+
+local function routeCharacterToSpeciesSpawn(player, state)
+    if not player or not state then return false end
+    local spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies(state.SpeciesId, preferredSpawnBiome(state))
+    if spawn then
+        player.RespawnLocation = spawn
+        state.LastSpawnName = spawn.Name
+        state.LastSpawnZoneId = spawn:GetAttribute("ZoneId")
+    end
+    local character = player.Character
+    if character and spawnCFrame then
+        local root = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
+        if root then
+            character:PivotTo(spawnCFrame)
+            return true
+        end
+    end
+    return spawn ~= nil
+end
+
 local function notifyResult(player, ok, resultOrReason, successMessage)
     if ok then
         StatReplicationService:Notify(player, successMessage or "Action complete", "Success", 2)
@@ -61,6 +89,7 @@ local function applyDeathState(player, state)
     task.delay(2, function()
         if not player.Parent then return end
         local respawned = SurvivalService:Respawn(player)
+        routeCharacterToSpeciesSpawn(player, respawned)
         MovementLockService:SetHatchedMovement(player, false, respawned)
         CharacterVisualService:ApplyForState(player, respawned)
         sendStats(player)
@@ -73,6 +102,7 @@ SurvivalService:OnDeath(applyDeathState)
 local function initializePlayer(player)
     local data = PlayerDataService:Load(player)
     local state = SurvivalService:CreateState(player, getStarterSpecies(data))
+    routeCharacterToSpeciesSpawn(player, state)
     MovementLockService:SetHatchedMovement(player, false, state)
     CharacterVisualService:ApplyForState(player, state)
     sendStats(player)
@@ -80,6 +110,9 @@ end
 
 local function applyCharacterState(player)
     local state = SurvivalService:GetState(player)
+    if state and state.Hatched ~= true then
+        routeCharacterToSpeciesSpawn(player, state)
+    end
     MovementLockService:SetHatchedMovement(player, state and state.Hatched == true, state)
     CharacterVisualService:ApplyForState(player, state)
 end

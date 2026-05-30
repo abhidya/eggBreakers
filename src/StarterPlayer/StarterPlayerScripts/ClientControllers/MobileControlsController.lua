@@ -2,15 +2,16 @@ local Players = game:GetService("Players")
 local UIFactory = require(script.Parent.UIFactory)
 
 local MobileControlsController = {}
-MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide", "Flight", "Swim" }
+MobileControlsController.Buttons = { "MoveThumbstick", "EatDrink", "Attack", "Sprint", "Call", "RestHide" }
+MobileControlsController.OptionalButtons = { "Flight", "Swim" }
 
 MobileControlsController.DefaultButtonColor = Color3.fromRGB(35, 45, 35)
 MobileControlsController.EffectStyles = {
-    EatDrink = { ActiveText = "Eat/Drink", ActiveColor = Color3.fromRGB(66, 140, 82) },
-    Attack = { ActiveText = "Attack!", ActiveColor = Color3.fromRGB(190, 78, 62) },
-    Sprint = { ActiveText = "Sprint!", ActiveColor = Color3.fromRGB(72, 128, 255) },
-    Call = { ActiveText = "Calling", ActiveColor = Color3.fromRGB(255, 196, 76) },
-    RestHide = { ActiveText = "Hidden", ActiveColor = Color3.fromRGB(56, 92, 68) },
+    EatDrink = { ActiveText = "Snack!", ActiveColor = Color3.fromRGB(66, 140, 82) },
+    Attack = { ActiveText = "Chomp!", ActiveColor = Color3.fromRGB(190, 78, 62) },
+    Sprint = { ActiveText = "Zoom!", ActiveColor = Color3.fromRGB(72, 128, 255) },
+    Call = { ActiveText = "Roar!", ActiveColor = Color3.fromRGB(255, 196, 76) },
+    RestHide = { ActiveText = "Cozy", ActiveColor = Color3.fromRGB(56, 92, 68) },
     Flight = { ActiveText = "Flying", ActiveColor = Color3.fromRGB(96, 170, 255) },
     Swim = { ActiveText = "Swimming", ActiveColor = Color3.fromRGB(56, 160, 210) },
 }
@@ -60,15 +61,15 @@ function MobileControlsController:CreateControls(settings)
     if self.Gui then return self.Gui end
     local scale = settings and settings.MobileButtonScale or 1.0
     local gui = UIFactory:CreateRootGui("MobileControls")
-    local buttonSize = UDim2.fromOffset(112 * scale, 64 * scale)
+    local buttonSize = UDim2.fromOffset(96 * scale, 54 * scale)
     local positions = {
-        EatDrink = UDim2.new(1, -368 * scale, 1, -170 * scale),
-        Attack = UDim2.new(1, -246 * scale, 1, -170 * scale),
-        Sprint = UDim2.new(1, -124 * scale, 1, -170 * scale),
-        Call = UDim2.new(1, -368 * scale, 1, -96 * scale),
-        RestHide = UDim2.new(1, -246 * scale, 1, -96 * scale),
-        Flight = UDim2.new(1, -124 * scale, 1, -96 * scale),
-        Swim = UDim2.new(1, -124 * scale, 1, -244 * scale),
+        EatDrink = UDim2.new(1, -318 * scale, 1, -146 * scale),
+        Attack = UDim2.new(1, -212 * scale, 1, -146 * scale),
+        Sprint = UDim2.new(1, -106 * scale, 1, -146 * scale),
+        Call = UDim2.new(1, -212 * scale, 1, -82 * scale),
+        RestHide = UDim2.new(1, -106 * scale, 1, -82 * scale),
+        Flight = UDim2.new(1, -212 * scale, 1, -210 * scale),
+        Swim = UDim2.new(1, -106 * scale, 1, -210 * scale),
     }
     local thumbstick = Instance.new("Frame")
     thumbstick.Name = "MoveThumbstick"
@@ -78,47 +79,53 @@ function MobileControlsController:CreateControls(settings)
     thumbstick.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     thumbstick.Parent = gui
     local labels = {
-        EatDrink = "EAT / DRINK\nfind marker",
-        Attack = "ATTACK\nnearest dino",
-        Sprint = "SPRINT\nuses stamina",
-        Call = "CALL\nsignal herd",
-        RestHide = "HIDE/REST\nsafe spot",
-        Flight = "FLY\nstamina",
-        Swim = "SWIM\noxygen",
+        EatDrink = "🍎 Snack",
+        Attack = "🦷 Chomp",
+        Sprint = "⚡ Zoom",
+        Call = "📣 Roar",
+        RestHide = "🌿 Rest",
+        Flight = "🪽 Fly",
+        Swim = "🌊 Swim",
     }
     for name, position in pairs(positions) do
         local button = UIFactory:CreateButton(gui, name .. "Button", labels[name] or name, position)
+        button.Size = buttonSize
         button:SetAttribute("ActionName", name)
         button:SetAttribute("DefaultText", labels[name] or name)
+        button:SetAttribute("OptionalAction", name == "Flight" or name == "Swim")
+        if name == "Flight" or name == "Swim" then
+            button.Visible = false
+            button.Active = false
+        end
     end
     local dialogue = Instance.new("TextLabel")
     dialogue.Name = "DialoguePromptLabel"
-    dialogue.Size = UDim2.fromOffset(360 * scale, 52 * scale)
-    dialogue.Position = UDim2.new(0.5, -180 * scale, 1, -238 * scale)
+    dialogue.Size = UDim2.fromOffset(260 * scale, 42 * scale)
+    dialogue.Position = UDim2.new(0.5, -130 * scale, 1, -304 * scale)
     dialogue.BackgroundTransparency = 0.18
     dialogue.BackgroundColor3 = Color3.fromRGB(16, 28, 20)
     dialogue.TextColor3 = Color3.fromRGB(240, 255, 220)
     dialogue.TextScaled = true
     dialogue.TextWrapped = true
-    dialogue.Text = "Guide: follow FOOD / WATER markers. Eat plants or carcasses, drink blue water."
+    dialogue.Text = "Follow arrows: 🍎 snack • 💧 drink"
     dialogue:SetAttribute("GuidesToActionableAssets", true)
     dialogue.Parent = gui
     local targetHint = Instance.new("TextLabel")
     targetHint.Name = "NearestActionHintLabel"
-    targetHint.Size = UDim2.fromOffset(360 * scale, 38 * scale)
-    targetHint.Position = UDim2.new(0.5, -180 * scale, 1, -294 * scale)
+    targetHint.Size = UDim2.fromOffset(260 * scale, 44 * scale)
+    targetHint.Position = UDim2.new(0.5, -130 * scale, 1, -356 * scale)
     targetHint.BackgroundTransparency = 0.15
     targetHint.BackgroundColor3 = Color3.fromRGB(32, 44, 28)
     targetHint.TextColor3 = Color3.fromRGB(255, 255, 255)
     targetHint.TextScaled = true
     targetHint.TextWrapped = true
-    targetHint.Text = "Nearest: scanning for real food/water..."
+    targetHint.Text = "↗ 🍎 / 💧"
     targetHint:SetAttribute("NonNpcActionHint", true)
     targetHint.Parent = gui
     local feedback = Instance.new("TextLabel")
     feedback.Name = "ActionFeedbackLabel"
-    feedback.Size = UDim2.fromOffset(360 * scale, 42 * scale)
-    feedback.Position = UDim2.new(0.5, -180 * scale, 1, -352 * scale)
+    feedback.Size = UDim2.fromOffset(260 * scale, 40 * scale)
+    feedback.Position = UDim2.new(0.5, -130 * scale, 1, -258 * scale)
     feedback.BackgroundTransparency = 0.25
     feedback.BackgroundColor3 = Color3.fromRGB(20, 35, 24)
     feedback.TextColor3 = Color3.new(1, 1, 1)
@@ -129,7 +136,7 @@ function MobileControlsController:CreateControls(settings)
     feedback.Parent = gui
     gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui = gui
-    return { Gui = gui, Buttons = self.Buttons, Scale = scale }
+    return { Gui = gui, Buttons = self.Buttons, OptionalButtons = self.OptionalButtons, Scale = scale }
 end
 
 return MobileControlsController

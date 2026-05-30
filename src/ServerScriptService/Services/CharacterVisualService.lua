@@ -386,28 +386,53 @@ function CharacterVisualService:_orientationCorrectionForSpecies(speciesId)
     return CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll)), pitch, yaw, roll, correction.Reason
 end
 
-function CharacterVisualService:_applySpeciesOrientationCorrection(model, speciesId)
-    local correction, pitch, yaw, roll, reason = self:_orientationCorrectionForSpecies(speciesId)
-    if pitch == 0 and yaw == 0 and roll == 0 then
-        model:SetAttribute("SpeciesOrientationCorrected", false)
-        return false
+local function averageUpDot(parts, targetUp)
+    if #parts == 0 then return 1 end
+    local total = 0
+    for _, part in ipairs(parts) do
+        total = total + part.CFrame.UpVector:Dot(targetUp)
     end
+    return total / #parts
+end
 
+function CharacterVisualService:_applyOrientationTransform(model, transform, pivotCFrame)
     if model:IsA("Model") then
-        model:PivotTo(model:GetPivot() * correction)
+        model:PivotTo(model:GetPivot() * transform)
     elseif model:IsA("BasePart") then
-        model.CFrame = model.CFrame * correction
+        model.CFrame = model.CFrame * transform
     else
         local center = boundsFromParts(getVisibleParts(model))
-        transformLooseVisualAroundPivot(model, CFrame.new(center or Vector3.new(0, 0, 0)), correction)
+        transformLooseVisualAroundPivot(model, pivotCFrame or CFrame.new(center or Vector3.new(0, 0, 0)), transform)
     end
-    model:SetAttribute("SpeciesOrientationCorrected", true)
+end
+
+function CharacterVisualService:_applySpeciesOrientationCorrection(model, speciesId, root)
+    local correction, pitch, yaw, roll, reason = self:_orientationCorrectionForSpecies(speciesId)
+    local species = SpeciesConfig[speciesId or ""]
+    local changed = false
+    if pitch ~= 0 or yaw ~= 0 or roll ~= 0 then
+        self:_applyOrientationTransform(model, correction, root and root.CFrame)
+        changed = true
+    end
+
+    local targetUp = root and root.CFrame.UpVector or Vector3.new(0, 1, 0)
+    local beforeDot = averageUpDot(getVisibleParts(model), targetUp)
+    if species and species.VisualOrientationCorrection and species.VisualOrientationCorrection.ForceUpright == true and beforeDot < 0 then
+        self:_applyOrientationTransform(model, CFrame.Angles(math.rad(180), 0, 0), root and root.CFrame)
+        changed = true
+    end
+    local afterDot = averageUpDot(getVisibleParts(model), targetUp)
+
+    model:SetAttribute("SpeciesOrientationCorrected", changed)
     model:SetAttribute("OrientationCorrectionSpecies", speciesId)
     model:SetAttribute("OrientationCorrectionPitchDegrees", pitch)
     model:SetAttribute("OrientationCorrectionYawDegrees", yaw)
     model:SetAttribute("OrientationCorrectionRollDegrees", roll)
-    model:SetAttribute("OrientationCorrectionReason", reason or "species_config")
-    return true
+    model:SetAttribute("OrientationCorrectionReason", reason or (changed and "species_config" or nil))
+    model:SetAttribute("UprightDotBeforeCorrection", beforeDot)
+    model:SetAttribute("UprightDotAfterCorrection", afterDot)
+    model:SetAttribute("UprightVerified", afterDot >= 0.92)
+    return changed
 end
 
 function CharacterVisualService:_prepareDinosaurClone(model, state)
@@ -416,7 +441,6 @@ function CharacterVisualService:_prepareDinosaurClone(model, state)
     clone:SetAttribute("SpeciesId", state and state.SpeciesId or "unknown")
     self:_normalizeDinosaurScale(clone)
     self:_applyGrowthVisualScale(clone, state)
-    self:_applySpeciesOrientationCorrection(clone, state and state.SpeciesId)
     return clone
 end
 
@@ -503,6 +527,7 @@ function CharacterVisualService:_attachModel(character, root, model)
         end
     end
     if model:GetAttribute("VisualKind") == "ImportedDinosaur" then
+        self:_applySpeciesOrientationCorrection(model, model:GetAttribute("SpeciesId"), root)
         self:_orientDinosaurForward(model, root)
     end
     for _, descendant in ipairs(model:GetDescendants()) do

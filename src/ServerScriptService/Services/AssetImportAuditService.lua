@@ -41,6 +41,15 @@ local function countSet(set)
     return count
 end
 
+local function normalizeQualityExclusionKind(value)
+    if value == nil then return nil end
+    local text = string.lower(tostring(value))
+    if text == "mesh" or text == "mesh-only" or text == "mesh_exclusion" then return "mesh" end
+    if text == "lq" or text == "low-quality" or text == "lowquality" or text == "simple-generated" then return "lowQuality" end
+    if text == "debug" or text == "debug-looking" then return "debug" end
+    return text
+end
+
 local function getChildByPath(root, path)
     local current = root
     for _, name in ipairs(path) do
@@ -90,6 +99,37 @@ function AssetImportAuditService:IsVisibleImportedAsset(instance)
         if descendant:IsA("BasePart") and descendant.Transparency < 1 then
             return true
         end
+    end
+    return false
+end
+
+function AssetImportAuditService:GetQualityExclusionKind(instance)
+    local current = instance
+    while current do
+        local kind = normalizeQualityExclusionKind(current:GetAttribute("AssetQualityExclusionKind"))
+        if kind then return kind end
+        if current:GetAttribute("LowQualityAsset") == true or current:GetAttribute("AssetQualityExcluded") == true then
+            return "lowQuality"
+        end
+        if current:GetAttribute("MeshExcludedAsset") == true then
+            return "mesh"
+        end
+        if current:GetAttribute("DebugOnly") == true or current:GetAttribute("DebugFallbackVisual") == true then
+            return "debug"
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+function AssetImportAuditService:HasRequiredPlayableVisualPolicyNote(instance)
+    local current = instance
+    while current do
+        local note = current:GetAttribute("RequiredPlayableVisualPolicyNote")
+        if note ~= nil and tostring(note) ~= "" then return true end
+        note = current:GetAttribute("AssetQualityPolicyNote")
+        if note ~= nil and tostring(note) ~= "" then return true end
+        current = current.Parent
     end
     return false
 end
@@ -163,6 +203,10 @@ function AssetImportAuditService:AuditAndRepair(options)
     local taggedSourceIds = {}
     local placedSourceIds = {}
     local releaseReadySourceIds = {}
+    local qualityExcludedSourceIds = {}
+    local meshExcludedSourceIds = {}
+    local lowQualityExcludedSourceIds = {}
+    local debugExcludedSourceIds = {}
 
     for _, entry in ipairs(AssetManifest.Entries) do
         addUnique(catalogedSourceIds, entry.SourceAssetId)
@@ -220,13 +264,29 @@ function AssetImportAuditService:AuditAndRepair(options)
 				instance:SetAttribute("ScriptsAudited", true)
 			end
 
+            local qualityExclusionKind = self:GetQualityExclusionKind(instance)
+            local qualityExcluded = qualityExclusionKind ~= nil
+            if qualityExcluded then
+                addUnique(qualityExcludedSourceIds, sourceAssetId)
+                if qualityExclusionKind == "mesh" then
+                    addUnique(meshExcludedSourceIds, sourceAssetId)
+                elseif qualityExclusionKind == "debug" then
+                    addUnique(debugExcludedSourceIds, sourceAssetId)
+                else
+                    addUnique(lowQualityExcludedSourceIds, sourceAssetId)
+                end
+                if instance:GetAttribute("RequiredPlayableVisual") == true and not self:HasRequiredPlayableVisualPolicyNote(instance) then
+                    table.insert(failures, instance:GetFullName() .. " required playable visual has quality exclusion without explicit policy note")
+                end
+            end
+
 			addUnique(importedSourceIds, sourceAssetId)
 			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
 			if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
             if instance:GetAttribute("ScriptsAudited") == true or (entry and entry.ScriptsAudited == true and not scriptsPresent) then
                 addUnique(auditedSourceIds, sourceAssetId)
             end
-            if tagged and (visible or rootInfo.placed) and not scriptsPresent then
+            if tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded then
                 addUnique(releaseReadySourceIds, sourceAssetId)
             end
 
@@ -238,7 +298,8 @@ function AssetImportAuditService:AuditAndRepair(options)
                 tagged = tagged,
                 placed = visible or rootInfo.placed,
                 scriptsPresent = scriptsPresent,
-                releaseReady = tagged and (visible or rootInfo.placed) and not scriptsPresent,
+                qualityExclusionKind = qualityExclusionKind,
+                releaseReady = tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded,
             })
         end
     end
@@ -250,6 +311,10 @@ function AssetImportAuditService:AuditAndRepair(options)
         taggedImportedAssets = countSet(taggedSourceIds),
         placedVisibleAssets = countSet(placedSourceIds),
         releaseReadyVisibleAssets = countSet(releaseReadySourceIds),
+        qualityExcludedAssets = countSet(qualityExcludedSourceIds),
+        meshExcludedAssets = countSet(meshExcludedSourceIds),
+        lowQualityExcludedAssets = countSet(lowQualityExcludedSourceIds),
+        debugExcludedAssets = countSet(debugExcludedSourceIds),
         scriptObjectsFound = #scriptRecords,
         scriptsQuarantined = #quarantinedScripts,
     }
@@ -299,12 +364,18 @@ function AssetImportAuditService:ToMarkdown(result)
         "| Tagged Imported Assets | " .. tostring(counts.taggedImportedAssets) .. " |",
         "| Placed Visible Assets | " .. tostring(counts.placedVisibleAssets) .. " |",
         "| Release Ready Visible Assets | " .. tostring(counts.releaseReadyVisibleAssets) .. " |",
+        "| Quality Excluded Assets | " .. tostring(counts.qualityExcludedAssets or 0) .. " |",
+        "| Mesh Excluded Assets | " .. tostring(counts.meshExcludedAssets or 0) .. " |",
+        "| Low Quality Excluded Assets | " .. tostring(counts.lowQualityExcludedAssets or 0) .. " |",
+        "| Debug Excluded Assets | " .. tostring(counts.debugExcludedAssets or 0) .. " |",
         "| Script Objects Found | " .. tostring(counts.scriptObjectsFound) .. " |",
         "| Scripts Quarantined | " .. tostring(counts.scriptsQuarantined) .. " |",
         "",
         "## Release Rule",
         "",
-        "Release validation fails unless imported, audited, tagged, placed, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows alone do not count as imported.",
+        "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and mesh/LQ exclusions do not count as release-ready.",
+        "",
+        "Mesh exclusions and low-quality exclusions are reported separately. MeshPart usage alone is not a failure; only assets explicitly marked by policy as mesh-excluded are withheld from release-ready counts. Required playable visuals must not be removed or excluded without an explicit policy note/replacement rationale.",
     }
     return table.concat(lines, "\n") .. "\n"
 end

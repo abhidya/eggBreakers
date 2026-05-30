@@ -4,6 +4,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local ZoneConfig = require(ReplicatedStorage.Shared.ZoneConfig)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local MapLayoutService = {}
 MapLayoutService.MapFolderName = "Map"
@@ -122,8 +123,53 @@ function MapLayoutService:ApplyFoodMetadata(food, spec)
     food:SetAttribute("BrowseTier", spec.browseTier or metadata.browseTier)
     food:SetAttribute("BrowseHeightStuds", spec.browseHeight or metadata.browseHeight)
     food:SetAttribute("MeatType", metadata.meatType)
+    food:SetAttribute("PotentialCarnivoreFood", diet == "Carnivore")
     food:SetAttribute("CompactFoodGroup", metadata.compactGroup)
     food:SetAttribute("InteractionHint", metadata.interactionHint or (diet == "Carnivore" and "Eat carcass" or "Eat plant"))
+end
+
+function MapLayoutService:IsVegetationBrowseSpec(spec)
+    if not spec then return false end
+    if spec.edibleBrowse == true or spec.kind == "Tree" then return true end
+    if spec.flowerCluster == true then return true end
+    if spec.kind == "ForestStand" or spec.kind == "DryScrub" then return true end
+    return spec.habitatFeature == "Forest" or spec.habitatFeature == "Desert"
+end
+
+function MapLayoutService:ApplyReleaseHiddenQueryPart(part)
+    part.Transparency = 1
+    part.CanCollide = false
+    part.CanTouch = true
+    part.CanQuery = true
+    part:SetAttribute("VisibleGameplayAffordance", false)
+    part:SetAttribute("GameplayQuery", true)
+    part:SetAttribute("InvisibleQueryHelper", true)
+    part:SetAttribute("ReleaseHiddenProceduralVisual", true)
+    part:SetAttribute("ProceduralGameplayVisual", nil)
+    part:SetAttribute("RestoreTransparency", 1)
+end
+
+function MapLayoutService:ApplyBrowseFoodAttributes(part, spec, options)
+    options = options or {}
+    local isTree = options.treeBrowse == true
+    part:SetAttribute("Decorative", false)
+    part:SetAttribute("TutorialSafe", spec.zone == "NurseryGrove")
+    part:SetAttribute("StarterFood", spec.zone == "NurseryGrove")
+    part:SetAttribute("RespawnCooldownSeconds", spec.browseCooldown or (isTree and 75 or 60))
+    part:SetAttribute("Depleted", part:GetAttribute("Depleted") == true)
+    self:ApplyFoodMetadata(part, {
+        diet = "Herbivore",
+        nutrition = spec.browseNutrition or (isTree and 24 or 22),
+        kind = isTree and "TreeBrowse" or "PlantPatch",
+        vegetationType = spec.vegetationType or (isTree and "TreeCanopy" or (spec.kind .. "Browse")),
+        plantPart = spec.plantPart,
+        browseTier = spec.browseTier,
+        browseHeight = spec.browseHeight,
+    })
+    self:ApplyReleaseHiddenQueryPart(part)
+    if not CollectionService:HasTag(part, "FoodSource") then
+        CollectionService:AddTag(part, "FoodSource")
+    end
 end
 
 MapLayoutService.FoodPlacements = {
@@ -508,6 +554,24 @@ MapLayoutService.NPCSpawnPlacements = {
     { name = "PterodactylFlyingPrey_02", position = Vector3.new(-1320, 72, 890), kind = "FlyingPrey", zone = "JungleBasin", flyingPrey = true },
 }
 
+MapLayoutService.PlayerSpawnPlacements = {
+    { name = "GallimimusFernSpawn_01", speciesId = "gallimimus", zone = "FernPlains", position = Vector3.new(-1245, 15, -65), yawDegrees = 92 },
+    { name = "GallimimusFernSpawn_02", speciesId = "gallimimus", zone = "FernPlains", position = Vector3.new(-1125, 15, 135), yawDegrees = -35 },
+    { name = "GallimimusNurserySpawn_01", speciesId = "gallimimus", zone = "NurseryGrove", position = Vector3.new(-1995, 15, 74), yawDegrees = 88 },
+
+    { name = "TriceratopsFernSpawn_01", speciesId = "triceratops", zone = "FernPlains", position = Vector3.new(-1190, 15, -190), yawDegrees = 35 },
+    { name = "TriceratopsJungleSpawn_01", speciesId = "triceratops", zone = "JungleBasin", position = Vector3.new(-1505, 15, 1015), yawDegrees = -10 },
+    { name = "TriceratopsNurserySpawn_01", speciesId = "triceratops", zone = "NurseryGrove", position = Vector3.new(-2050, 15, 38), yawDegrees = 74 },
+
+    { name = "VelociraptorJungleSpawn_01", speciesId = "velociraptor", zone = "JungleBasin", position = Vector3.new(-1415, 15, 1070), yawDegrees = -115 },
+    { name = "VelociraptorFernSpawn_01", speciesId = "velociraptor", zone = "FernPlains", position = Vector3.new(-1015, 15, -210), yawDegrees = 145 },
+    { name = "VelociraptorNurserySpawn_01", speciesId = "velociraptor", zone = "NurseryGrove", position = Vector3.new(-1870, 15, -78), yawDegrees = 118 },
+
+    { name = "CarnotaurusRedstoneSpawn_01", speciesId = "carnotaurus", zone = "RedstoneCanyon", position = Vector3.new(-260, 17, -720), yawDegrees = 64 },
+    { name = "CarnotaurusCitySpawn_01", speciesId = "carnotaurus", zone = "ApocalypticCity", position = Vector3.new(990, 15, -175), yawDegrees = -92 },
+    { name = "CarnotaurusNurserySpawn_01", speciesId = "carnotaurus", zone = "NurseryGrove", position = Vector3.new(-1832, 15, 20), yawDegrees = 122 },
+}
+
 
 MapLayoutService.CompactLayout = {
     origin = Vector3.new(-2000, 0, 0),
@@ -572,6 +636,10 @@ function MapLayoutService:ApplyCompactLayout()
     end
 
     for _, spec in ipairs(self.NPCSpawnPlacements) do
+        spec.position = self:CompactPosition(spec.position)
+    end
+
+    for _, spec in ipairs(self.PlayerSpawnPlacements) do
         spec.position = self:CompactPosition(spec.position)
     end
 end
@@ -691,7 +759,7 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
             food.CanCollide = false
             food.CanTouch = false
             food.CanQuery = true
-            food.Shape = Enum.PartType.Ball
+            food.Shape = Enum.PartType.Block
             food.Material = placement.diet == "Carnivore" and Enum.Material.Leather or Enum.Material.Grass
             food.Color = placement.diet == "Carnivore" and Color3.fromRGB(120, 55, 45) or Color3.fromRGB(64, 135, 54)
             food.Size = placement.size
@@ -699,7 +767,6 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
             food:SetAttribute("CreatorStoreOnly", nil)
             food:SetAttribute("ImportedVisibleAsset", nil)
             food:SetAttribute("AssetManifestId", nil)
-            food:SetAttribute("ProceduralGameplayVisual", true)
             food:SetAttribute("Decorative", false)
             food.Parent = zoneFolder
         end
@@ -708,15 +775,13 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("CreatorStoreOnly", nil)
         food:SetAttribute("ImportedVisibleAsset", nil)
         food:SetAttribute("AssetManifestId", nil)
-        food:SetAttribute("ProceduralGameplayVisual", true)
         food:SetAttribute("Depleted", food:GetAttribute("Depleted") == true)
         food:SetAttribute("RespawnCooldownSeconds", placement.cooldown)
         food:SetAttribute("DangerousZone", placement.zone ~= "NurseryGrove" and placement.zone ~= "FernPlains")
         local isTutorialFood = placement.tutorialSafe == true or placement.kind == "StarterPlant" or placement.kind == "TutorialCarcass"
         food:SetAttribute("StarterFood", isTutorialFood)
         food:SetAttribute("TutorialSafe", isTutorialFood)
-        food:SetAttribute("VisibleGameplayAffordance", true)
-        food:SetAttribute("GameplayQuery", true)
+        self:ApplyReleaseHiddenQueryPart(food)
         CollectionService:AddTag(food, "FoodSource")
     end
 end
@@ -838,7 +903,6 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing.CanCollide = false
     existing.CanTouch = true
     existing.CanQuery = true
-    existing.Transparency = 0
     existing:SetAttribute("ZoneId", source.zone)
     self:ApplyFoodMetadata(existing, {
         diet = source.diet,
@@ -850,12 +914,10 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing:SetAttribute("Depleted", false)
     existing:SetAttribute("TutorialSafe", source.tutorialSafe == true)
     existing:SetAttribute("HighRisk", source.highRisk == true)
-    existing:SetAttribute("VisibleGameplayAffordance", true)
-    existing:SetAttribute("GameplayQuery", true)
+    self:ApplyReleaseHiddenQueryPart(existing)
     existing:SetAttribute("CreatorStoreOnly", nil)
     existing:SetAttribute("ImportedVisibleAsset", nil)
     existing:SetAttribute("AssetManifestId", nil)
-    existing:SetAttribute("ProceduralGameplayVisual", true)
     existing:SetAttribute("PlacementRole", source.diet == "Herbivore" and "PlantFood" or "CarnivoreCarcassFood")
     if not CollectionService:HasTag(existing, "FoodSource") then
         CollectionService:AddTag(existing, "FoodSource")
@@ -877,14 +939,15 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part.CanCollide = false
     part.CanTouch = false
     part.CanQuery = false
-    part.Transparency = 0
+    part.Transparency = 1
     part:SetAttribute("ZoneId", spec.zone)
     part:SetAttribute("BiomeDressing", true)
     part:SetAttribute("Decorative", true)
     part:SetAttribute("CreatorStoreOnly", nil)
     part:SetAttribute("ImportedVisibleAsset", nil)
     part:SetAttribute("AssetManifestId", nil)
-    part:SetAttribute("ProceduralGameplayVisual", true)
+    part:SetAttribute("ReleaseHiddenProceduralVisual", true)
+    part:SetAttribute("InvisibleQueryHelper", true)
     part:SetAttribute("PlacementRole", role)
     part:SetAttribute("DressingKind", spec.kind)
     part:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
@@ -893,7 +956,7 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("HabitatFeature", spec.habitatFeature)
     part:SetAttribute("AvoidRouteCenters", true)
     part:SetAttribute("GroundTopY", self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil)
-    part:SetAttribute("FloatingAllowed", role == "VisibleTreeCanopy")
+    part:SetAttribute("FloatingAllowed", false)
     if not CollectionService:HasTag(part, "BiomeDressing") then
         CollectionService:AddTag(part, "BiomeDressing")
     end
@@ -929,28 +992,31 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             if not canopy then
                 canopy = Instance.new("Part")
                 canopy.Name = spec.name .. "_Canopy"
-                canopy.Shape = Enum.PartType.Ball
+                canopy.Shape = Enum.PartType.Block
                 canopy.Material = Enum.Material.Grass
                 canopy.Parent = zoneFolder
             end
+            canopy.Shape = Enum.PartType.Block
             canopy.Size = spec.canopySize
             canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + spec.canopySize.Y * 0.32, 0)
             canopy.Color = spec.canopyColor
-            self:ApplyDressingAttributes(canopy, spec, "VisibleTreeCanopy")
-            if spec.edibleBrowse == true then
-                canopy.CanTouch = true
-                canopy.CanQuery = true
-                canopy:SetAttribute("Decorative", false)
-                canopy:SetAttribute("VisibleGameplayAffordance", true)
-                canopy:SetAttribute("GameplayQuery", true)
-                canopy:SetAttribute("TutorialSafe", spec.zone == "NurseryGrove")
-                canopy:SetAttribute("StarterFood", spec.zone == "NurseryGrove")
-                canopy:SetAttribute("RespawnCooldownSeconds", spec.browseCooldown or 75)
-                canopy:SetAttribute("Depleted", canopy:GetAttribute("Depleted") == true)
-                self:ApplyFoodMetadata(canopy, { diet = "Herbivore", nutrition = spec.browseNutrition or 24, kind = "TreeBrowse" })
-                if not CollectionService:HasTag(canopy, "FoodSource") then
-                    CollectionService:AddTag(canopy, "FoodSource")
-                end
+            self:ApplyDressingAttributes(canopy, spec, "HiddenTreeCanopy")
+
+            local browse = zoneFolder:FindFirstChild(spec.name .. "_Browse")
+            if not browse then
+                browse = Instance.new("Part")
+                browse.Name = spec.name .. "_Browse"
+                browse.Shape = Enum.PartType.Block
+                browse.Material = Enum.Material.Grass
+                browse.Parent = zoneFolder
+            end
+            browse.Size = Vector3.new(math.max(8, spec.canopySize.X * 0.45), 4, math.max(8, spec.canopySize.Z * 0.45))
+            browse.Position = spec.position + Vector3.new(0, spec.browseHeight or 6, 0)
+            browse.Color = spec.canopyColor
+            self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery")
+            self:ApplyBrowseFoodAttributes(browse, spec, { treeBrowse = true })
+            if not CollectionService:HasTag(browse, "TreeProp") then
+                CollectionService:AddTag(browse, "TreeProp")
             end
         else
             local prop = zoneFolder:FindFirstChild(spec.name)
@@ -965,20 +1031,8 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             prop.Color = spec.color
             prop.Material = spec.material
             self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
-            if spec.edibleBrowse == true then
-                prop.CanTouch = true
-                prop.CanQuery = true
-                prop:SetAttribute("Decorative", false)
-                prop:SetAttribute("VisibleGameplayAffordance", true)
-                prop:SetAttribute("GameplayQuery", true)
-                prop:SetAttribute("TutorialSafe", spec.zone == "NurseryGrove")
-                prop:SetAttribute("StarterFood", spec.zone == "NurseryGrove")
-                prop:SetAttribute("RespawnCooldownSeconds", spec.browseCooldown or 60)
-                prop:SetAttribute("Depleted", prop:GetAttribute("Depleted") == true)
-                self:ApplyFoodMetadata(prop, { diet = "Herbivore", nutrition = spec.browseNutrition or 22, kind = "PlantPatch", vegetationType = spec.kind .. "Browse" })
-                if not CollectionService:HasTag(prop, "FoodSource") then
-                    CollectionService:AddTag(prop, "FoodSource")
-                end
+            if self:IsVegetationBrowseSpec(spec) then
+                self:ApplyBrowseFoodAttributes(prop, spec, { treeBrowse = false })
             end
         end
     end
@@ -1008,8 +1062,74 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("NestingHerd", spec.nestingHerd == true)
         marker:SetAttribute("FlyingPrey", spec.flyingPrey == true)
         marker:SetAttribute("FlightTarget", spec.flyingPrey == true)
+        marker:SetAttribute("PotentialCarnivoreFood", spec.kind == "Prey" or spec.kind == "AerialPrey" or spec.kind == "FlyingPrey")
     end
     return folders.NPCSpawns
+end
+
+function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
+    local spawnFolder = self:GetOrCreateFolder(folders.Map, "SpawnLocations")
+    for _, spec in ipairs(self.PlayerSpawnPlacements) do
+        local spawn = spawnFolder:FindFirstChild(spec.name)
+        if spawn and not spawn:IsA("SpawnLocation") then
+            spawn:Destroy()
+            spawn = nil
+        end
+        if not spawn then
+            spawn = Instance.new("SpawnLocation")
+            spawn.Name = spec.name
+            spawn.Anchored = true
+            spawn.CanCollide = true
+            spawn.CanTouch = false
+            spawn.CanQuery = true
+            spawn.Transparency = 1
+            spawn.Neutral = true
+            spawn.Duration = 0
+            spawn.Size = Vector3.new(18, 2, 18)
+            spawn.Parent = spawnFolder
+        end
+        spawn.Position = spec.position
+        spawn:SetAttribute("GameplayVolume", true)
+        spawn:SetAttribute("PlayerSpawn", true)
+        spawn:SetAttribute("StarterSpeciesSpawn", true)
+        spawn:SetAttribute("SpeciesId", spec.speciesId)
+        spawn:SetAttribute("ZoneId", spec.zone)
+        spawn:SetAttribute("YawDegrees", spec.yawDegrees or 0)
+    end
+    return spawnFolder
+end
+
+function MapLayoutService:GetPlayerSpawnForSpecies(speciesId, preferredBiome, roll)
+    local species = SpeciesConfig[speciesId or ""] or SpeciesConfig.gallimimus
+    local resolvedSpeciesId = species and species.SpeciesId or "gallimimus"
+    local folders = self:EnsureMapFolders()
+    local spawnFolder = self:EnsurePlayerSpawnMarkers(folders)
+    local candidates = {}
+    local fallback = {}
+    for _, spawn in ipairs(spawnFolder:GetChildren()) do
+        if spawn:GetAttribute("PlayerSpawn") == true and spawn:GetAttribute("SpeciesId") == resolvedSpeciesId then
+            table.insert(fallback, spawn)
+            if not preferredBiome or spawn:GetAttribute("ZoneId") == preferredBiome then
+                table.insert(candidates, spawn)
+            end
+        end
+    end
+    if #candidates == 0 then
+        candidates = fallback
+    end
+    if #candidates == 0 then
+        local legacy = spawnFolder:FindFirstChild("_INVISIBLE_EggSpawn_Nursery")
+        return legacy, legacy and (legacy.CFrame + Vector3.new(0, 4, 0)) or CFrame.new(self:CompactPosition(Vector3.new(-2000, 16, 0)))
+    end
+    local index = 1
+    if type(roll) == "number" then
+        index = math.clamp(math.floor(roll), 1, #candidates)
+    elseif #candidates > 1 then
+        index = math.random(1, #candidates)
+    end
+    local spawn = candidates[index]
+    local yaw = math.rad(spawn:GetAttribute("YawDegrees") or 0)
+    return spawn, CFrame.new(spawn.Position + Vector3.new(0, 4, 0)) * CFrame.Angles(0, yaw, 0)
 end
 
 function MapLayoutService:EnsureTutorialCombatTarget(folders)
@@ -1018,8 +1138,8 @@ function MapLayoutService:EnsureTutorialCombatTarget(folders)
         target = Instance.new("Part")
         target.Name = "TutorialPracticeTarget"
         target.Anchored = true
-        target.Shape = Enum.PartType.Ball
-        target.Material = Enum.Material.Neon
+        target.Shape = Enum.PartType.Block
+        target.Material = Enum.Material.SmoothPlastic
         target.Color = Color3.fromRGB(235, 82, 64)
         target.Parent = folders.Map
     end
@@ -1028,12 +1148,15 @@ function MapLayoutService:EnsureTutorialCombatTarget(folders)
     target.CanCollide = false
     target.CanTouch = true
     target.CanQuery = true
-    target.Transparency = 0.08
+    target.Transparency = 1
     target:SetAttribute("Health", math.max(1, target:GetAttribute("Health") or 40))
     target:SetAttribute("MaxHealth", 40)
     target:SetAttribute("TutorialSafe", true)
     target:SetAttribute("ZoneId", "NurseryGrove")
     target:SetAttribute("InteractionHint", "Attack practice target")
+    target:SetAttribute("InvisibleQueryHelper", true)
+    target:SetAttribute("VisibleGameplayAffordance", false)
+    target:SetAttribute("ReleaseHiddenProceduralVisual", true)
     if not CollectionService:HasTag(target, "Damageable") then
         CollectionService:AddTag(target, "Damageable")
     end
@@ -1060,6 +1183,11 @@ function MapLayoutService:EnsureSpawnSafety()
     spawn.Position = self:CompactPosition(Vector3.new(-2000, 12, 0))
     spawn:SetAttribute("GameplayVolume", true)
     spawn:SetAttribute("ZoneId", "NurseryGrove")
+    spawn:SetAttribute("PlayerSpawn", true)
+    spawn:SetAttribute("StarterSpeciesSpawn", true)
+    spawn:SetAttribute("SpeciesId", "starter_fallback")
+
+    self:EnsurePlayerSpawnMarkers(folders)
 
     self:EnsureTerrainContinuity(folders)
     self:EnsureFoodSourcePlacements(folders)

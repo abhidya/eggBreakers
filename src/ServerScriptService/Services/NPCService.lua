@@ -45,7 +45,11 @@ function NPCService:GetKindProfile(kind)
 end
 
 function NPCService:IsPreyKind(kind)
-    return kind == "Prey" or kind == "AerialPrey"
+    return kind == "Prey" or kind == "AerialPrey" or kind == "FlyingPrey"
+end
+
+function NPCService:IsCarnivoreFoodCandidate(record)
+    return record ~= nil and self:IsPreyKind(record.Kind) and record.State ~= "Dead"
 end
 
 function NPCService:GetRecordDiet(record)
@@ -92,8 +96,9 @@ function NPCService:Register(npc, kind)
         FlightCapable = profile.FlightCapable == true,
         PreferredAltitude = profile.PreferredAltitude or pivotPosition.Y,
         HuntsAerialPrey = profile.HuntsAerialPrey == true,
-        AerialPrey = profile.AerialPrey == true or kind == "AerialPrey",
+        AerialPrey = profile.AerialPrey == true or kind == "AerialPrey" or kind == "FlyingPrey",
     }
+    record.PotentialCarnivoreFood = self:IsPreyKind(kind)
     if npc then
         npc:SetAttribute("ActiveNPCBrain", true)
         npc:SetAttribute("NPCKind", kind)
@@ -105,6 +110,8 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("Flying", record.FlightCapable)
         npc:SetAttribute("AerialPrey", record.AerialPrey)
         npc:SetAttribute("PreferredAltitude", record.PreferredAltitude)
+        npc:SetAttribute("PotentialCarnivoreFood", record.PotentialCarnivoreFood == true)
+        npc:SetAttribute("CarnivoreFoodCandidate", record.PotentialCarnivoreFood == true)
         npc:SetAttribute("BrainMoveCount", 0)
         npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)
@@ -117,6 +124,9 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("NestZ", pivotPosition.Z)
         if not CollectionService:HasTag(npc, "Damageable") then
             CollectionService:AddTag(npc, "Damageable")
+        end
+        if record.PotentialCarnivoreFood == true and not CollectionService:HasTag(npc, "CarnivoreFoodCandidate") then
+            CollectionService:AddTag(npc, "CarnivoreFoodCandidate")
         end
     end
     table.insert(self.NPCs, record)
@@ -133,6 +143,13 @@ function NPCService:Transition(record, nextState)
         record.Instance:SetAttribute("LastBrainAction", nextState)
     end
     if nextState == "Dead" and self:IsPreyKind(record.Kind) then
+        if record.Instance then
+            record.Instance:SetAttribute("CarnivoreFoodCandidate", false)
+            record.Instance:SetAttribute("PotentialCarnivoreFood", false)
+            if CollectionService:HasTag(record.Instance, "CarnivoreFoodCandidate") then
+                CollectionService:RemoveTag(record.Instance, "CarnivoreFoodCandidate")
+            end
+        end
         record.Carcass = self:CreateCarcassFoodSource(record)
     end
     return true
@@ -746,8 +763,13 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
     carcass:SetAttribute("ImportedVisibleAsset", true)
     carcass:SetAttribute("AssetManifestId", carcass:GetAttribute("AssetManifestId") or "ImportedPreyCarcass")
     carcass:SetAttribute("SourceNPC", npc.Name)
+    carcass:SetAttribute("PotentialCarnivoreFood", true)
+    carcass:SetAttribute("CarcassFoodSource", true)
+    carcass:SetAttribute("GameplayQuery", true)
+    carcass:SetAttribute("CompactFoodGroup", "NPCCarcass")
     carcass.Parent = Workspace:FindFirstChild("NPCs") or Workspace
     CollectionService:AddTag(carcass, "FoodSource")
+    CollectionService:AddTag(carcass, "CarnivoreFoodCandidate")
     return carcass
 end
 

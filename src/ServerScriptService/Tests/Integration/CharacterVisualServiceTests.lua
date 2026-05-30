@@ -253,9 +253,51 @@ table.insert(suite.tests, { name = "carnotaurus imported visual is corrected upr
     Assert.notNil(attached, "carnotaurus visual attaches")
     Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "carnotaurus species correction applied")
     Assert.equals(attached:GetAttribute("OrientationCorrectionPitchDegrees"), 180, "carnotaurus pitch correction recorded")
+    Assert.truthy(attached:GetAttribute("UprightVerified"), "carnotaurus upright verification attr set")
     Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "carnotaurus body is upright after correction")
     Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "carnotaurus still faces player forward")
     Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward-facing proof remains verified")
+    source:Destroy()
+    cleanup(player)
+end })
+
+
+table.insert(suite.tests, { name = "carnotaurus force-upright recovers when static pitch over-rotates", run = function()
+    local player = MockPlayer.new(11008, "CarnotaurusForceUprightProbe")
+    local character = makeCharacter()
+    player.Character = character
+    character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+
+    local source = Instance.new("Model")
+    source.Name = "AlreadyUprightCarnotaurus"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "CarnotaurusBody"
+    body.Size = Vector3.new(2, 2, 4)
+    body.CFrame = CFrame.new(0, 0, 0)
+    body.Parent = source
+    source.PrimaryPart = body
+    local head = Instance.new("Part")
+    head.Name = "CarnotaurusHead"
+    head.Size = Vector3.new(1, 1, 1)
+    head.CFrame = CFrame.new(0, 0, -4)
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "CarnotaurusTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(0, 0, 4)
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBody", true)
+
+    Assert.notNil(attached, "upright carnotaurus visual attaches")
+    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "carnotaurus correction path applied")
+    Assert.truthy((attached:GetAttribute("UprightDotBeforeCorrection") or 1) < 0, "static pitch over-rotation was detected")
+    Assert.truthy(attached:GetAttribute("UprightVerified"), "force-upright restored visual orientation")
+    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "body remains upright after force-upright")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "forward correction still succeeds after force-upright")
     source:Destroy()
     cleanup(player)
 end })

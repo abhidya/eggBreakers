@@ -24,7 +24,9 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.notNil(tutorialWater, "nursery tutorial water exists")
     Assert.truthy(CollectionService:HasTag(tutorialFood, "FoodSource"), "tutorial food tagged")
     Assert.truthy(CollectionService:HasTag(tutorialWater, "WaterSource"), "tutorial water tagged")
-    Assert.equals(tutorialFood.Transparency, 0, "tutorial food visible")
+    Assert.equals(tutorialFood.Transparency, 1, "tutorial food hidden for release")
+    Assert.equals(tutorialFood:GetAttribute("InvisibleQueryHelper"), true, "tutorial food remains an invisible query helper")
+    Assert.falsy(tutorialFood:GetAttribute("VisibleGameplayAffordance"), "tutorial food does not expose procedural visuals")
     Assert.truthy(tutorialWater.Transparency < 1, "tutorial water visible")
     Assert.equals(tutorialFood:GetAttribute("TutorialSafe"), true, "tutorial food marked safe")
     Assert.equals(tutorialWater:GetAttribute("TutorialSafe"), true, "tutorial water marked safe")
@@ -48,7 +50,8 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
             counts.food = counts.food + 1
             if target:GetAttribute("Diet") == "Herbivore" then counts.herbivoreFood = counts.herbivoreFood + 1 end
             if target:GetAttribute("Diet") == "Carnivore" then counts.carnivoreFood = counts.carnivoreFood + 1 end
-            Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby food is visibly marked")
+            Assert.truthy(target:GetAttribute("GameplayQuery"), "nearby food remains queryable")
+            Assert.equals(target.Transparency, 1, "nearby procedural food is hidden for release")
         end
     end
     for _, target in ipairs(CollectionService:GetTagged("WaterSource")) do
@@ -63,11 +66,11 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
         end
     end
 
-    Assert.truthy(counts.food >= 14, "tutorial radius has dense visible food for repeated early attempts")
+    Assert.truthy(counts.food >= 14, "tutorial radius has dense invisible food queries for repeated early attempts")
     Assert.truthy(counts.herbivoreFood >= 9, "tutorial radius has dense herbivore starter plants")
     Assert.truthy(counts.carnivoreFood >= 5, "tutorial radius has enough carnivore starter meat/carcass")
     Assert.truthy(counts.water >= 1, "tutorial radius has visible water")
-    Assert.truthy(counts.trees >= 2, "tutorial radius has visible tree trunk/canopy")
+    Assert.truthy(counts.trees >= 2, "tutorial radius has tree browse query helpers")
 end })
 
 table.insert(suite.tests, { name = "non nursery water and risky food/fossils reachable", run = function()
@@ -151,8 +154,34 @@ table.insert(suite.tests, { name = "edible vegetation and tree browse metadata i
     for _ in pairs(compactGroups) do compactGroupCount = compactGroupCount + 1 end
     Assert.truthy(vegetationTypeCount >= 5, "herbivore foods use varied vegetation metadata")
     Assert.truthy(compactGroupCount >= 4, "herbivore foods use varied compact groups")
-    Assert.truthy(treeBrowseCount >= 2, "edible tree browse sources generated")
+    Assert.truthy(treeBrowseCount >= 7, "all procedural trees generate edible browse query helpers")
     Assert.truthy(nurseryBrowse >= 10, "nursery browse remains compact and dense")
+end })
+
+table.insert(suite.tests, { name = "procedural food and tree dressing are hidden query helpers", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    MapLayoutService:EnsureFoodSources()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local visibleProceduralFood = 0
+    local treeBrowse = 0
+    for _, food in ipairs(CollectionService:GetTagged("FoodSource")) do
+        if food:IsA("BasePart") and (food:IsDescendantOf(folders.FoodSources) or food:IsDescendantOf(folders.BiomeDressing)) then
+            Assert.equals(food:GetAttribute("GameplayQuery"), true, "food remains queryable " .. food.Name)
+            Assert.equals(food:GetAttribute("InvisibleQueryHelper"), true, "procedural food is marked as invisible helper " .. food.Name)
+            if food.Transparency < 1 then visibleProceduralFood = visibleProceduralFood + 1 end
+            if food:GetAttribute("TreeBrowse") == true then treeBrowse = treeBrowse + 1 end
+        end
+    end
+    for _, part in ipairs(CollectionService:GetTagged("TreeProp")) do
+        if part:IsA("BasePart") and part:IsDescendantOf(folders.BiomeDressing) then
+            Assert.equals(part.Transparency, 1, "procedural tree part hidden " .. part.Name)
+            Assert.falsy(part.Shape == Enum.PartType.Ball and part.Transparency < 1, "no visible rectangle+ball procedural tree dressing")
+        end
+    end
+    Assert.equals(visibleProceduralFood, 0, "no visible procedural food placeholders remain")
+    Assert.truthy(treeBrowse >= 7, "tree browse helpers cover every procedural tree")
 end })
 
 
@@ -185,7 +214,7 @@ table.insert(suite.tests, { name = "starter food compactness stays bounded aroun
     for _ in pairs(compactGroups) do groupCount = groupCount + 1 end
 
     Assert.truthy(nearFood >= 16, "spawn radius has dense starter food after browse additions")
-    Assert.truthy(nearFood <= 32, "spawn radius food density remains bounded")
+    Assert.truthy(nearFood <= 40, "spawn radius food density remains bounded after vegetation browse")
     Assert.truthy(groupCount >= 3, "spawn food density includes varied compact groups")
     Assert.truthy(nearestSpacing >= 12, "starter food is compact but not overlapping")
 end })

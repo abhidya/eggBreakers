@@ -164,6 +164,8 @@ table.insert(suite.tests, { name = "predator chases attacks and prey death leave
     Assert.equals(preyRecord.State, "Dead", "prey dies from attack")
     Assert.notNil(preyRecord.Carcass, "dead prey leaves carcass")
     Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "FoodSource"), "carcass is food source")
+    Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "CarnivoreFoodCandidate"), "carcass is a carnivore food candidate")
+    Assert.equals(preyRecord.Carcass:GetAttribute("PotentialCarnivoreFood"), true, "carcass potential carnivore food")
 
     predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
 end })
@@ -194,6 +196,8 @@ table.insert(suite.tests, { name = "predator chase attack creates edible carcass
     Assert.equals(preyRecord.State, "Dead", "prey dies from predator attack")
     Assert.notNil(preyRecord.Carcass, "dead prey creates carcass food")
     Assert.equals(preyRecord.Carcass:GetAttribute("Diet"), "Carnivore", "carcass is carnivore food")
+    Assert.equals(preyRecord.Carcass:GetAttribute("PotentialCarnivoreFood"), true, "NPC carcass remains potential carnivore food")
+    Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "CarnivoreFoodCandidate"), "NPC carcass tagged as carnivore candidate")
 
     predatorRecord.Hunger = 20
     NPCService:TickBrain(predatorRecord, {}, 1)
@@ -202,6 +206,30 @@ table.insert(suite.tests, { name = "predator chase attack creates edible carcass
     Assert.truthy(predatorRecord.Hunger > 20, "carcass restores predator hunger")
 
     predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
+end })
+
+
+table.insert(suite.tests, { name = "living prey are potential carnivore food candidates until dead", run = function()
+    resetNPCs()
+    ensureCarcassAsset()
+    local prey = makeNPC("CandidatePreyNPC", Vector3.new(0, 3, 0))
+    local predator = makeNPC("CandidatePredatorNPC", Vector3.new(20, 3, 0))
+    local preyOk, preyRecord = NPCService:Register(prey, "Prey")
+    local predatorOk = NPCService:Register(predator, "Predator")
+
+    Assert.truthy(preyOk and predatorOk, "prey and predator register")
+    Assert.equals(prey:GetAttribute("PotentialCarnivoreFood"), true, "living prey advertises carnivore food potential")
+    Assert.equals(prey:GetAttribute("CarnivoreFoodCandidate"), true, "living prey candidate attribute set")
+    Assert.truthy(CollectionService:HasTag(prey, "CarnivoreFoodCandidate"), "living prey candidate tag set")
+    Assert.falsy(predator:GetAttribute("PotentialCarnivoreFood"), "predator is not prey food")
+
+    NPCService:MarkPreyDead(preyRecord)
+    Assert.equals(prey:GetAttribute("CarnivoreFoodCandidate"), false, "dead prey instance no longer advertises living target")
+    Assert.falsy(CollectionService:HasTag(prey, "CarnivoreFoodCandidate"), "dead prey instance candidate tag removed")
+    Assert.notNil(preyRecord.Carcass, "dead prey creates separate carcass food")
+    Assert.equals(preyRecord.Carcass:GetAttribute("PotentialCarnivoreFood"), true, "carcass advertises carnivore food potential")
+
+    prey:Destroy(); predator:Destroy(); preyRecord.Carcass:Destroy()
 end })
 
 
