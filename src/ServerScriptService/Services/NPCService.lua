@@ -22,9 +22,10 @@ NPCService.KindProfiles = {
     Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "gallimimus" },
     AerialPrey = { Diet = "Herbivore", Health = 45, Damage = 6, Herding = true, SpeciesId = "gallimimus", FlightCapable = true, PreferredAltitude = 32, AerialPrey = true },
     Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "carnotaurus" },
-    AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pterodactyl", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true },
+    AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pteranodon", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true },
     Apex = { Diet = "Carnivore", Health = 260, Damage = 80, Apex = true, SpeciesId = "tyrannosaurus", ThreatRadius = 140 },
     Omnivore = { Diet = "Omnivore", Health = 95, Damage = 18, Herding = true, SpeciesId = "oviraptor" },
+    SemiAquatic = { Diet = "Carnivore", Health = 220, Damage = 60, SpeciesId = "spinosaurus" },
 }
 
 function NPCService:GetKindProfile(kind)

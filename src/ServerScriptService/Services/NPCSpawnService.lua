@@ -6,7 +6,7 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
-NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "AerialPrey", "Omnivore", "Predator", "AerialPredator", "Apex" }
+NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "AerialPrey", "Omnivore", "Predator", "AerialPredator", "Apex", "SemiAquatic" }
 NPCSpawnService.SpawnTickSeconds = 10
 NPCSpawnService.NPCModelCandidatePaths = {
     Prey = {
@@ -22,7 +22,7 @@ NPCSpawnService.NPCModelCandidatePaths = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling",
     },
     AerialPredator = {
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Pterodactyl_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Pteranodon_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
     },
     Apex = {
@@ -32,6 +32,10 @@ NPCSpawnService.NPCModelCandidatePaths = {
     Omnivore = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Juvenile",
+    },
+    SemiAquatic = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Spinosaurus_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Spinosaurus_Model_Set/Adult",
     },
 }
 
@@ -61,7 +65,7 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
                 return descendant
             end
         end
