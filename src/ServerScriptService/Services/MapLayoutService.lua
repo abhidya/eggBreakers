@@ -1313,4 +1313,46 @@ function MapLayoutService:ValidateLayoutFolders()
     return #missing == 0, missing
 end
 
+-- ──────────────────────────────────────────────────────────────────────────────
+-- WorldBuilderService integration (Lane G addition)
+-- Lazy-required so the file still loads in test stubs without Studio globals.
+-- ──────────────────────────────────────────────────────────────────────────────
+local _WorldBuilder = nil
+local function getWorldBuilder()
+    if not _WorldBuilder then
+        local ok, wb = pcall(require, game:GetService("ServerScriptService").Services.WorldBuilderService)
+        if ok then _WorldBuilder = wb end
+    end
+    return _WorldBuilder
+end
+
+-- BiomeCenters()
+-- Returns the 6 condensed biome center Vector3 positions via WorldBuilderService.
+-- Outer biomes are within 1 400 studs of NurseryGrove (satisfies BiomePlacementValidation).
+function MapLayoutService:BiomeCenters()
+    local wb = getWorldBuilder()
+    if wb then
+        return wb.BiomeCenters()
+    end
+    -- Fallback: derive directly from ZoneTerrain table (already compact-transformed)
+    local centers = {}
+    for zoneId, zone in pairs(self.ZoneTerrain) do
+        if zoneId ~= "MountainNestingCliffs" then
+            centers[zoneId] = zone.center
+        end
+    end
+    return centers
+end
+
+-- GroundPlace(model, x, z)
+-- Delegates to WorldBuilderService.GroundPlace.  Safe no-op if WB unavailable.
+function MapLayoutService:GroundPlace(model, x, z)
+    local wb = getWorldBuilder()
+    if wb then
+        return wb.GroundPlace(model, x, z)
+    end
+    warn("[MapLayoutService] GroundPlace: WorldBuilderService unavailable")
+    return nil
+end
+
 return MapLayoutService
