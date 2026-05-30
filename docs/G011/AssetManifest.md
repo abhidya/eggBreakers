@@ -6,6 +6,7 @@
 - Count: 500 manifest entries, 500 unique `SourceAssetId` values.
 - Catalog source: Roblox Creator Store Toolbox Service v2 plus Studio MCP inserted probe `CS-4596418748`.
 - Script policy: imported scripts are not allowed to run by default; sources with scripts are marked `ScriptsRemoved` unless explicitly sandboxed.
+- Boundary: this manifest is a catalog audit, not the live imported/release-ready asset count. Later G014 live Creator Store imports may be valid even when their `SourceAssetId` is outside this 500-row catalog; they still require separate Studio import/tag/script-audit/placement proof before counting toward release.
 
 ## Placement classification
 
