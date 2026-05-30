@@ -48,6 +48,13 @@ function NPCService:IsPreyKind(kind)
     return kind == "Prey" or kind == "AerialPrey" or kind == "FlyingPrey"
 end
 
+function NPCService:GetCarnivoreFoodKind(kind)
+    if kind == "AerialPrey" or kind == "FlyingPrey" then return "AerialPreyCarcass" end
+    if kind == "Predator" or kind == "AerialPredator" then return "PredatorCarcass" end
+    if kind == "Apex" then return "LargeCarcass" end
+    return "PreyCarcass"
+end
+
 function NPCService:IsCarnivoreFoodCandidate(record)
     return record ~= nil and self:IsPreyKind(record.Kind) and record.State ~= "Dead"
 end
@@ -112,6 +119,8 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("PreferredAltitude", record.PreferredAltitude)
         npc:SetAttribute("PotentialCarnivoreFood", record.PotentialCarnivoreFood == true)
         npc:SetAttribute("CarnivoreFoodCandidate", record.PotentialCarnivoreFood == true)
+        npc:SetAttribute("FoodWhenDefeated", true)
+        npc:SetAttribute("CarnivoreFoodKind", self:GetCarnivoreFoodKind(kind))
         npc:SetAttribute("BrainMoveCount", 0)
         npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)
@@ -142,10 +151,12 @@ function NPCService:Transition(record, nextState)
         record.Instance:SetAttribute("BrainState", nextState)
         record.Instance:SetAttribute("LastBrainAction", nextState)
     end
-    if nextState == "Dead" and self:IsPreyKind(record.Kind) then
+    if nextState == "Dead" then
         if record.Instance then
             record.Instance:SetAttribute("CarnivoreFoodCandidate", false)
             record.Instance:SetAttribute("PotentialCarnivoreFood", false)
+            record.Instance:SetAttribute("FoodWhenDefeated", true)
+            record.Instance:SetAttribute("CarnivoreFoodKind", self:GetCarnivoreFoodKind(record.Kind))
             if CollectionService:HasTag(record.Instance, "CarnivoreFoodCandidate") then
                 CollectionService:RemoveTag(record.Instance, "CarnivoreFoodCandidate")
             end
@@ -756,7 +767,7 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
     end
     carcass:SetAttribute("Diet", "Carnivore")
     carcass:SetAttribute("Nutrition", nutrition or 35)
-    carcass:SetAttribute("FoodKind", record and record.Kind == "AerialPrey" and "AerialPreyCarcass" or "PreyCarcass")
+    carcass:SetAttribute("FoodKind", record and self:GetCarnivoreFoodKind(record.Kind) or "PreyCarcass")
     carcass:SetAttribute("Depleted", false)
     carcass:SetAttribute("RespawnCooldownSeconds", 180)
     carcass:SetAttribute("CreatorStoreOnly", true)

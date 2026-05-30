@@ -69,6 +69,17 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     return nil
 end
 
+function NPCSpawnService:IsLiveCarnivoreFoodKind(kind)
+    return NPCService:IsPreyKind(kind)
+end
+
+function NPCSpawnService:GetCarnivoreFoodKind(kind)
+    if kind == "AerialPrey" or kind == "FlyingPrey" then return "AerialPreyCarcass" end
+    if kind == "Predator" or kind == "AerialPredator" then return "PredatorCarcass" end
+    if kind == "Apex" then return "LargeCarcass" end
+    return "PreyCarcass"
+end
+
 function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
     local profile = NPCService:GetKindProfile(kind)
     local species = SpeciesConfig[profile.SpeciesId]
@@ -88,6 +99,8 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
     clone:SetAttribute("PreferredAltitude", profile.PreferredAltitude)
     clone:SetAttribute("PotentialCarnivoreFood", potentialCarnivoreFood)
     clone:SetAttribute("CarnivoreFoodCandidate", potentialCarnivoreFood)
+    clone:SetAttribute("FoodWhenDefeated", true)
+    clone:SetAttribute("CarnivoreFoodKind", self:GetCarnivoreFoodKind(kind))
     clone:SetAttribute("ImportedVisibleAsset", true)
     clone:SetAttribute("CreatorStoreOnly", true)
     clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
@@ -126,6 +139,8 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         wrapper:SetAttribute("PreferredAltitude", profile.PreferredAltitude)
         wrapper:SetAttribute("PotentialCarnivoreFood", potentialCarnivoreFood)
         wrapper:SetAttribute("CarnivoreFoodCandidate", potentialCarnivoreFood)
+        wrapper:SetAttribute("FoodWhenDefeated", true)
+        wrapper:SetAttribute("CarnivoreFoodKind", self:GetCarnivoreFoodKind(kind))
         wrapper:SetAttribute("ImportedVisibleAsset", true)
         wrapper:SetAttribute("CreatorStoreOnly", true)
         wrapper:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))

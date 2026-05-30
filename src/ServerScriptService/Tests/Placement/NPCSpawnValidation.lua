@@ -64,6 +64,36 @@ table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and pr
     Assert.truthy(aerialPredators >= 1, "pterodactyl/aerial predator spawn exists")
 end })
 
+table.insert(suite.tests, { name = "authored NPC spawns expose species and deferred food metadata", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureNPCSpawnMarkers(folders)
+
+    local bySpecies = {}
+    local liveFood = 0
+    local defeatedFood = 0
+    for _, marker in ipairs(folders.NPCSpawns:GetChildren()) do
+        local kind = marker:GetAttribute("NPCKind")
+        local speciesId = marker:GetAttribute("SpeciesId")
+        Assert.truthy(type(speciesId) == "string" and speciesId ~= "", marker.Name .. " has source species expectation")
+        Assert.equals(marker:GetAttribute("FoodSourceCandidate"), true, marker.Name .. " is audited as deferred food candidate")
+        Assert.equals(marker:GetAttribute("FoodWhenDefeated"), true, marker.Name .. " can become food when defeated")
+        Assert.truthy(type(marker:GetAttribute("CarnivoreFoodKind")) == "string", marker.Name .. " has carcass kind")
+        Assert.truthy(type(marker:GetAttribute("GroundTopY")) == "number", marker.Name .. " has ground top for floating checks")
+        Assert.equals(marker:GetAttribute("AvoidOverlap"), true, marker.Name .. " opts into overlap validation")
+        bySpecies[speciesId] = (bySpecies[speciesId] or 0) + 1
+        if marker:GetAttribute("PotentialCarnivoreFood") == true then
+            liveFood = liveFood + 1
+            Assert.truthy(kind == "Prey" or kind == "AerialPrey" or kind == "FlyingPrey", marker.Name .. " only live prey advertises carnivore food")
+        end
+        if marker:GetAttribute("FoodWhenDefeated") == true then defeatedFood = defeatedFood + 1 end
+    end
+
+    Assert.truthy((bySpecies.gallimimus or 0) >= 6, "gallimimus/prey has multiple relevant spawn points")
+    Assert.truthy((bySpecies.carnotaurus or 0) >= 4, "carnotaurus/predator has multiple relevant spawn points")
+    Assert.truthy(liveFood >= 6, "live prey NPCs are potential carnivore food")
+    Assert.equals(defeatedFood, #folders.NPCSpawns:GetChildren(), "every authored NPC can produce defeated-food metadata")
+end })
+
 table.insert(suite.tests, { name = "spawn loop reaches visible world target from authored markers", run = function()
     MapLayoutService:EnsureSpawnSafety()
     local oldTarget = NPCSpawnService.TargetActive

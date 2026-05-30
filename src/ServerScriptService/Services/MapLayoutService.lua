@@ -536,8 +536,8 @@ MapLayoutService.NPCKindSpeciesIds = {
     FlyingPrey = "gallimimus",
     Predator = "carnotaurus",
     AerialPredator = "velociraptor",
-    Apex = "carnotaurus",
-    Omnivore = "velociraptor",
+    Apex = "tyrannosaurus",
+    Omnivore = "oviraptor",
 }
 
 MapLayoutService.NPCKindFoodWhenDefeated = {

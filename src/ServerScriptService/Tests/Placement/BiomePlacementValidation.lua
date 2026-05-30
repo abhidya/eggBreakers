@@ -201,7 +201,7 @@ table.insert(suite.tests, { name = "full map terrain underlay is single and comp
     local folders = MapLayoutService:EnsureMapFolders()
     MapLayoutService:EnsureTerrainContinuity(folders)
     Assert.truthy(folders.Map:GetAttribute("FullMapTerrainUnderlay"), "full map underlay marker set")
-    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2115,12,1980", "compact full map underlay covers all biomes and routes")
+    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2350,12,2200", "50% compact full map underlay covers all biomes and routes")
 end })
 
 table.insert(suite.tests, { name = "compact map keeps every biome in playable range", run = function()
@@ -221,7 +221,7 @@ table.insert(suite.tests, { name = "compact map keeps every biome in playable ra
 
     Assert.equals(biomeCount, 7, "all seven biomes remain represented")
     Assert.truthy(maxDistance <= 1400, "outer biome centers are condensed below long empty traversal")
-    Assert.equals(MapLayoutService.CompactLayout.scaleXZ, 0.45, "compact transform documents traversal scale")
+    Assert.equals(MapLayoutService.CompactLayout.scaleXZ, 0.5, "compact transform documents 50% traversal scale")
 end })
 
 TestRunner.registerSuite(suite)
