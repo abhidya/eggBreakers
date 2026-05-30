@@ -143,3 +143,37 @@ Live Studio audit after this batch: actuallyImportedAssets=23, auditedImportedAs
 - `AssetImportAuditService.lua` now quarantines non-required low-quality/mesh imported roots during mutate audits and reports `qualityAssetsQuarantined` separately.
 - `MapLayoutService.lua` now uses exact half-scale source compaction, re-centers mismatched food/carcass placements into their declared zones, keeps procedural food/tree visuals hidden, and tags NPC spawns as potential food when defeated.
 - No client UI or combat files were changed in this patch. Live G014 release count remains an honest 23/500 until Studio is synced and rerun.
+
+
+## G020 import/materialization continuation — 2026-05-30T01:18:38Z
+
+Active Studio: `eggBreakers2.rbxl` (`23b8836a-ed22-4397-9a96-75b0a4a96eed`).
+
+Inserted, sanitized, tagged, and intentionally placed 4 additional Creator Store assets:
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 10681819812 | G020_Imported_PrehistoricPlant_01 | FernPlains | HerbivoreFoodVisual | 0 scripts | MeshPart detected in live root; source policy will exclude until replacement/exception. |
+| 104497410410577 | G020_Imported_DinosaurNestEgg_01 | NurseryGrove | EggNestVisual | 0 scripts | Non-mesh live root. |
+| 509728826 | G020_Imported_RuinedCityStructure_01 | ApocalypticCity | CityRuinVisual | 2 scripts removed | Non-mesh live root. |
+| 5663348866 | G020_Imported_FossilBones_01 | MountainNestingCliffs | FossilVisual | 0 scripts | MeshPart detected in live root; source policy will exclude until replacement/exception. |
+
+Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after the batch:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 27 |
+| Audited Imported Assets | 27 |
+| Tagged Imported Assets | 27 |
+| Placed Visible Assets | 27 |
+| Release Ready Visible Assets | 27 |
+| Script Objects Found | 0 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 473 |
+
+Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (no placeholder/default-Part failures reported).
+
+Live all-category TestRunner after the batch: `220 total / 185 passed / 35 failed`. Asset-count failures now honestly report `27/500`. Remaining failures include known proof gates, stale open-Studio module cache/source mismatch, and still-missing mobile/RBXL persistence evidence.
+
+Source change included in this continuation: `MapLayoutService:EnsureNPCSpawnMarkers` now stamps `AerialSpawn`, `PreferredAltitude`, `FlyingPrey`, and `FlightTarget` consistently for aerial prey/predator markers.
