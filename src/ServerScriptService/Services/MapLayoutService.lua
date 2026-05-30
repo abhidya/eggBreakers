@@ -530,6 +530,26 @@ MapLayoutService.BiomeDressingPlacements = {
 
 }
 
+MapLayoutService.NPCKindSpeciesIds = {
+    Prey = "gallimimus",
+    AerialPrey = "gallimimus",
+    FlyingPrey = "gallimimus",
+    Predator = "carnotaurus",
+    AerialPredator = "velociraptor",
+    Apex = "carnotaurus",
+    Omnivore = "velociraptor",
+}
+
+MapLayoutService.NPCKindFoodWhenDefeated = {
+    Prey = "PreyCarcass",
+    AerialPrey = "AerialPreyCarcass",
+    FlyingPrey = "AerialPreyCarcass",
+    Predator = "PredatorCarcass",
+    AerialPredator = "PredatorCarcass",
+    Apex = "LargeCarcass",
+    Omnivore = "PreyCarcass",
+}
+
 MapLayoutService.NPCSpawnPlacements = {
     { name = "NurseryPrey_01", position = Vector3.new(-1905, 14, 95), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
     { name = "NurseryPrey_02", position = Vector3.new(-2075, 14, -115), kind = "Prey", zone = "NurseryGrove", tutorialSafe = true },
@@ -1039,6 +1059,24 @@ function MapLayoutService:EnsureBiomeDressing(folders)
     return folders.BiomeDressing
 end
 
+function MapLayoutService:IsLiveCarnivoreFoodKind(kind)
+    return kind == "Prey" or kind == "AerialPrey" or kind == "FlyingPrey"
+end
+
+function MapLayoutService:GetNPCSpawnSpeciesId(spec)
+    return spec.speciesId or self.NPCKindSpeciesIds[spec.kind] or "gallimimus"
+end
+
+function MapLayoutService:GetGroundTopYForZone(zoneId)
+    local zone = self.ZoneTerrain[zoneId]
+    return zone and zone.topY or self.FullMapUnderlay.topY
+end
+
+function MapLayoutService:GetPlacementRadius(size)
+    if typeof(size) ~= "Vector3" then return 4 end
+    return math.max(size.X, size.Z) / 2
+end
+
 function MapLayoutService:EnsureNPCSpawnMarkers(folders)
     for _, spec in ipairs(self.NPCSpawnPlacements) do
         local marker = folders.NPCSpawns:FindFirstChild(spec.name)
@@ -1060,14 +1098,25 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("SafeBabyArea", spec.tutorialSafe == true)
         marker:SetAttribute("DangerousNPC", spec.dangerous == true)
         marker:SetAttribute("NestingHerd", spec.nestingHerd == true)
+        marker:SetAttribute("SpeciesId", self:GetNPCSpawnSpeciesId(spec))
+        marker:SetAttribute("GroundTopY", self:GetGroundTopYForZone(spec.zone))
+        marker:SetAttribute("FloatingAllowed", spec.aerial == true or spec.flyingPrey == true)
+        marker:SetAttribute("PlacementRadiusStuds", self:GetPlacementRadius(marker.Size))
+        marker:SetAttribute("AvoidOverlap", true)
+        local species = SpeciesConfig[self:GetNPCSpawnSpeciesId(spec)]
+        local preferredBiome = species and species.EcosystemProfile and (species.EcosystemProfile.PreferredBiome or (species.EcosystemProfile.PreferredZones and species.EcosystemProfile.PreferredZones[1]))
+        marker:SetAttribute("PreferredBiome", preferredBiome)
+        marker:SetAttribute("SpeciesRelevantSpawn", preferredBiome == nil or preferredBiome == spec.zone or spec.zone == "NurseryGrove" or spec.nestingHerd == true)
         local aerialSpawn = spec.aerial == true or spec.kind == "AerialPrey" or spec.kind == "AerialPredator" or spec.kind == "FlyingPrey" or spec.flyingPrey == true
         marker:SetAttribute("AerialSpawn", aerialSpawn)
         marker:SetAttribute("PreferredAltitude", spec.preferredAltitude or (aerialSpawn and marker.Position.Y or nil))
         marker:SetAttribute("FlyingPrey", spec.kind == "AerialPrey" or spec.kind == "FlyingPrey" or spec.flyingPrey == true)
         marker:SetAttribute("FlightTarget", spec.kind == "AerialPrey" or spec.kind == "FlyingPrey" or spec.flyingPrey == true)
-        marker:SetAttribute("PotentialCarnivoreFood", true)
+        local liveCarnivoreFood = self:IsLiveCarnivoreFoodKind(spec.kind)
+        marker:SetAttribute("PotentialCarnivoreFood", liveCarnivoreFood)
+        marker:SetAttribute("CarnivoreFoodCandidate", liveCarnivoreFood)
         marker:SetAttribute("FoodWhenDefeated", true)
-        marker:SetAttribute("CarnivoreFoodKind", spec.dangerous == true and "HighRiskCarcass" or "PreyCarcass")
+        marker:SetAttribute("CarnivoreFoodKind", self.NPCKindFoodWhenDefeated[spec.kind] or (spec.dangerous == true and "HighRiskCarcass" or "PreyCarcass"))
         marker:SetAttribute("FoodSourceCandidate", true)
     end
     return folders.NPCSpawns
@@ -1101,6 +1150,13 @@ function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
         spawn:SetAttribute("SpeciesId", spec.speciesId)
         spawn:SetAttribute("ZoneId", spec.zone)
         spawn:SetAttribute("YawDegrees", spec.yawDegrees or 0)
+        spawn:SetAttribute("PitchDegrees", 0)
+        spawn:SetAttribute("RollDegrees", 0)
+        spawn:SetAttribute("SourceExpectedUpright", true)
+        spawn:SetAttribute("GroundTopY", self:GetGroundTopYForZone(spec.zone))
+        spawn:SetAttribute("FloatingAllowed", false)
+        spawn:SetAttribute("PlacementRadiusStuds", self:GetPlacementRadius(spawn.Size))
+        spawn:SetAttribute("AvoidOverlap", true)
     end
     return spawnFolder
 end

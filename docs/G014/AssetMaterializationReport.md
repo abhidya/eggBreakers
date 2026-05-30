@@ -402,3 +402,40 @@ Additional source/UI cleanup in this checkpoint: mobile controls changed to icon
 Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g024-supplement.rbxl` PASS.
 
 Release still fails honestly because materialized live count is `73/500`; full mobile/touch proof, RBXL save/reopen proof, and all-category fresh Studio TestRunner are still not green.
+
+## G025 import/materialization continuation — 2026-05-30T01:50:00Z
+
+Continued the non-pivot production cleanup by adding a new Creator Store batch focused on coherent food-capable vegetation, city landmarks, fossil/nest visuals, and biome cover. All roots were sanitized, tagged, intentionally placed, and script-audited in live Studio.
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 9164676690 | G025_Imported_FallenLog_01 | JungleBasin | fallen-log-cover-food-insect | 0 | new unique import |
+| 4536575513 | G025_Imported_FernBush_01 | FernPlains | fern-browse-food | 0 | duplicate SourceAssetId already present; tagged FoodSource |
+| 7299047040 | G025_Imported_Boulder_01 | RedstoneCanyon | canyon-cover-rock | 0 | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 8794744420 | G025_Imported_RuinedWall_01 | ApocalypticCity | city-ruined-wall | 0 | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 1784440735 | G025_Imported_SwampReeds_01 | SwampDelta | swamp-reeds-food | 0 | duplicate SourceAssetId already present; tagged FoodSource |
+| 159605518 | G025_Imported_FossilBone_01 | MountainNestingCliffs | fossil-reward-visual | 0 | new unique import |
+| 267220625 | G025_Imported_JungleVine_01 | JungleBasin | jungle-vine-browse | 0 | duplicate SourceAssetId already present; tagged FoodSource |
+| 1362894915 | G025_Imported_CarWreck_01 | ApocalypticCity | city-car-wreck | 0 | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 14663175798 | G025_Imported_EggNest_01 | NurseryGrove | imported-egg-nest-visual | 1 audited ModuleScript | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 737735563 | G025_Imported_RuinsPillar_01 | ApocalypticCity | city-navigation-landmark | 0 | new unique import |
+
+Live Studio evidence after the batch:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 80 |
+| Audited Imported Assets | 80 |
+| Tagged Imported Assets | 80 |
+| Placed Visible Assets | 80 |
+| Release Ready Visible Assets | 79 |
+| Script Objects Found | 1 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 421 |
+
+`scriptObjectsFound=1` is a ModuleScript preserved with audit/sandbox attributes; no runtime Script/LocalScript remained. Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCount=0`).
+
+Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g025-import-batch.rbxl` PASS.
+
+Release still fails honestly because release-ready live count is `79/500`; full mobile/touch proof, RBXL save/reopen proof, and all-category fresh Studio TestRunner are still not green.

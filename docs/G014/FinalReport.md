@@ -315,3 +315,9 @@ Latest live audit improved the materialized/imported count to 73 unique live Sou
 Mobile UX was tightened in source with icon-first controls and a less text-heavy food/water cue, but release still requires live mobile/touch proof.
 
 G014 STATUS: FAIL — releaseReadyVisibleAssets 73/500, fresh Studio/RBXL reload proof missing, full all-category TestRunner not green, mobile/touch E2E proof missing.
+
+## G025 status — 2026-05-30T01:50:00Z
+
+Live imported/materialized evidence improved to `actuallyImportedAssets=80` and `releaseReadyVisibleAssets=79`. This remains a failing production gate, not a pass. The gap to 500 release-ready unique imports is 421, and the latest no-mesh policy means MeshPart roots must be replaced or excluded from release-ready final acceptance.
+
+G014 STATUS: FAIL — releaseReadyVisibleAssets 79/500, fresh Studio/RBXL reload proof missing, full all-category TestRunner not green, mobile/touch E2E proof missing.

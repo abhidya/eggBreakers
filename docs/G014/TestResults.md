@@ -334,3 +334,13 @@ Release still fails honestly because materialized live count is `68/500` and fin
 - Mobile UI source cleanup: icon-first labels and hidden optional unsupported buttons; still needs device/touch E2E proof before release.
 
 Milestone Status: FAIL — remaining blockers are releaseReadyVisibleAssets 73/500, fresh Studio/RBXL reload proof, full all-category TestRunner, and device/mobile E2E proof.
+
+## G025 import/materialization verification — 2026-05-30T01:50:00Z
+
+- Source syntax: PASS (`luac -p` all Lua).
+- Diff whitespace: PASS (`git diff --check`).
+- Rojo build: PASS (`rojo build default.project.json --output /tmp/eggBreakers-g025-import-batch.rbxl`).
+- Live Studio asset audit: PASS for workspace scan; live import counts now `actuallyImportedAssets=80`, `releaseReadyVisibleAssets=79`, remaining gap `421`.
+- Script audit: 1 preserved ModuleScript, 0 runtime Script/LocalScript, 0 quarantined scripts.
+
+Milestone Status: FAIL — remaining blockers are releaseReadyVisibleAssets 79/500, fresh Studio/RBXL reload proof, full all-category TestRunner, and device/mobile E2E proof.
