@@ -14,7 +14,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 | Check | Result | Evidence |
 |---|---|---|
 | G011 catalog count | PASS | `AssetManifest.SourceAssets` validates at 500 entries / 500 unique `SourceAssetId` values. |
-| G014 live count | PASS/FAIL-honest | G014 docs consistently report 78 release-ready visible imports, below the 500 release target. |
+| G014 live count | PASS/FAIL-honest | G014 docs consistently report 23 quality-approved release-ready visible imports after quarantine, below the 500 release target. |
 | G013/G015 plan freshness | FAIL-stale | Older plans still mention 44/500 or 34/500 baselines; those are superseded by G014's 23/500 post-quality-quarantine audit and must not be used for the next batch gap. |
 | G014 batch IDs vs G011 catalog | INFO | 6 of 25 documented G014 batch rows are in the G011 catalog; 19 are post-catalog live imports. This is acceptable only if reports keep cataloged vs live-imported states separate and preserve explicit live tagging/audit proof. |
 

@@ -15,7 +15,7 @@ Current authoritative FAIL evidence is 23/500 release-ready visible imported ass
 | Rojo build | PASS | `rojo build default.project.json --output /tmp/eggBreakers-g014-source-fix.rbxl` passed. |
 | Server visual release validation | PASS | Studio `CharacterVisualService:ValidateReleaseVisualAssets()` passed after Creator Store imports were organized under `ReplicatedStorage.ImportedAssetLibrary`. |
 | E2E G013/G014 source gate | FAIL | Full E2E gate still includes release-blocking asset count 23/500 after quality quarantine and other broad release placement/client/mobile gaps. |
-| Asset release-ready count | FAIL | Studio `AssetImportAuditService` reports 78 live imported/release-ready assets; required target is 500 release-ready visible assets. |
+| Asset release-ready count | FAIL | Studio `AssetImportAuditService` reports 23 quality-approved live imported/release-ready assets after quarantine; required target is 500 release-ready visible assets. |
 | Plan/manifest consistency | PASS/FAIL-honest | `docs/G014/NextCreatorStoreAssetAudit.md` confirms G011 is a 500-ID catalog, G014 is the live 23/500 post-quality-quarantine materialization baseline, and post-catalog live IDs require explicit tag/audit/placement proof rather than manifest backfill. |
 | Full Studio TestRunner | FAIL | Edit-time G014 gate still fails release blockers including 23/500 imported asset count after quality quarantine. Play VM cannot directly require `ServerScriptService.Tests` through current MCP path, so full Play TestRunner remains unproven. |
 
@@ -64,3 +64,14 @@ Later evidence supersedes stale intermediate counts: active `eggBreakers2.rbxl` 
 | Gate | Status | Evidence |
 |---|---|---|
 | Live Studio import continuation | FAIL | Imported/tagged/placed/scrubbed 10 more unique Creator Store assets. Live `AssetImportAuditService` now reports `releaseReadyVisibleAssets=23/500 after quality quarantine`, leaving a 477 gap after quality quarantine. |
+
+
+## Continuation live Studio probe — 2026-05-30
+
+| Check | Result | Evidence |
+|---|---|---|
+| Source syntax | PASS | `find src -name '*.lua' -print \| sort \| xargs -n 1 luac -p` passed. |
+| Rojo source build | PASS | `rojo build default.project.json --output /tmp/eggBreakers-continuation.rbxl` passed. |
+| Open Studio bootstrap/audit before sync attempt | FAIL-honest | Live `AssetImportAuditService` ran and reported releaseReadyVisibleAssets=23/500, actuallyImportedAssets=23, scripts=0; release validation failed as expected. |
+| Open Studio all-category TestRunner before sync attempt | FAIL | 220 total, 171 passed, 49 failed. Several failures showed stale Studio module cache/source mismatch (for example missing `NPCService:GetFlightTarget` and `MapLayoutService:GetPlayerSpawnForSpecies` even though current source contains both). |
+| Rojo live sync attempt | FAIL | `rojo serve default.project.json --port 34873` started, but active Studio then showed `ServerScriptService` empty through MCP. The server process was stopped with `pkill`; fresh Studio/Rojo reload remains required before using Studio TestRunner as authoritative evidence. |

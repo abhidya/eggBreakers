@@ -53,3 +53,10 @@ Release remains FAIL because quality filtering reduced the honest live release-r
 - Need replacement of quarantined LQ food/tree/city/prop visuals with better Creator Store assets.
 
 G019 STATUS: FAIL — release-ready quality-approved imported assets are 23/500; fresh Studio reload/mobile proof remains unproven.
+
+
+## Continuation probe — 2026-05-30
+
+- Source remained syntactically valid and built with Rojo.
+- Live Studio audit still fails release at 23/500 quality-approved assets.
+- A Rojo serve attempt on port 34873 did not produce authoritative fresh Studio evidence; MCP inspection showed `ServerScriptService` empty afterward, so the open place must be reloaded/re-synced before final Studio TestRunner evidence can count.
