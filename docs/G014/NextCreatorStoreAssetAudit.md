@@ -7,7 +7,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 
 - `src/ReplicatedStorage/Shared/AssetManifest.lua` / `docs/G011/AssetManifest.md` remain the G011 catalog source of truth: 500 manifest entries and 500 unique Creator Store `SourceAssetId` values.
 - `docs/G014/AssetMaterializationReport.md` remains the G014 live materialization source of truth: 48 release-ready visible imported assets in the active Studio audit, so the release gap is 452 assets.
-- Catalog membership is not required for a later live import to count as a materialized asset, but catalog rows alone never count as imported assets.
+- Catalog membership is not required for a later live import to count as a materialized asset or release-ready asset when the imported instance already has explicit `SourceAssetId`, `CreatorStoreOnly`, script-audit, and visible-placement proof. Catalog rows alone never count as imported assets.
 
 ## Consistency findings
 
@@ -16,7 +16,7 @@ Scope: read-only plan/manifest/doc consistency audit for the next Creator Store 
 | G011 catalog count | PASS | `AssetManifest.SourceAssets` validates at 500 entries / 500 unique `SourceAssetId` values. |
 | G014 live count | PASS/FAIL-honest | G014 docs consistently report 48 release-ready visible imports, below the 500 release target. |
 | G013/G015 plan freshness | FAIL-stale | Older plans still mention 44/500 or 34/500 baselines; those are superseded by G014's 48/500 audit and must not be used for the next batch gap. |
-| G014 batch IDs vs G011 catalog | INFO | 6 of 25 documented G014 batch rows are in the G011 catalog; 19 are post-catalog live imports. This is acceptable only if reports keep cataloged vs live-imported states separate. |
+| G014 batch IDs vs G011 catalog | INFO | 6 of 25 documented G014 batch rows are in the G011 catalog; 19 are post-catalog live imports. This is acceptable only if reports keep cataloged vs live-imported states separate and preserve explicit live tagging/audit proof. |
 
 ## G014 documented batch IDs checked against G011 catalog
 
@@ -59,7 +59,8 @@ The next worker with live Creator Store insert access should use the G014 baseli
    - `src/ReplicatedStorage/Shared/UniqueImportPilotReport.lua`, and
    - `src/ReplicatedStorage/Shared/AssetManifest.lua` only for catalog-membership reporting.
 4. Count only real inserted primary `SourceAssetId` values that are tagged, script-audited/quarantined, placed visible, and release-ready.
-5. Do not treat the 19 post-catalog G014 IDs as manifest errors, and do not treat any of the 500 G011 catalog rows as live imports without Studio audit proof.
+5. For source IDs outside `AssetManifest.SourceAssets`, require explicit live attributes (`SourceAssetId`, `CreatorStoreOnly`, `ImportedVisibleAsset`/visible placement, and script audit) because the manifest cannot backfill missing metadata.
+6. Do not treat the 19 post-catalog G014 IDs as manifest errors, and do not treat any of the 500 G011 catalog rows as live imports without Studio audit proof.
 
 ## Stop condition
 

@@ -11,6 +11,7 @@ Overall release gate: **FAIL**.
 | Server visual release validation | PASS | Studio `CharacterVisualService:ValidateReleaseVisualAssets()` passed after Creator Store imports were organized under `ReplicatedStorage.ImportedAssetLibrary`. |
 | E2E G013/G014 source gate | FAIL | Full E2E gate still includes release-blocking asset count 48/500 and other broad release placement/client/mobile gaps. |
 | Asset release-ready count | FAIL | Studio `AssetImportAuditService` reports 48 live imported/release-ready assets; required target is 500 release-ready visible assets. |
+| Plan/manifest consistency | PASS/FAIL-honest | `docs/G014/NextCreatorStoreAssetAudit.md` confirms G011 is a 500-ID catalog, G014 is the live 48/500 materialization baseline, and post-catalog live IDs require explicit tag/audit/placement proof rather than manifest backfill. |
 | Full Studio TestRunner | FAIL | Edit-time G014 gate still fails release blockers including 48/500 imported asset count. Play VM cannot directly require `ServerScriptService.Tests` through current MCP path, so full Play TestRunner remains unproven. |
 
 ## Latest Continuation Evidence — 2026-05-27
