@@ -2,7 +2,22 @@
 
 > A single source of truth for taking eggBreakers from "mechanically real but visually broken" to a polished, prod-ready dinosaur survival game. Structured so independent agents can own a workstream in parallel. Every task has an ID, an acceptance criterion, and an asset/source note.
 
-**Status snapshot (validated via Studio MCP):** 199/228 tests passing · 50 anchored primitive NPCs · 2 new mesh dino packs (5,767 MeshParts, 744 enabled legacy scripts) · map ~6% dressed · flight/swim scope-frozen · all `AnimationIds` empty.
+## Current Authoritative Snapshot — 2026-05-30 (validated via live Studio)
+
+> Freshest authoritative state, validated via a live Studio test run by the orchestrator. Wording follows `docs/G026/PlanningCountContradictionReport.md`: `catalogedSourceAssetIds=500` is the **catalog** (unique SourceAssetIds), NOT 500 live imports; `releaseReadyVisibleAssets=22/500` is the **release gate**. All numbers elsewhere in this doc are DATED HISTORY unless restated here.
+
+- **Assets:** `releaseReadyVisibleAssets=22/500`. The `500` is `catalogedSourceAssetIds` — a catalog of cataloged unique SourceAssetIds, not live imports. Historical/contradictory counts (22, 23, 34, 79, 215, 221, 227 /500) are dated history only; 22/500 supersedes them.
+- **Tests:** 176 total / 143 passed / 34 failed.
+  - 15 are PRE-EXISTING module-load failures (test modules error on require, exist at HEAD, NOT caused by the recent merge): CombatServiceTests, FoodServiceTests, NPCServiceTests, CombatFormulaTests, 4 Performance budget tests (AssetCollisionBudgetTest, LoopBudgetTest, NPCCountBudgetTest, ParticleBudgetTest), Placement NPCSpawnValidation + SpawnPlacementValidation, E2E_CarnivoreSurvival + E2E_PlayableLoopClosure, G013FinalGate, G014FinalGateSuite, Security ExploitSafeZoneAttackTests.
+  - 19 are content/release-gate failures: G015/G016/G018 FinalGate (500-asset count + live-proof gates), AssetManifestValidation (placeholder primitives in Workspace.dinosaur), FlightSwimOxygenServiceTests x2, SpeciesConfigTests (playable-species cap), TestRunner coverage.
+- **Asset-quality disconnect (visual + tree audit):** `Workspace.dinosaur` is a STAGING PEN holding 56 genuine textured MESH dino species (Herbivores 16, Carnivores 28, Omnivores 4, Aquatic 8; ~5-10 MeshParts each, clean, no unions) that are UNUSED in gameplay. `Workspace.NPCs` spawns are PRIMITIVES (88-172 Parts, 0 MeshParts each). The player character is the DEFAULT Roblox R15 avatar (SpeciesId=nil, no dino visual applied). There is NO velociraptor mesh staged (nearest staged: Utahraptor, Microraptor, Coelophysis). A junk model named "Delete(and delete thumbnail)" exists.
+- **Just-merged code (on main):** pteranodon rename (was pterodactyl); spinosaurus SemiAquatic NPC spawn kind; combat hit VFX (CombatFeedbackController + ReplicatedStorage.ImportedAssetLibrary.CombatHitVFXTemplate); nest respawn (ServerMain + SurvivalService); water drinkable validation (WaterService); MapLayoutService WorldBuilder hooks (BiomeCenters/GroundPlace) + a syntax fix.
+
+See also `eggBreakers_STATUS.md` for the consolidated status page.
+
+---
+
+**Status snapshot (historical — see Current Authoritative Snapshot above; validated via Studio MCP):** 199/228 tests passing · 50 anchored primitive NPCs · 2 new mesh dino packs (5,767 MeshParts, 744 enabled legacy scripts) · map ~6% dressed · flight/swim scope-frozen · all `AnimationIds` empty.
 
 ---
 

@@ -2,6 +2,17 @@
 
 > The execution foundation. Step 1: what we have. Step 2: what we want + where it comes from. Step 3: mechanics keep/develop/replace. Step 4: the from-scratch build order. Everything here is audited against the live place (eggBreakers2.rbxl) and Codex's `.omx` history.
 
+## Current Authoritative Snapshot — 2026-05-30 (validated via live Studio)
+
+> Freshest authoritative state, validated via a live Studio test run by the orchestrator. Wording follows `docs/G026/PlanningCountContradictionReport.md`: `catalogedSourceAssetIds=500` is the **catalog** (unique SourceAssetIds), NOT 500 live imports; `releaseReadyVisibleAssets=22/500` is the **release gate**. The inventory and ledger counts below are DATED HISTORY unless restated here.
+
+- **Assets:** `releaseReadyVisibleAssets=22/500`. The `500` is `catalogedSourceAssetIds` — a catalog of unique SourceAssetIds, not live imports. Historical/contradictory counts (22, 23, 34, 79, 215, 221, 227 /500) are dated history only; 22/500 supersedes them. The STEP 1 inventory's "28 unique release-ready" figure below is historical.
+- **Tests:** 176 total / 143 passed / 34 failed. 15 are PRE-EXISTING module-load failures (error on require, exist at HEAD, NOT from the recent merge): CombatServiceTests, FoodServiceTests, NPCServiceTests, CombatFormulaTests, 4 Performance budget tests, Placement NPCSpawnValidation + SpawnPlacementValidation, E2E_CarnivoreSurvival + E2E_PlayableLoopClosure, G013FinalGate, G014FinalGateSuite, Security ExploitSafeZoneAttackTests. 19 are content/release-gate failures: G015/G016/G018 FinalGate, AssetManifestValidation, FlightSwimOxygenServiceTests x2, SpeciesConfigTests, TestRunner coverage.
+- **Asset-quality disconnect (visual + tree audit):** `Workspace.dinosaur` is a STAGING PEN holding 56 genuine textured MESH dino species (Herbivores 16, Carnivores 28, Omnivores 4, Aquatic 8; ~5-10 MeshParts each, clean, no unions) UNUSED in gameplay. `Workspace.NPCs` spawns are PRIMITIVES (88-172 Parts, 0 MeshParts each). The player character is the DEFAULT Roblox R15 avatar (SpeciesId=nil, no dino visual applied). There is NO velociraptor mesh staged (nearest: Utahraptor, Microraptor, Coelophysis). A junk model named "Delete(and delete thumbnail)" exists.
+- **Just-merged code (on main):** pteranodon rename (was pterodactyl); spinosaurus SemiAquatic NPC spawn kind; combat hit VFX; nest respawn; water drinkable validation (WaterService); MapLayoutService WorldBuilder hooks + a syntax fix.
+
+See also `eggBreakers_STATUS.md` for the consolidated status page.
+
 ---
 
 ## STEP 1 — Current Asset Inventory (audited)
@@ -9,11 +20,11 @@
 | Asset class | Count (live) | Quality verdict | Disposition |
 |-------------|-------------:|-----------------|-------------|
 | Server services (NPCService, Combat, Survival, etc.) | ~33 modules | Solid engine | **KEEP** |
-| Test suite (Unit→Performance + gates) | 65 suites / 228 tests | Comprehensive | **KEEP** (re-baseline) |
+| Test suite (Unit→Performance + gates) | 65 suites / 228 tests *(historical — latest live run is 176 total / 143 passed / 34 failed; see Current Authoritative Snapshot)* | Comprehensive | **KEEP** (re-baseline) |
 | `AssetImportAuditService` + quarantine | 1 | Useful, but MeshPart rule wrong | **KEEP + FIX** |
 | Primitive CSG dinos (`Imported_Playable_*`) | 6 sets | Block/union, no rig | **CUT/REPLACE** |
-| Live NPC instances (anchored primitives) | 50 | Anchored, no Humanoid/anim | **REPLACE** (new rigs) |
-| New mesh dino packs (`Dino Pack!`, `rex`, loose models) | 5,767 MeshParts, 21 roots | Real meshes/rigs — **but** 758 Workspace scripts (744 enabled) + 20 looped sounds; live-only, not in repo | **KEEP MESH/RIG, STRIP scripts+sounds** |
+| Live NPC instances (anchored primitives) | 50 *(historical — 2026-05-30 audit: `Workspace.NPCs` are primitives at 88-172 Parts, 0 MeshParts; see Current Authoritative Snapshot)* | Anchored, no Humanoid/anim | **REPLACE** (new rigs) |
+| New mesh dino packs (`Dino Pack!`, `rex`, loose models) | 5,767 MeshParts, 21 roots *(historical — 2026-05-30 audit finds 56 genuine textured mesh dino species staged in `Workspace.dinosaur` but UNUSED; see Current Authoritative Snapshot)* | Real meshes/rigs — **but** 758 Workspace scripts (744 enabled) + 20 looped sounds; live-only, not in repo | **KEEP MESH/RIG, STRIP scripts+sounds** |
 | Imported props (`Map/ImportedAssets`) | 8 placed / ~28 unique SourceIds | Mostly CSG wearing import tags | **AUDIT/REPLACE** |
 | Quarantined imports (`ReplicatedStorage/QuarantinedImportedAssets`) | 96 moved by Codex | Low-quality/mesh/simple-gen | **REVIEW** (some are real meshes wrongly quarantined) |
 | Placeholder food (balls/markers) | 47 hidden + visible | Junk | **CUT/REPLACE** |
@@ -23,7 +34,7 @@
 | Map terrain | flat plane + drop-off | Unnatural | **REBUILD** (sculpted Terrain) |
 | Skybox | Roblox default | No identity | **REPLACE** (custom sky) |
 
-**Honest release count today:** 28 unique release-ready imported assets vs **500** required.
+**Honest release count today:** 28 unique release-ready imported assets vs **500** required. *(historical — see Current Authoritative Snapshot; freshest authoritative count is `releaseReadyVisibleAssets=22/500`, where 500 = `catalogedSourceAssetIds` catalog, not live imports.)*
 
 ---
 

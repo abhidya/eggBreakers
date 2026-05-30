@@ -2,6 +2,17 @@
 
 > Companion to `eggBreakers_Master_Plan.md`. This doc captures the creative direction (world, story, mechanics) and pairs every need with live Creator Store research. Goal: a real, natural world — not a flat green plane with a drop-off, broken square water, and default Roblox sky.
 
+## Current Authoritative Snapshot — 2026-05-30 (validated via live Studio)
+
+> Freshest authoritative state, validated via a live Studio test run by the orchestrator. Wording follows `docs/G026/PlanningCountContradictionReport.md`: `catalogedSourceAssetIds=500` is the **catalog** (unique SourceAssetIds), NOT 500 live imports; `releaseReadyVisibleAssets=22/500` is the **release gate**. All numbers elsewhere in this doc are DATED HISTORY unless restated here.
+
+- **Assets:** `releaseReadyVisibleAssets=22/500`. The `500` is `catalogedSourceAssetIds` — a catalog of unique SourceAssetIds, not live imports. Historical/contradictory counts (22, 23, 34, 79, 215, 221, 227 /500) are dated history only; 22/500 supersedes them.
+- **Tests:** 176 total / 143 passed / 34 failed. 15 are PRE-EXISTING module-load failures (error on require, exist at HEAD, NOT from the recent merge): CombatServiceTests, FoodServiceTests, NPCServiceTests, CombatFormulaTests, 4 Performance budget tests, Placement NPCSpawnValidation + SpawnPlacementValidation, E2E_CarnivoreSurvival + E2E_PlayableLoopClosure, G013FinalGate, G014FinalGateSuite, Security ExploitSafeZoneAttackTests. 19 are content/release-gate failures: G015/G016/G018 FinalGate, AssetManifestValidation, FlightSwimOxygenServiceTests x2, SpeciesConfigTests, TestRunner coverage.
+- **Asset-quality disconnect (visual + tree audit):** `Workspace.dinosaur` is a STAGING PEN holding 56 genuine textured MESH dino species (Herbivores 16, Carnivores 28, Omnivores 4, Aquatic 8; ~5-10 MeshParts each, clean, no unions) UNUSED in gameplay. `Workspace.NPCs` spawns are PRIMITIVES (88-172 Parts, 0 MeshParts each). The player character is the DEFAULT Roblox R15 avatar (SpeciesId=nil, no dino visual applied). There is NO velociraptor mesh staged (nearest: Utahraptor, Microraptor, Coelophysis). A junk model named "Delete(and delete thumbnail)" exists.
+- **Just-merged code (on main):** pteranodon rename (was pterodactyl); spinosaurus SemiAquatic NPC spawn kind; combat hit VFX; nest respawn; water drinkable validation (WaterService); MapLayoutService WorldBuilder hooks + a syntax fix.
+
+See also `eggBreakers_STATUS.md` for the consolidated status page.
+
 ---
 
 ## 1. What's Wrong With the World Today (validated)
@@ -9,8 +20,8 @@
 - **Broken water** — shallow square "generated Part" plates, untagged, one too deep to swim.
 - **Default Roblox sky** — no atmosphere, no mood, no time-of-day identity.
 - **Empty far distance** — biomes float far apart with nothing on the horizon; the edge of the map is just void.
-- **~6% dressed** — almost no trees/rocks/props; the few that exist are invisible-helper placeholders.
-- **Primitive creatures** — block/union dinos, no animation, teleporting.
+- **~6% dressed** (historical — see Current Authoritative Snapshot) — almost no trees/rocks/props; the few that exist are invisible-helper placeholders.
+- **Primitive creatures** — block/union dinos, no animation, teleporting. (As of 2026-05-30, `Workspace.NPCs` are still primitives while 56 genuine mesh dinos sit unused in the `Workspace.dinosaur` staging pen — see Current Authoritative Snapshot.)
 
 We fix this by **building a real terrain world inside a decorated boundary, under a custom sky, dressed with high-rated imported assets.**
 
