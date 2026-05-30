@@ -307,3 +307,44 @@ Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCoun
 Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g024-import-batch.rbxl` PASS.
 
 Release still fails honestly because materialized live count is `68/500` and final mobile/RBXL/fresh all-category proof remains missing.
+
+## G024 supplemental import/materialization continuation — 2026-05-30T01:41:40Z
+
+Owner focus for this pass: do **not** pivot; keep tracking map placement, low-quality/mesh exclusion, kid-friendly mobile UI, food-capable vegetation, and honest 500-unique imported asset progress.
+
+Inserted/sanitized/tagged/placed 10 additional Creator Store insertions in live Studio. Five were new unique live SourceAssetIds over the existing G024 checkpoint; duplicates and mesh-policy exclusions are not treated as proof of 500 final assets.
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 212002982 | G024_Imported_BridgeLog_01 | FernPlains | landmark-bridge | 0 | duplicate SourceAssetId already present |
+| 60395419 | G024_Imported_JungleTree_01 | JungleBasin | vegetation-food-potential | 0 | duplicate SourceAssetId already present; tagged PotentialFood/FoodSource |
+| 44521224 | G024_Imported_SmallPlant_01 | NurseryGrove | starter-plant-food | 0 | duplicate SourceAssetId already present; tagged FoodSource |
+| 6249242162 | G024_Imported_Mushroom_01 | SwampDelta | swamp-plant-food | 0 | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 3082762400 | G024_Imported_CrystalRock_01 | RedstoneCanyon | landmark-rock | 0 | new unique import in live place |
+| 44100564 | G024_Imported_Barricade_01 | ApocalypticCity | city-risk-cover | 0 | duplicate SourceAssetId already present |
+| 12414580049 | G024_Imported_RustyPipe_01 | ApocalypticCity | city-ruin-prop | 0 | new unique import in live place |
+| 15602137818 | G024_Imported_StreetLight_01 | ApocalypticCity | city-landmark-light | 0 | MeshPart detected; owner no-mesh policy marks as excluded/replacement-needed |
+| 5618961046 | G024_Imported_SwampRoots_01 | SwampDelta | vegetation-food-potential | 0 | new unique import; tagged PotentialFood/FoodSource |
+| 8382516725 | G024_Imported_StoneArch_01 | RedstoneCanyon | navigation-landmark | 0 | new unique import in live place |
+
+Live Studio evidence after this supplemental pass:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 73 |
+| Audited Imported Assets | 73 |
+| Tagged Imported Assets | 73 |
+| Placed Visible Assets | 73 |
+| Release Ready Visible Assets | 73 |
+| Script Objects Found | 0 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 427 |
+
+Live `AssetAuditService:ScanWorkspace()` after the pass: PASS (`scanFailureCount=0`).
+
+Additional source/UI cleanup in this checkpoint: mobile controls changed to icon-first labels, hidden optional Flight/Swim remains non-visible for the scoped vertical slice, action feedback is shorter, and the food/water waypoint cue now uses a visual arrow/sparkle instead of debug-shell text.
+
+Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g024-supplement.rbxl` PASS.
+
+Release still fails honestly because materialized live count is `73/500`; full mobile/touch proof, RBXL save/reopen proof, and all-category fresh Studio TestRunner are still not green.

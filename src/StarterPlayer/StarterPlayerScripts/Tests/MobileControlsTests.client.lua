@@ -47,8 +47,8 @@ table.insert(suite.tests, { name = "phone guidance exposes real asset directions
     Assert.equals(controlsGui:FindFirstChild("DialoguePromptLabel"):GetAttribute("IconOnlyTracker"), true, "dialogue is icon-first")
     Assert.equals(controlsGui:FindFirstChild("NearestActionHintLabel"):GetAttribute("NonNpcActionHint"), true, "target hint excludes NPCs")
     Assert.equals(controlsGui:FindFirstChild("NearestActionHintLabel"):GetAttribute("IconOnlyTracker"), true, "target hint is icon-first")
-    Assert.truthy(string.find(controlsGui:FindFirstChild("EatDrinkButton").Text, "Snack", 1, true) ~= nil, "eat/drink button starts kid-friendly")
-    Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "↗", 1, true) ~= nil, "target hint is visual arrow style")
+    Assert.equals(controlsGui:FindFirstChild("EatDrinkButton").Text, "🍎💧", "eat/drink button starts icon-first")
+    Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "⬆", 1, true) ~= nil, "target hint is visual arrow style")
     Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "Follow", 1, true) == nil, "long tracker instruction removed")
     controlsGui:Destroy()
     MobileControlsController.Gui = nil
@@ -87,17 +87,29 @@ table.insert(suite.tests, { name = "flight and swim controls hide until availabl
     Assert.notNil(MobileControlsController.EffectStyles.Flight, "flight has visual feedback style")
     Assert.notNil(MobileControlsController.EffectStyles.Swim, "swim has visual feedback style")
     local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
-    Assert.equals(result.Gui:FindFirstChild("FlightButton").Visible, false, "flight starts hidden")
-    Assert.equals(result.Gui:FindFirstChild("SwimButton").Visible, false, "swim starts hidden")
-    Assert.equals(result.Gui:FindFirstChild("FlightButton").Active, false, "flight does not remain as grey inactive button")
-    Assert.equals(result.Gui:FindFirstChild("SwimButton").Active, false, "swim does not remain as grey inactive button")
+    for _, name in ipairs(MobileControlsController.OptionalButtons) do
+        local button = result.Gui:FindFirstChild(name .. "Button")
+        Assert.notNil(button, name .. " optional button exists for runtime unlock")
+        Assert.equals(button.Visible, false, name .. " starts hidden")
+        Assert.equals(button.Active, false, name .. " does not remain as grey inactive button")
+        Assert.equals(button.AutoButtonColor, false, name .. " has no grey disabled affordance")
+        Assert.equals(button:GetAttribute("OptionalAction"), true, name .. " is marked optional")
+    end
     result.Gui:Destroy()
     MobileControlsController.Gui = nil
 end })
 
-table.insert(suite.tests, { name = "mobile buttons expose icon identity", run = function()
+table.insert(suite.tests, { name = "mobile buttons expose icon-first minimal labels", run = function()
     local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     local controlsGui = result.Gui
+    local expected = { EatDrink = "🍎💧", Attack = "🦷", Sprint = "⚡", Call = "📣", RestHide = "🌿", Flight = "🪽", Swim = "🌊" }
+    for name, text in pairs(expected) do
+        local button = controlsGui:FindFirstChild(name .. "Button")
+        Assert.equals(button.Text, text, name .. " label is icon-first/minimal")
+        Assert.equals(button:GetAttribute("DefaultText"), text, name .. " default label remains minimal")
+        Assert.equals(button:GetAttribute("IconFirstMinimalLabel"), true, name .. " label contract marked")
+        Assert.truthy(string.len(button.Text) <= 12, name .. " label stays short")
+    end
     Assert.equals(controlsGui:FindFirstChild("EatDrinkButton"):GetAttribute("KidIcon"), "🍎", "eat button has icon identity")
     Assert.equals(controlsGui:FindFirstChild("AttackButton"):GetAttribute("KidIcon"), "🦷", "attack button has icon identity")
     Assert.equals(controlsGui:FindFirstChild("CallButton"):GetAttribute("MobileReadable"), true, "buttons remain mobile readable")
@@ -109,11 +121,38 @@ table.insert(suite.tests, { name = "waypoint tracker stays icon based", run = fu
     local food = MobileControlsController:BuildWaypointText("Food", 12.4)
     local water = MobileControlsController:BuildWaypointText("Water", 7.6)
     local none = MobileControlsController:BuildWaypointText("None")
-    Assert.truthy(string.find(food, "↗ 🍎 12m", 1, true) ~= nil, "food waypoint uses arrow icon and distance")
-    Assert.truthy(string.find(water, "↗ 💧 8m", 1, true) ~= nil, "water waypoint uses arrow icon and rounded distance")
+    Assert.truthy(string.find(food, "⬆ 🍎 12m", 1, true) ~= nil, "food waypoint uses large arrow icon and distance")
+    Assert.truthy(string.find(water, "✨ 💧 8m", 1, true) ~= nil, "nearby water waypoint uses sparkle cue and rounded distance")
     Assert.truthy(string.find(none, "🍎", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows food and water icons")
     Assert.truthy(string.find(food, "Food", 1, true) == nil, "food word removed from tracker")
     Assert.truthy(string.find(water, "Water", 1, true) == nil, "water word removed from tracker")
+end })
+
+
+table.insert(suite.tests, { name = "mobile hud prompts do not overlap controls", run = function()
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
+    local gui = result.Gui
+    local function verticalRect(instance)
+        return {
+            top = instance.Position.Y.Offset,
+            bottom = instance.Position.Y.Offset + instance.Size.Y.Offset,
+        }
+    end
+    local function verticallySeparated(a, b)
+        return a.bottom <= b.top or b.bottom <= a.top
+    end
+    local floating = { "DialoguePromptLabel", "NearestActionHintLabel", "ActionFeedbackLabel" }
+    local actions = { "EatDrinkButton", "AttackButton", "SprintButton", "CallButton", "RestHideButton", "FlightButton", "SwimButton" }
+    for _, aName in ipairs(floating) do
+        local a = verticalRect(gui:FindFirstChild(aName))
+        for _, bName in ipairs(actions) do
+            local b = verticalRect(gui:FindFirstChild(bName))
+            Assert.truthy(verticallySeparated(a, b), aName .. " vertically clears " .. bName)
+        end
+    end
+    Assert.equals(gui:FindFirstChild("NearestActionHintLabel"):GetAttribute("WaypointCue"), "large-arrow-nearby-sparkle", "waypoint cue contract exists")
+    gui:Destroy()
+    MobileControlsController.Gui = nil
 end })
 
 TestRunner.registerSuite(suite)

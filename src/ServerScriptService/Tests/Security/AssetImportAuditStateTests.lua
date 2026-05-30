@@ -54,6 +54,17 @@ local function withImportedFixture(callback)
             quarantine:Destroy()
         end
     end
+    local qualityQuarantine = ReplicatedStorage:FindFirstChild("QuarantinedImportedAssets")
+    if qualityQuarantine then
+        for _, child in ipairs(qualityQuarantine:GetChildren()) do
+            if child:GetAttribute("TestImportedAuditFixture") == true or child:GetAttribute("AssetQualityQuarantined") == true then
+                child:Destroy()
+            end
+        end
+        if #qualityQuarantine:GetChildren() == 0 then
+            qualityQuarantine:Destroy()
+        end
+    end
     for _, child in ipairs(library:GetChildren()) do
         if child:GetAttribute("TestImportedAuditFixture") == true then
             child:Destroy()
@@ -96,6 +107,55 @@ table.insert(suite.tests, { name = "quality exclusions are separated and withhel
         Assert.equals(result.counts.qualityExcludedAssets, 2, "all quality exclusions counted separately")
         Assert.equals(result.counts.lowQualityExcludedAssets, 1, "low-quality/simple generated exclusion separated")
         Assert.equals(result.counts.meshExcludedAssets, 1, "mesh exclusion separated from LQ")
+    end)
+end })
+
+
+table.insert(suite.tests, { name = "mesh and generated low quality visuals are excluded and quarantined", run = function()
+    withImportedFixture(function(_, library)
+        local meshFixture = makeImportedVisual(library, "Task23MeshFinalAsset", AssetManifest.Entries[2])
+        local meshPart = Instance.new("MeshPart")
+        meshPart.Name = "CreatorStoreMeshPayload"
+        meshPart.Parent = meshFixture
+
+        local glowingBall = makeImportedVisual(library, "Task23GlowingFoodCandidate", AssetManifest.Entries[3])
+        local ball = Instance.new("Part")
+        ball.Name = "GlowingBallFood"
+        ball.Shape = Enum.PartType.Ball
+        ball.Material = Enum.Material.Neon
+        ball.Parent = glowingBall
+
+        local rectangleBallTree = makeImportedVisual(library, "Task23RectangleBallTree", AssetManifest.Entries[4])
+        local trunk = Instance.new("Part")
+        trunk.Name = "RectangleTrunk"
+        trunk.Shape = Enum.PartType.Block
+        trunk.Parent = rectangleBallTree
+        local canopy = Instance.new("Part")
+        canopy.Name = "BallCanopy"
+        canopy.Shape = Enum.PartType.Ball
+        canopy.Parent = rectangleBallTree
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.equals(result.counts.meshExcludedAssets, 1, "MeshPart assets are forbidden from release-ready final assets")
+        Assert.truthy(result.counts.lowQualityExcludedAssets >= 2, "glowing balls and rectangle-ball trees are low-quality exclusions")
+        Assert.equals(result.counts.releaseReadyVisibleAssets, 1, "only the baseline fixture remains release-ready")
+        Assert.truthy(result.counts.qualityAssetsQuarantined >= 3, "mesh and LQ generated visuals are quarantined")
+    end)
+end })
+
+table.insert(suite.tests, { name = "required playable mesh visuals fail even with policy note", run = function()
+    withImportedFixture(function(_, library)
+        local meshFixture = makeImportedVisual(library, "Task23RequiredMeshPlayable", AssetManifest.Entries[2], {
+            RequiredPlayableVisual = true,
+            RequiredPlayableVisualPolicyNote = "Mesh must be replaced by generated Parts before release.",
+        })
+        local meshPart = Instance.new("MeshPart")
+        meshPart.Name = "ForbiddenPlayableMesh"
+        meshPart.Parent = meshFixture
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.falsy(result.passed, "required playable meshes are still forbidden final assets")
+        Assert.truthy(result.counts.meshExcludedAssets >= 1, "mesh exclusion counted")
     end)
 end })
 

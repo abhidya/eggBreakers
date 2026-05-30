@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
 local AssetImportAuditService = require(script.Parent.AssetImportAuditService)
@@ -129,6 +130,68 @@ function AssetAuditService:IsAllowedProceduralGameplayVisual(instance)
     return false
 end
 
+function AssetAuditService:IsVisibleGeneratedPart(instance)
+    if not instance:IsA("Part") or instance.Shape ~= Enum.PartType.Block then return false end
+    if self:IsCreatorStoreDerived(instance) then return false end
+    return instance:GetAttribute("GeneratedPart") == true
+        or instance:GetAttribute("GeneratedVisiblePart") == true
+        or instance:GetAttribute("ProceduralGameplayVisual") == true
+        or instance:GetAttribute("ProceduralWaterSource") == true
+end
+
+function AssetAuditService:ValidateVisibleGeneratedPartRelease(instance, failures)
+    if not self:IsVisibleGeneratedPart(instance) then return end
+    if instance:GetAttribute("ReleaseVisibleGeneratedPartAllowed") ~= true then
+        table.insert(failures, instance:GetFullName() .. " visible generated Part lacks ReleaseVisibleGeneratedPartAllowed=true")
+    end
+    local reason = instance:GetAttribute("ReleaseVisibleGeneratedPartReason")
+    if reason == nil or tostring(reason) == "" then
+        table.insert(failures, instance:GetFullName() .. " visible generated Part lacks ReleaseVisibleGeneratedPartReason")
+    end
+end
+
+function AssetAuditService:IsPotentialFoodCandidate(instance)
+    if CollectionService:HasTag(instance, "FoodSource") then return true end
+    return instance:GetAttribute("FoodSourceCandidate") == true
+        or instance:GetAttribute("FoodWhenDefeated") == true
+        or instance:GetAttribute("PotentialCarnivoreFood") == true
+        or instance:GetAttribute("PotentialHerbivoreFood") == true
+        or instance:GetAttribute("TreeBrowse") == true
+end
+
+function AssetAuditService:ValidatePotentialFoodCandidate(instance, failures)
+    if not self:IsPotentialFoodCandidate(instance) then return end
+
+    local isTaggedFood = CollectionService:HasTag(instance, "FoodSource")
+    local diet = instance:GetAttribute("Diet")
+    local nutrition = instance:GetAttribute("Nutrition")
+    local hasConcreteFood = (diet == "Herbivore" or diet == "Carnivore" or diet == "Omnivore")
+        and type(nutrition) == "number" and nutrition > 0
+    if isTaggedFood and not hasConcreteFood then
+        table.insert(failures, instance:GetFullName() .. " tagged FoodSource lacks valid Diet/Nutrition")
+        return
+    end
+    if hasConcreteFood then return end
+
+    local vegetationFood = instance:GetAttribute("PotentialHerbivoreFood") == true
+        or instance:GetAttribute("TreeBrowse") == true
+        or instance:GetAttribute("VegetationType") ~= nil
+        or instance:GetAttribute("PlantPart") ~= nil
+    if vegetationFood then
+        return
+    end
+
+    local npcFood = instance:GetAttribute("FoodWhenDefeated") == true
+        or instance:GetAttribute("PotentialCarnivoreFood") == true
+        or instance:GetAttribute("NPCKind") ~= nil
+        or instance:GetAttribute("NPCSpawn") == true
+    if npcFood and (instance:GetAttribute("FoodWhenDefeated") == true or instance:GetAttribute("CarnivoreFoodKind") ~= nil) then
+        return
+    end
+
+    table.insert(failures, instance:GetFullName() .. " potential food candidate lacks concrete food metadata or vegetation/NPC deferred-food attributes")
+end
+
 function AssetAuditService:HasForbiddenVisibleName(instance)
     for _, signal in ipairs(self.ForbiddenVisibleNameSignals) do
         if string.find(string.lower(instance.Name), string.lower(signal), 1, true) then return true end
@@ -187,8 +250,12 @@ function AssetAuditService:ScanWorkspace()
                 if self:HasForbiddenVisibleName(instance) then
                     table.insert(failures, instance:GetFullName() .. " has forbidden placeholder-like name")
                 end
-                if instance:IsA("Part") and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) and not self:IsAllowedProceduralGameplayVisual(instance) then
-                    table.insert(failures, instance:GetFullName() .. " is visible default block Part not marked Creator Store-derived")
+                if instance:IsA("Part") and instance.Shape == Enum.PartType.Block and not self:IsCreatorStoreDerived(instance) then
+                    if self:IsAllowedProceduralGameplayVisual(instance) then
+                        self:ValidateVisibleGeneratedPartRelease(instance, failures)
+                    else
+                        table.insert(failures, instance:GetFullName() .. " is visible default block Part not marked Creator Store-derived")
+                    end
                 end
                 if instance:GetAttribute("ImportedVisibleAsset") == true then
                     self:ValidateManifestReference(instance, failures)
@@ -196,6 +263,7 @@ function AssetAuditService:ScanWorkspace()
             elseif instance:IsA("BasePart") and instance.Transparency == 1 and not self:IsInvisibleHelper(instance) then
                 table.insert(failures, instance:GetFullName() .. " invisible helper violates naming/storage rule")
             end
+            self:ValidatePotentialFoodCandidate(instance, failures)
         end
     end
     return { visibleCount = visibleCount, failures = failures, passed = #failures == 0, cleanedTestFixtures = cleanedTestFixtures }

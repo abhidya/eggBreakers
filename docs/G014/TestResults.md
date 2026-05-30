@@ -324,3 +324,13 @@ Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCoun
 Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g024-import-batch.rbxl` PASS.
 
 Release still fails honestly because materialized live count is `68/500` and final mobile/RBXL/fresh all-category proof remains missing.
+
+## G024 supplemental verification — 2026-05-30T01:41:40Z
+
+- Source syntax: PASS (`luac -p` all Lua).
+- Diff whitespace: PASS (`git diff --check`).
+- Rojo build: PASS (`rojo build default.project.json --output /tmp/eggBreakers-g024-supplement.rbxl`).
+- Live Studio asset audit: PASS for workspace scan; import counts now 73 release-ready according to live audit, with an honest remaining gap of 427 to the 500 unique release-ready target.
+- Mobile UI source cleanup: icon-first labels and hidden optional unsupported buttons; still needs device/touch E2E proof before release.
+
+Milestone Status: FAIL — remaining blockers are releaseReadyVisibleAssets 73/500, fresh Studio/RBXL reload proof, full all-category TestRunner, and device/mobile E2E proof.

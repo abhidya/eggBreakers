@@ -7,19 +7,21 @@ MobileControlsController.OptionalButtons = { "Flight", "Swim" }
 
 MobileControlsController.DefaultButtonColor = Color3.fromRGB(35, 45, 35)
 MobileControlsController.EffectStyles = {
-    EatDrink = { ActiveText = "Snack!", ActiveColor = Color3.fromRGB(66, 140, 82) },
-    Attack = { ActiveText = "Chomp!", ActiveColor = Color3.fromRGB(190, 78, 62) },
-    Sprint = { ActiveText = "Zoom!", ActiveColor = Color3.fromRGB(72, 128, 255) },
-    Call = { ActiveText = "Roar!", ActiveColor = Color3.fromRGB(255, 196, 76) },
-    RestHide = { ActiveText = "Cozy", ActiveColor = Color3.fromRGB(56, 92, 68) },
-    Flight = { ActiveText = "Flying", ActiveColor = Color3.fromRGB(96, 170, 255) },
-    Swim = { ActiveText = "Swimming", ActiveColor = Color3.fromRGB(56, 160, 210) },
+    EatDrink = { ActiveText = "🍎+", ActiveColor = Color3.fromRGB(66, 140, 82) },
+    Attack = { ActiveText = "🦷!", ActiveColor = Color3.fromRGB(190, 78, 62) },
+    Sprint = { ActiveText = "⚡!", ActiveColor = Color3.fromRGB(72, 128, 255) },
+    Call = { ActiveText = "📣!", ActiveColor = Color3.fromRGB(255, 196, 76) },
+    RestHide = { ActiveText = "🌿💤", ActiveColor = Color3.fromRGB(56, 92, 68) },
+    Flight = { ActiveText = "🪽", ActiveColor = Color3.fromRGB(96, 170, 255) },
+    Swim = { ActiveText = "🌊", ActiveColor = Color3.fromRGB(56, 160, 210) },
 }
 
 function MobileControlsController:BuildWaypointText(targetType, distance)
-    if not targetType or targetType == "None" then return "↗ 🍎  💧" end
+    if not targetType or targetType == "None" then return "⬆ 🍎  💧" end
     local icon = targetType == "Water" and "💧" or "🍎"
-    return string.format("↗ %s %.0fm", icon, distance or 0)
+    local meters = math.max(0, tonumber(distance) or 0)
+    local pulse = meters <= 8 and "✨" or "⬆"
+    return string.format("%s %s %.0fm", pulse, icon, meters)
 end
 
 function MobileControlsController:BuildFoodWaterLegend(stats)
@@ -73,31 +75,31 @@ function MobileControlsController:CreateControls(settings)
     if self.Gui then return self.Gui end
     local scale = settings and settings.MobileButtonScale or 1.0
     local gui = UIFactory:CreateRootGui("MobileControls")
-    local buttonSize = UDim2.fromOffset(82 * scale, 58 * scale)
+    local buttonSize = UDim2.fromOffset(76 * scale, 54 * scale)
     local positions = {
-        EatDrink = UDim2.new(1, -274 * scale, 1, -142 * scale),
-        Attack = UDim2.new(1, -184 * scale, 1, -142 * scale),
-        Sprint = UDim2.new(1, -94 * scale, 1, -142 * scale),
-        Call = UDim2.new(1, -184 * scale, 1, -76 * scale),
-        RestHide = UDim2.new(1, -94 * scale, 1, -76 * scale),
-        Flight = UDim2.new(1, -184 * scale, 1, -208 * scale),
-        Swim = UDim2.new(1, -94 * scale, 1, -208 * scale),
+        EatDrink = UDim2.new(1, -252 * scale, 1, -132 * scale),
+        Attack = UDim2.new(1, -168 * scale, 1, -132 * scale),
+        Sprint = UDim2.new(1, -84 * scale, 1, -132 * scale),
+        Call = UDim2.new(1, -168 * scale, 1, -72 * scale),
+        RestHide = UDim2.new(1, -84 * scale, 1, -72 * scale),
+        Flight = UDim2.new(1, -168 * scale, 1, -204 * scale),
+        Swim = UDim2.new(1, -84 * scale, 1, -204 * scale),
     }
     local thumbstick = Instance.new("Frame")
     thumbstick.Name = "MoveThumbstick"
     thumbstick.Size = UDim2.fromOffset(120 * scale, 120 * scale)
-    thumbstick.Position = UDim2.new(0, 24, 1, -146 * scale)
+    thumbstick.Position = UDim2.new(0, 18 * scale, 1, -138 * scale)
     thumbstick.BackgroundTransparency = 0.5
     thumbstick.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     thumbstick.Parent = gui
     local labels = {
-        EatDrink = "🍎 Snack",
-        Attack = "🦷 Chomp",
-        Sprint = "⚡ Zoom",
-        Call = "📣 Roar",
-        RestHide = "🌿 Rest",
-        Flight = "🪽 Fly",
-        Swim = "🌊 Swim",
+        EatDrink = "🍎💧",
+        Attack = "🦷",
+        Sprint = "⚡",
+        Call = "📣",
+        RestHide = "🌿",
+        Flight = "🪽",
+        Swim = "🌊",
     }
     local icons = {
         EatDrink = "🍎",
@@ -115,6 +117,7 @@ function MobileControlsController:CreateControls(settings)
         button:SetAttribute("DefaultText", labels[name] or name)
         button:SetAttribute("KidIcon", icons[name] or "")
         button:SetAttribute("MobileReadable", true)
+        button:SetAttribute("IconFirstMinimalLabel", true)
         button:SetAttribute("OptionalAction", name == "Flight" or name == "Swim")
         if name == "Flight" or name == "Swim" then
             button.Visible = false
@@ -124,8 +127,8 @@ function MobileControlsController:CreateControls(settings)
     end
     local dialogue = Instance.new("TextLabel")
     dialogue.Name = "DialoguePromptLabel"
-    dialogue.Size = UDim2.fromOffset(168 * scale, 34 * scale)
-    dialogue.Position = UDim2.new(0.5, -84 * scale, 1, -332 * scale)
+    dialogue.Size = UDim2.fromOffset(168 * scale, 32 * scale)
+    dialogue.Position = UDim2.new(0.5, -84 * scale, 1, -360 * scale)
     dialogue.BackgroundTransparency = 0.1
     dialogue.BackgroundColor3 = Color3.fromRGB(16, 28, 20)
     dialogue.TextColor3 = Color3.fromRGB(240, 255, 220)
@@ -138,22 +141,23 @@ function MobileControlsController:CreateControls(settings)
     dialogue.Parent = gui
     local targetHint = Instance.new("TextLabel")
     targetHint.Name = "NearestActionHintLabel"
-    targetHint.Size = UDim2.fromOffset(168 * scale, 56 * scale)
-    targetHint.Position = UDim2.new(0.5, -84 * scale, 1, -286 * scale)
+    targetHint.Size = UDim2.fromOffset(168 * scale, 44 * scale)
+    targetHint.Position = UDim2.new(0.5, -84 * scale, 1, -320 * scale)
     targetHint.BackgroundTransparency = 0.04
     targetHint.BackgroundColor3 = Color3.fromRGB(24, 54, 34)
     targetHint.TextColor3 = Color3.fromRGB(255, 255, 255)
     targetHint.TextScaled = true
     targetHint.TextWrapped = true
-    targetHint.Text = "↗ 🍎  💧"
+    targetHint.Text = "⬆ 🍎  💧"
     targetHint:SetAttribute("NonNpcActionHint", true)
     targetHint:SetAttribute("IconOnlyTracker", true)
     targetHint:SetAttribute("FloatsAboveActionButtons", true)
+    targetHint:SetAttribute("WaypointCue", "large-arrow-nearby-sparkle")
     targetHint.Parent = gui
     local feedback = Instance.new("TextLabel")
     feedback.Name = "ActionFeedbackLabel"
-    feedback.Size = UDim2.fromOffset(180 * scale, 40 * scale)
-    feedback.Position = UDim2.new(0.5, -90 * scale, 1, -236 * scale)
+    feedback.Size = UDim2.fromOffset(180 * scale, 34 * scale)
+    feedback.Position = UDim2.new(0.5, -90 * scale, 1, -268 * scale)
     feedback.BackgroundTransparency = 0.1
     feedback.BackgroundColor3 = Color3.fromRGB(20, 35, 24)
     feedback.TextColor3 = Color3.new(1, 1, 1)

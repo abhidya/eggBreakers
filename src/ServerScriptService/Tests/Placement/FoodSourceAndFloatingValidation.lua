@@ -6,6 +6,7 @@ local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local Constants = require(ReplicatedStorage.Shared.Constants)
 local PlacementValidationService = require(ServerScriptService.Services.PlacementValidationService)
 local RemoteValidationService = require(ServerScriptService.Services.RemoteValidationService)
+local AssetAuditService = require(ServerScriptService.Services.AssetAuditService)
 
 local suite = { name = "FoodSourceAndFloatingValidation.server", category = "Placement", tests = {} }
 
@@ -64,6 +65,38 @@ table.insert(suite.tests, { name = "omnivore food metadata and reachability supp
 
     root:Destroy()
     food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "vegetation and NPC deferred food candidates validate via attributes", run = function()
+    local fern = Instance.new("Part")
+    fern.Name = "DistantGrazingFern"
+    fern:SetAttribute("FoodSourceCandidate", true)
+    fern:SetAttribute("PotentialHerbivoreFood", true)
+    fern:SetAttribute("VegetationType", "FernBrowse")
+    local failures = {}
+    AssetAuditService:ValidatePotentialFoodCandidate(fern, failures)
+    Assert.equals(#failures, 0, "vegetation can be potential food without live FoodSource tag")
+
+    local npc = Instance.new("Part")
+    npc.Name = "CandidatePreyNPC"
+    npc:SetAttribute("FoodSourceCandidate", true)
+    npc:SetAttribute("PotentialCarnivoreFood", true)
+    npc:SetAttribute("FoodWhenDefeated", true)
+    npc:SetAttribute("CarnivoreFoodKind", "PreyCarcass")
+    failures = {}
+    AssetAuditService:ValidatePotentialFoodCandidate(npc, failures)
+    Assert.equals(#failures, 0, "NPCs can be potential carnivore food through defeated/carcass attributes")
+
+    local bad = Instance.new("Part")
+    bad.Name = "AmbiguousFoodCandidate"
+    bad:SetAttribute("FoodSourceCandidate", true)
+    failures = {}
+    AssetAuditService:ValidatePotentialFoodCandidate(bad, failures)
+    Assert.truthy(#failures >= 1, "ambiguous potential food candidates still fail")
+
+    fern:Destroy()
+    npc:Destroy()
+    bad:Destroy()
 end })
 
 table.insert(suite.tests, { name = "visible floating assets fail unless explicitly allowed", run = function()

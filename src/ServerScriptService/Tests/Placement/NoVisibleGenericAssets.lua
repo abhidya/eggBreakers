@@ -16,6 +16,25 @@ table.insert(suite.tests, { name = "no default visible placeholders", run = func
     bad:Destroy()
 end })
 
+table.insert(suite.tests, { name = "visible generated Parts need explicit release approval", run = function()
+    local generated = Instance.new("Part")
+    generated.Name = "GeneratedReleaseProbe"
+    generated.Shape = Enum.PartType.Block
+    generated.Transparency = 0
+    generated:SetAttribute("ProceduralGameplayVisual", true)
+
+    local failures = {}
+    AssetAuditService:ValidateVisibleGeneratedPartRelease(generated, failures)
+    Assert.truthy(#failures >= 2, "missing generated Part release approval and reason fail")
+
+    generated:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    generated:SetAttribute("ReleaseVisibleGeneratedPartReason", "Server-authored gameplay affordance; not a fallback placeholder.")
+    failures = {}
+    AssetAuditService:ValidateVisibleGeneratedPartRelease(generated, failures)
+    Assert.equals(#failures, 0, "approved generated Part release metadata passes")
+    generated:Destroy()
+end })
+
 table.insert(suite.tests, { name = "invisible helper exceptions follow naming/storage", run = function()
     local allowed = AssetAuditService.AllowedInvisibleParents
     Assert.truthy(#allowed >= 4, "approved invisible helper parent list is explicit")

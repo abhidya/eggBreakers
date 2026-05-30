@@ -307,3 +307,11 @@ Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCoun
 Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g024-import-batch.rbxl` PASS.
 
 Release still fails honestly because materialized live count is `68/500` and final mobile/RBXL/fresh all-category proof remains missing.
+
+## G024 supplemental status — 2026-05-30T01:41:40Z
+
+Latest live audit improved the materialized/imported count to 73 unique live SourceAssetIds and kept script audit clean (`scriptObjectsFound=0`). This is progress, not signoff. The owner no-mesh/LQ policy remains tracked: MeshPart imports must be replaced or formally excepted before final release acceptance, and generated/low-quality visible placeholders remain release blockers.
+
+Mobile UX was tightened in source with icon-first controls and a less text-heavy food/water cue, but release still requires live mobile/touch proof.
+
+G014 STATUS: FAIL — releaseReadyVisibleAssets 73/500, fresh Studio/RBXL reload proof missing, full all-category TestRunner not green, mobile/touch E2E proof missing.

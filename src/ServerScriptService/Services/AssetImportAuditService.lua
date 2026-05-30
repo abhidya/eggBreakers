@@ -27,6 +27,7 @@ local LOW_QUALITY_NAME_PATTERNS = {
     "glowing[%w%s_%-]*ball",
     "ball[%s_%-]*tree",
     "rectangle[%w%s_%-]*tree",
+    "rectangle[%w%s_%-]*ball[%w%s_%-]*tree",
     "simple[%s_%-]*generated",
     "debug[%s_%-]*fallback",
     "placeholder",
@@ -39,6 +40,9 @@ local function isA(instance, className)
     return ok and result == true
 end
 
+local isGlowingBallPart
+local looksLikeRectangleBallTree
+
 local function nameLooksLowQuality(instance)
     local text = string.lower(instance.Name or "")
     for _, pattern in ipairs(LOW_QUALITY_NAME_PATTERNS) do
@@ -47,6 +51,57 @@ local function nameLooksLowQuality(instance)
         end
     end
     return false
+end
+
+local function looksLowQualityGeneratedFoodOrVegetation(instance)
+    if nameLooksLowQuality(instance) or isGlowingBallPart(instance) or looksLikeRectangleBallTree(instance) then
+        return true
+    end
+    if instance.GetDescendants then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if nameLooksLowQuality(descendant) or isGlowingBallPart(descendant) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function instanceNameContains(instance, token)
+    return string.find(string.lower(instance.Name or ""), token, 1, true) ~= nil
+end
+
+isGlowingBallPart = function(instance)
+    if not isA(instance, "BasePart") then return false end
+    if not instanceNameContains(instance, "ball") and instance.Shape ~= Enum.PartType.Ball then return false end
+    if instance.Material == Enum.Material.Neon then return true end
+    if instance.GetDescendants then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if isA(descendant, "PointLight") or isA(descendant, "SpotLight") or isA(descendant, "SurfaceLight") then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+looksLikeRectangleBallTree = function(instance)
+    if not instanceNameContains(instance, "tree") then return false end
+    local hasBlock = false
+    local hasBall = false
+    local function visit(part)
+        if isA(part, "Part") then
+            hasBlock = hasBlock or part.Shape == Enum.PartType.Block
+            hasBall = hasBall or part.Shape == Enum.PartType.Ball
+        end
+    end
+    visit(instance)
+    if instance.GetDescendants then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            visit(descendant)
+        end
+    end
+    return hasBlock and hasBall
 end
 
 local function containsMeshPart(instance)
@@ -144,10 +199,10 @@ function AssetImportAuditService:IsVisibleImportedAsset(instance)
 end
 
 function AssetImportAuditService:GetQualityExclusionKind(instance)
-    if nameLooksLowQuality(instance) then
+    if looksLowQualityGeneratedFoodOrVegetation(instance) then
         return "lowQuality"
     end
-    if containsMeshPart(instance) and not self:HasRequiredPlayableVisual(instance) then
+    if containsMeshPart(instance) then
         return "mesh"
     end
 
@@ -249,7 +304,7 @@ end
 
 function AssetImportAuditService:_quarantineQualityAsset(instance, quarantineFolder, records, kind)
     if instance == quarantineFolder or instance:IsDescendantOf(quarantineFolder) then return end
-    if self:HasRequiredPlayableVisual(instance) then return end
+    if kind ~= "mesh" and self:HasRequiredPlayableVisual(instance) then return end
     if self:_hasQualityExcludedAncestor(instance) then return end
 
     table.insert(records, {
@@ -367,7 +422,9 @@ function AssetImportAuditService:AuditAndRepair(options)
                 else
                     addUnique(lowQualityExcludedSourceIds, sourceAssetId)
                 end
-                if self:HasRequiredPlayableVisual(instance) and not self:HasRequiredPlayableVisualPolicyNote(instance) then
+                if qualityExclusionKind == "mesh" and self:HasRequiredPlayableVisual(instance) then
+                    table.insert(failures, instance:GetFullName() .. " required playable visual uses MeshPart; mesh final assets are forbidden")
+                elseif self:HasRequiredPlayableVisual(instance) and not self:HasRequiredPlayableVisualPolicyNote(instance) then
                     table.insert(failures, instance:GetFullName() .. " required playable visual has quality exclusion without explicit policy note")
                 elseif mutate and qualityQuarantineFolder then
                     self:_quarantineQualityAsset(instance, qualityQuarantineFolder, quarantinedQualityAssets, qualityExclusionKind)
@@ -472,7 +529,7 @@ function AssetImportAuditService:ToMarkdown(result)
         "",
         "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and mesh/LQ exclusions do not count as release-ready.",
         "",
-        "Mesh exclusions and low-quality exclusions are reported separately. Imported MeshPart roots, food/glowing ball placeholders, rectangle/ball tree placeholders, and simple-generated/debug fallback names are withheld from release-ready counts and quarantined on mutate unless protected as required playable visuals. Required playable visuals must not be removed or excluded without an explicit policy note/replacement rationale.",
+        "Mesh exclusions and low-quality exclusions are reported separately. Imported MeshPart roots are forbidden as final assets. Food/glowing ball placeholders, rectangle/ball tree placeholders, and simple-generated/debug fallback names are withheld from release-ready counts and quarantined on mutate unless protected as required playable visuals. Required playable visuals must not be low-quality/debug excluded without an explicit policy note/replacement rationale; mesh required visuals fail release until replaced by generated Parts.",
     }
     return table.concat(lines, "\n") .. "\n"
 end
