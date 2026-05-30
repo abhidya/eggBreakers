@@ -1,18 +1,18 @@
 # G014 Asset Materialization Report
 
-Latest Commit: af9fd05 plus current live Studio import batch docs pending commit.
+Latest Commit: 5553ade plus current live Studio import batch docs pending commit.
 
 | State | Count |
 |---|---:|
 | Cataloged SourceAssetIds | 500+ |
-| Actually Imported Assets | 10 live imported assets from Studio audit |
-| Audited Imported Assets | 10 live assets marked script-audited; below target |
-| Tagged Imported Assets | 10 live tagged imported assets; below target |
-| Placed Visible Assets | 10 live placed/visible imported assets; below target |
-| Release Ready Visible Assets | 10 live release-ready visible assets, below target |
+| Actually Imported Assets | 48 live imported assets from Studio audit |
+| Audited Imported Assets | 48 live assets marked script-audited; below target |
+| Tagged Imported Assets | 48 live tagged imported assets; below target |
+| Placed Visible Assets | 48 live placed/visible imported assets; below target |
+| Release Ready Visible Assets | 48 live release-ready visible assets, below target |
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
-| Scripts Quarantined | 0; no executable imported scripts found in the 10 live imported roots |
-| Remaining Release Ready Gap To 500 | 490 |
+| Scripts Quarantined | 0; no executable imported scripts found in the 48 live imported roots |
+| Remaining Release Ready Gap To 500 | 452 |
 
 G014 imported these/organized these required gameplay visuals in Studio for smoke proof:
 - `Imported_Dinosaur_Egg_Nest` from Creator Store asset `8895193`.
@@ -35,9 +35,45 @@ Added and organized 5 more live Creator Store imports in open Studio, then tagge
 | Fossil/bone collectible visual | 3505076540 | ApocalypticCity |
 | Pond/water source visual | 74355704971397 | SwampDelta |
 
-Live Studio audit after this batch: actuallyImportedAssets=10, auditedImportedAssets=10, taggedImportedAssets=10, placedVisibleAssets=10, releaseReadyVisibleAssets=10, scriptObjectsFound=0, scriptsQuarantined=0. Release validation still fails because the target is 500.
+Live Studio audit after the 2026-05-27 batch was previously recorded as 10/500. The current top-level counts above supersede that older batch count after later imports.
 
 
 ## G015 Follow-up Evidence — 2026-05-27
 
-G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+Later evidence supersedes stale intermediate counts: active `eggBreakers2.rbxl` now audits at 48/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer full reload TestRunner still remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+
+## G014 Import Batches — 2026-05-29
+
+Added and organized 20 more Creator Store imports in open Studio. Live audit increased from 30/500 at session baseline to 48/500 release-ready visible assets; two inserted assets did not increase the unique release-ready count.
+
+### Batch 2
+
+| Use | SourceAssetId | Placed Zone |
+|---|---:|---|
+| Redstone canyon rock | 116211098194180 | RedstoneCanyon |
+| Canyon cactus/plant food | 393735021 | RedstoneCanyon |
+| Jungle vines | 122280174982594 | JungleBasin |
+| Nursery prehistoric plant food | 26953061 | NurseryGrove |
+| Old Eden ruined building | 125968528580422 | ApocalypticCity |
+| Old Eden abandoned car | 109905665910630 | ApocalypticCity |
+| Fern Plains stump | 117401257092974 | FernPlains |
+| Swamp log | 16458140435 | SwampDelta |
+| Mountain nesting visual | 150068032 | MountainNestingCliffs |
+| City dinosaur bones/fossil | 176461892 | ApocalypticCity |
+
+### Batch 3
+
+| Use | SourceAssetId | Placed Zone |
+|---|---:|---|
+| Large fern herbivore food | 367401485 | FernPlains |
+| Jungle mossy boulder | 8421400545 | JungleBasin |
+| Old Eden street light | 14205708 | ApocalypticCity |
+| Old Eden rusty barrel | 13304723548 | ApocalypticCity |
+| Swamp bridge | 9016345250 | SwampDelta |
+| Redstone rock arch | 122586576789991 | RedstoneCanyon |
+| Swamp lily pad / water marker | 79823722717297 | SwampDelta |
+| Jungle flower herbivore food | 7935277298 | JungleBasin |
+| Nursery fallen branch | 13112823085 | NurseryGrove |
+| Old Eden road sign | 87098449723130 | ApocalypticCity |
+
+Live Studio audit after these batches: actuallyImportedAssets=48, auditedImportedAssets=48, taggedImportedAssets=48, placedVisibleAssets=48, releaseReadyVisibleAssets=48, scriptObjectsFound=0, scriptsQuarantined=0. Release validation still fails because the target is 500. Studio keyboard save attempt through MCP was rejected because `user_keyboard_input` is play-mode-only.

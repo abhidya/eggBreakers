@@ -9,16 +9,16 @@ Overall release gate: **FAIL**.
 | Lua syntax | PASS | `find src -name '*.lua' ... luac -p` passed after source fixes. |
 | Rojo build | PASS | `rojo build default.project.json --output /tmp/eggBreakers-g014-source-fix.rbxl` passed. |
 | Server visual release validation | PASS | Studio `CharacterVisualService:ValidateReleaseVisualAssets()` passed after Creator Store imports were organized under `ReplicatedStorage.ImportedAssetLibrary`. |
-| E2E G013/G014 source gate | FAIL | Full E2E gate still includes release-blocking asset count 10/500 and other broad release placement/client/mobile gaps. |
-| Asset release-ready count | FAIL | Studio `AssetImportAuditService` reports 10 live imported/release-ready assets; required target is 500 release-ready visible assets. |
-| Full Studio TestRunner | FAIL | Edit-time G014 gate still fails release blockers including 10/500 imported asset count. Play VM cannot directly require `ServerScriptService.Tests` through current MCP path, so full Play TestRunner remains unproven. |
+| E2E G013/G014 source gate | FAIL | Full E2E gate still includes release-blocking asset count 48/500 and other broad release placement/client/mobile gaps. |
+| Asset release-ready count | FAIL | Studio `AssetImportAuditService` reports 48 live imported/release-ready assets; required target is 500 release-ready visible assets. |
+| Full Studio TestRunner | FAIL | Edit-time G014 gate still fails release blockers including 48/500 imported asset count. Play VM cannot directly require `ServerScriptService.Tests` through current MCP path, so full Play TestRunner remains unproven. |
 
 ## Latest Continuation Evidence — 2026-05-27
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Studio live asset audit | FAIL | `AssetImportAuditService:AuditAndRepair({ mutate = true })` in Studio reported catalogedSourceAssetIds=500, actuallyImportedAssets=10, auditedImportedAssets=10 after scriptless audit mark, taggedImportedAssets=10, placedVisibleAssets=10, releaseReadyVisibleAssets=10, scriptObjectsFound=0, scriptsQuarantined=0. |
-| Release import validation | FAIL | `ValidateReleaseCounts(500)` returned failures: `actuallyImportedAssets=10; expected at least 500`, `releaseReadyVisibleAssets=10; expected at least 500`. |
+| Studio live asset audit | FAIL | `AssetImportAuditService:AuditAndRepair({ mutate = true })` in Studio reported catalogedSourceAssetIds=500, actuallyImportedAssets=48, auditedImportedAssets=48 after scriptless audit mark, taggedImportedAssets=48, placedVisibleAssets=48, releaseReadyVisibleAssets=48, scriptObjectsFound=0, scriptsQuarantined=0. |
+| Release import validation | FAIL | `ValidateReleaseCounts(500)` returned failures: `actuallyImportedAssets=48; expected at least 500`, `releaseReadyVisibleAssets=48; expected at least 500`. |
 | Edit-mode TestRunner | FAIL | `G014FinalGateSuite` run in Studio reported 28 total, 18 passed, 10 failed. Source fixes were added for mock notification casts, reward profile loading, live import count honesty, and record-safe carcass creation. Current edit VM still has stale required module cache for several fixed services; fresh source build is required for authoritative rerun. |
 | Source syntax/build after fixes | PASS | `find src -name '*.lua' ... luac -p`, `rojo build default.project.json --output /tmp/eggBreakers-g014-fixes-3.rbxl`, and `git diff --check -- . ':(exclude)eggBreakers.rbxl'` passed. |
 
@@ -26,10 +26,17 @@ Overall release gate: **FAIL**.
 
 | Gate | Status | Evidence |
 |---|---|---|
-| G014 import batch | FAIL | Imported and placed 5 additional unique Creator Store assets: 162897134, 7727678976, 108178603114720, 3505076540, 74355704971397. Live audit improved to releaseReadyVisibleAssets=10/500, leaving a 490 gap. |
+| G014 import batch | FAIL | Imported and placed 5 additional unique Creator Store assets: 162897134, 7727678976, 108178603114720, 3505076540, 74355704971397. That older batch improved the live audit to 10/500; later imports now supersede the current count to 48/500 with a 452 gap. |
 | Source verification after import docs | PASS | `luac -p`, `rojo build default.project.json --output /tmp/eggBreakers-g014-import-batch-10.rbxl`, and `git diff --check` passed. |
 
 
 ## G015 Follow-up Evidence — 2026-05-27
 
-G015 appended evidence supersedes any stale optimism: active `eggBreakers2.rbxl` audit after the G015 live batch reports 34/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner reports 146 total, 129 passed, 17 failed. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+Later evidence supersedes stale intermediate counts: active `eggBreakers2.rbxl` now audits at 48/500 release-ready visible assets, not release PASS. Fresh edit-mode all-category TestRunner was previously 146 total, 129 passed, 17 failed; a newer full reload TestRunner still remains required. Mobile/controller proof and `.rbxl` save/reopen persistence remain BLOCKED. G014 remains honest FAIL.
+
+## Import Batch Evidence — 2026-05-29
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Live Studio import continuation | FAIL | Active `eggBreakers2.rbxl` Studio audit started at 30/500, then two additional import/tag/place/scrub batches raised live `releaseReadyVisibleAssets` to 48/500 with a 452 gap. |
+| Save attempt | FAIL | Tried MCP `user_keyboard_input` Cmd+S, but the tool returned that keyboard input is only available in play mode with client datamodel focused; `.rbxl` save/reopen persistence remains unproven. |

@@ -17,14 +17,14 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 | State | Count |
 |---|---:|
 | Cataloged SourceAssetIds | 500+ |
-| Actually Imported Assets | 10 live imported assets from Studio audit |
-| Audited Imported Assets | 10 live assets marked script-audited; below target |
-| Tagged Imported Assets | 10 live tagged imported assets; below target |
-| Placed Visible Assets | 10 live placed/visible imported assets; below target |
-| Release Ready Visible Assets | 10 live release-ready visible assets |
+| Actually Imported Assets | 48 live imported assets from Studio audit |
+| Audited Imported Assets | 48 live assets marked script-audited; below target |
+| Tagged Imported Assets | 48 live tagged imported assets; below target |
+| Placed Visible Assets | 48 live placed/visible imported assets; below target |
+| Release Ready Visible Assets | 48 live release-ready visible assets |
 | Script Objects Found | 0 in live imported visual roots during Studio audit |
-| Scripts Quarantined | 0; no executable imported scripts found in the 10 live imported roots |
-| Remaining Release Ready Gap To 500 | 490 |
+| Scripts Quarantined | 0; no executable imported scripts found in the 48 live imported roots |
+| Remaining Release Ready Gap To 500 | 452 |
 
 ## Core Flow Result
 
@@ -45,7 +45,7 @@ Remaining Blockers: 500 release-ready imported assets, full Studio TestRunner, m
 
 ## Signoff
 
-G014 STATUS: FAIL — releaseReadyVisibleAssets remain 10/500 with a 490 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
+G014 STATUS: FAIL — releaseReadyVisibleAssets remain 48/500 with a 452 gap; full fresh Studio TestRunner is not proven; mobile/controller E2E is not proven; release placement/import audit is incomplete; `.rbxl` save/reopen persistence of imported visual library is not yet verified.
 
 
 ## G015 Follow-up Evidence — 2026-05-27
