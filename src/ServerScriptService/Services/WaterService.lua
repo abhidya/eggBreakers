@@ -1,10 +1,14 @@
 local CollectionService = game:GetService("CollectionService")
 
 local WaterService = {}
-WaterService.WaterTag = "WaterSource"
-WaterService.FishHabitatTag = "FishHabitat"
-WaterService.SafeDepthStuds = 6
+WaterService.WaterTag        = "WaterSource"
+WaterService.FishHabitatTag  = "FishHabitat"
+WaterService.DrinkableTag    = "DrinkableWater"   -- NEW: shallow+validated water
+WaterService.SafeDepthStuds  = 6                  -- max Y-size for shallow/drinkable
 
+-- ─────────────────────────────────────────────────────────────
+-- Existing public API (stable, unchanged signatures)
+-- ─────────────────────────────────────────────────────────────
 function WaterService:IsWaterSource(instance)
     return instance ~= nil and (CollectionService:HasTag(instance, self.WaterTag) or instance:GetAttribute("WaterSource") == true)
 end
@@ -51,6 +55,73 @@ function WaterService:MarkFishHabitat(water)
         CollectionService:AddTag(water, self.FishHabitatTag)
     end
     return true
+end
+
+-- ─────────────────────────────────────────────────────────────
+-- NEW: shallow / drinkable water validation helpers
+-- These address the CollisionValidation test that flagged a
+-- "too-deep" water zone being accepted as a drink target.
+-- ─────────────────────────────────────────────────────────────
+
+--- Returns true when `water` is a valid shallow drinkable source:
+---   • tagged WaterSource (or has WaterSource attribute)
+---   • Y-size ≤ SafeDepthStuds  (not too deep)
+---   • NOT flagged as DeepWater or UndrinkableDepth
+--- This is the canonical gate that FoodWaterService / collision
+--- validation should use instead of bare IsWaterSource.
+function WaterService:IsValidDrinkableWater(water)
+    if not self:IsWaterSource(water) then return false, "not_water" end
+    -- Explicit opt-out flags let designers mark deep zones undinkable.
+    if water:GetAttribute("DeepWater") then return false, "deep_water" end
+    if water:GetAttribute("UndrinkableDepth") then return false, "undrinkable_depth" end
+    local classification, depthOrReason = self:ClassifyDepth(water)
+    if classification == nil then
+        -- ClassifyDepth failed (e.g. unsupported type); allow rather than block.
+        return true
+    end
+    if classification == "Deep" then
+        return false, "too_deep"
+    end
+    return true
+end
+
+--- Marks `water` as a validated shallow drinkable source.
+--- Adds the DrinkableWater collection tag and sets the
+--- ShallowDrinkable attribute.  Rejects deep/invalid sources.
+--- Returns true on success, false + reason on failure.
+function WaterService:MarkShallowDrinkable(water)
+    local ok, reason = self:IsValidDrinkableWater(water)
+    if not ok then return false, reason end
+    water:SetAttribute("ShallowDrinkable", true)
+    if not CollectionService:HasTag(water, self.DrinkableTag) then
+        CollectionService:AddTag(water, self.DrinkableTag)
+    end
+    return true
+end
+
+--- Scan all WaterSource-tagged instances and mark shallow ones
+--- as drinkable; deep ones get the DeepWater attribute and have
+--- DrinkableWater tag removed if it was previously set in error.
+--- Call once at game init (MapLayoutService calls this after
+--- EnsureTerrainContinuity).
+function WaterService:ValidateAllWaterSources()
+    local shallow, deep = 0, 0
+    for _, water in ipairs(CollectionService:GetTagged(self.WaterTag)) do
+        local classification = self:ClassifyDepth(water)
+        if classification == "Shallow" then
+            self:MarkShallowDrinkable(water)
+            shallow = shallow + 1
+        elseif classification == "Deep" then
+            -- Ensure deep zones are not accidentally drinkable.
+            water:SetAttribute("DeepWater", true)
+            water:SetAttribute("ShallowDrinkable", false)
+            if CollectionService:HasTag(water, self.DrinkableTag) then
+                CollectionService:RemoveTag(water, self.DrinkableTag)
+            end
+            deep = deep + 1
+        end
+    end
+    return shallow, deep
 end
 
 return WaterService
