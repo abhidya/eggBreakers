@@ -147,3 +147,41 @@ Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCoun
 Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g021-import-batch.rbxl` PASS.
 
 Release still fails honestly because materialized live count is `42/500` and final mobile/RBXL/fresh all-category proof remains missing.
+
+
+## G022 import/materialization continuation — 2026-05-30T01:28:39Z
+
+Inserted, sanitized, tagged, and intentionally placed 10 additional Creator Store assets:
+
+| SourceAssetId | Insert Name | Zone | Role | Script Audit | Mesh/LQ Note |
+|---|---|---|---|---|---|
+| 58306225 | G022_Imported_GrassClump_01 | FernPlains | HerbivoreFoodVisual | 0 | non-mesh |
+| 44380873 | G022_Imported_TropicalPlant_01 | JungleBasin | JungleBrowseVisual | 0 | non-mesh; duplicate SourceAssetId already present so unique count did not increase |
+| 16458140435 | G022_Imported_FallenLog_01 | JungleBasin | JungleLogVisual | 6 removed | non-mesh |
+| 11239705094 | G022_Imported_CaveArch_01 | RedstoneCanyon | CanyonRockVisual | 0 | MeshPart detected; source policy will exclude until replacement/exception |
+| 11442829678 | G022_Imported_CityDebris_01 | ApocalypticCity | CityRubbleVisual | 0 | non-mesh |
+| 9460880283 | G022_Imported_RoadSign_01 | ApocalypticCity | CitySignVisual | 0 | MeshPart detected; source policy will exclude until replacement/exception |
+| 2523657735 | G022_Imported_WaterLily_01 | SwampDelta | SwampBrowseVisual | 0 | non-mesh |
+| 11530343070 | G022_Imported_NestStraw_01 | NurseryGrove | EggNestVisual | 0 | non-mesh |
+| 2555886764 | G022_Imported_BoneFossil_01 | MountainNestingCliffs | FossilVisual | 0 | non-mesh; duplicate SourceAssetId already present so unique count did not increase |
+| 40749106 | G022_Imported_DinoStatue_01 | ApocalypticCity | CityDinosaurLandmark | 114 removed | non-mesh |
+
+Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after this batch:
+
+| Count | Value |
+|---|---:|
+| Cataloged SourceAssetIds | 500 |
+| Actually Imported Assets | 49 |
+| Audited Imported Assets | 49 |
+| Tagged Imported Assets | 49 |
+| Placed Visible Assets | 49 |
+| Release Ready Visible Assets | 49 |
+| Script Objects Found | 0 |
+| Scripts Quarantined | 0 |
+| Remaining Gap To 500 | 451 |
+
+Live `AssetAuditService:ScanWorkspace()` after the batch: PASS (`scanFailureCount=0`).
+
+Verification: `luac -p` all Lua PASS; `git diff --check` PASS; `rojo build /tmp/eggBreakers-g022-import-batch.rbxl` PASS.
+
+Release still fails honestly because materialized live count is `49/500` and final mobile/RBXL/fresh all-category proof remains missing.
