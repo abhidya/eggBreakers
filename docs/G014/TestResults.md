@@ -2,6 +2,11 @@
 
 Overall release gate: **FAIL**.
 
+## Current G014 Status — 2026-05-29
+
+Current authoritative FAIL evidence is 48/500 release-ready visible imported assets with a 452 gap. Historical 30/500 and 34/500 values are superseded snapshots only; fresh all-category Studio TestRunner, mobile/controller E2E proof, release placement/import audit to 500, and `.rbxl` save/reopen persistence remain unproven or blocked.
+
+
 | Gate | Status | Evidence |
 |---|---|---|
 | Studio MCP responsiveness | PASS | `execute_luau` returned place `eggBreakers`, PlaceId `111212176992206`; `Bootstrap.Init()` created all required remotes. |
