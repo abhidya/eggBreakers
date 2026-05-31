@@ -38,6 +38,7 @@ Constants.ScopeFreeze = {
 }
 
 Constants.DefaultSpeciesId = "coelophysis"
+Constants.RandomStarterSpeciesId = "__random_full_roster"
 
 Constants.RetiredPrototypeSpecies = {
     gallimimus = true,

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 local UIFactory = require(script.Parent.Parent.ClientControllers.UIFactory)
 local HatchUIController = require(script.Parent.Parent.ClientControllers.HatchUIController)
 
@@ -83,7 +84,7 @@ table.insert(suite.tests, { name = "hatch screen binds crack input callback", ru
     HatchUIController.OnHatchInput = oldCallback
 end })
 
-table.insert(suite.tests, { name = "default hatch selector renders the four curated starters", run = function()
+table.insert(suite.tests, { name = "default hatch selector renders curated starters plus random roster", run = function()
     local oldGui = HatchUIController.Gui
     local oldSelector = HatchUIController.Selector
     local oldButtons = HatchUIController.SpeciesButtons
@@ -118,14 +119,50 @@ table.insert(suite.tests, { name = "default hatch selector renders the four cura
             buttonCount = buttonCount + 1
         end
     end
+    local random = selector:FindFirstChild("Species_" .. Constants.RandomStarterSpeciesId)
+    Assert.notNil(random, "random full-roster option exists")
+    Assert.equals(random:GetAttribute("SpeciesId"), Constants.RandomStarterSpeciesId, "random option sends sentinel species id")
+    Assert.equals(random:GetAttribute("RandomFullRoster"), true, "random option is marked as full-roster roll")
+    Assert.truthy(string.find(random.Text, "Random", 1, true) ~= nil, "random option text is readable")
+    Assert.truthy(string.find(random.Text, "all species", 1, true) ~= nil, "random option explains full roster")
     Assert.equals(rendered, 4, "all four curated starter expectations are asserted")
-    Assert.equals(buttonCount, 4, "default hatch selector has only the four curated starter buttons")
+    Assert.equals(buttonCount, 5, "default hatch selector has four curated starters plus random")
 
     gui:Destroy()
     HatchUIController.Gui = oldGui
     HatchUIController.Selector = oldSelector
     HatchUIController.SpeciesButtons = oldButtons
     HatchUIController.SelectedSpeciesId = oldSelected
+end })
+
+table.insert(suite.tests, { name = "random roster button highlights resolved rolled species", run = function()
+    local oldGui = HatchUIController.Gui
+    local oldSelector = HatchUIController.Selector
+    local oldButtons = HatchUIController.SpeciesButtons
+    local oldSelected = HatchUIController.SelectedSpeciesId
+    local oldRolled = HatchUIController.RandomRolledSpeciesId
+    HatchUIController.Gui = nil
+    HatchUIController.Selector = nil
+    HatchUIController.SpeciesButtons = nil
+    HatchUIController.SelectedSpeciesId = nil
+    HatchUIController.RandomRolledSpeciesId = nil
+
+    local gui = HatchUIController:Show()
+    HatchUIController:SetSpeciesOptions(nil, "tyrannosaurus", function() end)
+    local selector = gui.MuffledOverlay:FindFirstChild("SpeciesSelector")
+    local random = selector and selector:FindFirstChild("Species_" .. Constants.RandomStarterSpeciesId)
+
+    Assert.notNil(random, "random button remains visible after server chooses full-roster species")
+    Assert.equals(random:GetAttribute("RolledSpeciesId"), "tyrannosaurus", "random button records server-rolled species")
+    Assert.equals(random.BackgroundColor3, Color3.fromRGB(86, 108, 54), "random button stays highlighted for rolled species")
+    Assert.truthy(string.find(random.Text, "Tyrannosaurus", 1, true) ~= nil, "random button reveals rolled dinosaur")
+
+    gui:Destroy()
+    HatchUIController.Gui = oldGui
+    HatchUIController.Selector = oldSelector
+    HatchUIController.SpeciesButtons = oldButtons
+    HatchUIController.SelectedSpeciesId = oldSelected
+    HatchUIController.RandomRolledSpeciesId = oldRolled
 end })
 
 table.insert(suite.tests, { name = "selected dinosaur option is highlighted", run = function()

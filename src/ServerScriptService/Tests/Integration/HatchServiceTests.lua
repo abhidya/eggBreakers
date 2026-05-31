@@ -1,5 +1,7 @@
 local Assert = require(game:GetService("ReplicatedStorage").Shared.TestFramework.Assert)
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(game:GetService("ReplicatedStorage").Shared.SpeciesConfig)
+local Constants = require(game:GetService("ReplicatedStorage").Shared.Constants)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local suite = { name = "HatchServiceTests.server", category = "Integration", tests = {} }
@@ -106,6 +108,18 @@ table.insert(suite.tests, { name = "select species rejects unknown species id", 
 
     Assert.falsy(ok, "unknown species rejected")
     Assert.equals(reason, "unknown_species", "unknown species reason")
+end })
+
+table.insert(suite.tests, { name = "select random full-roster option resolves to playable species", run = function()
+    local p = player(31009)
+
+    local ok, state = SurvivalService:SelectSpecies(p, Constants.RandomStarterSpeciesId)
+
+    Assert.truthy(ok, "random full-roster selection accepted before hatch")
+    Assert.truthy(state.SpeciesId ~= Constants.RandomStarterSpeciesId, "random sentinel resolves to a real species")
+    Assert.notNil(SpeciesConfig[state.SpeciesId], "resolved random species exists in full playable roster")
+    Assert.equals(state.SelectedRandomFullRoster, true, "random selection is stamped for UI/story telemetry")
+    Assert.equals(state.Hatched, false, "random species remains an egg until hatch completes")
 end })
 
 return suite

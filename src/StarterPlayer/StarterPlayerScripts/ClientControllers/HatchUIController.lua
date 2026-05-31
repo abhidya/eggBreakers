@@ -3,15 +3,23 @@ local UserInputService = game:GetService("UserInputService")
 local UIFactory = require(script.Parent.UIFactory)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
 local HatchUIController = { Progress = 0 }
 HatchUIController.PromptPosition = UDim2.new(0.5, -210, 1, -470)
 HatchUIController.MeterPosition = UDim2.new(0.5, -180, 1, -405)
 HatchUIController.PromptSize = UDim2.fromOffset(420, 52)
 HatchUIController.MeterSize = UDim2.fromOffset(360, 18)
-HatchUIController.SelectorPosition = UDim2.new(0.5, -238, 1, -622)
-HatchUIController.SelectorSize = UDim2.fromOffset(476, 108)
-HatchUIController.StarterSpecies = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
+HatchUIController.SelectorPosition = UDim2.new(0.5, -238, 1, -682)
+HatchUIController.SelectorSize = UDim2.fromOffset(476, 162)
+HatchUIController.RandomSpeciesOptionId = Constants.RandomStarterSpeciesId
+HatchUIController.StarterSpecies = {
+    "coelophysis",
+    "parasaurolophus",
+    "utahraptor",
+    "citipati",
+    HatchUIController.RandomSpeciesOptionId,
+}
 
 local starterRoleText = {
     coelophysis = "fast scavenger",
@@ -21,6 +29,13 @@ local starterRoleText = {
 }
 
 function HatchUIController:GetSpeciesButtonText(speciesId)
+    if speciesId == self.RandomSpeciesOptionId then
+        local rolled = self.RandomRolledSpeciesId and SpeciesConfig[self.RandomRolledSpeciesId]
+        if rolled then
+            return string.format("🎲 Random\n%s", rolled.DisplayName or self.RandomRolledSpeciesId)
+        end
+        return "🎲 Random\nall species"
+    end
     local species = SpeciesConfig[speciesId]
     local name = species and species.DisplayName or speciesId
     local diet = species and species.Diet or ""
@@ -119,6 +134,20 @@ function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSe
     speciesIds = speciesIds or self.StarterSpecies
     self.OnSelectSpecies = onSelect or self.OnSelectSpecies
     self.SelectedSpeciesId = selectedSpeciesId or self.SelectedSpeciesId or speciesIds[1]
+    local selectedButtonId = self.SelectedSpeciesId
+    local selectedInOptions = false
+    for _, speciesId in ipairs(speciesIds) do
+        if speciesId == self.SelectedSpeciesId then
+            selectedInOptions = true
+            break
+        end
+    end
+    if not selectedInOptions and SpeciesConfig[self.SelectedSpeciesId] and table.find(speciesIds, self.RandomSpeciesOptionId) then
+        self.RandomRolledSpeciesId = self.SelectedSpeciesId
+        selectedButtonId = self.RandomSpeciesOptionId
+    elseif self.SelectedSpeciesId == self.RandomSpeciesOptionId then
+        self.RandomRolledSpeciesId = nil
+    end
     for _, child in ipairs(self.Selector:GetChildren()) do
         if child:IsA("TextButton") then
             child:Destroy()
@@ -136,12 +165,16 @@ function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSe
         button.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         button.TextStrokeTransparency = 0.55
         button.TextColor3 = Color3.new(1, 1, 1)
-        button.BackgroundColor3 = speciesId == self.SelectedSpeciesId and Color3.fromRGB(86, 108, 54) or Color3.fromRGB(54, 42, 28)
+        button.BackgroundColor3 = speciesId == selectedButtonId and Color3.fromRGB(86, 108, 54) or Color3.fromRGB(54, 42, 28)
         button:SetAttribute("SpeciesId", speciesId)
         button:SetAttribute("StarterRole", starterRoleText[speciesId] or "")
         button:SetAttribute("FirstSessionReadable", true)
+        button:SetAttribute("RandomFullRoster", speciesId == self.RandomSpeciesOptionId)
+        if speciesId == self.RandomSpeciesOptionId and self.RandomRolledSpeciesId then
+            button:SetAttribute("RolledSpeciesId", self.RandomRolledSpeciesId)
+        end
         UIFactory:RoundCorners(button, 8)
-        UIFactory:AddStroke(button, speciesId == self.SelectedSpeciesId and Color3.fromRGB(245, 230, 160) or Color3.fromRGB(92, 72, 42), speciesId == self.SelectedSpeciesId and 2 or 1)
+        UIFactory:AddStroke(button, speciesId == selectedButtonId and Color3.fromRGB(245, 230, 160) or Color3.fromRGB(92, 72, 42), speciesId == selectedButtonId and 2 or 1)
         button.Parent = self.Selector
         button.Activated:Connect(function()
             self.SelectedSpeciesId = speciesId
