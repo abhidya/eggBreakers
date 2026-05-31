@@ -93,10 +93,16 @@ table.insert(suite.tests, { name = "hatch, drink, and combat are server authorit
     target.Parent = Workspace
     CollectionService:AddTag(target, "Damageable")
     local attack = SpeciesConfig.utahraptor.Abilities.PrimaryAttack
-    local attackOk = CombatService:RequestAttack(player, attack, target)
-    Assert.truthy(attackOk, "valid attack rejected")
-    Assert.truthy((target:GetAttribute("Health") or 30) < 30, "attack did not reduce health")
-    Assert.equals(target:GetAttribute("LastServerDamage"), SpeciesConfig.utahraptor.BaseStats.Hatchling.Damage, "server damage marker")
+    local oldCrit = CombatService.CritChance
+    CombatService.CritChance = 0
+    local ok, err = pcall(function()
+        local attackOk = CombatService:RequestAttack(player, attack, target)
+        Assert.truthy(attackOk, "valid attack rejected")
+        Assert.truthy((target:GetAttribute("Health") or 30) < 30, "attack did not reduce health")
+        Assert.equals(target:GetAttribute("LastServerDamage"), SpeciesConfig.utahraptor.BaseStats.Hatchling.Damage, "server damage marker")
+    end)
+    CombatService.CritChance = oldCrit
+    if not ok then error(err) end
     target:Destroy(); water:Destroy(); cleanupPlayer(player)
 end })
 

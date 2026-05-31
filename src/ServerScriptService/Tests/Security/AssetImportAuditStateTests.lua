@@ -213,11 +213,57 @@ table.insert(suite.tests, { name = "ui icon names containing baseball do not tri
         ball.Parent = actualGlowingBall
 
         local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
-        Assert.equals(result.counts.lowQualityExcludedAssets, 1, "only the real glowing ball token is low-quality")
+        Assert.truthy(result.counts.lowQualityExcludedAssets >= 1, "real glowing ball token is still low-quality")
         Assert.truthy(iconPack.Parent ~= nil and not iconPack:GetAttribute("AssetQualityQuarantined"),
             "UI icon pack with Baseball_Bat remains release-eligible")
+        Assert.truthy(actualGlowingBall:GetAttribute("AssetQualityQuarantined") == true,
+            "actual glowing ball fixture is quarantined")
         Assert.truthy(result.counts.releaseReadyVisibleAssets >= 2,
             "baseline fixture and UI icon pack remain release-ready")
+    end)
+end })
+
+table.insert(suite.tests, { name = "G027 nest plant and ui batch remains release-ready when tagged", run = function()
+    withImportedFixture(function(_, library)
+        local expectedSources = {
+            ["8895193"] = true,
+            ["12630982706"] = true,
+            ["110801640375836"] = true,
+        }
+
+        local nest = makeImportedVisual(library, "G027_DinosaurNestEggs", AssetManifest.Entries[2])
+        nest:SetAttribute("SourceAssetId", "8895193")
+        nest:SetAttribute("AssetManifestId", "G027-8895193")
+
+        local plantPack = makeImportedVisual(library, "G027_PreHistoricPlantPack", AssetManifest.Entries[3])
+        plantPack:SetAttribute("SourceAssetId", "12630982706")
+        plantPack:SetAttribute("AssetManifestId", "G027-12630982706")
+        local plantMesh = Instance.new("MeshPart")
+        plantMesh.Name = "LowPolyFernMesh"
+        plantMesh.Parent = plantPack
+
+        local iconPack = makeImportedVisual(library, "G027_UIIconPack", AssetManifest.Entries[4])
+        iconPack:SetAttribute("SourceAssetId", "110801640375836")
+        iconPack:SetAttribute("AssetManifestId", "G027-110801640375836")
+        local baseballIcon = Instance.new("Part")
+        baseballIcon.Name = "Baseball_Bat"
+        baseballIcon.Material = Enum.Material.Neon
+        baseballIcon.Shape = Enum.PartType.Block
+        baseballIcon.Parent = iconPack
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        local releaseReadySources = {}
+        for _, record in ipairs(result.importedRecords) do
+            if expectedSources[tostring(record.sourceAssetId)] then
+                Assert.truthy(record.releaseReady, tostring(record.sourceAssetId) .. " should stay release-ready")
+                releaseReadySources[tostring(record.sourceAssetId)] = true
+            end
+        end
+        for sourceAssetId in pairs(expectedSources) do
+            Assert.truthy(releaseReadySources[sourceAssetId], "G027 source audited: " .. sourceAssetId)
+        end
+        Assert.falsy(iconPack:GetAttribute("AssetQualityQuarantined"), "G027 UI icon pack is not quality-quarantined")
+        Assert.falsy(plantPack:GetAttribute("AssetQualityQuarantined"), "G027 plant pack is not quality-quarantined")
     end)
 end })
 

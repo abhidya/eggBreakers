@@ -37,6 +37,18 @@ Live `AssetImportAuditService:AuditAndRepair({ mutate = true })` after the batch
 - `actuallyImportedAssets=26; expected at least 500`
 - `releaseReadyVisibleAssets=26; expected at least 500`
 
+## Story/Test Coverage Impact
+
+- Beat 0 now has a live nest/egg source (`8895193`) that matches `StoryboardBeatValidation.server` imported egg expectations, but release proof still needs save/reopen persistence and starter-specific screenshots.
+- Beat 1 now has a live first-forage plant source (`12630982706`), but herbivore food remains blocked until the placed gameplay target is proven with saved Studio state and mobile/client action proof.
+- HUD icon source material (`110801640375836`) supports compact affordance work, but `ClientHUDTests.client.lua` remains the source-level proof; no G018 live-proof attribute is satisfied by this batch alone.
+- `AssetImportAuditStateTests.lua` now includes a named G027 regression that fixtures the nest, plant, and UI roots with their actual SourceAssetIds and verifies each remains release-ready when correctly tagged.
+- `HatchUITests.client.lua` now asserts the default hatch selector renders exactly the four curated starters that this batch is meant to support: Coelophysis, Parasaurolophus, Utahraptor, and Citipati.
+
+## E2E Evidence
+
+Live Studio E2E after refreshing stale open-Studio service caches reported `36/38` passing. The only remaining E2E failures were the honest release gates at `26/500`, not hatch/movement/eating/rest/age/dying regressions.
+
 ## Code Fix Captured
 
 The UI icon pack originally quarantined because an imported child named `Baseball_Bat` matched the old low-quality substring heuristic for `ball`. Source now treats `ball` as a standalone token for glowing-ball quarantine, and a regression fixture proves `Baseball_Bat` stays release-eligible while `Glowing_Ball` is still excluded.

@@ -18,8 +18,10 @@
 - `src/ServerScriptService/Services/WorldDressingService.lua` — additive biome dressing insertion/scatter/grounding pipeline; not wired as proof that every biome is already dressed.
 - `src/ServerScriptService/Services/MapLayoutService.lua` — current biome layout, food/water placements, and food metadata.
 - `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*` — current HUD/mobile/waypoint affordance evidence.
+- `docs/G027_AssetBackedStoryBatch.md` — live inserted Beat 0 nest/egg, Beat 1 plant pack, and HUD icon source batch; still requires Studio save/reopen persistence.
 - `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua` — hatch/select/first-food regression coverage for the playable opening loop.
 - `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` — server-authoritative hatch, eat/drink, growth, rest/age, fight, city/fossil, dying, and respawn loop coverage.
+- `src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua` — source assertions for storyboard Beats 0-8, including imported egg source id `8895193`, readable starter food/carcass visuals, growth scale, fish/water, apex/city/nest hooks.
 - `src/StarterPlayer/StarterPlayerScripts/Tests/HatchUITests.client.lua` — client selector rendering and selected-option coverage.
 - `src/StarterPlayer/StarterPlayerScripts/Tests/ClientHUDTests.client.lua` — client HUD coverage for growth, role, story cue, rest/sleep, age, oxygen, threat, and dying readability.
 - Live Studio read-only audit, 2026-05-30 — `Workspace.dinosaur` is a staged mesh dino library; `Workspace.Map` remains mostly primitive placeholders.
@@ -69,10 +71,10 @@ Every scene below must earn four kinds of value:
 
 | Layer | Required value | Validated references |
 |---|---|---|
-| Visual | Egg shell, small dino body, warm protected grove, visible nest/home object. | Search refs: `dinosaur egg` → `da5da35b-1cef-496f-a3be-ee2803d568e5`; `dinosaur egg nest` → `df69fe17-9e1c-4e69-bf24-bf7ed3f3c689`. Catalog clean candidates: `150068032` Scrambled Eggs in a Nest; `101855130` Egg Nest; `4630012038` EGG NEST; `151888976` Terrordactyl Egg Nest; `150059455` Nest and Eggs. |
+| Visual | Egg shell, small dino body, warm protected grove, visible nest/home object. | G027 live insertion: `8895193` `G027_DinosaurNestEggs`, tagged/script-free/release-ready but live-only until saved. Search refs: `dinosaur egg` → `da5da35b-1cef-496f-a3be-ee2803d568e5`; `dinosaur egg nest` → `df69fe17-9e1c-4e69-bf24-bf7ed3f3c689`. Catalog clean candidates: `150068032` Scrambled Eggs in a Nest; `101855130` Egg Nest; `4630012038` EGG NEST; `151888976` Terrordactyl Egg Nest; `150059455` Nest and Eggs. |
 | Mechanical | Hatch state, pre-hatch selection among Coelophysis/Parasaurolophus/Utahraptor/Citipati, starter safe zone, first growth stage. | `StarterSpeciesService.StarterOrder` and `HatchUIController.StarterSpecies` both use the current four-starter order; `SpeciesConfig.lua`/`SpeciesRoster.lua` provide Hatchling/Juvenile/SubAdult/Adult; `MapLayoutService.lua` has `NurseryGrove` and tutorial-safe food/water placements. |
 | UI | Pre-hatch species selector, selected species card, diet badge, growth badge, compact hunger/thirst/stamina bars. | `HUDController.lua`; `HatchUIController.lua`; `MobileControlsController.lua`; `UIWireframeChecklist.md`; `HatchUITests.client.lua` covers selector options and selected-state highlight. |
-| UX | Player chooses a dinosaur before cracking the shell, then immediately sees that exact selected hatchling replace the default avatar; player understands “eat/drink/grow” within 10 seconds. | Current gap: pre-hatch selection and post-hatch visual identity must be proven in one live flow, including selected species continuity. |
+| UX | Player chooses a dinosaur before cracking the shell, then immediately sees that exact selected hatchling replace the default avatar; player understands “eat/drink/grow” within 10 seconds. | Source proof exists for selection persistence and imported/staged egg/dino visuals. Live gap: screenshot/recorded proof for all four starters plus saved-place persistence of the G027 nest asset. |
 
 **Storyboard frames**
 
@@ -83,7 +85,7 @@ Every scene below must earn four kinds of value:
 5. **Need pulse:** hunger/thirst bars gently pulse, not alarm-red.
 6. **First goal:** food/water hint points to real fern/water or diet-valid meat, not a generic arrow or placeholder ball.
 
-**Acceptance check:** live proof shows the pre-hatch selector, records the selected species, hatches without restart, and then proves the visible baby dino, species/diet UI, nest/egg asset, readable safe food/water, and no default avatar all match that selection.
+**Acceptance check:** live proof shows the pre-hatch selector, records the selected species, hatches without restart, and then proves the visible baby dino, species/diet UI, G027 or better nest/egg asset, readable safe food/water, and no default avatar all match that selection after save/reopen.
 
 ---
 
@@ -94,10 +96,10 @@ Every scene below must earn four kinds of value:
 
 | Layer | Required value | Validated references |
 |---|---|---|
-| Visual | Herbivore food is real fern/bush/fruit; carnivore food is visible carcass/bones; water is terrain water or convincing pond/shoreline. | Search refs: `fern low poly` → `1d710ea1-f95e-4c6d-86d6-3e2674563392`; `animal carcass bones remains` → `98ad66c5-2481-4723-8ee0-85bd64bbf36d`; `dinosaur bone` → `8837548f-f8a2-4e15-ba67-be24558a2903`. Catalog clean fern candidates: `7979002756`, `117873391`, `6829786787`, `434184732`, `111535569365865`, `8773009280`, `14703400302`. Clean bone/fossil candidates include `137420276606883`, `83552391154369`, `14047690299`, `11573236999`. |
+| Visual | Herbivore food is real fern/bush/fruit; carnivore food is visible carcass/bones; water is terrain water or convincing pond/shoreline. | G027 live insertion: `12630982706` `G027_PreHistoricPlantPack`, tagged/script-free/release-ready but live-only until saved. Search refs: `fern low poly` → `1d710ea1-f95e-4c6d-86d6-3e2674563392`; `animal carcass bones remains` → `98ad66c5-2481-4723-8ee0-85bd64bbf36d`; `dinosaur bone` → `8837548f-f8a2-4e15-ba67-be24558a2903`. Catalog clean fern candidates: `7979002756`, `117873391`, `6829786787`, `434184732`, `111535569365865`, `8773009280`, `14703400302`. Clean bone/fossil candidates include `137420276606883`, `83552391154369`, `14047690299`, `11573236999`. |
 | Mechanical | Diet filtering; eat/drink restores stats and grants growth; invalid food gives readable denial. | `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua` diet target filtering; `MapLayoutService:ApplyFoodMetadata`; Food/Water service tests referenced in docs. |
 | UI | “Snack/Drink” context button, distance text, diet-appropriate icon, depletion/respawn hint. | `MobileControlsController:BuildWaypointText`, `ClientBootstrap:FindNearestEatDrinkTarget`, `EatDrinkButton` behavior. |
-| UX | Player sees the target itself and understands why it is valid. The sense cue is a diet-aware pulse/highlight/distance/icon, not an arrow-only waypoint. | Current gap: live proof still needs visible food/water props plus touch E2E across herbivore, carnivore, and omnivore starters. |
+| UX | Player sees the target itself and understands why it is valid. The sense cue is a diet-aware pulse/highlight/distance/icon, not an arrow-only waypoint. | G027 closes the catalog-only plant gap for a first forage source. Remaining live gaps: saved/persisted placement, carnivore carcass proof, water prop proof, and touch E2E across herbivore, carnivore, and omnivore starters. |
 
 **Storyboard frames**
 
@@ -254,7 +256,7 @@ Every scene below must earn four kinds of value:
 
 | Layer | Required value | Validated references |
 |---|---|---|
-| Visual | Nest object, egg, parent/offspring scale contrast, territory landmark. | Egg/nest search refs and clean catalog candidates above. |
+| Visual | Nest object, egg, parent/offspring scale contrast, territory landmark. | G027 live insertion `8895193` supplies the current nest/egg candidate; egg/nest search refs and clean catalog candidates above remain backups until saved proof is captured. |
 | Mechanical | Adult-only nesting, respawn/home state, optional alpha challenge. | `NestService`/`SurvivalService` mentioned in status docs; SpeciesConfig adult growth; antigravity roadmap proposes alpha loop. |
 | UI | Nest prompt, home marker, egg status, alpha challenge warning. | Needs a diegetic home marker proof distinct from the food/water sense-guide. |
 | UX | Player has a reason to return and defend territory. | Must avoid grief-heavy PvP around hatchlings. |
@@ -266,7 +268,7 @@ Every scene below must earn four kinds of value:
 3. **Threat:** predator approaches; player chooses defend/call/flee.
 4. **Alpha:** optional late-game ritual/territory challenge, not mandatory.
 
-**Acceptance check:** screenshot shows real nest/egg asset and UI prompt; no default placeholder box/ball.
+**Acceptance check:** screenshot shows real nest/egg asset and UI prompt after save/reopen; no default placeholder box/ball.
 
 ---
 
@@ -317,16 +319,17 @@ Current local metadata is not enough to claim “high rated.” For each shortli
 
 ## Highest-impact next storyboard refinements
 
-1. **Food/water sense UX board** — prove `SenseGuideController` with scent pulse, diet icon, target highlight, and visible food/water props for herbivore, carnivore, and omnivore starters.
-2. **Hatch selection identity board** — Coelophysis, Parasaurolophus, Utahraptor, and Citipati each need a real mesh reference, diet/role cue, movement expectation, selected-state styling, and proof that the post-hatch dinosaur matches the pre-hatch choice.
-3. **Species identity board** — every playable species gets a real mesh reference, role card, movement mode, attack style, food type, and sound palette.
-4. **Asset-backed biome insertion board** — for each biome, pick 8–12 visual anchors from catalog/search refs, then record whether they are only candidates, inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
-5. **City mystery board** — pick ruins/wrecks/fossils and define the environmental story sequence.
-6. **Nest/alpha board** — define adult ownership loop, respawn rules, anti-grief UX, and home marker visuals.
+1. **G027 persistence board** — save/reopen the live `G027_AssetBackedStoryBatch`, then capture nest/egg, plant, and HUD icon proof in intended gameplay context.
+2. **Food/water sense UX board** — prove `SenseGuideController` with scent pulse, diet icon, target highlight, and visible food/water props for herbivore, carnivore, and omnivore starters.
+3. **Hatch selection identity board** — Coelophysis, Parasaurolophus, Utahraptor, and Citipati each need a real mesh reference, diet/role cue, movement expectation, selected-state styling, and proof that the post-hatch dinosaur matches the pre-hatch choice.
+4. **Species identity board** — every playable species gets a real mesh reference, role card, movement mode, attack style, food type, and sound palette.
+5. **Asset-backed biome insertion board** — for each biome, pick 8–12 visual anchors from catalog/search refs, then record whether they are only candidates, inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
+6. **City mystery board** — pick ruins/wrecks/fossils and define the environmental story sequence.
+7. **Nest/alpha board** — define adult ownership loop, respawn rules, anti-grief UX, and home marker visuals.
 
 ## Open questions / limits
 
 - Ratings are **not locally available** in the repo evidence. Asset rating must be checked via Creator Store/Studio before claiming an asset is high-rated.
 - Live `Workspace.dinosaur` staging contents are validated visually/structurally, but not all species names/source IDs are persisted in repo. Starter proof should prioritize the current four curated starters before broad roster polish.
-- Current docs mention some changes as “just-merged/on main,” while the working tree is dirty; treat implementation state as moving because other agents are editing.
+- Other agents may be editing concurrently; re-check `git status` and live Studio state before turning storyboard candidates into release claims.
 - This document intentionally does not place assets, run imports, or modify gameplay code.

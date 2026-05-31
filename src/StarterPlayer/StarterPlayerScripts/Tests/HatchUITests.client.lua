@@ -44,6 +44,51 @@ table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur select
     HatchUIController.SelectedSpeciesId = oldSelected
 end })
 
+table.insert(suite.tests, { name = "default hatch selector renders the four curated starters", run = function()
+    local oldGui = HatchUIController.Gui
+    local oldSelector = HatchUIController.Selector
+    local oldButtons = HatchUIController.SpeciesButtons
+    local oldSelected = HatchUIController.SelectedSpeciesId
+    HatchUIController.Gui = nil
+    HatchUIController.Selector = nil
+    HatchUIController.SpeciesButtons = nil
+    HatchUIController.SelectedSpeciesId = nil
+
+    local gui = HatchUIController:Show()
+    HatchUIController:SetSpeciesOptions(nil, "citipati", function() end)
+    local selector = gui.MuffledOverlay:FindFirstChild("SpeciesSelector")
+    Assert.notNil(selector, "default starter selector exists")
+
+    local expected = {
+        coelophysis = "Coelophysis",
+        parasaurolophus = "Parasaurolophus",
+        utahraptor = "Utahraptor",
+        citipati = "Citipati",
+    }
+    local rendered = 0
+    local buttonCount = 0
+    for speciesId, displayName in pairs(expected) do
+        local button = selector:FindFirstChild("Species_" .. speciesId)
+        Assert.notNil(button, speciesId .. " default starter option exists")
+        Assert.equals(button:GetAttribute("SpeciesId"), speciesId, speciesId .. " button carries species id")
+        Assert.truthy(string.find(button.Text, displayName, 1, true) ~= nil, speciesId .. " button names readable starter")
+        rendered = rendered + 1
+    end
+    for _, child in ipairs(selector:GetChildren()) do
+        if child:IsA("TextButton") then
+            buttonCount = buttonCount + 1
+        end
+    end
+    Assert.equals(rendered, 4, "all four curated starter expectations are asserted")
+    Assert.equals(buttonCount, 4, "default hatch selector has only the four curated starter buttons")
+
+    gui:Destroy()
+    HatchUIController.Gui = oldGui
+    HatchUIController.Selector = oldSelector
+    HatchUIController.SpeciesButtons = oldButtons
+    HatchUIController.SelectedSpeciesId = oldSelected
+end })
+
 table.insert(suite.tests, { name = "selected dinosaur option is highlighted", run = function()
     local oldGui = HatchUIController.Gui
     local oldSelector = HatchUIController.Selector

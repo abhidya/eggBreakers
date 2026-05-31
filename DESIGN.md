@@ -5,7 +5,7 @@
 - **Status:** Draft, active for story/UI/UX decisions
 - **Last refreshed:** 2026-05-31
 - **Primary product surfaces:** Roblox in-world survival loop, four-starter hatch selection/player visual, survival HUD, mobile controls, food/water scent-guide UX, combat feedback, rest/age/death lifecycle, nesting/home loop, biome discovery.
-- **Evidence reviewed:** `eggBreakers_Master_Plan.md`, `eggBreakers_World_and_Gameplay_Design.md`, `eggBreakers_Asset_Ledger_and_Build_Sequence.md`, `eggBreakers_STATUS.md`, `docs/AssetSourcing.md`, `docs/StoryModeStoryboard.md`, `src/ReplicatedStorage/Shared/SpeciesConfig.lua`, `src/ReplicatedStorage/Shared/StagedMeshLibrary.lua`, `src/ServerScriptService/Services/StarterSpeciesService.lua`, `src/ServerScriptService/Services/SurvivalService.lua`, `src/ServerScriptService/Services/WorldDressingService.lua`, `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*`.
+- **Evidence reviewed:** `eggBreakers_Master_Plan.md`, `eggBreakers_World_and_Gameplay_Design.md`, `eggBreakers_Asset_Ledger_and_Build_Sequence.md`, `eggBreakers_STATUS.md`, `docs/AssetSourcing.md`, `docs/StoryModeStoryboard.md`, `docs/G027_AssetBackedStoryBatch.md`, `src/ReplicatedStorage/Shared/SpeciesConfig.lua`, `src/ReplicatedStorage/Shared/StagedMeshLibrary.lua`, `src/ServerScriptService/Services/StarterSpeciesService.lua`, `src/ServerScriptService/Services/SurvivalService.lua`, `src/ServerScriptService/Services/WorldDressingService.lua`, `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua`, `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua`, `src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua`, `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*`, `src/StarterPlayer/StarterPlayerScripts/Tests/ClientHUDTests.client.lua`.
 
 ## Brand
 
@@ -17,7 +17,7 @@
 
 - **Goals:** make the player feel like the chosen starter dinosaur; keep Coelophysis, Parasaurolophus, Utahraptor, and Citipati distinct by diet/role from the first hatch screen; make movement, eating/drinking, rest, age, growth, dying, and respawn readable without developer labels; turn each biome into a story beat backed by visual/mechanical/UI/UX assets.
 - **Non-goals:** dialogue-heavy quest mode, shipping unreviewed free-model behavior scripts, counting catalog-only assets as release-ready, replacing every system before story/asset quality is proven.
-- **Success signals:** screenshots clearly show dino identity, real food/water, biome identity, combat feedback, nest/home ownership, and city mystery.
+- **Success signals:** screenshots clearly show dino identity, real food/water, biome identity, combat feedback, nest/home ownership, and city mystery. Source assertions may prove mechanics, but story acceptance still needs live screenshots and saved-place persistence for inserted assets such as the G027 nest/plant/icon batch.
 
 ## Personas and jobs
 
