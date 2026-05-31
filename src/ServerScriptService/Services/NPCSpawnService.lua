@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NPCService = require(script.Parent.NPCService)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
+local EcosystemRoster = require(ReplicatedStorage.Shared.EcosystemRoster)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
@@ -359,6 +360,174 @@ function NPCSpawnService:MaintainMinimumActive()
     self.LastSpawnFailureReason = lastFailureReason
     self.LastSpawnFailureKind = lastFailureKind
     return active
+end
+
+-- =============================================================================
+-- ECOSYSTEM MODE (additive)
+-- Spawns the full staged ecosystem — EVERY distinct species enumerated by
+-- EcosystemRoster from Workspace.dinosaur — as living NPCs, instead of only the
+-- ~9 fixed SpawnKinds. This path is entirely separate from MaintainMinimumActive /
+-- SpawnKinds (which it never calls or mutates) so the existing spawn loop + its
+-- tests are unaffected. Fully world-absent safe: with no Workspace.dinosaur the
+-- roster is empty and SpawnEcosystem is a no-op returning 0.
+-- =============================================================================
+
+-- Map a roster diet (+ aquatic flag) to the NPCService "kind" whose profile/brain
+-- best matches it. Kinds drive NPCService:Register's stats and the brain; species
+-- identity is preserved separately via SpeciesId/SpeciesName attributes.
+function NPCSpawnService:EcosystemKindFor(entry)
+    if entry.aquatic then
+        return "SemiAquatic"
+    end
+    if entry.diet == "Herbivore" then
+        return "Prey"
+    elseif entry.diet == "Omnivore" then
+        return "Omnivore"
+    elseif entry.diet == "Carnivore" then
+        return "Predator"
+    end
+    return "Prey"
+end
+
+-- Prepare a clone of a staged ecosystem source model into a ready-to-register NPC.
+-- Mirrors PrepareNPCModel's clone + strip-scripts + ground/pivot pattern, but stamps
+-- the SPECIES identity (from the roster) on top of the kind-derived attributes so the
+-- spawned NPC reads as its true species rather than the generic kind substitute.
+function NPCSpawnService:PrepareEcosystemNPCModel(entry, kind, index, spawnPosition)
+    local clone = self:PrepareNPCModel(entry.sourceModel, kind, index, nil)
+    clone.Name = entry.speciesName .. "NPC_" .. tostring(index)
+    -- Species identity (overrides the kind-substitute SpeciesId from PrepareNPCModel).
+    clone:SetAttribute("SpeciesId", entry.speciesId)
+    clone:SetAttribute("SpeciesName", entry.speciesName)
+    clone:SetAttribute("DietFolder", entry.dietFolder)
+    clone:SetAttribute("Diet", entry.diet)
+    clone:SetAttribute("Carnivore", entry.diet == "Carnivore")
+    clone:SetAttribute("EcosystemNPC", true)
+    clone:SetAttribute("Aquatic", entry.aquatic == true)
+    clone:SetAttribute("AquaticSpecies", entry.aquatic == true)
+    -- A spinosaur-style semi-aquatic kind already implies swim; an aquatic species also flies? no.
+    if entry.aquatic then
+        clone:SetAttribute("FlightCapable", false)
+        clone:SetAttribute("Flying", false)
+    end
+    clone:SetAttribute("AssetManifestId", "EcosystemNPC_" .. entry.speciesId)
+    -- Ground / position the prepared model.
+    if typeof(spawnPosition) == "Vector3" then
+        if clone:IsA("Model") then
+            if not clone.PrimaryPart then
+                clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true)
+            end
+            if clone.PrimaryPart then clone:PivotTo(CFrame.new(spawnPosition)) end
+        elseif clone:IsA("BasePart") then
+            clone.CFrame = CFrame.new(spawnPosition)
+        end
+    end
+    return clone
+end
+
+-- Compute a spread of spawn positions across the map. Prefers authored NPC spawn
+-- markers (Map.NPCSpawns); falls back to a deterministic ring grid around the origin
+-- so the ecosystem still spreads out when no markers exist.
+function NPCSpawnService:ResolveEcosystemSpawnPositions(count)
+    local positions = {}
+    local spawnFolder = self:GetSpawnFolder()
+    local spawns = spawnFolder and spawnFolder:GetChildren() or {}
+    local allowed = {}
+    for _, spawn in ipairs(spawns) do
+        if spawn:IsA("BasePart") and self:IsSpawnPositionAllowed(spawn) then
+            table.insert(allowed, spawn.Position)
+        end
+    end
+    for i = 1, count do
+        if #allowed > 0 then
+            positions[i] = allowed[((i - 1) % #allowed) + 1]
+        else
+            -- Deterministic spiral grid fallback.
+            local ring = math.floor(math.sqrt(i))
+            local angle = i * 2.399963 -- golden-angle-ish spread
+            local radius = 40 + ring * 36
+            positions[i] = Vector3.new(math.cos(angle) * radius, 12, math.sin(angle) * radius)
+        end
+    end
+    return positions
+end
+
+-- Spawn a spread of DISTINCT species NPCs across the map. Each enumerated species is
+-- spawned at least once (clamped to NPCService.MaxActive). Additive: never touches the
+-- SpawnKinds / MaintainMinimumActive path.
+-- opts:
+--   maxSpecies     — optional cap on number of distinct species to spawn
+--   perSpecies     — copies of each species to spawn (default 1)
+--   respectMaxCap  — when not false, stops at NPCService.MaxActive (default true)
+-- Returns: spawnedCount, results (array of { entry, kind, ok, reason, record })
+function NPCSpawnService:SpawnEcosystem(opts)
+    opts = opts or {}
+    self:EnsureNPCFolder()
+
+    local roster = EcosystemRoster:GetRoster()
+    local results = {}
+    local spawned = 0
+
+    if #roster == 0 then
+        self.LastEcosystemSpawned = 0
+        self.LastEcosystemSpecies = 0
+        return 0, results
+    end
+
+    local perSpecies = math.max(1, opts.perSpecies or 1)
+    local maxSpecies = opts.maxSpecies or #roster
+    local respectMaxCap = opts.respectMaxCap ~= false
+
+    local distinctSpecies = 0
+    local index = #NPCService.NPCs
+
+    for _, entry in ipairs(roster) do
+        if distinctSpecies >= maxSpecies then break end
+        distinctSpecies = distinctSpecies + 1
+
+        for copy = 1, perSpecies do
+            if respectMaxCap and #NPCService.NPCs >= NPCService.MaxActive then
+                break
+            end
+            index = index + 1
+            local kind = self:EcosystemKindFor(entry)
+            local positions = self:ResolveEcosystemSpawnPositions(index + 1)
+            local spawnPosition = positions[index] or Vector3.new(0, 12, 0)
+
+            local ok, reason, record = pcall(function()
+                local model = self:PrepareEcosystemNPCModel(entry, kind, index, spawnPosition)
+                model.Parent = Workspace:FindFirstChild("NPCs") or Workspace
+                local registered, result = NPCService:Register(model, kind)
+                if not registered then
+                    model:Destroy()
+                end
+                return registered, result
+            end)
+
+            -- pcall returns (success, ...); normalize.
+            local createOk, registerResult
+            if ok then
+                createOk, registerResult = reason, record
+            else
+                createOk, registerResult = false, tostring(reason)
+            end
+
+            table.insert(results, {
+                entry = entry,
+                kind = kind,
+                ok = createOk == true,
+                reason = createOk == true and nil or (registerResult or "spawn_failed"),
+                record = type(registerResult) == "table" and registerResult or nil,
+            })
+            if createOk == true then
+                spawned = spawned + 1
+            end
+        end
+    end
+
+    self.LastEcosystemSpawned = spawned
+    self.LastEcosystemSpecies = distinctSpecies
+    return spawned, results
 end
 
 function NPCSpawnService:StartSpawnLoop(intervalSeconds)
