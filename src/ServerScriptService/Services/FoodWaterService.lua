@@ -29,6 +29,24 @@ local FOLIAGE_FOOD_KINDS = {
 -- ─────────────────────────────────────────────────────────────
 -- Visual helpers (public, stable API)
 -- ─────────────────────────────────────────────────────────────
+-- Dimmed transparency applied to the *visible* readable foliage child while
+-- the food source is depleted. Kept partly visible (not fully hidden) so the
+-- player still sees a "grazed-down" cluster that regrows on the timer.
+FoodWaterService.DepletedFoliageTransparency = 0.75
+
+--- Resolve the separate visible foliage child (added by MapLayoutService) so
+--- depletion can dim it and regrowth can restore it. Returns nil when absent
+--- (e.g. plain test parts), keeping all behaviour additive/safe.
+function FoodWaterService:GetFoliageVisual(target)
+    if not (target and target:IsA("BasePart")) then return nil end
+    local name = target:GetAttribute("FoliageVisualName")
+    local visual = name and target:FindFirstChild(name) or target:FindFirstChild("EdibleFoliageVisual")
+    if visual and visual:IsA("BasePart") and visual:GetAttribute("EdibleFoliageVisual") then
+        return visual
+    end
+    return nil
+end
+
 function FoodWaterService:SetDepletedVisual(target, depleted)
     if target and target:IsA("BasePart") then
         if depleted then
@@ -42,6 +60,21 @@ function FoodWaterService:SetDepletedVisual(target, depleted)
             target.Transparency = target:GetAttribute("RestoreTransparency") or 0
             target.CanQuery = true
             target.CanTouch = true
+        end
+
+        -- Dim / restore the readable foliage cluster (if present). This is
+        -- independent of the query part's transparency so the query part
+        -- stays an invisible helper while the cluster gives visible feedback.
+        local visual = self:GetFoliageVisual(target)
+        if visual then
+            if depleted then
+                if visual:GetAttribute("RestoreTransparency") == nil then
+                    visual:SetAttribute("RestoreTransparency", visual.Transparency)
+                end
+                visual.Transparency = self.DepletedFoliageTransparency
+            else
+                visual.Transparency = visual:GetAttribute("RestoreTransparency") or 0
+            end
         end
     end
 end

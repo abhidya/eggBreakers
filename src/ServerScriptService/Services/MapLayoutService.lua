@@ -149,6 +149,69 @@ function MapLayoutService:ApplyReleaseHiddenQueryPart(part)
     part:SetAttribute("RestoreTransparency", 1)
 end
 
+-- ─────────────────────────────────────────────────────────────
+-- Readable foliage visuals (NEW, additive).
+-- The FoodSource query part itself stays an invisible, queryable
+-- gameplay helper (release-policy + placement tests depend on
+-- Transparency == 1 / InvisibleQueryHelper). Readability comes from
+-- a SEPARATE visible decorative child part that is NOT tagged
+-- "FoodSource"/"TreeProp", so it never appears in those tagged
+-- iterations and cannot trip the "no visible procedural food"
+-- assertions. FoodWaterService dims/restores it on eat/regrow.
+-- ─────────────────────────────────────────────────────────────
+MapLayoutService.FoliageVisualName = "EdibleFoliageVisual"
+
+MapLayoutService.HerbivoreFoliageColor = Color3.fromRGB(86, 168, 78)
+MapLayoutService.CarnivoreCarcassColor = Color3.fromRGB(122, 60, 48)
+
+function MapLayoutService:EnsureVisibleFoliageVisual(queryPart, opts)
+    if not (queryPart and queryPart:IsA("BasePart")) then return nil end
+    opts = opts or {}
+    local diet = opts.diet or queryPart:GetAttribute("Diet") or "Herbivore"
+    local isCarnivore = diet == "Carnivore"
+
+    local visual = queryPart:FindFirstChild(self.FoliageVisualName)
+    if not visual then
+        visual = Instance.new("Part")
+        visual.Name = self.FoliageVisualName
+        visual.Anchored = true
+        visual.CanCollide = false
+        visual.CanTouch = false
+        visual.CanQuery = false
+        visual.CastShadow = false
+        visual.Parent = queryPart
+    end
+
+    -- Sit the readable foliage just on top of (slightly inside) the query
+    -- volume so players see a clear edible cluster where the query part is.
+    local base = queryPart.Size
+    if isCarnivore then
+        visual.Shape = Enum.PartType.Block
+        visual.Material = Enum.Material.Leather
+        visual.Color = opts.color or self.CarnivoreCarcassColor
+        visual.Size = Vector3.new(math.max(2, base.X * 0.85), math.max(1.2, base.Y * 0.7), math.max(2, base.Z * 0.85))
+        visual.Position = queryPart.Position + Vector3.new(0, visual.Size.Y * 0.4, 0)
+    else
+        visual.Shape = Enum.PartType.Ball
+        visual.Material = Enum.Material.Grass
+        visual.Color = opts.color or self.HerbivoreFoliageColor
+        local spread = math.max(3, math.min(base.X, base.Z) * 0.9)
+        visual.Size = Vector3.new(spread, math.max(2.5, base.Y * 1.1), spread)
+        visual.Position = queryPart.Position + Vector3.new(0, visual.Size.Y * 0.35, 0)
+    end
+
+    visual.Transparency = 0
+    visual:SetAttribute("EdibleFoliageVisual", true)
+    visual:SetAttribute("VisibleGameplayAffordance", true)
+    visual:SetAttribute("ProceduralGameplayVisual", true)
+    visual:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    visual:SetAttribute("ReleaseVisibleGeneratedPartReason", "Readable edible foliage / carcass representation")
+    visual:SetAttribute("Decorative", true)
+    visual:SetAttribute("RestoreTransparency", 0)
+    queryPart:SetAttribute("FoliageVisualName", self.FoliageVisualName)
+    return visual
+end
+
 function MapLayoutService:ApplyBrowseFoodAttributes(part, spec, options)
     options = options or {}
     local isTree = options.treeBrowse == true
@@ -167,6 +230,7 @@ function MapLayoutService:ApplyBrowseFoodAttributes(part, spec, options)
         browseHeight = spec.browseHeight,
     })
     self:ApplyReleaseHiddenQueryPart(part)
+    self:EnsureVisibleFoliageVisual(part, { diet = "Herbivore", color = spec.canopyColor })
     if not CollectionService:HasTag(part, "FoodSource") then
         CollectionService:AddTag(part, "FoodSource")
     end
@@ -804,6 +868,7 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("StarterFood", isTutorialFood)
         food:SetAttribute("TutorialSafe", isTutorialFood)
         self:ApplyReleaseHiddenQueryPart(food)
+        self:EnsureVisibleFoliageVisual(food, { diet = placement.diet })
         CollectionService:AddTag(food, "FoodSource")
     end
 end
@@ -937,6 +1002,7 @@ function MapLayoutService:EnsureFoodSource(folders, source)
     existing:SetAttribute("TutorialSafe", source.tutorialSafe == true)
     existing:SetAttribute("HighRisk", source.highRisk == true)
     self:ApplyReleaseHiddenQueryPart(existing)
+    self:EnsureVisibleFoliageVisual(existing, { diet = source.diet, color = source.color })
     existing:SetAttribute("CreatorStoreOnly", nil)
     existing:SetAttribute("ImportedVisibleAsset", nil)
     existing:SetAttribute("AssetManifestId", nil)

@@ -10,6 +10,7 @@ local HUDController = require(controllers:WaitForChild("HUDController"))
 local HatchUIController = require(controllers:WaitForChild("HatchUIController"))
 local InputController = require(controllers:WaitForChild("InputController"))
 local MobileControlsController = require(controllers:WaitForChild("MobileControlsController"))
+local SenseGuideController = require(controllers:WaitForChild("SenseGuideController"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Constants = require(ReplicatedStorage.Shared.Constants)
@@ -274,6 +275,7 @@ ClientBootstrap.Controllers = {
     HatchUIController = HatchUIController,
     InputController = InputController,
     MobileControlsController = MobileControlsController,
+    SenseGuideController = SenseGuideController,
 }
 
 local DEFAULT_WALK_SPEED = 16
@@ -480,11 +482,23 @@ function ClientBootstrap:Init()
     HatchUIController:Show()
     local mobile = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     wireMobileButtons(mobile)
+    -- Diegetic food/water sense guide. Reuses our authoritative, diet-aware target
+    -- finder + live stats so it stays in lockstep with the EatDrink button and the
+    -- NearestActionHintLabel. Progressive disclosure: it stays hidden until hungry/thirsty.
+    SenseGuideController:Bind({
+        Finder = function(maxDistance, preferredMode)
+            return ClientBootstrap:FindNearestEatDrinkTarget(maxDistance, preferredMode)
+        end,
+        GetStats = function()
+            return ClientBootstrap.LastStats
+        end,
+    })
     RunService.Heartbeat:Connect(function()
         local now = os.clock()
         if now - ClientBootstrap.LastTargetScanAt >= ClientBootstrap.TargetScanSeconds then
             ClientBootstrap.LastTargetScanAt = now
             ClientBootstrap:UpdateActionGuidance(mobile.Gui)
+            SenseGuideController:Update()
         end
     end)
     Remotes:WaitForChild("StatUpdate").OnClientEvent:Connect(function(payload)
@@ -494,6 +508,7 @@ function ClientBootstrap:Init()
             ClientBootstrap.RefreshMobileContext()
         end
         ClientBootstrap:UpdateActionGuidance(mobile.Gui)
+        SenseGuideController:Update()
         if type(payload.hatchProgress) == "number" then HatchUIController:SetProgress(payload.hatchProgress) end
         if payload.hatched == true and HatchUIController.Gui then HatchUIController.Gui.Enabled = false end
     end)

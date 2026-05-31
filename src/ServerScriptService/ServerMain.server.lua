@@ -32,6 +32,7 @@ MapLayoutService:EnsureSpawnSafety()
 CityDiscoveryService:EnsureCityDiscoveryTriggers()
 SurvivalService:StartNeedsLoop(1, Players, StatReplicationService)
 FoodWaterService:StartDepletionLoop(1)
+FoodWaterService:NormaliseAllFoliageMetadata()
 NPCSpawnService:StartSpawnLoop(3)
 WeatherBiomeService:StartLoop(90)
 
