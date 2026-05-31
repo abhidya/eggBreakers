@@ -20,6 +20,7 @@
 --
 -- API:
 --   WorldDressingService:DressBiome(biomeId, sourceModel, opts) -> {Model}
+--   WorldDressingService:DressBiomeVaried(biomeId, sourceModels, opts) -> {Model}
 --   WorldDressingService:ClearBiome(biomeId)                    -> boolean
 --   WorldDressingService.DressingPlan                           -> per-biome defaults
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -33,15 +34,19 @@ local WorldDressingService = {}
 -- ── Tunable defaults the leader can edit per biome ──────────────────────────────
 -- count  = how many clones to scatter
 -- radius = horizontal scatter radius (studs) around the biome center
+-- edible = optional boolean; when true, every scattered clone is stamped + tagged
+--          as a FoodSource (foliage) so herbivores/omnivores can eat it. The leader
+--          can flip this per biome without touching call sites. Both DressBiome and
+--          DressBiomeVaried honour plan.edible (overridable via opts.edible).
 WorldDressingService.DressingPlan = {
-    NurseryGrove      = { count = 24, radius = 220 },
-    FernPlains        = { count = 30, radius = 320 },
-    RiverDelta        = { count = 18, radius = 240 },
-    RedwoodForest     = { count = 36, radius = 300 },
-    VolcanicBadlands  = { count = 14, radius = 280 },
-    CoastalCliffs     = { count = 16, radius = 260 },
+    NurseryGrove      = { count = 24, radius = 220, edible = true },
+    FernPlains        = { count = 30, radius = 320, edible = true },
+    RiverDelta        = { count = 18, radius = 240, edible = false },
+    RedwoodForest     = { count = 36, radius = 300, edible = false },
+    VolcanicBadlands  = { count = 14, radius = 280, edible = false },
+    CoastalCliffs     = { count = 16, radius = 260, edible = false },
     -- Fallback used when a biomeId is not listed above:
-    __default         = { count = 20, radius = 250 },
+    __default         = { count = 20, radius = 250, edible = false },
 }
 
 local DRESSING_TAG = "BiomeDressing"
@@ -175,6 +180,82 @@ local function groundY(x: number, z: number, topY: number, ignore: { Instance })
     return nil
 end
 
+-- Stamps a clone as edible foliage: explicit attributes (so it works even when
+-- FoodWaterService is absent — that service only *fills missing* attributes) plus
+-- the FoodSource CollectionService tag accepted by RemoteValidationService.
+local function stampEdible(clone: Instance)
+    clone:SetAttribute("Diet", EDIBLE_DEFAULT_DIET)
+    clone:SetAttribute("FoodKind", EDIBLE_DEFAULT_FOODKIND)
+    clone:SetAttribute("Nutrition", EDIBLE_DEFAULT_NUTRITION)
+    clone:SetAttribute("RespawnCooldownSeconds", EDIBLE_DEFAULT_RESPAWN)
+    clone:SetAttribute("EdibleVegetation", true)
+    CollectionService:AddTag(clone, FOOD_SOURCE_TAG)
+end
+
+-- Clones one source model, grounds it via raycast, randomizes yaw + scale, anchors,
+-- tags, optionally stamps edible, and parents under biomeFolder. Shared by both
+-- DressBiome and DressBiomeVaried so grounding/scatter/tag logic lives in one place.
+local function placeClone(
+    sourceModel: Instance,
+    biomeId: string,
+    biomeFolder: Instance,
+    center: Vector3,
+    radius: number,
+    jitter: number,
+    edible: boolean,
+    rng: () -> number
+): Instance
+    -- Uniform disc sampling: sqrt to avoid center clustering.
+    local angle = rng() * math.pi * 2
+    local dist = math.sqrt(rng()) * radius
+    local x = center.X + math.cos(angle) * dist
+    local z = center.Z + math.sin(angle) * dist
+
+    local clone = sourceModel:Clone()
+    stripScripts(clone)
+
+    -- Resolve ground height, ignoring clone + already-placed dressing so clones
+    -- never stack on each other.
+    local y = groundY(x, z, center.Y, { clone, biomeFolder })
+    if not y then
+        -- No ground found (e.g. Terrain absent): drop on the biome plane.
+        y = center.Y
+    end
+
+    -- Randomize yaw + apply slight uniform scale jitter.
+    local yaw = rng() * math.pi * 2
+    local scale = 1 + (rng() * 2 - 1) * jitter
+
+    if clone:IsA("Model") then
+        pcall(function()
+            clone:ScaleTo(scale)
+        end)
+    end
+
+    -- Anchor the placement so dressing never falls or drifts.
+    if clone:IsA("BasePart") then
+        clone.Anchored = true
+    else
+        for _, descendant in ipairs(clone:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Anchored = true
+            end
+        end
+    end
+
+    setPivot(clone, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0))
+
+    clone:SetAttribute("BiomeId", biomeId)
+    CollectionService:AddTag(clone, DRESSING_TAG)
+    CollectionService:AddTag(clone, VISIBLE_TAG)
+    if edible then
+        stampEdible(clone)
+    end
+
+    clone.Parent = biomeFolder
+    return clone
+end
+
 -- ──────────────────────────────────────────────────────────────────────────────
 -- DressBiome(biomeId, sourceModel, opts) -> { clones }
 --   opts = {
@@ -184,6 +265,7 @@ end
 --     seed    : number?   -- deterministic scatter
 --     scaleJitter : number? -- +/- fraction, default SCALE_JITTER
 --     reDress : boolean?  -- clear existing folder first (default true)
+--     edible  : boolean?  -- override DressingPlan.edible; stamp clones as FoodSource
 --   }
 -- Returns the list of placed clones (empty when no-op).
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -205,6 +287,11 @@ function WorldDressingService:DressBiome(biomeId: string, sourceModel: Instance?
     local count = opts.count or plan.count
     local radius = opts.radius or plan.radius
     local jitter = opts.scaleJitter or SCALE_JITTER
+    -- opts.edible overrides the plan; nil opts.edible falls back to plan.edible.
+    local edible = opts.edible
+    if edible == nil then
+        edible = plan.edible == true
+    end
 
     if count <= 0 or radius <= 0 then
         return placed
@@ -232,56 +319,121 @@ function WorldDressingService:DressBiome(biomeId: string, sourceModel: Instance?
     local biomeFolder = getOrCreateFolder(dressingRoot, biomeId)
 
     local rng = makeRng(opts.seed)
-    local topY = center.Y
 
-    for i = 1, count do
-        -- Uniform disc sampling: sqrt to avoid center clustering.
-        local angle = rng() * math.pi * 2
-        local dist = math.sqrt(rng()) * radius
-        local x = center.X + math.cos(angle) * dist
-        local z = center.Z + math.sin(angle) * dist
+    for _ = 1, count do
+        local clone = placeClone(sourceModel, biomeId, biomeFolder, center, radius, jitter, edible, rng)
+        table.insert(placed, clone)
+    end
 
-        local clone = sourceModel:Clone()
-        stripScripts(clone)
+    biomeFolder:SetAttribute("DressedCount", #placed)
+    biomeFolder:SetAttribute("DressedAt", os.time())
 
-        -- Resolve ground height, ignoring clone + already-placed dressing + the
-        -- dressing root so trees never stack on each other.
-        local ignore = { clone, biomeFolder }
-        local y = groundY(x, z, topY, ignore)
-        if not y then
-            -- No ground found (e.g. Terrain absent): drop on the biome plane.
-            y = topY
+    return placed
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- DressBiomeVaried(biomeId, sourceModels, opts) -> { clones }
+--   Scatters a MIX of multiple source models across the biome so a biome reads as
+--   trees + rocks + bushes rather than one repeated mesh. Reuses the same
+--   grounding / scatter / anchor / tag / edible logic as DressBiome (via placeClone).
+--
+--   sourceModels : { Model|BasePart }  -- the palette to scatter
+--   opts = same shape as DressBiome, plus:
+--     weights : { number }?  -- per-source relative weight (parallel to sourceModels).
+--                              Defaults to equal weighting (round-robin-ish via the
+--                              RNG). Non-positive / missing weights are treated as 1.
+--   Each placed clone gets a "DressingSourceIndex" attribute (1-based) for debugging.
+--   Backward-compatible: leaves DressBiome untouched.
+-- ──────────────────────────────────────────────────────────────────────────────
+function WorldDressingService:DressBiomeVaried(biomeId: string, sourceModels, opts)
+    opts = opts or {}
+    local placed: { Instance } = {}
+
+    if type(biomeId) ~= "string" or biomeId == "" then
+        warn("[WorldDressingService] DressBiomeVaried: invalid biomeId")
+        return placed
+    end
+
+    -- Filter to a clean palette of valid Model/BasePart sources.
+    local palette: { Instance } = {}
+    if type(sourceModels) == "table" then
+        for _, m in ipairs(sourceModels) do
+            if typeof(m) == "Instance" and (m:IsA("Model") or m:IsA("BasePart")) then
+                table.insert(palette, m)
+            end
         end
+    end
+    if #palette == 0 then
+        warn(string.format("[WorldDressingService] DressBiomeVaried(%s): no valid source models", biomeId))
+        return placed
+    end
 
-        -- Randomize yaw + apply slight uniform scale jitter.
-        local yaw = rng() * math.pi * 2
-        local scale = 1 + (rng() * 2 - 1) * jitter
+    local plan = self.DressingPlan[biomeId] or self.DressingPlan.__default
+    local count = opts.count or plan.count
+    local radius = opts.radius or plan.radius
+    local jitter = opts.scaleJitter or SCALE_JITTER
+    local edible = opts.edible
+    if edible == nil then
+        edible = plan.edible == true
+    end
 
-        if clone:IsA("Model") then
-            pcall(function()
-                clone:ScaleTo(scale)
-            end)
+    if count <= 0 or radius <= 0 then
+        return placed
+    end
+
+    local center = getBiomeCenter(biomeId, opts)
+    if not center then
+        warn(string.format("[WorldDressingService] DressBiomeVaried(%s): no biome center available; skipping", biomeId))
+        return placed
+    end
+
+    local mapFolder = getMapFolder()
+    if not mapFolder then
+        warn("[WorldDressingService] DressBiomeVaried: Workspace.Map missing; skipping")
+        return placed
+    end
+
+    if opts.reDress ~= false then
+        self:ClearBiome(biomeId)
+    end
+
+    local dressingRoot = getOrCreateFolder(mapFolder, "BiomeDressing")
+    local biomeFolder = getOrCreateFolder(dressingRoot, biomeId)
+
+    -- Build a cumulative weight table for weighted source selection. A missing or
+    -- non-positive weight defaults to 1 (equal share).
+    local weights = opts.weights
+    local cumulative: { number } = {}
+    local total = 0
+    for index = 1, #palette do
+        local w = 1
+        if type(weights) == "table" and type(weights[index]) == "number" and weights[index] > 0 then
+            w = weights[index]
         end
+        total += w
+        cumulative[index] = total
+    end
 
-        -- Anchor the placement so dressing never falls or drifts.
-        if clone:IsA("BasePart") then
-            clone.Anchored = true
-        else
-            for _, descendant in ipairs(clone:GetDescendants()) do
-                if descendant:IsA("BasePart") then
-                    descendant.Anchored = true
+    local rng = makeRng(opts.seed)
+
+    -- Pick a source index for placement i: weighted-random when weights differ, and
+    -- a deterministic round-robin fallback to guarantee variety even on small counts.
+    local function pickIndex(i: number): number
+        if total > 0 then
+            local roll = rng() * total
+            for index = 1, #palette do
+                if roll <= cumulative[index] then
+                    return index
                 end
             end
         end
+        return ((i - 1) % #palette) + 1
+    end
 
-        local placement = CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)
-        setPivot(clone, placement)
-
-        clone:SetAttribute("BiomeId", biomeId)
-        CollectionService:AddTag(clone, DRESSING_TAG)
-        CollectionService:AddTag(clone, VISIBLE_TAG)
-
-        clone.Parent = biomeFolder
+    for i = 1, count do
+        local index = pickIndex(i)
+        local clone = placeClone(palette[index], biomeId, biomeFolder, center, radius, jitter, edible, rng)
+        clone:SetAttribute("DressingSourceIndex", index)
         table.insert(placed, clone)
     end
 

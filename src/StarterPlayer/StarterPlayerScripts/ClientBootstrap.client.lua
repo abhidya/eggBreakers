@@ -11,6 +11,8 @@ local HatchUIController = require(controllers:WaitForChild("HatchUIController"))
 local InputController = require(controllers:WaitForChild("InputController"))
 local MobileControlsController = require(controllers:WaitForChild("MobileControlsController"))
 local SenseGuideController = require(controllers:WaitForChild("SenseGuideController"))
+local SfxController = require(controllers:WaitForChild("SfxController"))
+local NpcHealthThreatController = require(controllers:WaitForChild("NpcHealthThreatController"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Constants = require(ReplicatedStorage.Shared.Constants)
@@ -276,6 +278,8 @@ ClientBootstrap.Controllers = {
     InputController = InputController,
     MobileControlsController = MobileControlsController,
     SenseGuideController = SenseGuideController,
+    SfxController = SfxController,
+    NpcHealthThreatController = NpcHealthThreatController,
 }
 
 local DEFAULT_WALK_SPEED = 16

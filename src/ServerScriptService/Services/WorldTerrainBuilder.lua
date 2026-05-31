@@ -12,15 +12,44 @@
 --   :Pond(center, radius, depth)                 -> small lake
 --   :River(points, width, depth)                 -> water along a polyline
 --   :Beach(center, radius)                       -> sand ring around a point
+--   :PaintBiome(biomeId, opts)                   -> repaint terrain material in a biome disc
+--   :PaintAllBiomes()                            -> paint every known biome
 --
 -- Fields:
 --   .SeaLevel : number (default 34)
+--   .BiomeCenters : { [string]: Vector3 }
+--   .BiomePalette : { [string]: Enum.Material }
 
 local WorldTerrainBuilder = {}
 WorldTerrainBuilder.__index = WorldTerrainBuilder
 
 -- Default sea level (studs, world Y). Water is filled DOWN from here.
 WorldTerrainBuilder.SeaLevel = 34
+
+-- Canonical biome centers (world position). Sourced from the project spec.
+WorldTerrainBuilder.BiomeCenters = {
+	NurseryGrove = Vector3.new(-2000, 0, 0),
+	FernPlains = Vector3.new(-1575, 0, 0),
+	JungleBasin = Vector3.new(-1725, 0, 475),
+	SwampDelta = Vector3.new(-1075, 0, 475),
+	RedstoneCanyon = Vector3.new(-1100, 0, -325),
+	ApocalypticCity = Vector3.new(-650, 0, 0),
+}
+
+-- Surface material each biome should be painted with.
+-- (Materials chosen to read as the biome's ground; reddish/cracked use the
+-- closest stock Terrain materials.)
+WorldTerrainBuilder.BiomePalette = {
+	NurseryGrove = Enum.Material.LeafyGrass,
+	FernPlains = Enum.Material.Grass,
+	JungleBasin = Enum.Material.LeafyGrass,
+	SwampDelta = Enum.Material.Mud,
+	RedstoneCanyon = Enum.Material.Sandstone,
+	ApocalypticCity = Enum.Material.Slate,
+}
+
+-- Default disc radius (studs) per biome paint pass.
+WorldTerrainBuilder.BiomePaintRadius = 200
 
 -- ----------------------------------------------------------------------------
 -- Internal helpers
@@ -178,6 +207,140 @@ function WorldTerrainBuilder:Beach(center: Vector3, radius: number)
 		terrain:FillCylinder(cf, thickness, radius, Enum.Material.Sand)
 	end)
 	return true
+end
+
+-- ----------------------------------------------------------------------------
+-- Biome surface painting
+-- ----------------------------------------------------------------------------
+
+-- Repaint the Terrain ground material inside a biome's disc to match the biome.
+--
+-- Paints a vertical column above sea level (a tall cylinder) using
+-- ReplaceMaterial so that ONLY existing solid terrain is recolored -- air stays
+-- air, and water below sea level is untouched. This is additive (no new mass)
+-- and deterministic.
+--
+-- biomeId : string key into BiomeCenters / BiomePalette, OR a Vector3 center.
+-- opts    : optional table {
+--             center   = Vector3,        -- override center
+--             radius   = number,         -- disc radius (default BiomePaintRadius)
+--             material = Enum.Material,   -- override target material
+--             height   = number,         -- column height above sea level (default 120)
+--             below    = number,         -- studs below sea level to include (default 8)
+--           }
+function WorldTerrainBuilder:PaintBiome(biomeId: any, opts: any?)
+	local terrain = getTerrain()
+	if not terrain then
+		return false
+	end
+
+	opts = (type(opts) == "table") and opts or {}
+
+	-- Resolve center.
+	local center: Vector3? = nil
+	if isVector3(opts.center) then
+		center = opts.center
+	elseif isVector3(biomeId) then
+		center = biomeId
+	elseif type(biomeId) == "string" then
+		center = WorldTerrainBuilder.BiomeCenters[biomeId]
+	end
+	if not isVector3(center) then
+		return false
+	end
+
+	-- Resolve target material.
+	local material: Enum.Material? = nil
+	if typeof(opts.material) == "EnumItem" then
+		material = opts.material
+	elseif type(biomeId) == "string" then
+		material = WorldTerrainBuilder.BiomePalette[biomeId]
+	end
+	if typeof(material) ~= "EnumItem" then
+		material = Enum.Material.Grass
+	end
+
+	local radius = math.max(num(opts.radius, WorldTerrainBuilder.BiomePaintRadius), 1)
+	local height = math.max(num(opts.height, 120), 1)
+	local below = math.max(num(opts.below, 8), 0)
+	local seaLevel = num(self.SeaLevel, WorldTerrainBuilder.SeaLevel)
+
+	-- Column spans from (seaLevel - below) up to (seaLevel + height).
+	local bottomY = seaLevel - below
+	local topY = seaLevel + height
+	local spanY = topY - bottomY
+	local centerY = (bottomY + topY) * 0.5
+
+	-- ReplaceMaterial only swaps occupied voxels of any existing material to the
+	-- biome material -- it does not create terrain. We bound it to the biome
+	-- disc via a region cube; the disc shape is honored by ReplaceMaterial only
+	-- operating on a box region, so we additionally fall back to a cylinder fill
+	-- guard below if ReplaceMaterial is unavailable.
+	local minV = Vector3.new(center.X - radius, bottomY, center.Z - radius)
+	local maxV = Vector3.new(center.X + radius, topY, center.Z + radius)
+
+	local replaced = false
+	pcall(function()
+		local region = Region3.new(minV, maxV):ExpandToGrid(4)
+		-- Replace every non-air, non-water material in the region with the
+		-- biome material. SwampDelta keeps its water because Water is excluded.
+		for _, src in ipairs({
+			Enum.Material.Grass,
+			Enum.Material.LeafyGrass,
+			Enum.Material.Ground,
+			Enum.Material.Mud,
+			Enum.Material.Sand,
+			Enum.Material.Sandstone,
+			Enum.Material.Rock,
+			Enum.Material.Slate,
+			Enum.Material.Asphalt,
+			Enum.Material.Snow,
+			Enum.Material.Basalt,
+			Enum.Material.CrackedLava,
+			Enum.Material.Limestone,
+			Enum.Material.Pavement,
+			Enum.Material.Cobblestone,
+		}) do
+			if src ~= material then
+				terrain:ReplaceMaterial(region, 4, src, material)
+			end
+		end
+		replaced = true
+	end)
+
+	if not replaced then
+		-- Fallback for environments without ReplaceMaterial: lay a thin solid
+		-- disc of the biome material straddling sea level. Still additive and
+		-- deterministic; never touches water below.
+		local thickness = math.min(spanY, 8)
+		local cf = CFrame.new(center.X, seaLevel + thickness * 0.5, center.Z)
+		pcall(function()
+			terrain:FillCylinder(cf, thickness, radius, material)
+		end)
+	end
+
+	return true
+end
+
+-- Paint every known biome with its palette material. Returns the count of
+-- biomes successfully painted.
+function WorldTerrainBuilder:PaintAllBiomes(opts: any?)
+	local painted = 0
+	-- Deterministic order so repeated runs behave identically.
+	local order = {
+		"NurseryGrove",
+		"FernPlains",
+		"JungleBasin",
+		"SwampDelta",
+		"RedstoneCanyon",
+		"ApocalypticCity",
+	}
+	for _, biomeId in ipairs(order) do
+		if self:PaintBiome(biomeId, opts) then
+			painted += 1
+		end
+	end
+	return painted
 end
 
 return WorldTerrainBuilder
