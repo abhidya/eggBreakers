@@ -34,7 +34,13 @@ table.insert(suite.tests, { name = "every species has required fields and stages
         end
     end
     Assert.truthy(count >= Constants.ScopeFreeze.RequiredPlayableSpecies, "vertical slice keeps required starter species")
-    Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpeciesBeforeVerticalSlice, "vertical slice stays within playable species cap")
+    -- The full staged roster is now playable. Workspace.dinosaur holds 56 rigs that
+    -- de-duplicate to 48 distinct staged species; merged with the curated 8 (4 of which
+    -- -- gallimimus, velociraptor, oviraptor, pteranodon -- have no staged-name twin)
+    -- the playable roster is 52. The cap is the full-roster upper bound, not the old
+    -- vertical-slice number; field validation above stays strict.
+    Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpecies, "playable roster stays within full-roster cap")
+    Assert.truthy(count >= 48, "full staged roster (>=48 distinct playable species) is available")
 end })
 
 table.insert(suite.tests, { name = "starter species diet roles stay fixed", run = function()

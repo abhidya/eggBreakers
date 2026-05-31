@@ -45,6 +45,38 @@ function StarterSpeciesService:ChooseStarterSpecies(data, roll)
     return chosen
 end
 
+-- Full selectable / hatch pool: EVERY playable species in SpeciesConfig (the full
+-- staged roster, ~52 species). Sourced from SpeciesConfig keys so the selection UI
+-- offers the whole roster, not just the curated starters. Sorted for stable ordering.
+function StarterSpeciesService:GetSelectableSpecies()
+    local ids = {}
+    for speciesId, entry in pairs(SpeciesConfig) do
+        if type(entry) == "table" and entry.SpeciesId == speciesId then
+            ids[#ids + 1] = speciesId
+        end
+    end
+    table.sort(ids)
+    return ids
+end
+
+-- The selectable pool a given player may hatch. By default the FULL roster so every
+-- staged species is hatchable; honors an explicit unlock gate when present.
+-- `requireUnlock` (optional) restricts to data.UnlockedSpecies when true.
+function StarterSpeciesService:GetHatchPool(data, requireUnlock)
+    if requireUnlock and type(data) == "table" and type(data.UnlockedSpecies) == "table" then
+        local pool = {}
+        for _, speciesId in ipairs(self:GetSelectableSpecies()) do
+            if data.UnlockedSpecies[speciesId] == true then
+                pool[#pool + 1] = speciesId
+            end
+        end
+        if #pool > 0 then
+            return pool
+        end
+    end
+    return self:GetSelectableSpecies()
+end
+
 function StarterSpeciesService:HasCarnivoreAndHerbivore(data)
     local hasCarnivore = false
     local hasHerbivore = false

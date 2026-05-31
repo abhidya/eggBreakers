@@ -250,4 +250,27 @@ local SpeciesConfig = {
     },
 }
 
+-- ---------------------------------------------------------------------------
+-- FULL ROSTER INJECTION
+-- Make the full staged roster playable by injecting any species not already
+-- defined above (48 distinct staged species + curated 8 => ~52 playable).
+-- Additive: the curated 8 entries are NEVER overwritten.
+-- Entries come from SpeciesRoster (SpeciesConfig-compatible shape, headless-safe).
+-- Guarded with pcall so headless test loads still succeed if SpeciesRoster is
+-- absent (the curated 8 remain available).
+-- ---------------------------------------------------------------------------
+do
+    local ok, roster = pcall(function()
+        return require(script.Parent.SpeciesRoster)
+    end)
+    if ok and roster and type(roster.AllSpecies) == "function" then
+        local all = roster:AllSpecies()
+        for id, entry in pairs(all) do
+            if SpeciesConfig[id] == nil then
+                SpeciesConfig[id] = entry
+            end
+        end
+    end
+end
+
 return SpeciesConfig

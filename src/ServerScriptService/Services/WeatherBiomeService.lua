@@ -6,6 +6,11 @@ WeatherBiomeService.WeatherCycle = { "Clear", "Cloudy", "Rain" }
 WeatherBiomeService.CoverageSize = Vector3.new(4700, 2, 4400)
 WeatherBiomeService.CoverageCenter = Vector3.new(-450, 90, -250)
 WeatherBiomeService.MaxTileSize = 2048
+-- Design doc: "Cut the broken rain element." The giant neon "VisibleRainStreaks"
+-- slabs washed the scene blue. They are disabled by default; flip to true only
+-- if a future, non-ugly streak VFX is wired up. Non-visual weather state below
+-- (biome weather, lighting, rain volume tiles) is unaffected.
+WeatherBiomeService.VisibleRainEnabled = false
 
 function WeatherBiomeService:GetFolder()
     local folder = Workspace:FindFirstChild("WeatherEffects")
@@ -73,6 +78,23 @@ function WeatherBiomeService:_ensureRainTiles(folder, prefix, height, y, materia
     return xTiles * zTiles
 end
 
+-- Destroys any existing "VisibleRainStreaks" slabs under Workspace.WeatherEffects.
+-- Safe to call when the folder/parts are absent; returns the number removed.
+function WeatherBiomeService:ClearVisibleRain(folder)
+    folder = folder or Workspace:FindFirstChild("WeatherEffects")
+    if not folder then
+        return 0
+    end
+    local removed = 0
+    for _, child in ipairs(folder:GetChildren()) do
+        if child:IsA("BasePart") and string.find(child.Name, "VisibleRainStreaks", 1, true) then
+            child:Destroy()
+            removed += 1
+        end
+    end
+    return removed
+end
+
 function WeatherBiomeService:ApplyWeather(weatherName)
     self.CurrentWeather = weatherName or self.CurrentWeather or "Clear"
     Lighting:SetAttribute("CurrentWeather", self.CurrentWeather)
@@ -80,7 +102,12 @@ function WeatherBiomeService:ApplyWeather(weatherName)
     Lighting.ClockTime = self.CurrentWeather == "Rain" and 15.5 or 13
     local folder = self:GetFolder()
     local rainTileCount = self:_ensureRainTiles(folder, "VisibleRainVolume", 2, self.CoverageCenter.Y, Enum.Material.Glass, Color3.fromRGB(120, 170, 255))
-    self:_ensureRainTiles(folder, "VisibleRainStreaks", 80, 48, Enum.Material.Neon, Color3.fromRGB(150, 205, 255))
+    if self.VisibleRainEnabled then
+        self:_ensureRainTiles(folder, "VisibleRainStreaks", 80, 48, Enum.Material.Neon, Color3.fromRGB(150, 205, 255))
+    else
+        -- Streak slabs are cut: make sure none linger (e.g. from a prior session/build).
+        self:ClearVisibleRain(folder)
+    end
 
     local visible = self.CurrentWeather == "Rain"
     folder:SetAttribute("WeatherCoverageX", self.CoverageSize.X)
@@ -100,8 +127,20 @@ function WeatherBiomeService:ApplyWeather(weatherName)
     return self.CurrentWeather
 end
 
+-- Boot hook: clean up any pre-existing streak slabs so they never wash the scene
+-- blue on a fresh session. Safe when the world/folder is absent (returns 0).
+function WeatherBiomeService:Init()
+    if not self.VisibleRainEnabled then
+        self:ClearVisibleRain()
+    end
+    return self
+end
+
 function WeatherBiomeService:StartLoop(intervalSeconds)
     if self.Running then return false, "already_running" end
+    if not self.VisibleRainEnabled then
+        self:ClearVisibleRain()
+    end
     self.Running = true
     task.spawn(function()
         local index = 1
