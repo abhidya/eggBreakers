@@ -1,0 +1,46 @@
+{
+  "mcpServers": {
+    "Roblox_Studio": {
+      "command": "/Users/abdulrehmanbhidya/Downloads/roblox-studio-rust-mcp-server/target/release/rbx-studio-mcp",
+      "args": [
+        "--stdio"
+      ]
+    },
+    "Roblox_Search": {
+      "command": "node",
+      "args": [
+        "/Users/abdulrehmanbhidya/PycharmProjects/eggBreakers/tools/roblox_search_mcp_server.js"
+      ]
+    }
+  },
+  "coworkUserFilesPath": "/Users/abdulrehmanbhidya/Claude",
+  "preferences": {
+    "chromeExtensionEnabled": true,
+    "coworkScheduledTasksEnabled": true,
+    "ccdScheduledTasksEnabled": true,
+    "sidebarMode": "task",
+    "bypassPermissionsGateByAccount": {
+      "296145f7-869e-43c6-9719-8efe7cccff77": false
+    },
+    "coworkWebSearchEnabled": true,
+    "coworkOnboardingResumeStep": null,
+    "chicagoEnabled": true,
+    "remoteToolsDeviceName": "abdulrehmans-macbook-pro-attlocal-net",
+    "epitaxyPrefs": {
+      "dframe-local-slice": {
+        "pinnedOrder": [],
+        "customGroupAssignments": {},
+        "customGroupOrder": {}
+      },
+      "starred-cowork-spaces": [],
+      "starred-local-code-sessions": [],
+      "starred-session-groups": [],
+      "epitaxy-perm-mode-acks.296145f7-869e-43c6-9719-8efe7cccff77": [
+        "/Users/abdulrehmanbhidya/PycharmProjects/eggBreakers:auto"
+      ],
+      "epitaxy-folder-permission-mode.296145f7-869e-43c6-9719-8efe7cccff77": {
+        "/Users/abdulrehmanbhidya/PycharmProjects/eggBreakers": "auto"
+      }
+    }
+  }
+}
