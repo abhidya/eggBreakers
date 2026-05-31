@@ -3,6 +3,19 @@
 Rule: no final PASS until live E2E, fresh all-category TestRunner, mobile/client proof, RBXL persistence, publish-blocker scan, and 500 release-ready imported visible assets pass.
 Rule: G016 owner complaints and release blockers remain authoritative until fresh evidence supersedes them.
 Rule: Creator Store / Creator Marketplace assets are primary; GenerationService remains authoring fallback only and never counts as release-ready imported assets by itself.
+Rule: use `Roblox_Studio` MCP for `eggBreakers2.rbxl` live place control/inspection/build/play; use `Roblox_Search` MCP only for the separate `place1` legacy plugin asset search/rating/preview lane. Do not use `Roblox_Studio.search_creator_store` for asset sourcing.
+
+## W0A — Staged dino visual blocker
+Status: SOURCE FIXED / LIVE PROVEN
+Evidence: `CharacterVisualService` keeps rig helper parts (`RootPart`, `HumanoidRootPart`, hitbox/collision/bounds/helper names) invisible and non-colliding while preserving visible mesh body parts. Studio patch-only `CharacterVisualServiceTests.server` passed `11/11`. Live `eggBreakers2.rbxl` Play inspection found player visual folder present, `visibleParts=7`, `helperVisible=0`, `largeVisibleNonHelper=0`; screenshot `wave0_live_player_visual_after_helper_fix` showed no giant opaque helper box around the player dinosaur.
+Next gate: keep this regression in the focused suite and re-run after any character/NPC visual sanitizer changes.
+
+## W0B — Beats 0-2 next parallel lanes
+Status: SOURCE IMPROVED / LIVE SMOKED
+Evidence: Wave 0 swarm slices integrated. `MapLayoutService` now creates richer visible child affordance clusters for hidden food query parts, clamps Nursery/FernPlains fallback canopies away from oversized visible block silhouettes, and `FoodWaterService` dims/restores all affordance descendants. `NPCSpawnService` prunes parentless records and continues after one spawn failure. Mobile guidance now separates 80-stud sensed targets from 14-stud actionable Snack/Drink and removes the fake up-arrow cue. Source checks passed: scoped `luac`, `git diff --check`, and `rojo build default.project.json --output /tmp/eggBreakers-wave0-integrated.rbxl`. Fresh-clone Studio probes proved food depletion visuals, canopy/food readability, NPC spawn robustness, and mobile scent cue behavior. Live Play smoke found `food=62`, `affordances=186`, `foodAffordanceFailures=0`, `badCanopies=0`, `helperVisible=0`, `npcs=15`; screenshot `wave0_integrated_live_readability` shows no giant block canopy and no fake up-arrow target cue.
+Continuation evidence: hatch UI prompt/meter moved above mobile controls; screenshot `wave0_hatch_ui_clears_mobile_controls` proves the bottom controls are no longer covered. `NPCSpawnService:PrepareNPCModel` now hides staged NPC helper roots/colliders with regression coverage. Remaining directional feedback arrows were removed from Eat/Drink and Swim fallback cues.
+Non-search continuation evidence: `NPCService` now prunes parentless records inside `TickNPCs`, stamps locomotion mode, and recognizes staged `RootPart` + `AnimationController` rigs as bounded `KinematicRootStep` movers. Studio fresh-clone probe proved `movedX=8.0`, `teleported=false`, `staleBefore=2`, `staleAfter=1`, `rootT=1.0`, and `bodyVisible=true`.
+Next gate: `Roblox_Search` asset lane remains blocked because `Roblox_Search.get_studio_state` timed out after the latest `place1` toggle. Current provisional store candidates are `11611657675` for fern starter food, `8895193` for nest/egg, and `2915304314` for scaled bones/fossil dressing only. Do not replace procedural fallback affordances with rolled/generated release visuals; resume rated search for meat/carcass and scent/waypoint assets when `place1` responds, then import accepted candidates into `eggBreakers2` for visual proof before wiring.
 
 ## E001 — Shared profile/stat/UI plumbing
 Status: SOURCE FIXING

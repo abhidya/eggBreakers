@@ -8,6 +8,29 @@ local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
 
 local suite = { name = "BiomePlacementValidation.server", category = "Placement", tests = {} }
 
+local READABILITY_BIOMES = {
+    NurseryGrove = true,
+    FernPlains = true,
+}
+
+local MAX_FALLBACK_CANOPY_SIZE = 18
+
+local function isOversizedBlockFallbackCanopy(instance)
+    if not instance:IsA("BasePart") then return false end
+    if instance:GetAttribute("ImportedVisibleAsset") == true then return false end
+    if instance.Shape ~= Enum.PartType.Block then return false end
+    if instance:GetAttribute("DressingKind") ~= "Tree" then return false end
+
+    local role = instance:GetAttribute("PlacementRole")
+    local name = string.lower(instance.Name)
+    local looksLikeCanopy = role == "HiddenTreeCanopy"
+        or role == "VisibleTreeCanopy"
+        or string.find(name, "canopy", 1, true) ~= nil
+    if not looksLikeCanopy then return false end
+
+    return math.max(instance.Size.X, instance.Size.Y, instance.Size.Z) > MAX_FALLBACK_CANOPY_SIZE
+end
+
 table.insert(suite.tests, { name = "required biome folders exist", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     for zoneId in pairs(ZoneConfig) do
@@ -49,6 +72,27 @@ table.insert(suite.tests, { name = "visible trees and biome dressing are materia
     end
     Assert.truthy(visibleTrees >= 20, "ten visible trees create trunk/canopy parts")
     Assert.truthy(zoneCount >= 7, "dressing covers every major biome")
+end })
+
+table.insert(suite.tests, { name = "nursery and fern plains reject oversized block fallback tree canopies", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local inspected = 0
+    for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if instance:IsA("BasePart")
+            and instance:GetAttribute("BiomeDressing") == true
+            and instance.Transparency < 1
+            and READABILITY_BIOMES[instance:GetAttribute("ZoneId")] then
+            inspected = inspected + 1
+            Assert.falsy(
+                isOversizedBlockFallbackCanopy(instance),
+                "Nursery/FernPlains visible canopy must be imported or non-block readable dressing: " .. instance:GetFullName()
+            )
+        end
+    end
+
+    Assert.truthy(inspected > 0, "readability audit inspected visible Nursery/FernPlains dressing")
 end })
 
 table.insert(suite.tests, { name = "scenic landmarks and flower clusters are materialized", run = function()

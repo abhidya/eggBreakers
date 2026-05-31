@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
+local NPCSpawnService = require(game:GetService("ServerScriptService").Services.NPCSpawnService)
 
 local suite = { name = "NPCServiceTests.server", category = "Integration", tests = {} }
 
@@ -16,6 +17,28 @@ local function makeNPC(name, position)
     model.PrimaryPart = root
     model.Parent = workspace
     return model
+end
+
+local function makeStagedRootRig(name, position)
+    local model = Instance.new("Model")
+    model.Name = name
+    local root = Instance.new("Part")
+    root.Name = "RootPart"
+    root.Size = Vector3.new(10, 10, 10)
+    root.Transparency = 1
+    root.Position = position or Vector3.new(0, 3, 0)
+    root.Parent = model
+    local body = Instance.new("MeshPart")
+    body.Name = "BodyMesh"
+    body.Size = Vector3.new(4, 2, 8)
+    body.Position = root.Position
+    body.Parent = model
+    local animationController = Instance.new("AnimationController")
+    animationController.Name = "AnimationController"
+    animationController.Parent = model
+    model.PrimaryPart = root
+    model.Parent = workspace
+    return model, root, body
 end
 
 local function makeTaggedPart(name, tagName, position)
@@ -47,6 +70,45 @@ end
 local function resetNPCs()
     NPCService.NPCs = {}
 end
+
+table.insert(suite.tests, { name = "parentless NPC records are pruned from active registry", run = function()
+    local oldRecords = NPCService.NPCs
+    resetNPCs()
+
+    local live = makeNPC("LivePruneProbeNPC", Vector3.new(0, 3, 0))
+    local stale = makeNPC("StalePruneProbeNPC", Vector3.new(8, 3, 0))
+    local _, liveRecord = NPCService:Register(live, "Prey")
+    NPCService:Register(stale, "Prey")
+    stale:Destroy()
+
+    local pruned = NPCSpawnService:PruneStaleNPCRecords()
+    Assert.equals(pruned, 1, "one parentless NPC record pruned")
+    Assert.equals(#NPCService.NPCs, 1, "only live NPC record remains")
+    Assert.equals(NPCService.NPCs[1], liveRecord, "live record is preserved")
+
+    live:Destroy()
+    NPCService.NPCs = oldRecords
+end })
+
+table.insert(suite.tests, { name = "TickNPCs prunes stale records before brain tick", run = function()
+    local oldRecords = NPCService.NPCs
+    resetNPCs()
+
+    local live = makeNPC("LiveTickPruneNPC", Vector3.new(0, 3, 0))
+    local stale = makeNPC("StaleTickPruneNPC", Vector3.new(8, 3, 0))
+    local _, liveRecord = NPCService:Register(live, "Prey")
+    NPCService:Register(stale, "Prey")
+    liveRecord.Hatched = true
+    stale:Destroy()
+
+    local active = NPCService:TickNPCs({})
+    Assert.equals(#NPCService.NPCs, 1, "stale destroyed NPC is removed during TickNPCs")
+    Assert.equals(NPCService.NPCs[1], liveRecord, "live record remains after TickNPCs prune")
+    Assert.truthy(active >= 0, "tick returns active count after pruning")
+
+    live:Destroy()
+    NPCService.NPCs = oldRecords
+end })
 
 table.insert(suite.tests, { name = "NPC hatches at nest then seeks needs and eats/drinks", run = function()
     resetNPCs()
@@ -120,6 +182,25 @@ table.insert(suite.tests, { name = "movement step is bounded and stamped", run =
     Assert.equals(npc:GetAttribute("LastBrainAction"), "SeekFood", "last brain action stamped")
     Assert.equals(npc:GetAttribute("BrainActionTarget"), "50.0,3.0,0.0", "target position stamped")
     Assert.equals(npc:GetAttribute("LastMoveTarget"), "50.0,3.0,0.0", "last move target stamped")
+
+    npc:Destroy()
+end })
+
+table.insert(suite.tests, { name = "staged RootPart rig movement is bounded and mode-stamped", run = function()
+    resetNPCs()
+    local npc, root, body = makeStagedRootRig("StagedRootStepNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Predator")
+    record.Hatched = true
+
+    local target = Vector3.new(50, 3, 0)
+    Assert.truthy(NPCService:MoveToward(record, target, 8, "Chase"), "staged rig move succeeds")
+    local moved = NPCService:GetRecordPosition(record)
+    Assert.truthy(math.abs(moved.X - 8) < 0.01, "staged root rig moves only one bounded step")
+    Assert.truthy((moved - target).Magnitude > 30, "staged root rig is not teleported to full target")
+    Assert.equals(record.LastLocomotionMode, "KinematicRootStep", "record stamps staged root locomotion mode")
+    Assert.equals(npc:GetAttribute("LocomotionMode"), "KinematicRootStep", "instance stamps staged root locomotion mode")
+    Assert.equals(root.Transparency, 1, "helper root remains invisible")
+    Assert.truthy(body.Transparency < 1, "visible mesh body remains renderable")
 
     npc:Destroy()
 end })

@@ -3,6 +3,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 local UIFactory = require(script.Parent.Parent.ClientControllers.UIFactory)
+local HatchUIController = require(script.Parent.Parent.ClientControllers.HatchUIController)
 
 local suite = { name = "HatchUITests.client", category = "Client", tests = {} }
 
@@ -35,6 +36,13 @@ table.insert(suite.tests, { name = "first hatch skip unavailable", run = functio
     Assert.equals(fill.Size.X.Scale, 1, "100 progress fills meter")
     Assert.falsy(gui.Enabled, "hatch UI disables at completion")
     gui:Destroy()
+end })
+
+table.insert(suite.tests, { name = "hatch prompt clears mobile action guidance", run = function()
+    local promptBottom = HatchUIController.PromptPosition.Y.Offset + HatchUIController.PromptSize.Y.Offset
+    local meterBottom = HatchUIController.MeterPosition.Y.Offset + HatchUIController.MeterSize.Y.Offset
+    Assert.truthy(promptBottom <= -405, "hatch prompt sits above mobile guidance stack")
+    Assert.truthy(meterBottom <= -360, "hatch meter clears action guidance labels")
 end })
 
 TestRunner.registerSuite(suite)

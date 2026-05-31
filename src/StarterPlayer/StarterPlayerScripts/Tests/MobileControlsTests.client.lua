@@ -37,7 +37,7 @@ table.insert(suite.tests, { name = "buttons do not overlap HUD", run = function(
     button.Parent:Destroy()
 end })
 
-table.insert(suite.tests, { name = "phone guidance exposes real asset directions", run = function()
+table.insert(suite.tests, { name = "phone guidance exposes scent cues without fake arrows", run = function()
     local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     local controlsGui = result.Gui
     Assert.notNil(controlsGui:FindFirstChild("DialoguePromptLabel"), "dialogue prompt exists")
@@ -48,7 +48,8 @@ table.insert(suite.tests, { name = "phone guidance exposes real asset directions
     Assert.equals(controlsGui:FindFirstChild("NearestActionHintLabel"):GetAttribute("NonNpcActionHint"), true, "target hint excludes NPCs")
     Assert.equals(controlsGui:FindFirstChild("NearestActionHintLabel"):GetAttribute("IconOnlyTracker"), true, "target hint is icon-first")
     Assert.equals(controlsGui:FindFirstChild("EatDrinkButton").Text, "🍎💧", "eat/drink button starts icon-first")
-    Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "⬆", 1, true) ~= nil, "target hint is visual arrow style")
+    Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "⬆", 1, true) == nil, "target hint does not use fake direction arrow")
+    Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "◌", 1, true) ~= nil, "idle target hint uses sense pulse")
     Assert.truthy(string.find(controlsGui:FindFirstChild("NearestActionHintLabel").Text, "Follow", 1, true) == nil, "long tracker instruction removed")
     controlsGui:Destroy()
     MobileControlsController.Gui = nil
@@ -118,14 +119,40 @@ table.insert(suite.tests, { name = "mobile buttons expose icon-first minimal lab
 end })
 
 table.insert(suite.tests, { name = "waypoint tracker stays icon based", run = function()
-    local food = MobileControlsController:BuildWaypointText("Food", 12.4)
+    local food = MobileControlsController:BuildWaypointText("Food", 12.4, "Herbivore")
     local water = MobileControlsController:BuildWaypointText("Water", 7.6)
+    local distant = MobileControlsController:BuildWaypointText("Food", 42.2, "Carnivore")
     local none = MobileControlsController:BuildWaypointText("None")
-    Assert.truthy(string.find(food, "⬆ 🍎 12m", 1, true) ~= nil, "food waypoint uses large arrow icon and distance")
+    Assert.truthy(string.find(food, "✨ 🌿 12m", 1, true) ~= nil, "nearby herbivore food uses sense pulse and distance")
     Assert.truthy(string.find(water, "✨ 💧 8m", 1, true) ~= nil, "nearby water waypoint uses sparkle cue and rounded distance")
-    Assert.truthy(string.find(none, "🍎", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows food and water icons")
+    Assert.truthy(string.find(distant, "〰 🍖 42m", 1, true) ~= nil, "distant carnivore food uses scent trail and diet icon")
+    Assert.truthy(string.find(none, "🌿", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows food and water icons")
     Assert.truthy(string.find(food, "Food", 1, true) == nil, "food word removed from tracker")
     Assert.truthy(string.find(water, "Water", 1, true) == nil, "water word removed from tracker")
+    Assert.truthy(string.find(food, "⬆", 1, true) == nil and string.find(distant, "⬆", 1, true) == nil, "target tracker never uses generic up arrow")
+end })
+
+table.insert(suite.tests, { name = "diet icons distinguish food targets", run = function()
+    Assert.equals(MobileControlsController:BuildTargetIcon("Food", "Herbivore"), "🌿", "herbivore food uses plant icon")
+    Assert.equals(MobileControlsController:BuildTargetIcon("Food", "Carnivore"), "🍖", "carnivore food uses meat icon")
+    Assert.equals(MobileControlsController:BuildTargetIcon("Food", "Omnivore"), "🍽️", "omnivore food uses mixed diet icon")
+    Assert.equals(MobileControlsController:BuildTargetIcon("Water", "Carnivore"), "💧", "water icon ignores diet")
+    Assert.equals(MobileControlsController:BuildFoodWaterLegend({ diet = "Carnivore", hunger = 20, thirst = 80 }), "🍖 + 💧 = ⭐", "legend uses carnivore food icon")
+end })
+
+table.insert(suite.tests, { name = "sensed target state is not tappable", run = function()
+    local button = UIFactory:CreateButton(Instance.new("Frame"), "EatDrinkButton", "🍎💧", UDim2.fromOffset(0, 0))
+    local ok = MobileControlsController:SetButtonContext(button, "Sensed")
+    Assert.equals(ok, true, "sensed state applies")
+    Assert.equals(button:GetAttribute("Context"), "Sensed", "button records sensed-only state")
+    Assert.equals(button.Active, false, "sensed distant target does not advertise tappable action")
+    Assert.equals(button.AutoButtonColor, false, "sensed distant target does not look pressable")
+    button.Parent:Destroy()
+end })
+
+table.insert(suite.tests, { name = "action feedback avoids directional arrows", run = function()
+    Assert.truthy(string.find("◌ 🍎 💧", "↗", 1, true) == nil, "fallback feedback avoids diagonal direction arrow")
+    Assert.truthy(string.find(MobileControlsController:BuildWaypointText("Food", 30, "Herbivore"), "⬆", 1, true) == nil, "scent cue avoids up arrow")
 end })
 
 
@@ -150,7 +177,7 @@ table.insert(suite.tests, { name = "mobile hud prompts do not overlap controls",
             Assert.truthy(verticallySeparated(a, b), aName .. " vertically clears " .. bName)
         end
     end
-    Assert.equals(gui:FindFirstChild("NearestActionHintLabel"):GetAttribute("WaypointCue"), "large-arrow-nearby-sparkle", "waypoint cue contract exists")
+    Assert.equals(gui:FindFirstChild("NearestActionHintLabel"):GetAttribute("WaypointCue"), "scent-pulse-nearby-trail", "scent cue contract exists")
     gui:Destroy()
     MobileControlsController.Gui = nil
 end })

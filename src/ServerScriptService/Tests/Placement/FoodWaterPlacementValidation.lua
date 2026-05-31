@@ -8,6 +8,19 @@ local CollectionService = game:GetService("CollectionService")
 
 local suite = { name = "FoodWaterPlacementValidation.server", category = "Placement", tests = {} }
 
+local function countVisibleFoodAffordances(food)
+    local count = 0
+    for _, descendant in ipairs(food:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("VisibleGameplayAffordance") == true then
+            Assert.falsy(CollectionService:HasTag(descendant, "FoodSource"), "visible affordance is not a FoodSource tag " .. descendant.Name)
+            Assert.equals(descendant.CanQuery, false, "visible affordance is not the gameplay query " .. descendant.Name)
+            Assert.truthy(descendant.Transparency < 1, "visible affordance starts readable " .. descendant.Name)
+            count = count + 1
+        end
+    end
+    return count
+end
+
 table.insert(suite.tests, { name = "nursery food water exists", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     Assert.notNil(folders.Zones:FindFirstChild("NurseryGrove"), "NurseryGrove zone exists")
@@ -34,6 +47,8 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialFood:GetAttribute("InteractionHint"), "Eat tender fern", "plant hint is readable")
     Assert.equals(tutorialMeat:GetAttribute("InteractionHint"), "Eat safe carcass", "meat hint is readable")
     Assert.equals(tutorialWater:GetAttribute("InteractionHint"), "Drink water", "water hint is readable")
+    Assert.truthy(countVisibleFoodAffordances(tutorialFood) >= 3, "starter plant has a readable foliage cluster")
+    Assert.truthy(countVisibleFoodAffordances(tutorialMeat) >= 3, "starter carcass has meat and bone affordances")
 end })
 
 
@@ -165,12 +180,16 @@ table.insert(suite.tests, { name = "procedural food and tree dressing are hidden
     MapLayoutService:EnsureBiomeDressing(folders)
 
     local visibleProceduralFood = 0
+    local visibleAffordances = 0
     local treeBrowse = 0
     for _, food in ipairs(CollectionService:GetTagged("FoodSource")) do
         if food:IsA("BasePart") and (food:IsDescendantOf(folders.FoodSources) or food:IsDescendantOf(folders.BiomeDressing)) then
             Assert.equals(food:GetAttribute("GameplayQuery"), true, "food remains queryable " .. food.Name)
             Assert.equals(food:GetAttribute("InvisibleQueryHelper"), true, "procedural food is marked as invisible helper " .. food.Name)
             if food.Transparency < 1 then visibleProceduralFood = visibleProceduralFood + 1 end
+            local affordanceCount = countVisibleFoodAffordances(food)
+            Assert.truthy(affordanceCount > 0, "food query helper needs visible non-FoodSource affordance children: " .. food:GetFullName())
+            visibleAffordances = visibleAffordances + affordanceCount
             if food:GetAttribute("TreeBrowse") == true then treeBrowse = treeBrowse + 1 end
         end
     end
@@ -181,6 +200,7 @@ table.insert(suite.tests, { name = "procedural food and tree dressing are hidden
         end
     end
     Assert.equals(visibleProceduralFood, 0, "no visible procedural food placeholders remain")
+    Assert.truthy(visibleAffordances >= 12, "visible child affordances make hidden food readable")
     Assert.truthy(treeBrowse >= 7, "tree browse helpers cover every procedural tree")
 end })
 

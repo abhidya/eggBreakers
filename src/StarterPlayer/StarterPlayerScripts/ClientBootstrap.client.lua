@@ -10,6 +10,7 @@ local HUDController = require(controllers:WaitForChild("HUDController"))
 local HatchUIController = require(controllers:WaitForChild("HatchUIController"))
 local InputController = require(controllers:WaitForChild("InputController"))
 local MobileControlsController = require(controllers:WaitForChild("MobileControlsController"))
+local ActionGuidanceController = require(controllers:WaitForChild("ActionGuidanceController"))
 local SenseGuideController = require(controllers:WaitForChild("SenseGuideController"))
 local SfxController = require(controllers:WaitForChild("SfxController"))
 local NpcHealthThreatController = require(controllers:WaitForChild("NpcHealthThreatController"))
@@ -26,6 +27,8 @@ ClientBootstrap.Sprinting = false
 ClientBootstrap.MotionPlaying = false
 ClientBootstrap.LastTargetScanAt = 0
 ClientBootstrap.TargetScanSeconds = 0.5
+ClientBootstrap.SenseTargetDistance = 80
+ClientBootstrap.ActionTargetDistance = 14
 
 local function getTargetPosition(target)
     if not target or not target:IsDescendantOf(workspace) then return nil end
@@ -127,10 +130,6 @@ function ClientBootstrap:SetButtonText(button, text)
     end
 end
 
-local function iconForTarget(targetType)
-    return targetType == "Water" and "💧" or "🍎"
-end
-
 function ClientBootstrap:ShowActionFeedback(gui, message, button)
     local label = gui and gui:FindFirstChild("ActionFeedbackLabel")
     if not label then return false end
@@ -144,53 +143,7 @@ function ClientBootstrap:ShowActionFeedback(gui, message, button)
 end
 
 function ClientBootstrap:UpdateActionGuidance(gui)
-    if not gui then return false end
-    local target, targetType, distance = self:FindNearestEatDrinkTarget(80)
-    local hint = gui:FindFirstChild("NearestActionHintLabel")
-    local dialogue = gui:FindFirstChild("DialoguePromptLabel")
-    local eatDrink = gui:FindFirstChild("EatDrinkButton")
-    local stats = self.LastStats or {}
-    if target then
-        local targetName = self:DescribeTarget(target)
-        local verb = targetType == "Water" and "DRINK" or "EAT"
-        local icon = iconForTarget(targetType)
-        if hint then
-            hint.Text = MobileControlsController:BuildWaypointText(targetType, distance)
-            hint:SetAttribute("TargetName", target.Name)
-            hint:SetAttribute("TargetType", targetType)
-            hint:SetAttribute("DistanceStuds", math.floor((distance or 0) + 0.5))
-            hint:SetAttribute("IconOnlyTracker", true)
-        end
-        if eatDrink then
-            eatDrink.Text = icon .. " " .. (targetType == "Water" and "Drink" or "Snack")
-            eatDrink:SetAttribute("CurrentTargetName", target.Name)
-            eatDrink:SetAttribute("CurrentTargetLabel", targetName)
-            eatDrink:SetAttribute("CurrentTargetType", targetType)
-            eatDrink:SetAttribute("ActionVerb", verb)
-        end
-        if dialogue then
-            dialogue.Text = targetType == "Water" and "💧 → ⭐" or "🍎 → ⭐"
-            dialogue:SetAttribute("IconOnlyTracker", true)
-        end
-    else
-        if hint then
-            hint.Text = MobileControlsController:BuildWaypointText("None")
-            hint:SetAttribute("TargetName", "")
-            hint:SetAttribute("TargetType", "None")
-            hint:SetAttribute("IconOnlyTracker", true)
-        end
-        if eatDrink then
-            local need = (tonumber(stats.thirst) or 100) < (tonumber(stats.hunger) or 100) and "💧 Drink" or "🍎 Snack"
-            eatDrink.Text = need
-            eatDrink:SetAttribute("CurrentTargetName", "")
-            eatDrink:SetAttribute("CurrentTargetType", "None")
-        end
-        if dialogue then
-            dialogue.Text = MobileControlsController:BuildFoodWaterLegend(stats)
-            dialogue:SetAttribute("IconOnlyTracker", true)
-        end
-    end
-    return true
+    return ActionGuidanceController:Update(gui, self)
 end
 
 function ClientBootstrap:CreateLocalCallPulse(callType)
@@ -399,7 +352,7 @@ local function wireMobileButtons(result)
                     showFeedback(gui, "💧 +")
                 end
             else
-                ClientBootstrap:ShowActionFeedback(gui, "↗ 🍎 💧")
+                ClientBootstrap:ShowActionFeedback(gui, "◌ 🍎 💧")
             end
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
@@ -475,7 +428,7 @@ local function wireMobileButtons(result)
             local water = ClientBootstrap:FindNearestEatDrinkTarget(18, "Water")
             InputController:RequestSwim(water)
             swim:SetAttribute("LastWaterTarget", water and water.Name or "")
-            showFeedback(gui, water and "🌊🫧" or "↗ 💧")
+            showFeedback(gui, water and "🌊🫧" or "◌ 💧")
             ClientBootstrap:UpdateActionGuidance(gui)
         end)
     end

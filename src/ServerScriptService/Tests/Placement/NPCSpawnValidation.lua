@@ -34,6 +34,122 @@ table.insert(suite.tests, { name = "spawn loop can materialize active NPC record
     NPCSpawnService.TargetActive = old
 end })
 
+table.insert(suite.tests, { name = "spawn loop prunes parentless records before active count", run = function()
+    local oldTarget = NPCSpawnService.TargetActive
+    local oldRecords = NPCService.NPCs
+    local oldCreate = NPCSpawnService.CreateNPCRecord
+    local spawned = {}
+
+    NPCService.NPCs = {}
+    local stale = Instance.new("Model")
+    stale.Name = "ParentlessSpawnRecord"
+    local staleRoot = Instance.new("Part")
+    staleRoot.Name = "Root"
+    staleRoot.Parent = stale
+    stale.PrimaryPart = staleRoot
+    stale.Parent = workspace
+    NPCService:Register(stale, "Prey")
+    stale:Destroy()
+
+    NPCSpawnService.TargetActive = 1
+    NPCSpawnService.CreateNPCRecord = function(self, spawnInstance, kind, index)
+        local npc = Instance.new("Model")
+        npc.Name = "PrunedRecordReplacement_" .. tostring(index)
+        local root = Instance.new("Part")
+        root.Name = "Root"
+        root.Parent = npc
+        npc.PrimaryPart = root
+        npc:SetAttribute("NPCKind", kind or "Prey")
+        npc.Parent = self:EnsureNPCFolder()
+        table.insert(spawned, npc)
+        return NPCService:Register(npc, kind or "Prey")
+    end
+
+    local active = NPCSpawnService:MaintainMinimumActive()
+    Assert.equals(active, 1, "parentless record does not count as active")
+    Assert.equals(#NPCService.NPCs, 1, "stale record pruned before top-up")
+    Assert.truthy(NPCService.NPCs[1].Instance and NPCService.NPCs[1].Instance.Parent ~= nil, "remaining record has live instance")
+
+    for _, npc in ipairs(spawned) do npc:Destroy() end
+    NPCSpawnService.CreateNPCRecord = oldCreate
+    NPCSpawnService.TargetActive = oldTarget
+    NPCService.NPCs = oldRecords
+end })
+
+table.insert(suite.tests, { name = "spawn loop continues after one spawn failure", run = function()
+    local oldTarget = NPCSpawnService.TargetActive
+    local oldRecords = NPCService.NPCs
+    local oldCreate = NPCSpawnService.CreateNPCRecord
+    local spawned = {}
+    local calls = 0
+
+    NPCService.NPCs = {}
+    NPCSpawnService.TargetActive = 2
+    NPCSpawnService.CreateNPCRecord = function(self, spawnInstance, kind, index)
+        calls = calls + 1
+        if calls == 1 then
+            return false, "test_missing_model"
+        end
+        local npc = Instance.new("Model")
+        npc.Name = "ContinuationSpawn_" .. tostring(index)
+        local root = Instance.new("Part")
+        root.Name = "Root"
+        root.Parent = npc
+        npc.PrimaryPart = root
+        npc:SetAttribute("NPCKind", kind or "Prey")
+        npc.Parent = self:EnsureNPCFolder()
+        table.insert(spawned, npc)
+        return NPCService:Register(npc, kind or "Prey")
+    end
+
+    local active = NPCSpawnService:MaintainMinimumActive()
+    Assert.equals(active, 2, "spawn loop fills target after a single failed spawn")
+    Assert.truthy(calls >= 3, "spawn loop attempted later candidates after failure")
+    Assert.equals(NPCSpawnService.LastSpawnFailures, 1, "spawn failure probe counted the skipped spawn")
+    Assert.equals(NPCSpawnService.LastSpawnFailureReason, "test_missing_model", "spawn failure probe records reason")
+
+    for _, npc in ipairs(spawned) do npc:Destroy() end
+    NPCSpawnService.CreateNPCRecord = oldCreate
+    NPCSpawnService.TargetActive = oldTarget
+    NPCService.NPCs = oldRecords
+end })
+
+table.insert(suite.tests, { name = "staged NPC helper root remains invisible after prepare", run = function()
+    local source = Instance.new("Model")
+    source.Name = "StagedNPCHelperProbe"
+    local root = Instance.new("Part")
+    root.Name = "RootPart"
+    root.Size = Vector3.new(48, 48, 48)
+    root.Transparency = 0
+    root.Parent = source
+    source.PrimaryPart = root
+    local body = Instance.new("MeshPart")
+    body.Name = "VisibleBody"
+    body.Size = Vector3.new(6, 4, 12)
+    body.Transparency = 0
+    body.Parent = source
+
+    local marker = Instance.new("Part")
+    marker.Name = "NPCPrepareProbeSpawn"
+    marker.Position = Vector3.new(0, 14, 0)
+    local prepared = NPCSpawnService:PrepareNPCModel(source, "Prey", 9001, marker)
+    local preparedRoot = prepared:FindFirstChild("RootPart", true)
+    local preparedBody = prepared:FindFirstChild("VisibleBody", true)
+
+    Assert.notNil(preparedRoot, "prepared NPC has helper root")
+    Assert.notNil(preparedBody, "prepared NPC keeps visible mesh body")
+    Assert.equals(preparedRoot.Transparency, 1, "NPC helper root is hidden")
+    Assert.equals(preparedRoot.CanCollide, false, "NPC helper root does not collide")
+    Assert.equals(preparedRoot.CanTouch, false, "NPC helper root does not touch")
+    Assert.equals(preparedRoot.CanQuery, false, "NPC helper root does not query")
+    Assert.equals(preparedRoot:GetAttribute("NPCInvisibleRigHelper"), true, "NPC helper root is marked")
+    Assert.truthy(preparedBody.Transparency < 1, "NPC mesh body remains visible")
+
+    prepared:Destroy()
+    marker:Destroy()
+    source:Destroy()
+end })
+
 table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and predators", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     MapLayoutService:EnsureNPCSpawnMarkers(folders)

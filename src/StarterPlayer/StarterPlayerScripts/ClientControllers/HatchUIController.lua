@@ -2,6 +2,10 @@ local Players = game:GetService("Players")
 local UIFactory = require(script.Parent.UIFactory)
 
 local HatchUIController = { Progress = 0 }
+HatchUIController.PromptPosition = UDim2.new(0.5, -210, 1, -470)
+HatchUIController.MeterPosition = UDim2.new(0.5, -180, 1, -405)
+HatchUIController.PromptSize = UDim2.fromOffset(420, 52)
+HatchUIController.MeterSize = UDim2.fromOffset(360, 18)
 
 function HatchUIController:Show()
     if self.Gui then return self.Gui end
@@ -14,8 +18,8 @@ function HatchUIController:Show()
     overlay.Parent = gui
     local prompt = Instance.new("TextLabel")
     prompt.Name = "InputPrompt"
-    prompt.Size = UDim2.fromOffset(420, 60)
-    prompt.Position = UDim2.new(0.5, -210, 1, -150)
+    prompt.Size = self.PromptSize
+    prompt.Position = self.PromptPosition
     prompt.Text = "Tap to crack the shell"
     prompt.TextScaled = true
     prompt.TextColor3 = Color3.new(1, 1, 1)
@@ -23,8 +27,8 @@ function HatchUIController:Show()
     prompt.Parent = overlay
     local meter = Instance.new("Frame")
     meter.Name = "CrackMeter"
-    meter.Size = UDim2.fromOffset(360, 20)
-    meter.Position = UDim2.new(0.5, -180, 1, -85)
+    meter.Size = self.MeterSize
+    meter.Position = self.MeterPosition
     meter.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
     meter.Parent = overlay
     self.Fill = Instance.new("Frame")

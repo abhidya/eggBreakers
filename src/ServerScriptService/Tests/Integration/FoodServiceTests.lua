@@ -85,14 +85,30 @@ end })
 
 table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = function()
     local p, food = setup(32005, "Herbivore")
+    local leaf = Instance.new("Part")
+    leaf.Name = "LeafAffordance"
+    leaf.Transparency = 0.1
+    leaf:SetAttribute("VisibleGameplayAffordance", true)
+    leaf:SetAttribute("EdibleFoliageVisual", true)
+    leaf.Parent = food
+    local frond = Instance.new("Part")
+    frond.Name = "FrondAffordance"
+    frond.Transparency = 0.25
+    frond:SetAttribute("VisibleGameplayAffordance", true)
+    frond:SetAttribute("EdibleFoliageVisual", true)
+    frond.Parent = food
     food:SetAttribute("RespawnCooldownSeconds", 1)
     Assert.truthy(FoodWaterService:RequestEat(p, food), "eat depletes food")
     Assert.equals(food:GetAttribute("Depleted"), true, "food depleted")
+    Assert.equals(leaf.Transparency, FoodWaterService.DepletedFoliageTransparency, "first visible affordance dims")
+    Assert.equals(frond.Transparency, FoodWaterService.DepletedFoliageTransparency, "second visible affordance dims")
     food:SetAttribute("DepletedUntil", os.time() - 1)
     food.Transparency = 0.8
     FoodWaterService:RefreshDepletion(food)
     Assert.equals(food:GetAttribute("Depleted"), false, "food restored after cooldown")
     Assert.equals(food.Transparency, 0, "food visibly restored after cooldown")
+    Assert.equals(leaf.Transparency, 0.1, "first affordance restores original transparency")
+    Assert.equals(frond.Transparency, 0.25, "second affordance restores original transparency")
     food:Destroy()
 end })
 

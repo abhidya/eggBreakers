@@ -47,6 +47,19 @@ function FoodWaterService:GetFoliageVisual(target)
     return nil
 end
 
+function FoodWaterService:GetFoliageVisuals(target)
+    local visuals = {}
+    if not (target and target:IsA("BasePart")) then return visuals end
+    for _, descendant in ipairs(target:GetDescendants()) do
+        if descendant:IsA("BasePart")
+            and (descendant:GetAttribute("EdibleFoliageVisual") == true or descendant:GetAttribute("VisibleGameplayAffordance") == true)
+        then
+            table.insert(visuals, descendant)
+        end
+    end
+    return visuals
+end
+
 function FoodWaterService:SetDepletedVisual(target, depleted)
     if target and target:IsA("BasePart") then
         if depleted then
@@ -62,11 +75,10 @@ function FoodWaterService:SetDepletedVisual(target, depleted)
             target.CanTouch = true
         end
 
-        -- Dim / restore the readable foliage cluster (if present). This is
-        -- independent of the query part's transparency so the query part
-        -- stays an invisible helper while the cluster gives visible feedback.
-        local visual = self:GetFoliageVisual(target)
-        if visual then
+        -- Dim / restore every readable food affordance child. This is
+        -- independent of the query part's transparency so the query part stays
+        -- an invisible helper while the visible cluster gives feedback.
+        for _, visual in ipairs(self:GetFoliageVisuals(target)) do
             if depleted then
                 if visual:GetAttribute("RestoreTransparency") == nil then
                     visual:SetAttribute("RestoreTransparency", visual.Transparency)

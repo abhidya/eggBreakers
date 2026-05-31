@@ -2,13 +2,14 @@
 -- Core actions: EatDrink, Attack, Sprint, Call, RestHide.
 -- Optional (hidden until species unlocks): Flight, Swim.
 -- Left side: movement thumbstick placeholder (Roblox TouchThumbstick takes it at runtime).
--- Floating hints above the button cluster: waypoint cue + action feedback.
+-- Floating hints above the button cluster: scent cue + action feedback.
 --
 -- Public API (stable – do NOT remove or rename):
 --   MobileControlsController.Buttons          table
 --   MobileControlsController.OptionalButtons  table
 --   MobileControlsController.EffectStyles     table
---   MobileControlsController:BuildWaypointText(targetType, distance)  -> string
+--   MobileControlsController:BuildWaypointText(targetType, distance, diet) -> string
+--   MobileControlsController:BuildTargetIcon(targetType, diet)         -> string
 --   MobileControlsController:BuildFoodWaterLegend(stats)              -> string
 --   MobileControlsController:SetButtonEffect(button, actionName, active) -> bool
 --   MobileControlsController:FlashButtonEffect(button, actionName, durationSeconds) -> bool
@@ -18,7 +19,7 @@
 --   MobileControlsController:HideOptionalButton(gui, name)
 --   MobileControlsController:SetActionAvailable(gui, name, available) -- progressive disclosure
 --   MobileControlsController:SetButtonContext(button, context) -- contextual one-tap state
---   MobileControlsController:UpdateWaypoint(gui, targetType, distance) -- diegetic sense cue
+--   MobileControlsController:UpdateWaypoint(gui, targetType, distance, diet) -- diegetic sense cue
 --   MobileControlsController:ShowActionFeedback(gui, message, durationSeconds) -- transient toast
 
 local Players   = game:GetService("Players")
@@ -46,14 +47,22 @@ MobileControlsController.EffectStyles = {
 
 -- ── Pure helpers ──────────────────────────────────────────────────────────────
 
--- Waypoint cue shown in the NearestActionHintLabel.
--- Tests assert: food uses "⬆ 🍎 12m", nearby water uses "✨ 💧 8m",
--- no word "Food" or "Water", idle shows both food & water icons.
-function MobileControlsController:BuildWaypointText(targetType, distance)
-    if not targetType or targetType == "None" then return "⬆ 🍎  💧" end
-    local icon   = targetType == "Water" and "💧" or "🍎"
+function MobileControlsController:BuildTargetIcon(targetType, diet)
+    if targetType == "Water" then return "💧" end
+    diet = tostring(diet or "")
+    if diet == "Herbivore" then return "🌿" end
+    if diet == "Carnivore" then return "🍖" end
+    if diet == "Omnivore" then return "🍽️" end
+    return "🍎"
+end
+
+-- Scent cue shown in the NearestActionHintLabel.
+-- Nearby targets sparkle; distant targets use a non-directional scent trail.
+function MobileControlsController:BuildWaypointText(targetType, distance, diet)
+    if not targetType or targetType == "None" then return "◌ 🌿  💧" end
+    local icon   = self:BuildTargetIcon(targetType, diet)
     local meters = math.max(0, tonumber(distance) or 0)
-    local pulse  = meters <= 8 and "✨" or "⬆"
+    local pulse  = meters <= 14 and "✨" or "〰"
     return string.format("%s %s %.0fm", pulse, icon, meters)
 end
 
@@ -61,7 +70,8 @@ end
 function MobileControlsController:BuildFoodWaterLegend(stats)
     stats   = stats or {}
     local foodLow = (tonumber(stats.hunger) or 100) <= (tonumber(stats.thirst) or 100)
-    return foodLow and "🍎 + 💧 = ⭐" or "💧 + 🍎 = ⭐"
+    local foodIcon = self:BuildTargetIcon("Food", stats.diet)
+    return foodLow and (foodIcon .. " + 💧 = ⭐") or ("💧 + " .. foodIcon .. " = ⭐")
 end
 
 -- ── Button effect helpers ─────────────────────────────────────────────────────
@@ -165,6 +175,11 @@ function MobileControlsController:SetButtonContext(button, context)
         button.BackgroundTransparency = 0
         button.Active                 = true
         button.AutoButtonColor        = true
+    elseif context == "Sensed" then
+        button.TextTransparency       = 0.2
+        button.BackgroundTransparency = 0.18
+        button.Active                 = false
+        button.AutoButtonColor        = false
     elseif context == "Unavailable" then
         button.TextTransparency       = 0.45
         button.BackgroundTransparency = 0.35
@@ -177,11 +192,11 @@ end
 -- ── Floating-hint helpers ─────────────────────────────────────────────────────
 
 -- Push a fresh waypoint cue into the NearestActionHintLabel (icon-only, diegetic).
-function MobileControlsController:UpdateWaypoint(gui, targetType, distance)
+function MobileControlsController:UpdateWaypoint(gui, targetType, distance, diet)
     if not gui then return false end
     local hint = gui:FindFirstChild("NearestActionHintLabel")
     if not hint then return false end
-    hint.Text = self:BuildWaypointText(targetType, distance)
+    hint.Text = self:BuildWaypointText(targetType, distance, diet)
     return true
 end
 
@@ -316,7 +331,7 @@ function MobileControlsController:CreateControls(settings)
     UIFactory:RoundCorners(dialogue, 6)
     dialogue.Parent = gui
 
-    -- NearestActionHintLabel: waypoint arrow cue
+    -- NearestActionHintLabel: non-directional scent/sense cue
     local targetHint = Instance.new("TextLabel")
     targetHint.Name                  = "NearestActionHintLabel"
     targetHint.Size                  = UDim2.fromOffset(168 * scale, 44 * scale)
@@ -326,11 +341,11 @@ function MobileControlsController:CreateControls(settings)
     targetHint.TextColor3            = Color3.fromRGB(255, 255, 255)
     targetHint.TextScaled            = true
     targetHint.TextWrapped           = true
-    targetHint.Text                  = "⬆ 🍎  💧"
+    targetHint.Text                  = "◌ 🌿  💧"
     targetHint:SetAttribute("NonNpcActionHint",         true)
     targetHint:SetAttribute("IconOnlyTracker",          true)
     targetHint:SetAttribute("FloatsAboveActionButtons", true)
-    targetHint:SetAttribute("WaypointCue",              "large-arrow-nearby-sparkle")
+    targetHint:SetAttribute("WaypointCue",              "scent-pulse-nearby-trail")
     targetHint.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
     targetHint.TextStrokeTransparency = 0.45
     UIFactory:RoundCorners(targetHint, 6)

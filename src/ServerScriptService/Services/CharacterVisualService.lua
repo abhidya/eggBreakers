@@ -55,6 +55,19 @@ local function hasVisiblePart(instance)
     return false
 end
 
+local function isRigHelperPart(instance)
+    if not instance:IsA("BasePart") then return false end
+    local name = string.lower(instance.Name or "")
+    return name == "rootpart"
+        or name == "humanoidrootpart"
+        or string.find(name, "hitbox", 1, true) ~= nil
+        or string.find(name, "collision", 1, true) ~= nil
+        or string.find(name, "collider", 1, true) ~= nil
+        or string.find(name, "bounding", 1, true) ~= nil
+        or string.find(name, "bounds", 1, true) ~= nil
+        or string.find(name, "helper", 1, true) ~= nil
+end
+
 local function setDescendantCollisionSafe(instance)
     if instance:IsA("BasePart") then
         instance.Anchored = false
@@ -62,7 +75,11 @@ local function setDescendantCollisionSafe(instance)
         instance.CanTouch = false
         instance.CanQuery = false
         instance.Massless = true
-        instance.Transparency = math.min(instance.Transparency, 0.05)
+        if isRigHelperPart(instance) then
+            instance.Transparency = 1
+        else
+            instance.Transparency = math.min(instance.Transparency, 0.05)
+        end
     end
 end
 

@@ -284,8 +284,50 @@ function NPCService:GetInstancePosition(instance)
     return nil
 end
 
+function NPCService:PruneStaleRecords()
+    local pruned = 0
+    for index = #self.NPCs, 1, -1 do
+        local record = self.NPCs[index]
+        local instance = record and record.Instance
+        if not instance or instance.Parent == nil then
+            table.remove(self.NPCs, index)
+            pruned = pruned + 1
+        end
+    end
+    return pruned
+end
+
 function NPCService:FormatVector3(position)
     return string.format("%.1f,%.1f,%.1f", position.X, position.Y, position.Z)
+end
+
+function NPCService:ResolveLocomotionRoot(npc)
+    if not npc then return nil, "MissingNPC" end
+    if npc:IsA("BasePart") then
+        return npc, "KinematicPartStep"
+    end
+    local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
+    local humanoidRoot = npc:FindFirstChild("HumanoidRootPart", true)
+    if humanoid and humanoidRoot and humanoidRoot:IsA("BasePart") then
+        return humanoidRoot, "HumanoidMoveTo"
+    end
+    local stagedRoot = npc:FindFirstChild("RootPart", true)
+    if stagedRoot and stagedRoot:IsA("BasePart") then
+        return stagedRoot, "KinematicRootStep"
+    end
+    if npc.PrimaryPart then
+        return npc.PrimaryPart, "KinematicPrimaryPartStep"
+    end
+    return nil, "KinematicPivotStep"
+end
+
+function NPCService:StampLocomotion(record, mode)
+    record.LastLocomotionMode = mode
+    local npc = record.Instance
+    if npc and npc.SetAttribute then
+        npc:SetAttribute("LocomotionMode", mode)
+        npc:SetAttribute("LastLocomotionMode", mode)
+    end
 end
 
 function NPCService:OrientToward(record, targetPosition, actionName)
@@ -362,17 +404,18 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
         if targetInstance then
             npc:SetAttribute("BrainTargetName", targetInstance.Name)
         end
+        local root, mode = self:ResolveLocomotionRoot(npc)
         local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
-        local hrp = npc:FindFirstChild("HumanoidRootPart")
-        if humanoid and hrp then
+        self:StampLocomotion(record, mode)
+        if humanoid and root and mode == "HumanoidMoveTo" then
             -- Physics-driven locomotion via Humanoid:MoveTo; unanchors root part for smooth motion.
-            if hrp.Anchored then hrp.Anchored = false end
+            if root.Anchored then root.Anchored = false end
             humanoid:MoveTo(targetPosition)
             -- Orient model toward target (non-teleporting; Humanoid handles position)
-            local lookCF = CFrame.lookAt(hrp.Position, lookAt)
-            hrp.CFrame = lookCF
+            local lookCF = CFrame.lookAt(root.Position, lookAt)
+            root.CFrame = lookCF
         elseif npc.PivotTo then
-            -- Fallback: Humanoid-less models use PivotTo (keeps existing tests passing)
+            -- Humanoid-less staged rigs step only by the bounded nextPosition, never to the full target.
             npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
         elseif npc:IsA("BasePart") then
             npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
@@ -722,16 +765,17 @@ function NPCService:MoveRecordToward(record, targetPosition, stepStuds, actionNa
     if (lookAt - nextPosition).Magnitude <= 0.05 then
         lookAt = nextPosition + Vector3.new(0, 0, -1)
     end
+    local root, mode = self:ResolveLocomotionRoot(npc)
     local humanoid2 = npc:FindFirstChildWhichIsA("Humanoid")
-    local hrp2 = npc:FindFirstChild("HumanoidRootPart")
-    if humanoid2 and hrp2 then
+    self:StampLocomotion(record, mode)
+    if humanoid2 and root and mode == "HumanoidMoveTo" then
         -- Physics-driven locomotion; unanchors root part for smooth Humanoid motion.
-        if hrp2.Anchored then hrp2.Anchored = false end
+        if root.Anchored then root.Anchored = false end
         humanoid2:MoveTo(targetPosition)
-        local lookCF2 = CFrame.lookAt(hrp2.Position, lookAt)
-        hrp2.CFrame = lookCF2
+        local lookCF2 = CFrame.lookAt(root.Position, lookAt)
+        root.CFrame = lookCF2
     elseif npc.PivotTo then
-        -- Fallback: Humanoid-less models use PivotTo (keeps existing tests passing)
+        -- Humanoid-less staged rigs step only by the bounded nextPosition, never to the full target.
         npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
     elseif npc:IsA("BasePart") then
         npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
@@ -1028,6 +1072,7 @@ function NPCService:MarkPreyDead(record)
 end
 
 function NPCService:TickNPCs(players)
+    self:PruneStaleRecords()
     local active = 0
     for _, record in ipairs(self.NPCs) do
         local ok = self:TickBrain(record, players, self.TickSeconds)
@@ -1062,10 +1107,10 @@ function NPCService:StartTickLoop(playersService)
                 if record.State ~= "Dead" and record.MoveTarget then
                     local npc = record.Instance
                     if npc then
+                        local root, mode = self:ResolveLocomotionRoot(npc)
                         local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
-                        local hrp = npc:FindFirstChild("HumanoidRootPart")
-                        if humanoid and hrp then
-                            local dist = (hrp.Position - record.MoveTarget).Magnitude
+                        if humanoid and root and mode == "HumanoidMoveTo" then
+                            local dist = (root.Position - record.MoveTarget).Magnitude
                             if dist > 2 then
                                 humanoid:MoveTo(record.MoveTarget)
                             else

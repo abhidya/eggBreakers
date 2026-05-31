@@ -57,6 +57,18 @@ local function hasVisiblePart(instance)
     return false
 end
 
+local function isHelperVisualPart(part)
+    local name = string.lower(part.Name)
+    return name == "rootpart"
+        or name == "humanoidrootpart"
+        or string.find(name, "hitbox", 1, true) ~= nil
+        or string.find(name, "collision", 1, true) ~= nil
+        or string.find(name, "collider", 1, true) ~= nil
+        or string.find(name, "bounding", 1, true) ~= nil
+        or string.find(name, "bounds", 1, true) ~= nil
+        or string.find(name, "helper", 1, true) ~= nil
+end
+
 function NPCSpawnService:ResolveImportedNPCModel(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
@@ -127,7 +139,13 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
             descendant.Anchored = true
             descendant.CanCollide = false
             descendant.CanTouch = false
-            descendant.CanQuery = true
+            if isHelperVisualPart(descendant) then
+                descendant.Transparency = 1
+                descendant.CanQuery = false
+                descendant:SetAttribute("NPCInvisibleRigHelper", true)
+            else
+                descendant.CanQuery = true
+            end
         end
     end
     local spawnPosition = spawnInstance and spawnInstance:IsA("BasePart") and spawnInstance.Position or Vector3.new(0, 12, 0)
@@ -232,6 +250,19 @@ function NPCSpawnService:HasStagedMeshForKind(kind)
     return staged ~= nil and hasVisiblePart(staged)
 end
 
+function NPCSpawnService:PruneStaleNPCRecords()
+    local pruned = 0
+    for index = #NPCService.NPCs, 1, -1 do
+        local record = NPCService.NPCs[index]
+        local instance = record and record.Instance
+        if not instance or instance.Parent == nil then
+            table.remove(NPCService.NPCs, index)
+            pruned = pruned + 1
+        end
+    end
+    return pruned
+end
+
 -- Remove NPC models from Workspace.NPCs that are stale:
 --   * not registered in NPCService.NPCs, OR
 --   * beyond NPCService.MaxActive (excess), OR
@@ -294,6 +325,7 @@ end
 
 function NPCSpawnService:MaintainMinimumActive()
     self:EnsureNPCFolder()
+    self:PruneStaleNPCRecords()
     -- Despawn stale/excess/primitive NPC models before topping up so the world
     -- never accumulates leftover placeholder bodies across sessions.
     self:CleanupStaleNPCs()
@@ -303,16 +335,29 @@ function NPCSpawnService:MaintainMinimumActive()
     local index = active
     local attempts = 0
     local maxAttempts = math.max(self.TargetActive * 2, #spawns * 2, 1)
+    local failures = 0
+    local lastFailureReason = nil
+    local lastFailureKind = nil
     while active < self.TargetActive and active < NPCService.MaxActive and attempts < maxAttempts do
         attempts = attempts + 1
         index = index + 1
         local spawnInstance = spawns[((index - 1) % math.max(#spawns, 1)) + 1]
         if #spawns == 0 or self:IsSpawnPositionAllowed(spawnInstance) then
             local kind = spawnInstance and spawnInstance:GetAttribute("NPCKind") or self.SpawnKinds[((index - 1) % #self.SpawnKinds) + 1]
-            local ok = self:CreateNPCRecord(spawnInstance, kind, index)
-            if ok then active = active + 1 else break end
+            local ok, result = self:CreateNPCRecord(spawnInstance, kind, index)
+            if ok then
+                active = active + 1
+            else
+                failures = failures + 1
+                lastFailureReason = result or "spawn_failed"
+                lastFailureKind = kind
+            end
         end
     end
+    self.LastMaintainAttempts = attempts
+    self.LastSpawnFailures = failures
+    self.LastSpawnFailureReason = lastFailureReason
+    self.LastSpawnFailureKind = lastFailureKind
     return active
 end
 

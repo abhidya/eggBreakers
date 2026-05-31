@@ -61,8 +61,13 @@ SenseGuideController._badge     = nil
 SenseGuideController._pulse     = nil   -- RenderStepped connection driving the breathing pulse
 SenseGuideController._activeTarget = nil
 
-local function iconForType(targetType)
-	return targetType == "Water" and "💧" or "🍎"
+local function iconForTarget(targetType, target)
+	if targetType == "Water" then return "💧" end
+	local diet = target and tostring(target:GetAttribute("Diet") or "") or ""
+	if diet == "Herbivore" then return "🌿" end
+	if diet == "Carnivore" then return "🍖" end
+	if diet == "Omnivore" then return "🍽️" end
+	return "🍎"
 end
 
 -- Pure: returns true when the player is hungry/thirsty enough to warrant guidance.
@@ -166,7 +171,7 @@ function SenseGuideController:_ensureVisuals(target, targetType)
 		badge.TextColor3 = Color3.fromRGB(255, 255, 255)
 		badge.TextScaled = true
 		badge.Font = Enum.Font.GothamBold
-		badge.Text = "🍎 0m"
+		badge.Text = "🌿 0m"
 		badge:SetAttribute("IconOnlyTracker", true)
 		badge:SetAttribute("SenseGuide", true)
 		local corner = Instance.new("UICorner")
@@ -249,7 +254,7 @@ function SenseGuideController:Update()
 	self._activeTarget = target
 	if self._billboard then self._billboard.Enabled = true end
 	if self._badge then
-		self._badge.Text = string.format("%s %dm", iconForType(targetType), math.floor((distance or 0) + 0.5))
+		self._badge.Text = string.format("%s %dm", iconForTarget(targetType, target), math.floor((distance or 0) + 0.5))
 	end
 	self:_startPulse()
 	return true, target, targetType, distance

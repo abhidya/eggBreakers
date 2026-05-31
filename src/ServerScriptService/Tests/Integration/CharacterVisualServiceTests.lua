@@ -376,6 +376,53 @@ table.insert(suite.tests, { name = "avatar hide preserves existing imported dino
     character:Destroy()
 end })
 
+table.insert(suite.tests, { name = "staged rig helper root remains invisible after attach", run = function()
+    local player = MockPlayer.new(11009, "RigHelperTransparencyProbe")
+    local character = makeCharacter()
+    player.Character = character
+
+    local source = Instance.new("Model")
+    source.Name = "StagedRigWithLargeRoot"
+    source.Parent = ReplicatedStorage
+    local root = Instance.new("Part")
+    root.Name = "RootPart"
+    root.Size = Vector3.new(34, 42, 28)
+    root.Transparency = 1
+    root.Parent = source
+    source.PrimaryPart = root
+    local body = Instance.new("Part")
+    body.Name = "CarnotaurusBodyMesh"
+    body.Size = Vector3.new(5, 4, 12)
+    body.CFrame = CFrame.new(0, 0, -4)
+    body.Transparency = 0.2
+    body.Parent = source
+    local head = Instance.new("Part")
+    head.Name = "CarnotaurusHeadMesh"
+    head.Size = Vector3.new(3, 3, 4)
+    head.CFrame = CFrame.new(0, 1, -11)
+    head.Transparency = 0.2
+    head.Parent = source
+    local motor = Instance.new("Motor6D")
+    motor.Name = "BodyRigMotor"
+    motor.Part0 = root
+    motor.Part1 = body
+    motor.Parent = root
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+    local attachedRoot = attached and attached:FindFirstChild("RootPart", true)
+    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBodyMesh", true)
+
+    Assert.notNil(attached, "staged rig attaches")
+    Assert.equals(attachedRoot.Transparency, 1, "large rig RootPart stays invisible")
+    Assert.equals(attachedRoot.CanCollide, false, "large rig RootPart cannot collide")
+    Assert.equals(attachedRoot.CanQuery, false, "large rig RootPart cannot block queries")
+    Assert.truthy(attachedBody.Transparency < 1, "renderable mesh body remains visible")
+
+    source:Destroy()
+    cleanup(player)
+end })
+
 table.insert(suite.tests, { name = "folder based imported dinosaur stays readable after attach", run = function()
     local player = MockPlayer.new(11004, "FolderDinoVisualTester")
     local character = makeCharacter()

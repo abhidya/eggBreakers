@@ -163,6 +163,51 @@ MapLayoutService.FoliageVisualName = "EdibleFoliageVisual"
 
 MapLayoutService.HerbivoreFoliageColor = Color3.fromRGB(86, 168, 78)
 MapLayoutService.CarnivoreCarcassColor = Color3.fromRGB(122, 60, 48)
+MapLayoutService.CarcassBoneColor = Color3.fromRGB(218, 205, 174)
+
+local function configureFoodAffordance(part, restoreTransparency)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.CastShadow = false
+    part.Transparency = restoreTransparency or 0
+    part:SetAttribute("EdibleFoliageVisual", true)
+    part:SetAttribute("VisibleGameplayAffordance", true)
+    part:SetAttribute("ProceduralGameplayVisual", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartReason", "Readable edible foliage / carcass representation")
+    part:SetAttribute("Decorative", true)
+    part:SetAttribute("RestoreTransparency", restoreTransparency or 0)
+end
+
+local function getReadableFallbackCanopySize(spec)
+    local canopySize = spec.canopySize
+    if spec.zone ~= "NurseryGrove" and spec.zone ~= "FernPlains" then
+        return canopySize
+    end
+    local largest = math.max(canopySize.X, canopySize.Y, canopySize.Z)
+    if largest <= 18 then
+        return canopySize
+    end
+    local scale = 18 / largest
+    return Vector3.new(
+        math.max(10, canopySize.X * scale),
+        math.max(8, canopySize.Y * scale),
+        math.max(10, canopySize.Z * scale)
+    )
+end
+
+function MapLayoutService:GetOrCreateFoodAffordancePart(queryPart, name)
+    local part = queryPart:FindFirstChild(name)
+    if not part then
+        part = Instance.new("Part")
+        part.Name = name
+        part.Parent = queryPart
+    end
+    configureFoodAffordance(part, 0)
+    return part
+end
 
 function MapLayoutService:EnsureVisibleFoliageVisual(queryPart, opts)
     if not (queryPart and queryPart:IsA("BasePart")) then return nil end
@@ -170,44 +215,53 @@ function MapLayoutService:EnsureVisibleFoliageVisual(queryPart, opts)
     local diet = opts.diet or queryPart:GetAttribute("Diet") or "Herbivore"
     local isCarnivore = diet == "Carnivore"
 
-    local visual = queryPart:FindFirstChild(self.FoliageVisualName)
-    if not visual then
-        visual = Instance.new("Part")
-        visual.Name = self.FoliageVisualName
-        visual.Anchored = true
-        visual.CanCollide = false
-        visual.CanTouch = false
-        visual.CanQuery = false
-        visual.CastShadow = false
-        visual.Parent = queryPart
-    end
-
     -- Sit the readable foliage just on top of (slightly inside) the query
     -- volume so players see a clear edible cluster where the query part is.
     local base = queryPart.Size
+    local visual = self:GetOrCreateFoodAffordancePart(queryPart, self.FoliageVisualName)
     if isCarnivore then
         visual.Shape = Enum.PartType.Block
         visual.Material = Enum.Material.Leather
         visual.Color = opts.color or self.CarnivoreCarcassColor
         visual.Size = Vector3.new(math.max(2, base.X * 0.85), math.max(1.2, base.Y * 0.7), math.max(2, base.Z * 0.85))
-        visual.Position = queryPart.Position + Vector3.new(0, visual.Size.Y * 0.4, 0)
+        visual.CFrame = CFrame.new(queryPart.Position + Vector3.new(0, visual.Size.Y * 0.4, 0)) * CFrame.Angles(0, math.rad(12), 0)
+
+        local bone = self:GetOrCreateFoodAffordancePart(queryPart, "CarcassBoneVisual")
+        bone.Shape = Enum.PartType.Cylinder
+        bone.Material = Enum.Material.SmoothPlastic
+        bone.Color = self.CarcassBoneColor
+        bone.Size = Vector3.new(math.max(0.45, base.Y * 0.28), math.max(3, base.X * 0.78), math.max(0.45, base.Y * 0.28))
+        bone.CFrame = CFrame.new(queryPart.Position + Vector3.new(0, visual.Size.Y * 0.95, 0)) * CFrame.Angles(0, 0, math.rad(90))
+
+        local rib = self:GetOrCreateFoodAffordancePart(queryPart, "CarcassRibVisual")
+        rib.Shape = Enum.PartType.Block
+        rib.Material = Enum.Material.SmoothPlastic
+        rib.Color = self.CarcassBoneColor
+        rib.Size = Vector3.new(math.max(0.35, base.Y * 0.2), math.max(1.2, base.Y * 0.75), math.max(2.5, base.Z * 0.72))
+        rib.CFrame = CFrame.new(queryPart.Position + Vector3.new(base.X * 0.16, visual.Size.Y * 0.72, 0)) * CFrame.Angles(0, math.rad(18), math.rad(18))
     else
         visual.Shape = Enum.PartType.Ball
         visual.Material = Enum.Material.Grass
         visual.Color = opts.color or self.HerbivoreFoliageColor
         local spread = math.max(3, math.min(base.X, base.Z) * 0.9)
         visual.Size = Vector3.new(spread, math.max(2.5, base.Y * 1.1), spread)
-        visual.Position = queryPart.Position + Vector3.new(0, visual.Size.Y * 0.35, 0)
+        visual.CFrame = CFrame.new(queryPart.Position + Vector3.new(0, visual.Size.Y * 0.35, 0))
+
+        local leftFrond = self:GetOrCreateFoodAffordancePart(queryPart, "FoliageFrondLeftVisual")
+        leftFrond.Shape = Enum.PartType.Block
+        leftFrond.Material = Enum.Material.Grass
+        leftFrond.Color = opts.color or Color3.fromRGB(102, 188, 92)
+        leftFrond.Size = Vector3.new(math.max(0.7, base.X * 0.16), math.max(0.25, base.Y * 0.16), math.max(4, base.Z * 0.9))
+        leftFrond.CFrame = CFrame.new(queryPart.Position + Vector3.new(-base.X * 0.18, visual.Size.Y * 0.58, 0)) * CFrame.Angles(math.rad(15), math.rad(-28), math.rad(10))
+
+        local rightFrond = self:GetOrCreateFoodAffordancePart(queryPart, "FoliageFrondRightVisual")
+        rightFrond.Shape = Enum.PartType.Block
+        rightFrond.Material = Enum.Material.Grass
+        rightFrond.Color = opts.color or Color3.fromRGB(74, 150, 70)
+        rightFrond.Size = Vector3.new(math.max(0.7, base.X * 0.16), math.max(0.25, base.Y * 0.16), math.max(4, base.Z * 0.9))
+        rightFrond.CFrame = CFrame.new(queryPart.Position + Vector3.new(base.X * 0.18, visual.Size.Y * 0.5, 0)) * CFrame.Angles(math.rad(-12), math.rad(32), math.rad(-10))
     end
 
-    visual.Transparency = 0
-    visual:SetAttribute("EdibleFoliageVisual", true)
-    visual:SetAttribute("VisibleGameplayAffordance", true)
-    visual:SetAttribute("ProceduralGameplayVisual", true)
-    visual:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
-    visual:SetAttribute("ReleaseVisibleGeneratedPartReason", "Readable edible foliage / carcass representation")
-    visual:SetAttribute("Decorative", true)
-    visual:SetAttribute("RestoreTransparency", 0)
     queryPart:SetAttribute("FoliageVisualName", self.FoliageVisualName)
     return visual
 end
@@ -1090,13 +1144,13 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             if not canopy then
                 canopy = Instance.new("Part")
                 canopy.Name = spec.name .. "_Canopy"
-                canopy.Shape = Enum.PartType.Block
                 canopy.Material = Enum.Material.Grass
                 canopy.Parent = zoneFolder
             end
-            canopy.Shape = Enum.PartType.Block
-            canopy.Size = spec.canopySize
-            canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + spec.canopySize.Y * 0.32, 0)
+            local canopySize = getReadableFallbackCanopySize(spec)
+            canopy.Shape = (spec.zone == "NurseryGrove" or spec.zone == "FernPlains") and Enum.PartType.Ball or Enum.PartType.Block
+            canopy.Size = canopySize
+            canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + canopySize.Y * 0.32, 0)
             canopy.Color = spec.canopyColor
             self:ApplyDressingAttributes(canopy, spec, "HiddenTreeCanopy")
 
