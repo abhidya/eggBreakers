@@ -2,11 +2,13 @@
 
 Date: 2026-05-31
 
-Status: SEARCH COMPLETE / INSERTION BLOCKED BY STUDIO AUTHORIZATION
+Status: SEARCH COMPLETE / RAW INSERTION BLOCKED / AUTHORIZED STUDIO SEARCH BRIDGE VERIFIED
 
 This pass used the Rust Roblox search MCP directly through `tools/roblox_search_direct.js`, which calls Creator Store Toolbox Service v2 via `search_assets`. Search is parallel-safe; the batch below was run as independent concurrent queries rather than serial Studio search.
 
 Insertion attempt: a small script-free candidate batch was attempted in the active `eggBreakers3.rbxl` Studio session with `InsertService:LoadAsset`. Every selected asset returned `User is not authorized to access Asset.` The empty batch marker was removed immediately and `AssetImportAuditService:AuditAndRepair({ mutate = true })` reported the live release-ready count back at `24`, so no fake import count was kept.
+
+Follow-up diagnosis on 2026-05-31 verified the practical workaround: do not use raw `InsertService:LoadAsset`. Re-query accepted `Roblox_Search` candidates through `Roblox_Studio.search_creator_store` with the exact string `<asset name> <asset id>`, then insert from the returned Studio `searchId` using `Roblox_Studio.insert_from_creator_store`. See `docs/assets/authorized-creator-store-import.md`.
 
 ## Commands Run
 
@@ -56,7 +58,15 @@ ROBLOX_SEARCH_MCP_BIN=/Users/abdulrehmanbhidya/PycharmProjects/roblox-studio-rus
 
 All returned `User is not authorized to access Asset.`
 
-Next insertion path should use the Roblox Studio Creator Store insertion/plugin path that has user authority, then immediately run:
+Next insertion path should use the Roblox Studio Creator Store insertion/plugin path that has user authority. Exact candidate searches verified as Studio-resolvable:
+
+| Candidate | Studio search query | Studio object types |
+| --- | --- | --- |
+| `Broken Car` `4675550604` | `Broken Car 4675550604` | `car`, `vehicle` |
+| `Mulet fish Mesh` `6923368893` | `Mulet fish Mesh 6923368893` | `fish`, `animal`, `sea creature` first; ignore unrelated returned types unless insertion proves otherwise |
+| `VelociRaptor Blue` `8585959958` | `VelociRaptor Blue 8585959958` | `dinosaur`, `creature` first |
+
+Then immediately run:
 
 1. Move accepted roots under `Workspace.Map.ImportedAssets/G018SearchBatchNNN` or `ReplicatedStorage.ImportedAssetLibrary`.
 2. Stamp `SourceAssetId`, `AssetManifestId`, `CreatorStoreOnly`, `ImportedVisibleAsset`, `ScriptsAudited`, and `PlacementRole`.
