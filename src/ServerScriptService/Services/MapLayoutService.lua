@@ -980,6 +980,49 @@ function MapLayoutService:FillTerrainBlock(terrain, center, size, material)
     terrain:FillBlock(CFrame.new(center), size, material)
 end
 
+function MapLayoutService:RaycastTerrainSurfaceY(x, z)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Include
+    params.FilterDescendantsInstances = { Workspace.Terrain }
+    local origin = Vector3.new(x, 1024, z)
+    local result = Workspace:Raycast(origin, Vector3.new(0, -2048, 0), params)
+    return result and result.Position.Y or nil
+end
+
+function MapLayoutService:GetGroundSurfaceYForPosition(position, zoneId)
+    local terrainY = self:RaycastTerrainSurfaceY(position.X, position.Z)
+    if terrainY then
+        return terrainY, "Terrain"
+    end
+    return self:GetGroundTopYForZone(zoneId), "ZoneTop"
+end
+
+function MapLayoutService:ResolveGroundedPartPosition(position, size, zoneId, clearance)
+    local surfaceY, source = self:GetGroundSurfaceYForPosition(position, zoneId)
+    local halfHeight = typeof(size) == "Vector3" and size.Y / 2 or 0
+    return Vector3.new(position.X, surfaceY + halfHeight + (clearance or 0), position.Z), surfaceY, source
+end
+
+function MapLayoutService:ResolveNPCSpawnMarkerPosition(spec, size)
+    local surfaceY, source = self:GetGroundSurfaceYForPosition(spec.position, spec.zone)
+    local aerialSpawn = spec.aerial == true or spec.kind == "AerialPrey" or spec.kind == "AerialPredator" or spec.kind == "FlyingPrey" or spec.flyingPrey == true
+    if aerialSpawn then
+        local altitude = spec.preferredAltitude or math.max(32, spec.position.Y - surfaceY)
+        return Vector3.new(spec.position.X, surfaceY + altitude, spec.position.Z), surfaceY, source
+    end
+    local halfHeight = typeof(size) == "Vector3" and size.Y / 2 or 1
+    local clearance = spec.spawnClearanceStuds or math.max(4, halfHeight)
+    return Vector3.new(spec.position.X, surfaceY + clearance, spec.position.Z), surfaceY, source
+end
+
+function MapLayoutService:ResolveWaterCenter(water)
+    local surfaceY, source = self:GetGroundSurfaceYForPosition(water.center, water.zone)
+    if source == "Terrain" then
+        return Vector3.new(water.center.X, surfaceY - water.size.Y / 2 + 0.15, water.center.Z), surfaceY, source
+    end
+    return water.center, surfaceY, source
+end
+
 function MapLayoutService:EnsureRouteMarker(folders, route)
     local marker = folders.Routes:FindFirstChild(route.name)
     if not marker then
@@ -1011,7 +1054,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
         marker.Transparency = 0.35
         marker.Parent = folders.WaterSources
     end
-    marker.Position = water.center
+    local waterCenter, surfaceY, surfaceSource = self:ResolveWaterCenter(water)
+    marker.Position = waterCenter
     marker.Size = water.size
     marker:SetAttribute("ShallowWater", true)
     marker:SetAttribute("WaterSource", true)
@@ -1022,6 +1066,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("ReleaseVisibleGeneratedPartReason", "Procedural shallow water source representation")
     marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
+    marker:SetAttribute("GroundTopY", surfaceY)
+    marker:SetAttribute("PlacementSurfaceSource", surfaceSource)
     marker:SetAttribute("SwimZone", water.swimZone == true)
     marker:SetAttribute("FishSpawnAllowed", water.fishSpawnAllowed == true)
     marker:SetAttribute("InteractionHint", "Drink water")
@@ -1165,7 +1211,8 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
     end
 
     for _, water in ipairs(self.ShallowWater) do
-        self:FillTerrainBlock(terrain, water.center, water.size, Enum.Material.Water)
+        local waterCenter = self:ResolveWaterCenter(water)
+        self:FillTerrainBlock(terrain, waterCenter, water.size, Enum.Material.Water)
         self:EnsureShallowWaterMarker(folders, water)
     end
 
@@ -1391,7 +1438,8 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
             marker.Size = Vector3.new(8, 2, 8)
             marker.Parent = folders.NPCSpawns
         end
-        marker.Position = spec.position
+        local markerPosition, groundTopY, surfaceSource = self:ResolveNPCSpawnMarkerPosition(spec, marker.Size)
+        marker.Position = markerPosition
         marker:SetAttribute("NPCSpawn", true)
         marker:SetAttribute("NPCKind", spec.kind)
         marker:SetAttribute("ZoneId", spec.zone)
@@ -1399,7 +1447,8 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("DangerousNPC", spec.dangerous == true)
         marker:SetAttribute("NestingHerd", spec.nestingHerd == true)
         marker:SetAttribute("SpeciesId", self:GetNPCSpawnSpeciesId(spec))
-        marker:SetAttribute("GroundTopY", self:GetGroundTopYForZone(spec.zone))
+        marker:SetAttribute("GroundTopY", groundTopY)
+        marker:SetAttribute("PlacementSurfaceSource", surfaceSource)
         marker:SetAttribute("FloatingAllowed", spec.aerial == true or spec.flyingPrey == true)
         marker:SetAttribute("PlacementRadiusStuds", self:GetPlacementRadius(marker.Size))
         marker:SetAttribute("AvoidOverlap", true)
@@ -1409,7 +1458,7 @@ function MapLayoutService:EnsureNPCSpawnMarkers(folders)
         marker:SetAttribute("SpeciesRelevantSpawn", preferredBiome == nil or preferredBiome == spec.zone or spec.zone == "NurseryGrove" or spec.nestingHerd == true)
         local aerialSpawn = spec.aerial == true or spec.kind == "AerialPrey" or spec.kind == "AerialPredator" or spec.kind == "FlyingPrey" or spec.flyingPrey == true
         marker:SetAttribute("AerialSpawn", aerialSpawn)
-        marker:SetAttribute("PreferredAltitude", spec.preferredAltitude or (aerialSpawn and marker.Position.Y or nil))
+        marker:SetAttribute("PreferredAltitude", spec.preferredAltitude or (aerialSpawn and marker.Position.Y - groundTopY or nil))
         marker:SetAttribute("FlyingPrey", spec.kind == "AerialPrey" or spec.kind == "FlyingPrey" or spec.flyingPrey == true)
         marker:SetAttribute("FlightTarget", spec.kind == "AerialPrey" or spec.kind == "FlyingPrey" or spec.flyingPrey == true)
         local liveCarnivoreFood = self:IsLiveCarnivoreFoodKind(spec.kind)
@@ -1443,7 +1492,8 @@ function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
             spawn.Size = Vector3.new(18, 2, 18)
             spawn.Parent = spawnFolder
         end
-        spawn.Position = spec.position
+        local spawnPosition, groundTopY, surfaceSource = self:ResolveGroundedPartPosition(spec.position, spawn.Size, spec.zone, 0)
+        spawn.Position = spawnPosition
         spawn:SetAttribute("GameplayVolume", true)
         spawn:SetAttribute("PlayerSpawn", true)
         spawn:SetAttribute("StarterSpeciesSpawn", true)
@@ -1453,7 +1503,8 @@ function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
         spawn:SetAttribute("PitchDegrees", 0)
         spawn:SetAttribute("RollDegrees", 0)
         spawn:SetAttribute("SourceExpectedUpright", true)
-        spawn:SetAttribute("GroundTopY", self:GetGroundTopYForZone(spec.zone))
+        spawn:SetAttribute("GroundTopY", groundTopY)
+        spawn:SetAttribute("PlacementSurfaceSource", surfaceSource)
         spawn:SetAttribute("FloatingAllowed", false)
         spawn:SetAttribute("PlacementRadiusStuds", self:GetPlacementRadius(spawn.Size))
         spawn:SetAttribute("AvoidOverlap", true)

@@ -2,6 +2,8 @@
 
 Release honesty rule: **G018 is not PASS** until fresh Studio/live E2E, all-category TestRunner, mobile/client proof, RBXL save/reopen persistence, publish-blocker scan, and the 500 release-ready imported visible asset gate all pass. G016 failures remain release blockers.
 
+Story beat audit: source coverage for Storyboard Beats 0-8 is tracked in `docs/G018/STORY_BEAT_COVERAGE_AUDIT.md`. That audit updates import expectations from strip-all-scripts to reviewed-script policy: dynamic Creator Store executable code may ship only with source review, owner, sandbox/authority checks, tests, and integration proof.
+
 | Story ID | Story | Unit | Integration | E2E | Client | Security | Placement/Asset | Live Proof | Current Status | Evidence | Next Failing Test |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | G018-US01 | Small prey categories drive prey behavior and HUD identity | FIXING | FIXING | FAIL | FIXING | PASS | BLOCKED | BLOCKED | FIXING | Shared profile/category plumbing and HUD category display added in source; no live prey proof yet. | G018FinalGate live proof attr `G018US01LiveProofPassed` |

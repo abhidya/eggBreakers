@@ -26,6 +26,44 @@ table.insert(suite.tests, { name = "spawns avoid terrain props water predator da
     spawn:Destroy()
 end })
 
+table.insert(suite.tests, { name = "map placement resolves against live terrain height", run = function()
+    local oldRaycastTerrainSurfaceY = MapLayoutService.RaycastTerrainSurfaceY
+    local ok, err = pcall(function()
+        MapLayoutService.RaycastTerrainSurfaceY = function(_, _x, _z)
+            return 48
+        end
+
+        local playerPosition, playerGroundY, playerSource = MapLayoutService:ResolveGroundedPartPosition(Vector3.new(-2000, 12, 0), Vector3.new(18, 2, 18), "NurseryGrove", 0)
+        Assert.equals(playerPosition.Y, 49, "player spawn center rests on live terrain")
+        Assert.equals(playerGroundY, 48, "player spawn records terrain ground")
+        Assert.equals(playerSource, "Terrain", "player spawn source is live terrain")
+
+        local npcPosition, npcGroundY = MapLayoutService:ResolveNPCSpawnMarkerPosition({
+            position = Vector3.new(-1950, 14, 50),
+            zone = "NurseryGrove",
+            kind = "Prey",
+        }, Vector3.new(8, 2, 8))
+        Assert.equals(npcPosition.Y, 52, "ground NPC marker is lifted above live terrain")
+        Assert.equals(npcGroundY, 48, "NPC marker records terrain ground")
+
+        local aerialPosition = MapLayoutService:ResolveNPCSpawnMarkerPosition({
+            position = Vector3.new(-1090, 60, -437),
+            zone = "RedstoneCanyon",
+            kind = "AerialPrey",
+        }, Vector3.new(8, 2, 8))
+        Assert.equals(aerialPosition.Y, 80, "aerial marker preserves flight room over live terrain")
+
+        local waterCenter = MapLayoutService:ResolveWaterCenter({
+            center = Vector3.new(-2000, 10, 70),
+            size = Vector3.new(160, 5, 90),
+            zone = "NurseryGrove",
+        })
+        Assert.between(waterCenter.Y, 45.64, 45.66, "water volume top is brought to terrain surface")
+    end)
+    MapLayoutService.RaycastTerrainSurfaceY = oldRaycastTerrainSurfaceY
+    if not ok then error(err) end
+end })
+
 
 table.insert(suite.tests, { name = "starter species have multiple biome routed player spawns", run = function()
     MapLayoutService:EnsureSpawnSafety()

@@ -143,7 +143,7 @@ Current candidate decisions:
 - Meat/carcass: no accepted candidate yet. `99997340604947` (`Frozen Meat Pack`) is huge (`82.1 x 19.0 x 108.0`); `186499985` (`Butchered Pig`) is primitive/weak. Keep searching before rolling a release visual.
 - Scent/waypoint UX: no accepted asset yet. `122873943814595` is a zero-size GUI/system preview with no useful rating signal and script-risk; current custom no-arrow scent cue remains safer until a validated UI asset exists.
 Acceptance criteria:
-- MeshPart/model geometry, readable in-world at gameplay distance, sane scale, no uncontrolled scripts/autoplay audio after review/sanitization, and usable rating/favorite/creator signal from `Roblox_Search`.
+- MeshPart/model geometry, readable in-world at gameplay distance, sane scale, no uncontrolled scripts/autoplay audio after review/sanitization, reviewed-script approval for any dynamic imported executable code, and usable rating/favorite/creator signal from `Roblox_Search`.
 Reject criteria:
 - Primitive/CSG/blocky props, glowing balls, flat texture-only food, fossil exhibits pretending to be edible carcasses, oversized nests, false-direction UI arrows, or any model whose helper root/collider is visible/collidable.
 
@@ -193,7 +193,7 @@ Import candidates:
 - `2915304314` for scaled bones/fossil/carrion dressing only, not edible meat until visual proof says it reads as food.
 Required import probe:
 - Insert into `ReplicatedStorage.ImportedAssetLibrary` or a temporary `Workspace.AssetProbe` in `eggBreakers2`.
-- Review scripts/autoplay audio before marking candidate usable; adapt useful dynamic scripts under eggBreakers authority and quarantine unsafe/unowned behavior.
+- Review scripts/autoplay audio before marking candidate usable; adapt useful dynamic scripts under eggBreakers authority only after source review, owner assignment, sandbox/authority checks, focused tests, and integration proof; quarantine unsafe/unowned behavior.
 - Stamp `SourceAssetId`, `CreatorStoreOnly`, and `ImportedVisibleAsset` on accepted roots.
 - Capture eggBreakers2 screenshot from gameplay distance with UI hidden.
 - Only then wire MapLayout/FoodWater/Nest visuals to imported assets; keep procedural clusters as non-release fallback.
