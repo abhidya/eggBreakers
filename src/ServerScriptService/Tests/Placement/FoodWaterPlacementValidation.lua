@@ -106,6 +106,21 @@ table.insert(suite.tests, { name = "imported food visual templates are preferred
     carcassTemplate:Destroy()
 end })
 
+table.insert(suite.tests, { name = "food resolver does not use carnivore carcass template for herbivore plants", run = function()
+    local carcassTemplate = makeImportedFoodTemplate("TestImportedTutorialCarcassVisual", "TutorialCarcass", "Carnivore")
+    local query = Instance.new("Part")
+    query.Name = "HerbivorePlantProbe"
+    query:SetAttribute("FoodKind", "StarterPlant")
+    query:SetAttribute("Diet", "Herbivore")
+
+    local resolved = MapLayoutService:ResolveImportedFoodVisualTemplate(query)
+
+    Assert.equals(resolved, nil, "herbivore plant resolver rejects carnivore carcass template")
+
+    query:Destroy()
+    carcassTemplate:Destroy()
+end })
+
 table.insert(suite.tests, { name = "procedural food visual remains fallback when import absent", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     local source = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")

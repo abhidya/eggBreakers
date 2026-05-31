@@ -226,10 +226,18 @@ function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
     if not (instance and (instance:IsA("Model") or instance:IsA("BasePart")) and hasVisibleBasePart(instance)) then
         return false
     end
+    local templateKind = instance:GetAttribute("FoodKind")
+    local templateDiet = instance:GetAttribute("Diet")
+    if templateKind ~= nil and kind ~= nil and templateKind ~= kind then
+        return false
+    end
+    if templateDiet ~= nil and diet ~= nil and templateDiet ~= diet then
+        return false
+    end
     if instance:GetAttribute("ImportedFoodVisualTemplate") == true or instance:GetAttribute("FoodVisualTemplate") == true then
         return true
     end
-    if instance:GetAttribute("FoodKind") == kind or instance:GetAttribute("Diet") == diet then
+    if templateKind == kind or templateDiet == diet then
         return true
     end
 
