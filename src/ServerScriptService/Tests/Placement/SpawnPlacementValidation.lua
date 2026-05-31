@@ -98,6 +98,53 @@ table.insert(suite.tests, { name = "starter species have multiple biome routed p
     end
 end })
 
+table.insert(suite.tests, { name = "citipati routed spawns stay inside their story biomes", run = function()
+    local checked = {}
+    for _, spec in ipairs(MapLayoutService.PlayerSpawnPlacements) do
+        if spec.speciesId == "citipati" and (spec.zone == "JungleBasin" or spec.zone == "FernPlains") then
+            local zone = MapLayoutService.ZoneTerrain[spec.zone]
+            Assert.notNil(zone, "zone terrain exists for " .. spec.zone)
+            local dx = math.abs(spec.position.X - zone.center.X)
+            local dz = math.abs(spec.position.Z - zone.center.Z)
+            Assert.truthy(dx <= zone.size.X * 0.5, spec.name .. " X stays within " .. spec.zone)
+            Assert.truthy(dz <= zone.size.Z * 0.5, spec.name .. " Z stays within " .. spec.zone)
+            checked[spec.zone] = true
+        end
+    end
+
+    Assert.equals(checked.JungleBasin, true, "citipati has JungleBasin story spawn")
+    Assert.equals(checked.FernPlains, true, "citipati has FernPlains story spawn")
+end })
+
+table.insert(suite.tests, { name = "citipati materialized spawns resolve inside story biomes", run = function()
+    MapLayoutService:EnsureSpawnSafety()
+    local folders = MapLayoutService:EnsureMapFolders()
+    local spawnFolder = folders.Map:FindFirstChild("SpawnLocations")
+    Assert.notNil(spawnFolder, "SpawnLocations folder exists")
+
+    local actualByZone = {}
+    for _, spawn in ipairs(spawnFolder:GetChildren()) do
+        if spawn:GetAttribute("PlayerSpawn") == true and spawn:GetAttribute("SpeciesId") == "citipati" then
+            local zoneId = spawn:GetAttribute("ZoneId")
+            local zone = MapLayoutService.ZoneTerrain[zoneId]
+            Assert.notNil(zone, "citipati spawn zone terrain exists " .. tostring(zoneId))
+            local dx = math.abs(spawn.Position.X - zone.center.X)
+            local dz = math.abs(spawn.Position.Z - zone.center.Z)
+            Assert.truthy(dx <= zone.size.X * 0.5 + 1, spawn.Name .. " materialized X stays within " .. zoneId)
+            Assert.truthy(dz <= zone.size.Z * 0.5 + 1, spawn.Name .. " materialized Z stays within " .. zoneId)
+            actualByZone[zoneId] = true
+        end
+    end
+
+    local spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies("citipati", "JungleBasin", 1)
+    Assert.notNil(spawn, "citipati JungleBasin spawn resolves")
+    Assert.equals(spawn:GetAttribute("SpeciesId"), "citipati", "resolver returns citipati spawn")
+    Assert.equals(spawn:GetAttribute("ZoneId"), "JungleBasin", "resolver honors Citipati JungleBasin story biome")
+    Assert.truthy(spawnCFrame.UpVector:Dot(Vector3.new(0, 1, 0)) >= 0.99, "resolved Citipati spawn remains upright")
+    Assert.equals(actualByZone.JungleBasin, true, "materialized Citipati JungleBasin spawn exists")
+    Assert.equals(actualByZone.FernPlains, true, "materialized Citipati FernPlains spawn exists")
+end })
+
 local function assertNoOverlap(instances, minDistance, label)
     for i = 1, #instances do
         for j = i + 1, #instances do

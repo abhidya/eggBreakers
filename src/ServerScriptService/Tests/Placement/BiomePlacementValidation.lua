@@ -15,6 +15,16 @@ local READABILITY_BIOMES = {
 
 local MAX_FALLBACK_CANOPY_SIZE = 18
 
+local function ensureFolder(parent, name)
+    local folder = parent:FindFirstChild(name)
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = name
+        folder.Parent = parent
+    end
+    return folder
+end
+
 local function isOversizedBlockFallbackCanopy(instance)
     if not instance:IsA("BasePart") then return false end
     if instance:GetAttribute("ImportedVisibleAsset") == true then return false end
@@ -93,6 +103,56 @@ table.insert(suite.tests, { name = "nursery and fern plains reject oversized blo
     end
 
     Assert.truthy(inspected > 0, "readability audit inspected visible Nursery/FernPlains dressing")
+end })
+
+table.insert(suite.tests, { name = "imported biome dressing hides block anchors", run = function()
+    local existingLibrary = ReplicatedStorage:FindFirstChild(MapLayoutService.ImportedAssetLibraryName)
+    local stashName = "_BiomePlacementValidationImportedAssetLibrary"
+    local stashedLibrary = ReplicatedStorage:FindFirstChild(stashName)
+    if stashedLibrary then stashedLibrary:Destroy() end
+    if existingLibrary then existingLibrary.Name = stashName end
+
+    local library = ensureFolder(ReplicatedStorage, MapLayoutService.ImportedAssetLibraryName)
+    local template = Instance.new("Model")
+    template.Name = "Jungle Plant Dressing Test"
+    template:SetAttribute("ImportedVisibleAsset", true)
+    template:SetAttribute("CreatorStoreOnly", true)
+    template:SetAttribute("SourceAssetId", "78440826469281")
+    template.Parent = library
+
+    local visiblePart = Instance.new("Part")
+    visiblePart.Name = "FoliageMeshProxy"
+    visiblePart.Size = Vector3.new(8, 9, 7)
+    visiblePart.Transparency = 0
+    visiblePart.Parent = template
+    template.PrimaryPart = visiblePart
+
+    local ok, err = pcall(function()
+        local folders = MapLayoutService:EnsureMapFolders()
+        MapLayoutService:EnsureBiomeDressing(folders)
+
+        local importedCount = 0
+        local hiddenAnchors = 0
+        for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+            if instance.Name == MapLayoutService.ImportedDressingVisualName and instance:GetAttribute("ImportedDressingVisual") == true then
+                importedCount = importedCount + 1
+                Assert.equals(instance:GetAttribute("CreatorStoreOnly"), true, "imported dressing stays Creator Store sourced")
+                Assert.equals(instance:GetAttribute("BiomeDressing"), true, "imported dressing keeps biome tag")
+            end
+            if instance:IsA("BasePart") and instance:GetAttribute("ImportedDressingVisualAttached") == true then
+                hiddenAnchors = hiddenAnchors + 1
+                Assert.equals(instance.Transparency, 1, "block anchor is hidden after imported dressing attaches")
+                Assert.equals(instance:GetAttribute("ReleaseHiddenProceduralVisual"), true, "hidden anchor remains release-auditable")
+            end
+        end
+
+        Assert.truthy(importedCount >= 1, "at least one imported biome dressing visual attached")
+        Assert.truthy(hiddenAnchors >= 1, "at least one procedural block anchor was hidden")
+    end)
+
+    library:Destroy()
+    if existingLibrary then existingLibrary.Name = MapLayoutService.ImportedAssetLibraryName end
+    if not ok then error(err) end
 end })
 
 table.insert(suite.tests, { name = "scenic landmarks and flower clusters are materialized", run = function()

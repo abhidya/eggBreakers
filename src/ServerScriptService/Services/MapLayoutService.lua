@@ -443,6 +443,7 @@ function MapLayoutService:AttachImportedDressingVisual(anchor, spec, role)
 
     anchor.Transparency = 1
     anchor:SetAttribute("ReleaseHiddenProceduralVisual", true)
+    anchor:SetAttribute("InvisibleQueryHelper", true)
     anchor:SetAttribute("ProceduralGameplayVisual", nil)
     anchor:SetAttribute("ImportedDressingVisualAttached", true)
     anchor:SetAttribute("ImportedDressingTemplate", source:GetFullName())
@@ -1039,8 +1040,8 @@ MapLayoutService.PlayerSpawnPlacements = {
     { name = "UtahraptorRedstoneSpawn_01", speciesId = "utahraptor", zone = "RedstoneCanyon", position = Vector3.new(-1015, 15, -210), yawDegrees = 145 },
     { name = "UtahraptorNurserySpawn_01", speciesId = "utahraptor", zone = "NurseryGrove", position = Vector3.new(-1870, 15, -78), yawDegrees = 118 },
 
-    { name = "CitipatiJungleSpawn_01", speciesId = "citipati", zone = "JungleBasin", position = Vector3.new(-260, 17, -720), yawDegrees = 64 },
-    { name = "CitipatiFernSpawn_01", speciesId = "citipati", zone = "FernPlains", position = Vector3.new(640, 15, -175), yawDegrees = -92 },
+    { name = "CitipatiJungleSpawn_01", speciesId = "citipati", zone = "JungleBasin", position = Vector3.new(-1455, 17, 960), yawDegrees = 64 },
+    { name = "CitipatiFernSpawn_01", speciesId = "citipati", zone = "FernPlains", position = Vector3.new(-1180, 15, 105), yawDegrees = -92 },
     { name = "CitipatiNurserySpawn_01", speciesId = "citipati", zone = "NurseryGrove", position = Vector3.new(-1832, 15, 20), yawDegrees = 122 },
 }
 
@@ -1166,6 +1167,23 @@ function MapLayoutService:FillTerrainBlock(terrain, center, size, material)
     terrain:FillBlock(CFrame.new(center), size, material)
 end
 
+function MapLayoutService:FillTerrainWaterBody(terrain, center, size)
+    local longAxisIsX = size.X >= size.Z
+    local longSize = longAxisIsX and size.X or size.Z
+    local shortSize = longAxisIsX and size.Z or size.X
+    local radius = math.max(8, shortSize * 0.5)
+    local step = math.max(radius * 0.72, 10)
+    local count = math.max(1, math.ceil(longSize / step))
+    local start = -((count - 1) * step) * 0.5
+    for index = 1, count do
+        local offset = start + (index - 1) * step
+        local position = longAxisIsX
+            and Vector3.new(center.X + offset, center.Y, center.Z)
+            or Vector3.new(center.X, center.Y, center.Z + offset)
+        terrain:FillCylinder(CFrame.new(position), size.Y, radius, Enum.Material.Water)
+    end
+end
+
 function MapLayoutService:RaycastTerrainSurfaceY(x, z)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Include
@@ -1237,19 +1255,22 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
         marker.CanQuery = true
         marker.Material = Enum.Material.Glass
         marker.Color = Color3.fromRGB(58, 137, 184)
-        marker.Transparency = 0.35
         marker.Parent = folders.WaterSources
     end
     local waterCenter, surfaceY, surfaceSource = self:ResolveWaterCenter(water)
     marker.Position = waterCenter
     marker.Size = water.size
+    marker.Transparency = 1
+    marker.Material = Enum.Material.Glass
+    marker.Color = Color3.fromRGB(58, 137, 184)
     marker:SetAttribute("ShallowWater", true)
     marker:SetAttribute("WaterSource", true)
     marker:SetAttribute("ZoneId", water.zone)
     marker:SetAttribute("BiomeId", water.zone)
     marker:SetAttribute("ProceduralWaterSource", true)
-    marker:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
-    marker:SetAttribute("ReleaseVisibleGeneratedPartReason", "Procedural shallow water source representation")
+    marker:SetAttribute("ReleaseVisibleGeneratedPartAllowed", nil)
+    marker:SetAttribute("ReleaseVisibleGeneratedPartReason", nil)
+    marker:SetAttribute("ReleaseHiddenProceduralVisual", true)
     marker:SetAttribute("TutorialSafe", water.tutorialSafe == true)
     marker:SetAttribute("SwimmableDepthStuds", water.size.Y)
     marker:SetAttribute("GroundTopY", surfaceY)
@@ -1257,12 +1278,64 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("SwimZone", water.swimZone == true)
     marker:SetAttribute("FishSpawnAllowed", water.fishSpawnAllowed == true)
     marker:SetAttribute("InteractionHint", "Drink water")
-    marker:SetAttribute("VisibleGameplayAffordance", true)
+    marker:SetAttribute("VisibleGameplayAffordance", false)
     marker:SetAttribute("GameplayQuery", true)
+    marker:SetAttribute("InvisibleQueryHelper", true)
     if not CollectionService:HasTag(marker, "WaterSource") then
         CollectionService:AddTag(marker, "WaterSource")
     end
+    self:EnsureShallowWaterVisual(marker, water)
     return marker
+end
+
+function MapLayoutService:EnsureShallowWaterVisual(marker, water)
+    local visualFolder = marker:FindFirstChild("WaterVisuals")
+    if not visualFolder then
+        visualFolder = Instance.new("Folder")
+        visualFolder.Name = "WaterVisuals"
+        visualFolder.Parent = marker
+    end
+
+    local visualCount = water.swimZone and 4 or 3
+    local offsets = {
+        Vector3.new(0, 0, 0),
+        Vector3.new(-0.18, 0, 0.12),
+        Vector3.new(0.16, 0, -0.1),
+        Vector3.new(0.05, 0, 0.2),
+    }
+    for index = 1, visualCount do
+        local visual = visualFolder:FindFirstChild("Surface_" .. tostring(index))
+        if not visual then
+            visual = Instance.new("Part")
+            visual.Name = "Surface_" .. tostring(index)
+            visual.Shape = Enum.PartType.Ball
+            visual.Anchored = true
+            visual.CanCollide = false
+            visual.CanTouch = false
+            visual.CanQuery = false
+            visual.Parent = visualFolder
+        end
+        local scale = 1 - (index - 1) * 0.18
+        local offset = offsets[index] or Vector3.new(0, 0, 0)
+        visual.Size = Vector3.new(
+            math.max(18, marker.Size.X * scale),
+            0.55,
+            math.max(14, marker.Size.Z * math.max(0.52, scale - 0.08))
+        )
+        visual.Position = marker.Position
+            + Vector3.new(marker.Size.X * offset.X, marker.Size.Y * 0.5 + 0.08 + index * 0.01, marker.Size.Z * offset.Z)
+        visual.Material = Enum.Material.Glass
+        visual.Color = water.swimZone and Color3.fromRGB(54, 150, 190) or Color3.fromRGB(78, 164, 196)
+        visual.Transparency = index == 1 and 0.28 or 0.42
+        visual:SetAttribute("WaterVisual", true)
+        visual:SetAttribute("VisibleGameplayAffordance", true)
+        visual:SetAttribute("Decorative", true)
+        visual:SetAttribute("ZoneId", water.zone)
+        visual:SetAttribute("BiomeId", water.zone)
+        visual:SetAttribute("SourceWaterName", marker.Name)
+        visual:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+        visual:SetAttribute("ReleaseVisibleGeneratedPartReason", "Rounded visible water surface for shallow gameplay water")
+    end
 end
 
 function MapLayoutService:EnsureFoodSourcePlacements(folders)
@@ -1398,7 +1471,7 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
 
     for _, water in ipairs(self.ShallowWater) do
         local waterCenter = self:ResolveWaterCenter(water)
-        self:FillTerrainBlock(terrain, waterCenter, water.size, Enum.Material.Water)
+        self:FillTerrainWaterBody(terrain, waterCenter, water.size)
         self:EnsureShallowWaterMarker(folders, water)
     end
 
@@ -1542,6 +1615,14 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             canopy.Color = spec.canopyColor
             self:ApplyDressingAttributes(canopy, spec, "HiddenTreeCanopy")
 
+            local importedTree = self:AttachImportedDressingVisual(trunk, spec, "ImportedTreeDressing")
+            if importedTree then
+                canopy.Transparency = 1
+                canopy:SetAttribute("ReleaseHiddenProceduralVisual", true)
+                canopy:SetAttribute("InvisibleQueryHelper", true)
+                canopy:SetAttribute("ProceduralGameplayVisual", nil)
+            end
+
             local browse = zoneFolder:FindFirstChild(spec.name .. "_Browse")
             if not browse then
                 browse = Instance.new("Part")
@@ -1571,6 +1652,7 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             prop.Color = spec.color
             prop.Material = spec.material
             self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
+            self:AttachImportedDressingVisual(prop, spec, "ImportedBiomeDressing")
 
             if self:IsVegetationBrowseSpec(spec) then
                 local browse = zoneFolder:FindFirstChild(spec.name .. "_Browse")

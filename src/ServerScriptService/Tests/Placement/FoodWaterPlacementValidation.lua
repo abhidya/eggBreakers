@@ -22,6 +22,19 @@ local function countVisibleFoodAffordances(food)
     return count
 end
 
+local function countVisibleWaterAffordances(water)
+    local count = 0
+    for _, descendant in ipairs(water:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("WaterVisual") == true then
+            Assert.truthy(descendant.Transparency < 1, "water visual starts readable " .. descendant.Name)
+            Assert.equals(descendant.CanQuery, false, "water visual is not the gameplay query " .. descendant.Name)
+            Assert.equals(descendant:GetAttribute("VisibleGameplayAffordance"), true, "water visual is stamped readable " .. descendant.Name)
+            count = count + 1
+        end
+    end
+    return count
+end
+
 local function makeImportedFoodTemplate(name, kind, diet)
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     if not library then
@@ -66,7 +79,9 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialFood.Transparency, 1, "tutorial food hidden for release")
     Assert.equals(tutorialFood:GetAttribute("InvisibleQueryHelper"), true, "tutorial food remains an invisible query helper")
     Assert.falsy(tutorialFood:GetAttribute("VisibleGameplayAffordance"), "tutorial food does not expose procedural visuals")
-    Assert.truthy(tutorialWater.Transparency < 1, "tutorial water visible")
+    Assert.equals(tutorialWater.Transparency, 1, "tutorial water query hidden for release")
+    Assert.equals(tutorialWater:GetAttribute("InvisibleQueryHelper"), true, "tutorial water remains an invisible query helper")
+    Assert.truthy(countVisibleWaterAffordances(tutorialWater) >= 3, "tutorial water has rounded readable visual surfaces")
     Assert.equals(tutorialFood:GetAttribute("TutorialSafe"), true, "tutorial food marked safe")
     Assert.equals(tutorialWater:GetAttribute("TutorialSafe"), true, "tutorial water marked safe")
     Assert.equals(tutorialMeat:GetAttribute("TutorialSafe"), true, "tutorial meat marked safe")
@@ -156,7 +171,7 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
     for _, target in ipairs(CollectionService:GetTagged("WaterSource")) do
         if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
             counts.water = counts.water + 1
-            Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby water is visibly marked")
+            Assert.truthy(countVisibleWaterAffordances(target) >= 1, "nearby water has visible rounded affordance")
         end
     end
     for _, target in ipairs(CollectionService:GetTagged("TreeProp")) do
