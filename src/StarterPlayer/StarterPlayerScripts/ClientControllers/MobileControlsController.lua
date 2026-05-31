@@ -59,7 +59,7 @@ end
 -- Scent cue shown in the NearestActionHintLabel.
 -- Nearby targets sparkle; distant targets use a non-directional scent trail.
 function MobileControlsController:BuildWaypointText(targetType, distance, diet)
-    if not targetType or targetType == "None" then return "◌ 🌿  💧" end
+    if not targetType or targetType == "None" then return "◌ " .. self:BuildTargetIcon("Food", diet) .. "  💧" end
     local icon   = self:BuildTargetIcon(targetType, diet)
     local meters = math.max(0, tonumber(distance) or 0)
     local pulse  = meters <= 14 and "✨" or "〰"
@@ -227,7 +227,7 @@ local BUTTON_LABELS = {
     Attack   = "🦷",
     Sprint   = "⚡",
     Call     = "📣",
-    RestHide = "🌿",
+    RestHide = "🌿💤",
     Flight   = "🪽",
     Swim     = "🌊",
 }
@@ -237,7 +237,7 @@ local BUTTON_ICONS = {
     Attack   = "🦷",
     Sprint   = "⚡",
     Call     = "📣",
-    RestHide = "🌿",
+    RestHide = "🌿💤",
     Flight   = "🪽",
     Swim     = "🌊",
 }
@@ -303,6 +303,7 @@ function MobileControlsController:CreateControls(settings)
         -- asserted by MobileControlsTests stays geometrically true.
         button.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
         button.TextStrokeTransparency = 0.45
+        button.Font = Enum.Font.FredokaOne
         -- Flight and Swim start hidden until species unlocks them
         if name == "Flight" or name == "Swim" then
             button.Visible         = false

@@ -35,7 +35,10 @@ table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur select
     Assert.notNil(parasaurolophus, "parasaurolophus option exists")
     Assert.notNil(raptor, "utahraptor option exists")
     Assert.equals(raptor:GetAttribute("SpeciesId"), "utahraptor", "button carries selected species id")
+    Assert.equals(raptor:GetAttribute("StarterRole"), "pack hunter", "button carries first-session role cue")
+    Assert.equals(raptor:GetAttribute("FirstSessionReadable"), true, "button is marked as first-session readable")
     Assert.truthy(string.find(parasaurolophus.Text, "Parasaurolophus", 1, true) ~= nil, "button names readable dinosaur")
+    Assert.truthy(string.find(parasaurolophus.Text, "safe grazer", 1, true) ~= nil, "button explains herbivore role without prose wall")
 
     gui:Destroy()
     HatchUIController.Gui = oldGui
@@ -144,6 +147,8 @@ end })
 table.insert(suite.tests, { name = "hatch prompt clears mobile action guidance", run = function()
     local promptBottom = HatchUIController.PromptPosition.Y.Offset + HatchUIController.PromptSize.Y.Offset
     local meterBottom = HatchUIController.MeterPosition.Y.Offset + HatchUIController.MeterSize.Y.Offset
+    local selectorBottom = HatchUIController.SelectorPosition.Y.Offset + HatchUIController.SelectorSize.Y.Offset
+    Assert.truthy(selectorBottom <= HatchUIController.PromptPosition.Y.Offset, "starter selector clears hatch prompt")
     Assert.truthy(promptBottom <= -405, "hatch prompt sits above mobile guidance stack")
     Assert.truthy(meterBottom <= -360, "hatch meter clears action guidance labels")
 end })

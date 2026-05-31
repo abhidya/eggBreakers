@@ -329,7 +329,7 @@ local function wireMobileButtons(result)
         setButtonContext(gui:FindFirstChild("AttackButton"), "🦷 " .. ClientBootstrap:GetPrimaryAttack(), true)
         setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "⚡ low" or "⚡", stats.stamina == nil or stats.stamina >= 5)
         setButtonContext(gui:FindFirstChild("CallButton"), "📣", true)
-        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "🌿 cozy" or "🌿", true)
+        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "🌿💤" or "🌿 Rest", true)
         local canFly = modes.Flight == true or modes.flight == true or modes.flying == true
         local canSwim = modes.Swim == true or modes.swim == true or modes.swimming == true
         setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "🪽" or "", canFly, true)
@@ -404,7 +404,7 @@ local function wireMobileButtons(result)
             InputController:RequestRest(isHidden)
             ClientBootstrap:PlayActionMotion("Hide")
             applyHiddenVisual(isHidden)
-            restHide.Text = isHidden and "🌿 Cozy" or "🌿 Rest"
+            restHide.Text = isHidden and "🌿💤" or "🌿 Rest"
             setButtonActive(restHide, isHidden)
             markButtonPressed(restHide, isHidden and "Cozy" or "Ready")
             showFeedback(gui, isHidden and "🌿💤" or "✅", restHide)

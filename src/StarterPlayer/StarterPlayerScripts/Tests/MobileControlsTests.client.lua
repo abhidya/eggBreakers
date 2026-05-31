@@ -103,7 +103,7 @@ end })
 table.insert(suite.tests, { name = "mobile buttons expose icon-first minimal labels", run = function()
     local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     local controlsGui = result.Gui
-    local expected = { EatDrink = "🍎💧", Attack = "🦷", Sprint = "⚡", Call = "📣", RestHide = "🌿", Flight = "🪽", Swim = "🌊" }
+    local expected = { EatDrink = "🍎💧", Attack = "🦷", Sprint = "⚡", Call = "📣", RestHide = "🌿💤", Flight = "🪽", Swim = "🌊" }
     for name, text in pairs(expected) do
         local button = controlsGui:FindFirstChild(name .. "Button")
         Assert.equals(button.Text, text, name .. " label is icon-first/minimal")
@@ -122,11 +122,11 @@ table.insert(suite.tests, { name = "waypoint tracker stays icon based", run = fu
     local food = MobileControlsController:BuildWaypointText("Food", 12.4, "Herbivore")
     local water = MobileControlsController:BuildWaypointText("Water", 7.6)
     local distant = MobileControlsController:BuildWaypointText("Food", 42.2, "Carnivore")
-    local none = MobileControlsController:BuildWaypointText("None")
+    local none = MobileControlsController:BuildWaypointText("None", nil, "Carnivore")
     Assert.truthy(string.find(food, "✨ 🌿 12m", 1, true) ~= nil, "nearby herbivore food uses sense pulse and distance")
     Assert.truthy(string.find(water, "✨ 💧 8m", 1, true) ~= nil, "nearby water waypoint uses sparkle cue and rounded distance")
     Assert.truthy(string.find(distant, "〰 🍖 42m", 1, true) ~= nil, "distant carnivore food uses scent trail and diet icon")
-    Assert.truthy(string.find(none, "🌿", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows food and water icons")
+    Assert.truthy(string.find(none, "🍖", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows diet-valid food and water icons")
     Assert.truthy(string.find(food, "Food", 1, true) == nil, "food word removed from tracker")
     Assert.truthy(string.find(water, "Water", 1, true) == nil, "water word removed from tracker")
     Assert.truthy(string.find(food, "⬆", 1, true) == nil and string.find(distant, "⬆", 1, true) == nil, "target tracker never uses generic up arrow")

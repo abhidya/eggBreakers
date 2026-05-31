@@ -8,16 +8,24 @@ HatchUIController.PromptPosition = UDim2.new(0.5, -210, 1, -470)
 HatchUIController.MeterPosition = UDim2.new(0.5, -180, 1, -405)
 HatchUIController.PromptSize = UDim2.fromOffset(420, 52)
 HatchUIController.MeterSize = UDim2.fromOffset(360, 18)
-HatchUIController.SelectorPosition = UDim2.new(0.5, -230, 1, -560)
-HatchUIController.SelectorSize = UDim2.fromOffset(460, 72)
+HatchUIController.SelectorPosition = UDim2.new(0.5, -238, 1, -622)
+HatchUIController.SelectorSize = UDim2.fromOffset(476, 108)
 HatchUIController.StarterSpecies = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
+
+local starterRoleText = {
+    coelophysis = "fast scavenger",
+    parasaurolophus = "safe grazer",
+    utahraptor = "pack hunter",
+    citipati = "nest forager",
+}
 
 function HatchUIController:GetSpeciesButtonText(speciesId)
     local species = SpeciesConfig[speciesId]
     local name = species and species.DisplayName or speciesId
     local diet = species and species.Diet or ""
     local icon = diet == "Carnivore" and "🍖" or (diet == "Omnivore" and "🍽️" or "🌿")
-    return string.format("%s %s", icon, name)
+    local role = starterRoleText[speciesId] or (species and species.Role) or "survivor"
+    return string.format("%s %s\n%s", icon, name, role)
 end
 
 function HatchUIController:Show()
@@ -34,6 +42,7 @@ function HatchUIController:Show()
     prompt.Size = self.PromptSize
     prompt.Position = self.PromptPosition
     prompt.Text = "Tap to crack the shell"
+    prompt.Font = Enum.Font.FredokaOne
     prompt.TextScaled = true
     prompt.TextColor3 = Color3.new(1, 1, 1)
     prompt.BackgroundTransparency = 1
@@ -45,8 +54,10 @@ function HatchUIController:Show()
     selector.BackgroundColor3 = Color3.fromRGB(24, 18, 12)
     selector.BackgroundTransparency = 0.12
     selector.Parent = overlay
+    UIFactory:RoundCorners(selector, 10)
+    UIFactory:AddStroke(selector, Color3.fromRGB(112, 90, 48), 1)
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize = UDim2.fromOffset(220, 30)
+    layout.CellSize = UDim2.fromOffset(230, 46)
     layout.CellPadding = UDim2.fromOffset(8, 8)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = selector
@@ -87,10 +98,18 @@ function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSe
         button.Name = "Species_" .. speciesId
         button.LayoutOrder = index
         button.Text = self:GetSpeciesButtonText(speciesId)
+        button.Font = Enum.Font.FredokaOne
         button.TextScaled = true
+        button.TextWrapped = true
+        button.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        button.TextStrokeTransparency = 0.55
         button.TextColor3 = Color3.new(1, 1, 1)
         button.BackgroundColor3 = speciesId == self.SelectedSpeciesId and Color3.fromRGB(86, 108, 54) or Color3.fromRGB(54, 42, 28)
         button:SetAttribute("SpeciesId", speciesId)
+        button:SetAttribute("StarterRole", starterRoleText[speciesId] or "")
+        button:SetAttribute("FirstSessionReadable", true)
+        UIFactory:RoundCorners(button, 8)
+        UIFactory:AddStroke(button, speciesId == self.SelectedSpeciesId and Color3.fromRGB(245, 230, 160) or Color3.fromRGB(92, 72, 42), speciesId == self.SelectedSpeciesId and 2 or 1)
         button.Parent = self.Selector
         button.Activated:Connect(function()
             self.SelectedSpeciesId = speciesId
