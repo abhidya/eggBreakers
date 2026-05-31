@@ -76,4 +76,36 @@ table.insert(suite.tests, { name = "dinosaur/tutorial after hatch", run = functi
     Assert.equals(state.Diet, "Herbivore", "diet state available for tutorial/HUD")
 end })
 
+table.insert(suite.tests, { name = "select species replaces egg state before hatch", run = function()
+    local p = player(31006)
+    SurvivalService:CreateState(p, "gallimimus")
+
+    local ok, state = SurvivalService:SelectSpecies(p, "velociraptor")
+
+    Assert.truthy(ok, "valid pre-hatch species selection accepted")
+    Assert.equals(state.SpeciesId, "velociraptor", "selected species stored")
+    Assert.equals(state.Hatched, false, "selected species remains an egg")
+    Assert.equals(state.SelectedBeforeHatch, true, "selection marker is stamped")
+end })
+
+table.insert(suite.tests, { name = "select species rejects already hatched player", run = function()
+    local p = player(31007)
+    SurvivalService:CreateState(p, "gallimimus")
+    for _ = 1, 5 do SurvivalService:RequestHatch(p, "tap") end
+
+    local ok, reason = SurvivalService:SelectSpecies(p, "velociraptor")
+
+    Assert.falsy(ok, "hatched player cannot switch species through egg selector")
+    Assert.equals(reason, "already_hatched", "already hatched reason")
+end })
+
+table.insert(suite.tests, { name = "select species rejects unknown species id", run = function()
+    local p = player(31008)
+
+    local ok, reason = SurvivalService:SelectSpecies(p, "unknownosaurus")
+
+    Assert.falsy(ok, "unknown species rejected")
+    Assert.equals(reason, "unknown_species", "unknown species reason")
+end })
+
 return suite

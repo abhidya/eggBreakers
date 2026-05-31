@@ -7,6 +7,7 @@ local suite = { name = "ClientInputTests.client", category = "Client", tests = {
 
 local expectedRequests = {
     RequestHatch = "string",
+    RequestSelectSpecies = "string",
     RequestEat = "Instance",
     RequestDrink = "Instance",
     RequestAttack = "string",
@@ -29,6 +30,10 @@ table.insert(suite.tests, { name = "keyboard/tap request mappings", run = functi
     Assert.equals(RemoteContracts.RequestAttack.Arguments.attackType, "string", "attack forwards attack type")
     Assert.equals(RemoteContracts.RequestAttack.Arguments.targetInstance, "Instance?", "attack target may be nil")
     Assert.equals(RemoteContracts.RequestNestAction.Arguments.nestInstance, "Instance", "nest action requires target instance")
+end })
+
+table.insert(suite.tests, { name = "species selection forwards species id", run = function()
+    Assert.equals(RemoteContracts.RequestSelectSpecies.Arguments.speciesId, "string", "species selection forwards species id")
 end })
 
 TestRunner.registerSuite(suite)

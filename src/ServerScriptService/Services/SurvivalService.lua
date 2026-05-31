@@ -55,6 +55,18 @@ function SurvivalService:GetState(player)
     return self.States[player]
 end
 
+function SurvivalService:SelectSpecies(player, speciesId)
+    if type(speciesId) ~= "string" then return false, "bad_species" end
+    local species = SpeciesConfig[speciesId]
+    if not species or not species.BaseStats then return false, "unknown_species" end
+    local current = self:GetState(player)
+    if current and current.Hatched == true then return false, "already_hatched" end
+    if current and current.Dead == true then return false, "invalid_hatch_state" end
+    local nextState = self:CreateState(player, speciesId)
+    nextState.SelectedBeforeHatch = true
+    return true, nextState
+end
+
 function SurvivalService:RequestHatch(player, inputType)
     local state = self:GetState(player) or self:CreateState(player)
     if state.Hatched or state.Dead then return false, "invalid_hatch_state" end

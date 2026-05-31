@@ -206,6 +206,26 @@ Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
     sendStats(player)
 end)
 
+if Remotes:FindFirstChild("RequestSelectSpecies") then
+    Remotes.RequestSelectSpecies.OnServerEvent:Connect(function(player, speciesId)
+        if not RateLimitService:Check(player, "RequestSelectSpecies", 0.25) then
+            StatReplicationService:Notify(player, "Changing dinosaur too fast", "Warning", 1)
+            sendStats(player)
+            return
+        end
+        local ok, result = SurvivalService:SelectSpecies(player, speciesId)
+        if ok then
+            routeCharacterToSpeciesSpawn(player, result)
+            MovementLockService:SetHatchedMovement(player, false, result)
+            CharacterVisualService:ApplyForState(player, result)
+            StatReplicationService:Notify(player, "Selected " .. tostring(SpeciesConfig[result.SpeciesId].DisplayName or result.SpeciesId), "Info", 2)
+        else
+            notifyResult(player, false, result, nil)
+        end
+        sendStats(player)
+    end)
+end
+
 Remotes.RequestEat.OnServerEvent:Connect(function(player, target)
     local previousState = SurvivalService:GetState(player)
     local oldStage = previousState and previousState.GrowthStage

@@ -437,6 +437,9 @@ end
 function ClientBootstrap:Init()
     HUDController:EnsureGui()
     HatchUIController:Show()
+    HatchUIController:SetSpeciesOptions(HatchUIController.StarterSpecies, nil, function(speciesId)
+        InputController:RequestSelectSpecies(speciesId)
+    end)
     local mobile = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     wireMobileButtons(mobile)
     -- Diegetic food/water sense guide. Reuses our authoritative, diet-aware target
@@ -467,6 +470,9 @@ function ClientBootstrap:Init()
         ClientBootstrap:UpdateActionGuidance(mobile.Gui)
         SenseGuideController:Update()
         if type(payload.hatchProgress) == "number" then HatchUIController:SetProgress(payload.hatchProgress) end
+        if type(payload.species) == "string" and HatchUIController.Gui and HatchUIController.Gui.Enabled ~= false then
+            HatchUIController:SetSpeciesOptions(HatchUIController.StarterSpecies, payload.species)
+        end
         if payload.hatched == true and HatchUIController.Gui then HatchUIController.Gui.Enabled = false end
     end)
     return true

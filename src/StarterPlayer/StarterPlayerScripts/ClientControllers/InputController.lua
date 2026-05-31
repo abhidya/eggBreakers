@@ -4,6 +4,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local InputController = {}
 
 function InputController:RequestHatch(inputType) Remotes.RequestHatch:FireServer(inputType) end
+function InputController:RequestSelectSpecies(speciesId) Remotes.RequestSelectSpecies:FireServer(speciesId) end
 function InputController:RequestEat(target) Remotes.RequestEat:FireServer(target) end
 function InputController:RequestDrink(target) Remotes.RequestDrink:FireServer(target) end
 function InputController:RequestSwim(water) Remotes.RequestSwim:FireServer(water) end

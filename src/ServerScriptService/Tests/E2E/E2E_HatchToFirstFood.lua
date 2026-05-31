@@ -16,6 +16,17 @@ table.insert(suite.tests, { name = "hatch assigns dinosaur and diet", run = func
     Assert.equals(s.Diet,"Herbivore","diet shown")
 end })
 
+table.insert(suite.tests, { name = "selected egg species persists through hatch", run = function()
+    local p=MockPlayer.new(41003,"E2ESelectHatch"); SurvivalService:CreateState(p,"gallimimus")
+    local ok=SurvivalService:SelectSpecies(p,"velociraptor")
+    Assert.truthy(ok,"pre-hatch species selection accepted")
+    for _=1,5 do SurvivalService:RequestHatch(p,"tap") end
+    local s=SurvivalService:GetState(p)
+    Assert.equals(s.Hatched,true,"selected egg hatched")
+    Assert.equals(s.SpeciesId,"velociraptor","selected species persisted")
+    Assert.equals(s.Diet,"Carnivore","selected species diet available")
+end })
+
 table.insert(suite.tests, { name = "first food increases hunger and tutorial advances", run = function()
     local p=MockPlayer.new(41002,"E2EFood"); RateLimitService:ClearPlayer(p); rootFor(p)
     local s=SurvivalService:CreateState(p,"gallimimus"); s.Hatched=true; s.Hunger=40

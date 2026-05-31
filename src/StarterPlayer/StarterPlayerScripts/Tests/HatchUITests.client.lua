@@ -11,6 +11,64 @@ table.insert(suite.tests, { name = "tap hatch input works", run = function()
     Assert.notNil(RemoteContracts.RequestHatch, "hatch remote contract exists")
     Assert.equals(RemoteContracts.RequestHatch.Arguments.inputType, "string", "tap input is sent as a string input type")
     Assert.truthy(RemoteContracts.RequestHatch.RateLimitSeconds <= 0.2, "hatch taps remain responsive but rate-limited")
+    Assert.notNil(RemoteContracts.RequestSelectSpecies, "species selection remote contract exists")
+    Assert.equals(RemoteContracts.RequestSelectSpecies.Arguments.speciesId, "string", "species selection sends species id")
+end })
+
+table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur selector", run = function()
+    local oldGui = HatchUIController.Gui
+    local oldSelector = HatchUIController.Selector
+    local oldButtons = HatchUIController.SpeciesButtons
+    local oldSelected = HatchUIController.SelectedSpeciesId
+    HatchUIController.Gui = nil
+    HatchUIController.Selector = nil
+    HatchUIController.SpeciesButtons = nil
+    HatchUIController.SelectedSpeciesId = nil
+
+    local gui = HatchUIController:Show()
+    HatchUIController:SetSpeciesOptions({ "gallimimus", "velociraptor" }, "velociraptor", function() end)
+    local overlay = gui:FindFirstChild("MuffledOverlay")
+    local selector = overlay and overlay:FindFirstChild("SpeciesSelector")
+    Assert.notNil(selector, "species selector exists")
+    local gallimimus = selector:FindFirstChild("Species_gallimimus")
+    local raptor = selector:FindFirstChild("Species_velociraptor")
+    Assert.notNil(gallimimus, "gallimimus option exists")
+    Assert.notNil(raptor, "velociraptor option exists")
+    Assert.equals(raptor:GetAttribute("SpeciesId"), "velociraptor", "button carries selected species id")
+    Assert.truthy(string.find(gallimimus.Text, "Gallimimus", 1, true) ~= nil, "button names readable dinosaur")
+
+    gui:Destroy()
+    HatchUIController.Gui = oldGui
+    HatchUIController.Selector = oldSelector
+    HatchUIController.SpeciesButtons = oldButtons
+    HatchUIController.SelectedSpeciesId = oldSelected
+end })
+
+table.insert(suite.tests, { name = "selected dinosaur option is highlighted", run = function()
+    local oldGui = HatchUIController.Gui
+    local oldSelector = HatchUIController.Selector
+    local oldButtons = HatchUIController.SpeciesButtons
+    local oldSelected = HatchUIController.SelectedSpeciesId
+    HatchUIController.Gui = nil
+    HatchUIController.Selector = nil
+    HatchUIController.SpeciesButtons = nil
+    HatchUIController.SelectedSpeciesId = nil
+
+    local gui = HatchUIController:Show()
+    HatchUIController:SetSpeciesOptions({ "gallimimus", "velociraptor" }, "velociraptor", function() end)
+    local selector = gui.MuffledOverlay:FindFirstChild("SpeciesSelector")
+    local gallimimus = selector and selector:FindFirstChild("Species_gallimimus")
+    local raptor = selector and selector:FindFirstChild("Species_velociraptor")
+    Assert.notNil(gallimimus, "unselected option exists")
+    Assert.notNil(raptor, "selected option exists")
+    Assert.equals(raptor.BackgroundColor3, Color3.fromRGB(86, 108, 54), "selected dinosaur uses selected highlight")
+    Assert.equals(gallimimus.BackgroundColor3, Color3.fromRGB(54, 42, 28), "unselected dinosaur uses inactive color")
+
+    gui:Destroy()
+    HatchUIController.Gui = oldGui
+    HatchUIController.Selector = oldSelector
+    HatchUIController.SpeciesButtons = oldButtons
+    HatchUIController.SelectedSpeciesId = oldSelected
 end })
 
 table.insert(suite.tests, { name = "first hatch skip unavailable", run = function()

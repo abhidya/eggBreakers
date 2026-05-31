@@ -14,6 +14,8 @@
 - `src/ReplicatedStorage/Shared/SpeciesConfig.lua` — configured species roles, diets, movement modes, growth stats, abilities, and animation slots.
 - `src/ServerScriptService/Services/MapLayoutService.lua` — current biome layout, food/water placements, and food metadata.
 - `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*` — current HUD/mobile/waypoint affordance evidence.
+- `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua` — hatch/select/first-food regression coverage for the playable opening loop.
+- `src/StarterPlayer/StarterPlayerScripts/Tests/HatchUITests.client.lua` — client selector rendering and selected-option coverage.
 - Live Studio read-only audit, 2026-05-30 — `Workspace.dinosaur` is a staged mesh dino library; `Workspace.Map` remains mostly primitive placeholders.
 
 ## Validation language
@@ -49,18 +51,20 @@ Every scene below must earn four kinds of value:
 | Layer | Required value | Validated references |
 |---|---|---|
 | Visual | Egg shell, small dino body, warm protected grove, visible nest/home object. | Search refs: `dinosaur egg` → `da5da35b-1cef-496f-a3be-ee2803d568e5`; `dinosaur egg nest` → `df69fe17-9e1c-4e69-bf24-bf7ed3f3c689`. Catalog clean candidates: `150068032` Scrambled Eggs in a Nest; `101855130` Egg Nest; `4630012038` EGG NEST; `151888976` Terrordactyl Egg Nest; `150059455` Nest and Eggs. |
-| Mechanical | Hatch state, species selection, starter safe zone, first growth stage. | `SpeciesConfig.lua` has Hatchling/Juvenile/SubAdult/Adult for each species; `MapLayoutService.lua` has `NurseryGrove` and tutorial-safe food/water placements. |
-| UI | Species card, diet badge, growth badge, compact hunger/thirst/stamina bars. | `HUDController.lua`; `MobileControlsController.lua`; `UIWireframeChecklist.md`. |
-| UX | Immediate replacement of default avatar with selected dinosaur; player understands “eat/drink/grow” within 10 seconds. | Current gap: status docs say player can appear as default R15; this beat fails until dino visual application is proven. |
+| Mechanical | Hatch state, pre-hatch species selection, starter safe zone, first growth stage. | `SpeciesConfig.lua` has Hatchling/Juvenile/SubAdult/Adult for each species; `MapLayoutService.lua` has `NurseryGrove` and tutorial-safe food/water placements. |
+| UI | Pre-hatch species selector, selected species card, diet badge, growth badge, compact hunger/thirst/stamina bars. | `HUDController.lua`; `HatchUIController.lua`; `MobileControlsController.lua`; `UIWireframeChecklist.md`; `HatchUITests.client.lua` covers selector options and selected-state highlight. |
+| UX | Player chooses a dinosaur before cracking the shell, then immediately sees that exact selected hatchling replace the default avatar; player understands “eat/drink/grow” within 10 seconds. | Current gap: pre-hatch selection and post-hatch visual identity must be proven in one live flow, including selected species continuity. |
 
 **Storyboard frames**
 
-1. **Black → crack:** shell cracks, UI hidden except subtle “tap to hatch.”
-2. **Reveal:** camera pulls back to baby dino beside nest; species name and diet badge fade in.
-3. **Need pulse:** hunger/thirst bars gently pulse, not alarm-red.
-4. **First goal:** food/water hint points to real fern/water, not a generic arrow or placeholder ball.
+1. **Black → choose:** shell view is muffled and calm; player sees starter dinosaur choices before the first crack.
+2. **Select identity:** selected option shows species name, diet, and role cue clearly enough to distinguish herbivore/carnivore before hatching.
+3. **Crack:** tap/click/keyboard input cracks the selected egg; selector remains stable and does not obscure the prompt or meter.
+4. **Reveal:** camera pulls back to the selected baby dino beside nest; species name and diet badge fade in and match the pre-hatch choice.
+5. **Need pulse:** hunger/thirst bars gently pulse, not alarm-red.
+6. **First goal:** food/water hint points to real fern/water or diet-valid meat, not a generic arrow or placeholder ball.
 
-**Acceptance check:** screenshot proves baby dino mesh, nest/egg asset, readable safe food/water, no default avatar.
+**Acceptance check:** live proof shows the pre-hatch selector, records the selected species, hatches without restart, and then proves the visible baby dino, species/diet UI, nest/egg asset, readable safe food/water, and no default avatar all match that selection.
 
 ---
 
@@ -293,10 +297,11 @@ Current local metadata is not enough to claim “high rated.” For each shortli
 ## Highest-impact next storyboard refinements
 
 1. **Food/water sense UX board** — replace arrow-only waypoint with scent pulse, diet icon, target highlight, and visible food/water props.
-2. **Species identity board** — every playable species gets a real mesh reference, role card, movement mode, attack style, food type, and sound palette.
-3. **Biome prop boards** — for each biome, pick 8–12 visual anchors from catalog/search refs and map them to gameplay jobs.
-4. **City mystery board** — pick ruins/wrecks/fossils and define the environmental story sequence.
-5. **Nest/alpha board** — define adult ownership loop, respawn rules, anti-grief UX, and home marker visuals.
+2. **Hatch selection identity board** — every starter option needs a real mesh reference, diet/role cue, movement expectation, selected-state styling, and proof that the post-hatch dinosaur matches the pre-hatch choice.
+3. **Species identity board** — every playable species gets a real mesh reference, role card, movement mode, attack style, food type, and sound palette.
+4. **Biome prop boards** — for each biome, pick 8–12 visual anchors from catalog/search refs and map them to gameplay jobs.
+5. **City mystery board** — pick ruins/wrecks/fossils and define the environmental story sequence.
+6. **Nest/alpha board** — define adult ownership loop, respawn rules, anti-grief UX, and home marker visuals.
 
 ## Open questions / limits
 

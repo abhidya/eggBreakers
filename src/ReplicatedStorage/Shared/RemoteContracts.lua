@@ -5,6 +5,7 @@ local RemoteContracts = {
     RequestSwim = { Direction = "ClientToServer", Arguments = { waterInstance = "Instance" }, RateLimitSeconds = 0.4 },
     RequestFlight = { Direction = "ClientToServer", Arguments = { enabled = "boolean" }, RateLimitSeconds = 0.4 },
     RequestSprint = { Direction = "ClientToServer", Arguments = { enabled = "boolean" }, RateLimitSeconds = 0.25 },
+    RequestSelectSpecies = { Direction = "ClientToServer", Arguments = { speciesId = "string" }, RateLimitSeconds = 0.25 },
     RequestAttack = { Direction = "ClientToServer", Arguments = { attackType = "string", targetInstance = "Instance?" }, RateLimitSeconds = 0.4 },
     RequestCall = { Direction = "ClientToServer", Arguments = { callType = "string" }, RateLimitSeconds = 2.0 },
     RequestGroupInvite = { Direction = "ClientToServer", Arguments = { targetPlayer = "Player" }, RateLimitSeconds = 3.0 },
