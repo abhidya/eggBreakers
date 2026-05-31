@@ -4,3 +4,6 @@
 # OS / Studio lock noise
 .DS_Store
 *.rbxl.lock
+
+# other-agent scratch
+.codex/
