@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 local FoodWaterService = require(script.Parent.FoodWaterService)
+local SurvivalService = require(script.Parent.SurvivalService)
 
 local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
@@ -30,9 +31,16 @@ NPCService.MateRadius = 34
 NPCService.MateCooldownSeconds = 90
 NPCService.FoodReactionRadius = 55
 NPCService.FightReactionRadius = 85
+NPCService.MateReactionRadius = 60
+NPCService.ReactionMemorySeconds = 8
+NPCService.ReactionMoveStep = 5
+NPCService.FightBackSeconds = 10
+NPCService.KinematicHeartbeatMoveBudget = 12
+NPCService.KinematicFollowSpeedStudsPerSecond = 6
+NPCService.KinematicTargetTolerance = 1.25
 -- DYING PIPELINE tunables (additive; safe when world absent).
 NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
-NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
+NPCService.CarcassDespawnSeconds = 180     -- carcasses should remain readable long enough to be eaten
 NPCService.ApexThreatRadius = 140
 NPCService.KindProfiles = {
     Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "parasaurolophus" },
@@ -81,6 +89,16 @@ function NPCService:GetRecordDiet(record)
     return self:GetKindProfile(record and record.Kind or "Prey").Diet
 end
 
+function NPCService:GetEaterName(eater)
+    if type(eater) == "table" then
+        if eater.Instance then return eater.Instance.Name end
+        if eater.Name then return eater.Name end
+    elseif typeof(eater) == "Instance" then
+        return eater.Name
+    end
+    return ""
+end
+
 function NPCService:CanEatDiet(eaterDiet, foodDiet)
     return eaterDiet == "Omnivore" or foodDiet == "Omnivore" or eaterDiet == foodDiet
 end
@@ -124,6 +142,7 @@ function NPCService:Register(npc, kind)
         PackHunter = profile.PackHunter == true,
         MateEligible = true,
         LastMateAt = 0,
+        ReactionSequence = 0,
     }
     local seedSource = tostring(npc and npc.Name or kind) .. ":" .. self:FormatVector3(pivotPosition)
     record.BehaviorSeed = self:MakeBehaviorSeed(seedSource)
@@ -156,6 +175,9 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("BrainMoveCount", 0)
         npc:SetAttribute("LastBrainAction", "HatchAtNest")
         npc:SetAttribute("NPCState", record.State)
+        npc:SetAttribute("ReactionIntent", "")
+        npc:SetAttribute("ReactionSequence", 0)
+        npc:SetAttribute("KinematicSmoothingEnabled", true)
         npc:SetAttribute("Hatched", false)
         npc:SetAttribute("Hunger", record.Hunger)
         npc:SetAttribute("Thirst", record.Thirst)
@@ -229,7 +251,7 @@ function NPCService:ScheduleCarcassDespawn(record, carcass, despawnSeconds)
     -- the carcass food source, so remove the live model to avoid a duplicate visual.
     local npc = record.Instance
     if typeof(task) == "table" and type(task.delay) == "function" then
-        if npc then
+        if npc and npc ~= carcass then
             task.delay(self.DeathSettleSeconds, function()
                 if npc and npc.Parent then
                     if npc.SetAttribute then npc:SetAttribute("DeathState", "Despawned") end
@@ -270,8 +292,12 @@ function NPCService:Transition(record, nextState)
             record.Instance:SetAttribute("PotentialCarnivoreFood", false)
             record.Instance:SetAttribute("FoodWhenDefeated", true)
             record.Instance:SetAttribute("CarnivoreFoodKind", self:GetCarnivoreFoodKind(record.Kind))
+            record.Instance:SetAttribute("FightBackArmed", false)
             if CollectionService:HasTag(record.Instance, "CarnivoreFoodCandidate") then
                 CollectionService:RemoveTag(record.Instance, "CarnivoreFoodCandidate")
+            end
+            if CollectionService:HasTag(record.Instance, "Damageable") then
+                CollectionService:RemoveTag(record.Instance, "Damageable")
             end
         end
         -- DYING PIPELINE: settle the body (death state), then convert to a readable carcass
@@ -356,7 +382,53 @@ function NPCService:ResolveWanderTarget(record)
     return target
 end
 
-function NPCService:StampNearbyReaction(sourceRecord, radius, reactionName, attributes)
+function NPCService:InferReactionIntent(candidate, sourceRecord, reactionName, context)
+    if reactionName == "FoodSignal" then
+        local target = context and context.TargetInstance
+        local targetDiet = target and target:GetAttribute("Diet")
+        if (candidate.Hunger or 100) < 80 and (not targetDiet or self:CanEatDiet(self:GetRecordDiet(candidate), targetDiet)) then
+            return "SeekSharedFood"
+        end
+        return "NoticeFood"
+    elseif reactionName == "FightSignal" then
+        if self:IsPreyKind(candidate.Kind) or candidate.Kind == "Omnivore" then
+            return "FleeFight"
+        end
+        if candidate.Kind == "Predator" or candidate.Kind == "AerialPredator" or candidate.Apex == true then
+            return "JoinFight"
+        end
+        return "NoticeFight"
+    elseif reactionName == "MateSignal" then
+        local targetRecord = context and context.TargetRecord
+        if targetRecord and targetRecord.SpeciesId == candidate.SpeciesId and candidate.MateEligible == true then
+            return "SocialMate"
+        end
+        return "NoticeMate"
+    end
+    return reactionName
+end
+
+function NPCService:QueueReaction(candidate, sourceRecord, reactionName, context, distance)
+    if not candidate then return nil end
+    local intent = self:InferReactionIntent(candidate, sourceRecord, reactionName, context)
+    candidate.ReactionSequence = (candidate.ReactionSequence or 0) + 1
+    candidate.ReactionIntent = intent
+    candidate.ReactionAt = os.clock()
+    candidate.ReactionSourceRecord = sourceRecord
+    candidate.ReactionSourcePosition = sourceRecord and self:GetRecordPosition(sourceRecord) or nil
+    candidate.ReactionTargetInstance = context and context.TargetInstance or nil
+    candidate.ReactionTargetRecord = context and context.TargetRecord or nil
+    if candidate.Instance then
+        candidate.Instance:SetAttribute("ReactionSequence", candidate.ReactionSequence)
+        candidate.Instance:SetAttribute("ReactionIntent", intent)
+        candidate.Instance:SetAttribute("ReactionAgeSeconds", 0)
+        candidate.Instance:SetAttribute("ReactionTarget", candidate.ReactionTargetInstance and candidate.ReactionTargetInstance.Name or "")
+        candidate.Instance:SetAttribute("ReactionDistance", distance or 0)
+    end
+    return intent
+end
+
+function NPCService:StampNearbyReaction(sourceRecord, radius, reactionName, attributes, context)
     if not sourceRecord then return 0 end
     local sourcePosition = self:GetRecordPosition(sourceRecord)
     local affected = 0
@@ -368,10 +440,12 @@ function NPCService:StampNearbyReaction(sourceRecord, radius, reactionName, attr
                 candidate.LastReaction = reactionName
                 candidate.LastReactionSource = sourceRecord.Instance
                 candidate.LastReactionDistance = distance
+                local intent = self:QueueReaction(candidate, sourceRecord, reactionName, context, distance)
                 if candidate.Instance then
                     candidate.Instance:SetAttribute("LastReaction", reactionName)
                     candidate.Instance:SetAttribute("LastReactionSource", sourceRecord.Instance and sourceRecord.Instance.Name or "NPC")
                     candidate.Instance:SetAttribute("LastReactionDistance", distance)
+                    candidate.Instance:SetAttribute("LastReactionIntent", intent or reactionName)
                     if attributes then
                         for key, value in pairs(attributes) do
                             candidate.Instance:SetAttribute(key, value)
@@ -414,6 +488,37 @@ function NPCService:StampLocomotion(record, mode)
         npc:SetAttribute("LocomotionMode", mode)
         npc:SetAttribute("LastLocomotionMode", mode)
     end
+end
+
+function NPCService:PrepareHumanoidRigForMotion(record, npc, root, humanoid)
+    if not npc or not humanoid then return 0 end
+    local unanchored = 0
+    local parts = {}
+    if npc:IsA("BasePart") then
+        table.insert(parts, npc)
+    elseif npc.GetDescendants then
+        for _, descendant in ipairs(npc:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(parts, descendant)
+            end
+        end
+    end
+    for _, part in ipairs(parts) do
+        if part.Anchored then
+            unanchored = unanchored + 1
+        end
+        part.Anchored = false
+        part.CanCollide = false
+        part.CanTouch = false
+        part.Massless = part ~= root
+    end
+    humanoid.PlatformStand = false
+    humanoid.AutoRotate = true
+    if record and record.Instance and record.Instance.SetAttribute then
+        record.Instance:SetAttribute("HumanoidRigMotionReady", true)
+        record.Instance:SetAttribute("HumanoidRigUnanchoredParts", unanchored)
+    end
+    return unanchored
 end
 
 function NPCService:GetMovementModes(record)
@@ -606,8 +711,8 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
         local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
         self:StampLocomotion(record, mode)
         if humanoid and root and mode == "HumanoidMoveTo" then
-            -- Physics-driven locomotion via Humanoid:MoveTo; unanchors root part for smooth motion.
-            if root.Anchored then root.Anchored = false end
+            -- Physics-driven locomotion via Humanoid:MoveTo; imported rigs often arrive fully anchored.
+            self:PrepareHumanoidRigForMotion(record, npc, root, humanoid)
             self:ConfigureHumanoidMovement(record, humanoid, brainAction)
             humanoid:MoveTo(targetPosition)
             -- Orient model toward target (non-teleporting; Humanoid handles position)
@@ -668,6 +773,9 @@ function NPCService:Eat(record, food)
             local context = FoodWaterService:BuildEatContext(target, record.Instance and record.Instance.Name or "NPC", expectedDiet, target:GetAttribute("Nutrition") or nutrition)
             FoodWaterService:MarkFoodEaten(target, context)
             target:SetAttribute("LastEatenByNPC", context.EaterName)
+            if target:GetAttribute("CarcassFoodSource") == true then
+                self:ConsumeCarcassFoodSource(target, record)
+            end
             depletedCount = depletedCount + 1
         end
     end
@@ -691,6 +799,8 @@ function NPCService:Eat(record, food)
     self:StampNearbyReaction(record, self.FoodReactionRadius, "FoodSignal", {
         NearbyFoodTarget = food and food.Name or "",
         NearbyFoodDiet = food and (food:GetAttribute("Diet") or "") or "",
+    }, {
+        TargetInstance = food,
     })
     return self:Transition(record, "Eat")
 end
@@ -708,8 +818,43 @@ function NPCService:Drink(record, water)
     return self:Transition(record, "Drink")
 end
 
-function NPCService:DamageRecord(record, amount)
+function NPCService:MarkAggro(record, attacker, reason)
     if not record or record.State == "Dead" then return false, "not_active" end
+    record.AggroUntil = os.clock() + (self.FightBackSeconds or 10)
+    record.AggroReason = reason or "Damaged"
+    if type(attacker) == "table" and attacker.Instance then
+        record.AggroTargetRecord = attacker
+        record.AggroTargetInstance = attacker.Instance
+    elseif type(attacker) == "table" and attacker.Character then
+        record.AggroTargetUserId = attacker.UserId
+        record.AggroTargetName = attacker.Name
+    elseif typeof(attacker) == "Instance" then
+        if attacker:IsA("Player") then
+            record.AggroTargetUserId = attacker.UserId
+            record.AggroTargetName = attacker.Name
+        else
+            record.AggroTargetInstance = attacker
+            record.AggroTargetName = attacker.Name
+        end
+    end
+    if record.Instance then
+        record.Instance:SetAttribute("FightBackArmed", true)
+        record.Instance:SetAttribute("FightBackReason", record.AggroReason)
+        record.Instance:SetAttribute("FightBackUntil", record.AggroUntil)
+        record.Instance:SetAttribute("FightEventState", "Provoked")
+        if record.AggroTargetName then
+            record.Instance:SetAttribute("FightBackTarget", record.AggroTargetName)
+        end
+        if record.AggroTargetUserId then
+            record.Instance:SetAttribute("FightBackTargetUserId", record.AggroTargetUserId)
+        end
+    end
+    return true
+end
+
+function NPCService:DamageRecord(record, amount, attacker)
+    if not record or record.State == "Dead" then return false, "not_active" end
+    self:MarkAggro(record, attacker, "Damaged")
     record.Health = math.max(0, (record.Health or record.MaxHealth or 80) - (amount or 10))
     if record.Instance then record.Instance:SetAttribute("Health", record.Health) end
     if record.Health <= 0 then
@@ -734,9 +879,12 @@ function NPCService:AttackRecord(attacker, target)
     end
     self:StampNearbyReaction(attacker, self.FightReactionRadius, "FightSignal", {
         NearbyFightTarget = target.Instance and target.Instance.Name or "NPC",
+    }, {
+        TargetInstance = target.Instance,
+        TargetRecord = target,
     })
     self:Transition(attacker, "Attack")
-    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12)
+    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12, attacker)
 end
 
 function NPCService:FindNearestRecord(record, kind, maxDistance)
@@ -809,14 +957,25 @@ function NPCService:TryMate(record)
 
     record.MateTarget = mate.Instance
     record.LastMateAt = now
-    mate.LastMateAt = mate.LastMateAt or now
+    mate.LastMateAt = now
     if record.Instance then
         record.Instance:SetAttribute("MateTarget", mate.Instance and mate.Instance.Name or "")
         record.Instance:SetAttribute("MateDistance", distance)
         record.Instance:SetAttribute("MateCooldownSeconds", self.MateCooldownSeconds)
         record.Instance:SetAttribute("LastBrainAction", "Mate")
     end
-    self:OrientToward(record, self:GetRecordPosition(mate), "Mate")
+    local matePosition = self:GetRecordPosition(mate)
+    if distance and distance > self.InteractDistance then
+        self:MoveToward(record, matePosition, self.MoveStep * 0.5, "Mate", mate.Instance)
+    else
+        self:OrientToward(record, matePosition, "Mate")
+    end
+    self:StampNearbyReaction(record, self.MateReactionRadius, "MateSignal", {
+        NearbyMateTarget = mate.Instance and mate.Instance.Name or "",
+    }, {
+        TargetInstance = record.Instance,
+        TargetRecord = record,
+    })
     return self:Transition(record, "Mate")
 end
 
@@ -1002,6 +1161,214 @@ function NPCService:StampApexEvent(record, now)
     return self:Transition(record, "ApexEvent")
 end
 
+function NPCService:ResolveFightBackTarget(record, players, maxDistance)
+    if not record then return nil, nil, nil end
+    local position = self:GetRecordPosition(record)
+    local bestInstance, bestRecord, bestDistance, bestPlayer = nil, nil, maxDistance or self.SenseDistance, nil
+    local targetRecord = record.AggroTargetRecord
+    if targetRecord and targetRecord.State ~= "Dead" and targetRecord.Instance then
+        local targetPosition = self:GetRecordPosition(targetRecord)
+        local distance = (targetPosition - position).Magnitude
+        if distance <= bestDistance then
+            return targetRecord.Instance, targetRecord, distance
+        end
+    end
+    local targetInstance = record.AggroTargetInstance
+    if targetInstance and targetInstance.Parent then
+        local targetPosition = self:GetInstancePosition(targetInstance)
+        local distance = targetPosition and (targetPosition - position).Magnitude or math.huge
+        if distance <= bestDistance then
+            bestInstance, bestDistance = targetInstance, distance
+        end
+    end
+
+    local damagedByUserId = record.AggroTargetUserId
+    if record.Instance and record.Instance.GetAttribute then
+        local stampedUserId = record.Instance:GetAttribute("LastDamagedByUserId")
+        if type(stampedUserId) == "number" and stampedUserId > 0 then
+            damagedByUserId = stampedUserId
+            record.AggroTargetUserId = stampedUserId
+        end
+    end
+    for _, player in ipairs(players or {}) do
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root and (not damagedByUserId or player.UserId == damagedByUserId) then
+            local distance = (root.Position - position).Magnitude
+            if distance <= bestDistance then
+                bestInstance, bestRecord, bestDistance, bestPlayer = root, nil, distance, player
+                record.AggroTargetName = player.Name
+            end
+        end
+    end
+    if not bestInstance and not damagedByUserId then
+        local nearestRoot, nearestDistance = self:FindNearestPlayerRoot(record, players, bestDistance)
+        if nearestRoot then
+            bestInstance, bestDistance = nearestRoot, nearestDistance
+        end
+    end
+    return bestInstance, bestRecord, bestDistance, bestPlayer
+end
+
+function NPCService:HandleFightBack(record, players)
+    if not record or record.State == "Dead" then return false, "not_active" end
+    if record.Instance and record.Instance.GetAttribute then
+        local damagedAt = record.Instance:GetAttribute("LastDamagedAt")
+        if type(damagedAt) == "number" and damagedAt > (record.LastDamageSeenAt or 0) then
+            record.LastDamageSeenAt = damagedAt
+            self:MarkAggro(record, nil, "PlayerDamaged")
+        end
+    end
+    if not record.AggroUntil or os.clock() > record.AggroUntil then
+        if record.Instance then
+            record.Instance:SetAttribute("FightBackArmed", false)
+        end
+        return false, "no_aggro"
+    end
+
+    local targetInstance, targetRecord, distance, targetPlayer = self:ResolveFightBackTarget(record, players, record.MaxChaseDistance or self.SenseDistance)
+    if not targetInstance then return false, "missing_target" end
+    local targetPosition = targetRecord and self:GetRecordPosition(targetRecord) or self:GetInstancePosition(targetInstance)
+    if not targetPosition then return false, "missing_target_position" end
+    record.ChaseTarget = targetRecord and targetRecord.Instance or targetInstance
+    if record.Instance then
+        local targetName = record.AggroTargetName or targetInstance.Name
+        record.Instance:SetAttribute("FightBackArmed", true)
+        record.Instance:SetAttribute("FightBackState", distance <= self.AttackDistance and "Counterattacking" or "ChasingAttacker")
+        record.Instance:SetAttribute("FightBackTarget", targetName)
+        record.Instance:SetAttribute("FightBackDistance", distance or 0)
+    end
+    if distance and distance <= self.AttackDistance then
+        if targetRecord then
+            return self:AttackRecord(record, targetRecord)
+        end
+        if targetPlayer then
+            local retaliationDamage = math.max(1, math.floor((record.Damage or self:GetKindProfile(record.Kind).Damage or 10) * 0.5))
+            local damageOk = SurvivalService:ApplyDamage(targetPlayer, retaliationDamage, "NPCCounterattack")
+            if record.Instance then
+                record.Instance:SetAttribute("CounterattackDamage", retaliationDamage)
+                record.Instance:SetAttribute("CounterattackDamageApplied", damageOk == true)
+            end
+        end
+        record.AttackTarget = targetInstance
+        record.LastAttackAt = os.time()
+        if record.Instance then
+            record.Instance:SetAttribute("LastAction", "Attack")
+            record.Instance:SetAttribute("LastBrainAction", "Attack")
+            record.Instance:SetAttribute("AttackTarget", record.AggroTargetName or targetInstance.Name)
+            record.Instance:SetAttribute("AttackRangeConfirmed", true)
+            record.Instance:SetAttribute("FightEventState", "Counterattacking")
+        end
+        self:OrientToward(record, targetPosition, "Attack")
+        return self:Transition(record, "Attack")
+    end
+    self:MoveToward(record, targetPosition, self.MoveStep, "Chase", targetInstance)
+    return self:Transition(record, "Chase")
+end
+
+function NPCService:ClearReactionIntent(record, reason)
+    record.ReactionIntent = nil
+    record.ReactionTargetInstance = nil
+    record.ReactionTargetRecord = nil
+    if record.Instance then
+        record.Instance:SetAttribute("ReactionIntent", "")
+        record.Instance:SetAttribute("ReactionClearReason", reason or "")
+    end
+end
+
+function NPCService:FindNearestEdibleFood(record, maxDistance)
+    local diet = self:GetRecordDiet(record)
+    return self:FindNearestTagged(record, "FoodSource", maxDistance or self.SenseDistance, function(candidate)
+        return candidate:GetAttribute("Depleted") ~= true and self:CanEatDiet(diet, candidate:GetAttribute("Diet"))
+    end)
+end
+
+function NPCService:HandleReactionIntent(record)
+    if not record or record.State == "Dead" or not record.ReactionIntent then return false, "no_reaction" end
+    local age = os.clock() - (record.ReactionAt or 0)
+    if age > (self.ReactionMemorySeconds or 8) then
+        self:ClearReactionIntent(record, "expired")
+        return false, "expired"
+    end
+    if record.Instance then
+        record.Instance:SetAttribute("ReactionAgeSeconds", age)
+    end
+
+    if record.ReactionIntent == "SeekSharedFood" then
+        local food = record.ReactionTargetInstance
+        if not food or not food.Parent or food:GetAttribute("Depleted") == true or not self:CanEatDiet(self:GetRecordDiet(record), food:GetAttribute("Diet")) then
+            food = self:FindNearestEdibleFood(record, self.SenseDistance)
+        end
+        local foodPosition = food and self:GetInstancePosition(food)
+        if not foodPosition then
+            self:ClearReactionIntent(record, "missing_food")
+            return false, "missing_food"
+        end
+        record.FoodTarget = food
+        if record.Instance then
+            record.Instance:SetAttribute("FoodTarget", food.Name)
+            record.Instance:SetAttribute("FoodTargetDiet", self:GetRecordDiet(record))
+            record.Instance:SetAttribute("ReactionConsumed", "Food")
+        end
+        local distance = (foodPosition - self:GetRecordPosition(record)).Magnitude
+        if distance <= self.InteractDistance then return self:Eat(record, food) end
+        self:MoveToward(record, foodPosition, self.ReactionMoveStep or self.MoveStep, "SeekFood", food)
+        return self:Transition(record, "SeekFood")
+    elseif record.ReactionIntent == "FleeFight" then
+        local sourcePosition = record.ReactionSourcePosition
+        if not sourcePosition and record.ReactionSourceRecord then
+            sourcePosition = self:GetRecordPosition(record.ReactionSourceRecord)
+        end
+        if not sourcePosition then return false, "missing_fight_source" end
+        local position = self:GetRecordPosition(record)
+        local away = position - sourcePosition
+        if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
+        record.FleeFrom = sourcePosition
+        if record.Instance then
+            record.Instance:SetAttribute("ReactionConsumed", "Fight")
+            record.Instance:SetAttribute("FightEventState", "FleeingFight")
+        end
+        self:MoveToward(record, position + away.Unit * self.MoveStep, self.MoveStep, "Flee")
+        return self:Transition(record, "Flee")
+    elseif record.ReactionIntent == "JoinFight" then
+        local targetRecord = record.ReactionTargetRecord
+        if not targetRecord or targetRecord.State == "Dead" or not targetRecord.Instance then
+            self:ClearReactionIntent(record, "missing_fight_target")
+            return false, "missing_fight_target"
+        end
+        local targetPosition = self:GetRecordPosition(targetRecord)
+        local distance = (targetPosition - self:GetRecordPosition(record)).Magnitude
+        if record.Instance then
+            record.Instance:SetAttribute("ReactionConsumed", "Fight")
+            record.Instance:SetAttribute("FightEventState", "JoiningFight")
+        end
+        if distance <= self.InteractDistance then return self:AttackRecord(record, targetRecord) end
+        self:MoveToward(record, targetPosition, self.ReactionMoveStep or self.MoveStep, "Chase", targetRecord.Instance)
+        return self:Transition(record, "Chase")
+    elseif record.ReactionIntent == "SocialMate" then
+        local targetRecord = record.ReactionTargetRecord
+        if not targetRecord or targetRecord.State == "Dead" or targetRecord.SpeciesId ~= record.SpeciesId then
+            self:ClearReactionIntent(record, "missing_mate")
+            return false, "missing_mate"
+        end
+        local targetPosition = self:GetRecordPosition(targetRecord)
+        local distance = (targetPosition - self:GetRecordPosition(record)).Magnitude
+        record.MateTarget = targetRecord.Instance
+        if record.Instance then
+            record.Instance:SetAttribute("MateTarget", targetRecord.Instance and targetRecord.Instance.Name or "")
+            record.Instance:SetAttribute("MateDistance", distance)
+            record.Instance:SetAttribute("ReactionConsumed", "Mate")
+        end
+        if distance > self.InteractDistance then
+            self:MoveToward(record, targetPosition, self.ReactionMoveStep or self.MoveStep, "Mate", targetRecord.Instance)
+        else
+            self:OrientToward(record, targetPosition, "Mate")
+        end
+        return self:Transition(record, "Mate")
+    end
+    return false, "passive_reaction"
+end
+
 function NPCService:TickBrain(record, players, deltaSeconds)
     if not record or record.State == "Dead" then return false, "not_active" end
     if record.Hatched ~= true then
@@ -1013,6 +1380,12 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         self:Transition(record, "Wander")
     end
     self:ApplyNeeds(record, deltaSeconds)
+
+    local fightBackOk = self:HandleFightBack(record, players)
+    if fightBackOk then return true end
+
+    local reactionOk = self:HandleReactionIntent(record)
+    if reactionOk then return true end
 
     if self:IsPreyKind(record.Kind) then
         local playerRoot = self.FindNearestPlayerRoot and self:FindNearestPlayerRoot(record, players, self.FleeDistance)
@@ -1158,6 +1531,42 @@ function NPCService:FindNearestPlayerRoot(record, players, maxDistance)
     return nearestRoot, nearestDistance
 end
 
+function NPCService:StepKinematicMoveTarget(record, deltaSeconds)
+    if not record or record.State == "Dead" or typeof(record.MoveTarget) ~= "Vector3" then return false, "no_target" end
+    local npc = record.Instance
+    if not npc then return false, "missing_npc" end
+    local root, mode = self:ResolveLocomotionRoot(npc)
+    if mode == "HumanoidMoveTo" then return false, "humanoid_managed" end
+    local position = self:GetRecordPosition(record)
+    local delta = record.MoveTarget - position
+    if delta.Magnitude <= (self.KinematicTargetTolerance or 1.25) then
+        record.MoveTarget = nil
+        npc:SetAttribute("KinematicSmoothingActive", false)
+        return false, "arrived"
+    end
+    local step = math.min((self.KinematicFollowSpeedStudsPerSecond or 6) * math.max(deltaSeconds or 0, 0), delta.Magnitude)
+    if step <= 0 then return false, "zero_step" end
+    local nextPosition = position + delta.Unit * step
+    local lookAt = Vector3.new(record.MoveTarget.X, nextPosition.Y, record.MoveTarget.Z)
+    if (lookAt - nextPosition).Magnitude <= 0.05 then
+        lookAt = nextPosition + Vector3.new(0, 0, -1)
+    end
+    if npc.PivotTo then
+        npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
+    elseif npc:IsA("BasePart") then
+        npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
+    elseif root and root:IsA("BasePart") then
+        root.CFrame = CFrame.lookAt(nextPosition, lookAt)
+    end
+    record.KinematicHeartbeatMoves = (record.KinematicHeartbeatMoves or 0) + 1
+    npc:SetAttribute("KinematicSmoothingActive", true)
+    npc:SetAttribute("KinematicMoveTarget", self:FormatVector3(record.MoveTarget))
+    npc:SetAttribute("KinematicHeartbeatMoves", record.KinematicHeartbeatMoves)
+    npc:SetAttribute("KinematicLastStepStuds", step)
+    npc:SetAttribute("LocomotionMode", mode)
+    return true
+end
+
 function NPCService:Wander(record)
     local target = self:ResolveWanderTarget(record)
     self:Transition(record, "Wander")
@@ -1219,12 +1628,73 @@ function NPCService:RunPredatorBrain(record, players)
     return self:Wander(record)
 end
 
+function NPCService:StampCarcassGeometry(carcass, consumed)
+    if not carcass then return end
+    if carcass:IsA("BasePart") then
+        carcass.CanCollide = true
+        carcass.CanTouch = false
+        carcass.CanQuery = consumed ~= true
+        if consumed == true then
+            carcass.Transparency = math.max(carcass.Transparency, 0.65)
+        end
+        return
+    end
+    if carcass.GetDescendants then
+        for _, descendant in ipairs(carcass:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.CanCollide = true
+                descendant.CanTouch = false
+                descendant.CanQuery = consumed ~= true
+                if consumed == true then
+                    descendant.Transparency = math.max(descendant.Transparency, 0.65)
+                end
+            end
+        end
+    end
+end
+
+function NPCService:ConvertRecordToCarcass(record, nutrition)
+    if not record or not record.Instance then return nil, "missing_npc" end
+    local carcass = record.Instance
+    carcass.Name = carcass.Name or ((record.Kind or "NPC") .. "_Carcass")
+    if carcass.SetAttribute then
+        carcass:SetAttribute("Diet", "Carnivore")
+        carcass:SetAttribute("Nutrition", nutrition or 35)
+        carcass:SetAttribute("FoodKind", self:GetCarnivoreFoodKind(record.Kind))
+        carcass:SetAttribute("Depleted", false)
+        carcass:SetAttribute("RespawnCooldownSeconds", 180)
+        carcass:SetAttribute("CreatorStoreOnly", true)
+        carcass:SetAttribute("ImportedVisibleAsset", carcass:GetAttribute("ImportedVisibleAsset") ~= false)
+        carcass:SetAttribute("AssetManifestId", carcass:GetAttribute("AssetManifestId") or "DefeatedNPCModelCarcass")
+        carcass:SetAttribute("SourceNPC", carcass.Name)
+        carcass:SetAttribute("SourceNPCKind", record.Kind or "")
+        carcass:SetAttribute("PotentialCarnivoreFood", true)
+        carcass:SetAttribute("CarnivoreFoodCandidate", true)
+        carcass:SetAttribute("CarcassFoodSource", true)
+        carcass:SetAttribute("DeadModelCarcass", true)
+        carcass:SetAttribute("CarcassConsumed", false)
+        carcass:SetAttribute("DeathState", "Carcass")
+        carcass:SetAttribute("GameplayQuery", true)
+        carcass:SetAttribute("CompactFoodGroup", "NPCCarcass")
+        carcass:SetAttribute("ActiveNPCBrain", false)
+    end
+    self:StampCarcassGeometry(carcass, false)
+    if not CollectionService:HasTag(carcass, "FoodSource") then
+        CollectionService:AddTag(carcass, "FoodSource")
+    end
+    if not CollectionService:HasTag(carcass, "CarnivoreFoodCandidate") then
+        CollectionService:AddTag(carcass, "CarnivoreFoodCandidate")
+    end
+    record.Carcass = carcass
+    return carcass
+end
+
 function NPCService:ResolveImportedCarcassVisual()
     local library = game:GetService("ReplicatedStorage"):FindFirstChild("ImportedAssetLibrary")
     if not library then return nil end
     for _, descendant in ipairs(library:GetDescendants()) do
         local name = string.lower(descendant.Name)
-        if (string.find(name, "fossil", 1, true) or string.find(name, "bone", 1, true) or string.find(name, "dinosaur", 1, true) or string.find(name, "egg", 1, true)) then
+        if (string.find(name, "carcass", 1, true) or string.find(name, "corpse", 1, true) or string.find(name, "fossil", 1, true) or string.find(name, "bone", 1, true) or string.find(name, "skeleton", 1, true)) then
             if descendant:IsA("Model") or descendant:IsA("BasePart") then
                 if descendant:IsA("BasePart") or descendant:FindFirstChildWhichIsA("BasePart", true) then
                     return descendant
@@ -1235,10 +1705,149 @@ function NPCService:ResolveImportedCarcassVisual()
     return nil
 end
 
+function NPCService:ResolveImportedBoneVisual()
+    local library = game:GetService("ReplicatedStorage"):FindFirstChild("ImportedAssetLibrary")
+    if not library then return nil end
+    for _, descendant in ipairs(library:GetDescendants()) do
+        local name = string.lower(descendant.Name)
+        local looksLikeBones = string.find(name, "bone", 1, true)
+            or string.find(name, "fossil", 1, true)
+            or string.find(name, "skeleton", 1, true)
+            or string.find(name, "skull", 1, true)
+        if looksLikeBones and (descendant:IsA("Model") or descendant:IsA("BasePart")) then
+            if descendant:IsA("BasePart") or descendant:FindFirstChildWhichIsA("BasePart", true) then
+                return descendant
+            end
+        end
+    end
+    return nil
+end
+
+function NPCService:CreateProceduralBonesReplacement(sourceCarcass, position)
+    local bones = Instance.new("Model")
+    bones.Name = (sourceCarcass and sourceCarcass.Name or "NPC") .. "_Bones"
+
+    local function makeBone(name, size, offset, rotation)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Shape = Enum.PartType.Cylinder
+        part.Size = size
+        part.Material = Enum.Material.SmoothPlastic
+        part.Color = Color3.fromRGB(228, 218, 184)
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = true
+        part.CFrame = CFrame.new(position + offset) * rotation
+        part.Parent = bones
+        return part
+    end
+
+    local spine = makeBone("SpineBone", Vector3.new(0.45, 5.5, 0.45), Vector3.new(0, 0.35, 0), CFrame.Angles(0, 0, math.rad(90)))
+    makeBone("RibBoneA", Vector3.new(0.35, 3.2, 0.35), Vector3.new(-0.8, 0.55, 0.35), CFrame.Angles(math.rad(70), 0, math.rad(90)))
+    makeBone("RibBoneB", Vector3.new(0.35, 3.2, 0.35), Vector3.new(0.8, 0.55, -0.35), CFrame.Angles(math.rad(-70), 0, math.rad(90)))
+    local skull = Instance.new("Part")
+    skull.Name = "SkullBone"
+    skull.Shape = Enum.PartType.Ball
+    skull.Size = Vector3.new(1.35, 0.9, 1.05)
+    skull.Material = Enum.Material.SmoothPlastic
+    skull.Color = Color3.fromRGB(232, 223, 190)
+    skull.Anchored = true
+    skull.CanCollide = false
+    skull.CanTouch = false
+    skull.CanQuery = true
+    skull.CFrame = CFrame.new(position + Vector3.new(2.9, 0.55, 0))
+    skull.Parent = bones
+
+    bones.PrimaryPart = spine
+    bones:SetAttribute("ProceduralBonesVisual", true)
+    return bones
+end
+
+function NPCService:CreateBonesReplacement(sourceCarcass, eaterRecord)
+    if not sourceCarcass then return nil, "missing_carcass" end
+    local source = self:ResolveImportedBoneVisual()
+    local position = self:GetInstancePosition(sourceCarcass) or Vector3.new(0, 3, 0)
+    local bones
+    if source then
+        bones = source:Clone()
+        if bones:IsA("BasePart") then
+            local wrapper = Instance.new("Model")
+            wrapper.Name = (sourceCarcass.Name or "NPC") .. "_Bones"
+            bones.Parent = wrapper
+            wrapper.PrimaryPart = bones
+            bones = wrapper
+        else
+            bones.Name = (sourceCarcass.Name or "NPC") .. "_Bones"
+        end
+    else
+        bones = self:CreateProceduralBonesReplacement(sourceCarcass, position)
+    end
+    for _, descendant in ipairs(bones:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = true
+        end
+    end
+    if bones:IsA("Model") then
+        if not bones.PrimaryPart then bones.PrimaryPart = bones:FindFirstChildWhichIsA("BasePart", true) end
+        if bones.PrimaryPart then bones:PivotTo(CFrame.new(position)) end
+    elseif bones:IsA("BasePart") then
+        bones.CFrame = CFrame.new(position)
+    end
+    bones:SetAttribute("Diet", "")
+    bones:SetAttribute("Nutrition", 0)
+    bones:SetAttribute("FoodKind", "DepletedCarcassBones")
+    bones:SetAttribute("Depleted", true)
+    bones:SetAttribute("CarcassBones", true)
+    bones:SetAttribute("CarcassConsumed", true)
+    bones:SetAttribute("SourceCarcass", sourceCarcass.Name)
+    bones:SetAttribute("EatenByNPC", self:GetEaterName(eaterRecord))
+    bones:SetAttribute("ImportedVisibleAsset", true)
+    bones:SetAttribute("GameplayQuery", true)
+    bones.Parent = Workspace:FindFirstChild("NPCs") or Workspace
+    return bones
+end
+
+function NPCService:ConsumeCarcassFoodSource(carcass, eaterRecord)
+    if not carcass or carcass:GetAttribute("CarcassFoodSource") ~= true then return false, "not_carcass" end
+    carcass:SetAttribute("Depleted", true)
+    carcass:SetAttribute("Nutrition", 0)
+    carcass:SetAttribute("PotentialCarnivoreFood", false)
+    carcass:SetAttribute("CarnivoreFoodCandidate", false)
+    carcass:SetAttribute("CarcassConsumed", true)
+    carcass:SetAttribute("CarcassVisualState", "Bones")
+    carcass:SetAttribute("EatenByNPC", self:GetEaterName(eaterRecord))
+    if CollectionService:HasTag(carcass, "CarnivoreFoodCandidate") then
+        CollectionService:RemoveTag(carcass, "CarnivoreFoodCandidate")
+    end
+    if CollectionService:HasTag(carcass, "FoodSource") then
+        CollectionService:RemoveTag(carcass, "FoodSource")
+    end
+    self:StampCarcassGeometry(carcass, true)
+
+    local bones = self:CreateBonesReplacement(carcass, eaterRecord)
+    if bones then
+        carcass:SetAttribute("BonesReplacement", bones.Name)
+        if carcass.Parent then
+            carcass.Parent = nil
+        end
+        return true, bones
+    end
+
+    carcass:SetAttribute("BonesReplacement", "")
+    return true, carcass
+end
+
 function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
 	local record = type(npcOrRecord) == "table" and npcOrRecord.Instance ~= nil and npcOrRecord or nil
 	local npc = record and record.Instance or npcOrRecord
     if not npc then return nil, "missing_npc" end
+    if record then
+        return self:ConvertRecordToCarcass(record, nutrition)
+    end
     local position = Vector3.new(0, 3, 0)
     if npc and npc.GetPivot then
         position = npc:GetPivot().Position
@@ -1473,20 +2082,29 @@ function NPCService:StartTickLoop(playersService)
     task.spawn(function()
         local RunService = game:GetService("RunService")
         while self.TickLoopStarted do
-            RunService.Heartbeat:Wait()
+            local deltaSeconds = RunService.Heartbeat:Wait()
+            local movedThisFrame = 0
             for _, record in ipairs(self.NPCs) do
-                if record.State ~= "Dead" and record.MoveTarget then
+                if movedThisFrame >= (self.KinematicHeartbeatMoveBudget or self.MaxActive or 30) then
+                    if record.Instance then
+                        record.Instance:SetAttribute("KinematicMoveDeferred", true)
+                    end
+                elseif record.State ~= "Dead" and record.MoveTarget then
                     local npc = record.Instance
                     if npc then
                         local root, mode = self:ResolveLocomotionRoot(npc)
                         local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
                         if humanoid and root and mode == "HumanoidMoveTo" then
+                            self:PrepareHumanoidRigForMotion(record, npc, root, humanoid)
                             local dist = (root.Position - record.MoveTarget).Magnitude
                             if dist > 2 then
                                 humanoid:MoveTo(record.MoveTarget)
                             else
                                 record.MoveTarget = nil
                             end
+                        elseif self:StepKinematicMoveTarget(record, deltaSeconds) then
+                            movedThisFrame = movedThisFrame + 1
+                            npc:SetAttribute("KinematicMoveDeferred", false)
                         end
                     end
                 end
@@ -1494,6 +2112,14 @@ function NPCService:StartTickLoop(playersService)
         end
     end)
     return true
+end
+
+if FoodWaterService.OnCarcassConsumed then
+    FoodWaterService:OnCarcassConsumed(function(carcass, eaterRecordOrPlayer)
+        if carcass and carcass:GetAttribute("CarcassFoodSource") == true then
+            NPCService:ConsumeCarcassFoodSource(carcass, eaterRecordOrPlayer)
+        end
+    end)
 end
 
 return NPCService

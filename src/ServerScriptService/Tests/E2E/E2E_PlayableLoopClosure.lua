@@ -4,6 +4,7 @@ local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFrame
 local SpeciesConfig = require(game:GetService("ReplicatedStorage").Shared.SpeciesConfig)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
+local WaterService = require(game:GetService("ServerScriptService").Services.WaterService)
 local CombatService = require(game:GetService("ServerScriptService").Services.CombatService)
 local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
 local CityDiscoveryService = require(game:GetService("ServerScriptService").Services.CityDiscoveryService)
@@ -21,10 +22,10 @@ local function ensureCarcassAsset()
         library.Name = "ImportedAssetLibrary"
         library.Parent = game:GetService("ReplicatedStorage")
     end
-    local asset = library:FindFirstChild("PlayableLoopCarcass")
+    local asset = library:FindFirstChild("PlayableLoopBoneRemains")
     if not asset then
         asset = Instance.new("Part")
-        asset.Name = "PlayableLoopCarcass"
+        asset.Name = "PlayableLoopBoneRemains"
         asset.Size = Vector3.new(4, 1, 2)
         asset.Parent = library
     end
@@ -41,7 +42,148 @@ local function rootFor(player, position)
     return root
 end
 
+local function makeNPC(name, position)
+    local model = Instance.new("Model")
+    model.Name = name
+    local root = Instance.new("Part")
+    root.Name = "Root"
+    root.Size = Vector3.new(2, 2, 2)
+    root.Position = position or Vector3.new(0, 3, 0)
+    root.Parent = model
+    model.PrimaryPart = root
+    model.Parent = workspace
+    return model
+end
+
+local function resetNPCs()
+    NPCService.NPCs = {}
+end
+
+table.insert(suite.tests, { name = "hatched player can sprint after egg movement is locked", run = function()
+    local player = MockPlayer.new(49002, "LoopMovement")
+    RateLimitService:ClearPlayer(player)
+    rootFor(player)
+
+    local state = SurvivalService:CreateState(player, "utahraptor")
+    local eggSprintOk = SurvivalService:SetSprinting(player, true)
+    Assert.falsy(eggSprintOk, "egg cannot sprint before hatch")
+
+    for _ = 1, 5 do SurvivalService:RequestHatch(player, "tap") end
+    local sprintOk = SurvivalService:SetSprinting(player, true)
+    Assert.truthy(sprintOk, "hatched player can sprint")
+    Assert.equals(state.Sprinting, true, "sprint state is readable")
+    Assert.truthy(state.CurrentWalkSpeed > SpeciesConfig.utahraptor.BaseStats.Hatchling.WalkSpeed, "sprint increases movement speed")
+
+    SurvivalService:SetSprinting(player, false)
+    Assert.equals(state.Sprinting, false, "sprint can stop")
+end })
+
+table.insert(suite.tests, { name = "nearby NPCs react to food events in playable loop", run = function()
+    resetNPCs()
+    local eater = makeNPC("LoopReactionEatingPreyNPC", Vector3.new(0, 3, 0))
+    local bystander = makeNPC("LoopReactionBystanderPreyNPC", Vector3.new(12, 3, 0))
+    local food = Instance.new("Part")
+    food.Name = "LoopReactionFern"
+    food.Position = Vector3.new(4, 3, 0)
+    food:SetAttribute("Diet", "Herbivore")
+    food:SetAttribute("Nutrition", 20)
+    food.Parent = workspace
+    CollectionService:AddTag(food, "FoodSource")
+
+    local _, eaterRecord = NPCService:Register(eater, "Prey")
+    local _, bystanderRecord = NPCService:Register(bystander, "Prey")
+    eaterRecord.Hatched = true
+    bystanderRecord.Hatched = true
+
+    NPCService:Eat(eaterRecord, food)
+    Assert.equals(bystander:GetAttribute("LastReaction"), "FoodSignal", "nearby NPC notices food event")
+    Assert.equals(bystander:GetAttribute("NearbyFoodTarget"), "LoopReactionFern", "food target is stamped on bystander")
+    Assert.equals(eater:GetAttribute("FoodSignalReactionAffected"), 1, "food reaction affected count is stamped")
+
+    eater:Destroy(); bystander:Destroy(); food:Destroy()
+    resetNPCs()
+end })
+
+table.insert(suite.tests, { name = "nearby NPCs react to fight events in playable loop", run = function()
+    resetNPCs()
+    local bystander = makeNPC("LoopFightBystanderPreyNPC", Vector3.new(12, 3, 0))
+    local predator = makeNPC("LoopFightPredatorNPC", Vector3.new(3, 3, 0))
+    local prey = makeNPC("LoopFightPreyNPC", Vector3.new(6, 3, 0))
+
+    local _, bystanderRecord = NPCService:Register(bystander, "Prey")
+    local _, predatorRecord = NPCService:Register(predator, "Predator")
+    local _, preyRecord = NPCService:Register(prey, "Prey")
+    bystanderRecord.Hatched = true
+    predatorRecord.Hatched = true
+    preyRecord.Hatched = true
+    preyRecord.Health = 80
+
+    NPCService:AttackRecord(predatorRecord, preyRecord)
+    Assert.equals(predator:GetAttribute("FightEventState"), "Attacking", "attacker fight state is stamped")
+    Assert.equals(prey:GetAttribute("FightEventState"), "Hit", "target fight state is stamped")
+    Assert.equals(bystander:GetAttribute("LastReaction"), "FightSignal", "nearby NPC notices fight event")
+    Assert.equals(bystander:GetAttribute("NearbyFightTarget"), "LoopFightPreyNPC", "fight target is stamped on bystander")
+
+    bystander:Destroy(); predator:Destroy(); prey:Destroy()
+    resetNPCs()
+end })
+
+table.insert(suite.tests, { name = "validated shallow water is drinkable while deep water is not", run = function()
+    local player = MockPlayer.new(49003, "LoopWater")
+    RateLimitService:ClearPlayer(player)
+    rootFor(player)
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
+    state.Hatched = true
+
+    local shallow = Instance.new("Part")
+    shallow.Name = "LoopDrinkableShallowWater"
+    shallow.Size = Vector3.new(18, 4, 18)
+    shallow.Position = Vector3.new(2, 3, 0)
+    shallow.Parent = workspace
+    CollectionService:AddTag(shallow, "WaterSource")
+
+    local deep = Instance.new("Part")
+    deep.Name = "LoopDeepSwimWater"
+    deep.Size = Vector3.new(18, 10, 18)
+    deep.Position = Vector3.new(2, 3, 0)
+    deep.Parent = workspace
+    CollectionService:AddTag(deep, "WaterSource")
+
+    WaterService:ValidateAllWaterSources()
+    Assert.truthy(CollectionService:HasTag(shallow, "DrinkableWater"), "shallow water is tagged drinkable")
+    Assert.falsy(CollectionService:HasTag(deep, "DrinkableWater"), "deep water is not tagged drinkable")
+
+    state.Thirst = 30
+    Assert.truthy(FoodWaterService:RequestDrink(player, shallow), "validated shallow water restores thirst")
+    RateLimitService:ClearPlayer(player)
+    local deepOk = FoodWaterService:RequestDrink(player, deep)
+    Assert.falsy(deepOk, "deep water is rejected as a drink target")
+
+    shallow:Destroy(); deep:Destroy()
+end })
+
+table.insert(suite.tests, { name = "hostile NPC fights back when player is in attack range", run = function()
+    resetNPCs()
+    local player = MockPlayer.new(49004, "LoopFightBack")
+    RateLimitService:ClearPlayer(player)
+    rootFor(player, Vector3.new(0, 3, 0))
+    local state = SurvivalService:CreateState(player, "utahraptor")
+    state.Hatched = true
+
+    local predator = makeNPC("LoopFightBackPredatorNPC", Vector3.new(3, 3, 0))
+    local _, predatorRecord = NPCService:Register(predator, "Predator")
+    predatorRecord.Hatched = true
+
+    Assert.truthy(NPCService:RunPredatorBrain(predatorRecord, { player }), "predator brain responds to nearby player")
+    Assert.equals(predatorRecord.State, "Attack", "hostile NPC enters attack state")
+    Assert.equals(predator:GetAttribute("AttackRangeConfirmed"), true, "hostile NPC confirms attack range")
+
+    predator:Destroy()
+    resetNPCs()
+end })
+
 table.insert(suite.tests, { name = "fresh player egg to death respawn loop is server authoritative", run = function()
+    resetNPCs()
     local player = MockPlayer.new(49001, "LoopClosure")
     RateLimitService:ClearPlayer(player)
     PlayerDataService:Get(player)
@@ -136,6 +278,12 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     RateLimitService:ClearPlayer(player)
     Assert.truthy(FoodWaterService:RequestEat(player, record.Carcass), "carnivore player eats NPC carcass")
     Assert.truthy(state.Hunger > 30, "NPC carcass restores hunger")
+    Assert.equals(record.Carcass:GetAttribute("LastFoodState"), "Depleted", "eaten carcass depletes into remains")
+    Assert.equals(record.Carcass:GetAttribute("CarcassConsumed"), true, "player-eaten carcass enters consumed state")
+    Assert.falsy(CollectionService:HasTag(record.Carcass, "FoodSource"), "consumed carcass is no longer edible")
+    local bonesName = record.Carcass:GetAttribute("BonesReplacement")
+    Assert.truthy((bonesName or "") ~= "", "depleted carcass records bones replacement")
+    Assert.notNil(workspace:FindFirstChild(bonesName, true), "depleted carcass leaves readable bone remains in world")
 
     Assert.truthy(CityDiscoveryService:Discover(player, "ApocalypticCity"), "city discovered")
     local fossil = Instance.new("Part")
@@ -157,6 +305,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
 
     if record.Carcass then record.Carcass:Destroy() end
     eggFood:Destroy(); water:Destroy(); prey:Destroy(); preyModel:Destroy(); fossil:Destroy()
+    resetNPCs()
 end })
 
 return suite

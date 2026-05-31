@@ -17,6 +17,7 @@
 --   HUDController:EnsureGui()                       -> gui
 
 local Players           = game:GetService("Players")
+local Workspace         = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIFactory         = require(script.Parent.UIFactory)
 local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
@@ -74,6 +75,17 @@ local BAR_START_Y = 108
 local BAR_STEP    = 22
 
 -- ── Pure helpers ──────────────────────────────────────────────────────────────
+
+local function getViewportSize()
+    local camera = Workspace.CurrentCamera
+    return camera and camera.ViewportSize or Vector2.new(1280, 720)
+end
+
+function HUDController:GetResponsiveScale(viewport)
+    viewport = viewport or getViewportSize()
+    if viewport.X >= 900 and viewport.Y >= 540 then return 1, false end
+    return math.clamp(math.min(viewport.X / 844, viewport.Y / 390), 0.62, 0.78), true
+end
 
 local function round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
@@ -359,6 +371,18 @@ function HUDController:EnsureGui()
         UDim2.fromOffset(PANEL_PAD, PANEL_PAD)
     )
     root:SetAttribute("CompactKidHUD", true)
+    local hudScale, compactViewport = self:GetResponsiveScale()
+    if compactViewport then
+        local uiScale = Instance.new("UIScale")
+        uiScale.Name = "MobileViewportScale"
+        uiScale.Scale = hudScale
+        uiScale.Parent = root
+        root.BackgroundTransparency = 0.26
+        root:SetAttribute("MobileSafeLayout", true)
+        root:SetAttribute("MobileViewportScale", hudScale)
+    else
+        root:SetAttribute("MobileSafeLayout", false)
+    end
 
     -- ── Row 1: species name ────────────────────────────────────────────────
     self.SpeciesLabel              = Instance.new("TextLabel")

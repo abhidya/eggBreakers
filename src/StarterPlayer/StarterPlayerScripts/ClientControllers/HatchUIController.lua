@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local UIFactory = require(script.Parent.UIFactory)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
@@ -27,6 +28,18 @@ local starterRoleText = {
     utahraptor = "pack hunter",
     citipati = "nest forager",
 }
+
+local function getViewportSize()
+    local camera = Workspace.CurrentCamera
+    return camera and camera.ViewportSize or Vector2.new(1280, 720)
+end
+
+function HatchUIController:GetResponsiveScale(viewport)
+    viewport = viewport or getViewportSize()
+    if viewport.X >= 900 and viewport.Y >= 540 then return 1, false end
+    local scale = math.clamp(math.min(viewport.X / 844, viewport.Y / 390), 0.62, 0.86)
+    return scale, true
+end
 
 function HatchUIController:GetSpeciesButtonText(speciesId)
     if speciesId == self.RandomSpeciesOptionId then
@@ -66,6 +79,7 @@ function HatchUIController:Show()
     prompt.AutoButtonColor = true
     prompt:SetAttribute("HatchInputButton", true)
     prompt.Parent = overlay
+    self.Prompt = prompt
     local selector = Instance.new("Frame")
     selector.Name = "SpeciesSelector"
     selector.Size = self.SelectorSize
@@ -81,6 +95,7 @@ function HatchUIController:Show()
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = selector
     self.Selector = selector
+    self.SelectorLayout = layout
     self.SpeciesButtons = {}
     local meter = Instance.new("Frame")
     meter.Name = "CrackMeter"
@@ -88,6 +103,7 @@ function HatchUIController:Show()
     meter.Position = self.MeterPosition
     meter.BackgroundColor3 = Color3.fromRGB(40, 30, 20)
     meter.Parent = overlay
+    self.Meter = meter
     self.Fill = Instance.new("Frame")
     self.Fill.Name = "Fill"
     self.Fill.Size = UDim2.fromScale(0, 1)
@@ -98,7 +114,69 @@ function HatchUIController:Show()
         gui.Parent = localPlayer:WaitForChild("PlayerGui")
     end
     self.Gui = gui
+    self:ApplyResponsiveLayout()
     return gui
+end
+
+function HatchUIController:ApplyResponsiveLayout()
+    if not self.Gui then return false end
+    local viewport = getViewportSize()
+    local scale, compact = self:GetResponsiveScale(viewport)
+    local selector = self.Selector
+    local layout = self.SelectorLayout
+    local prompt = self.Prompt
+    local meter = self.Meter
+
+    if selector and layout then
+        if compact then
+            local selectorWidth = math.max(300, math.min(476 * scale, viewport.X - 24))
+            local columns = selectorWidth < 420 and 2 or 3
+            local cellPadding = math.max(5, 8 * scale)
+            local cellWidth = math.floor((selectorWidth - cellPadding * (columns + 1)) / columns)
+            local cellHeight = math.max(34, 42 * scale)
+            local rows = math.ceil((self.CurrentSpeciesOptionCount or #self.StarterSpecies) / columns)
+            local selectorHeight = math.max(102, rows * cellHeight + (rows + 1) * cellPadding)
+            selector.Size = UDim2.fromOffset(selectorWidth, selectorHeight)
+            selector.Position = UDim2.new(0.5, -selectorWidth / 2, 0, math.max(54, math.floor(viewport.Y * 0.08)))
+            selector:SetAttribute("MobileSafeLayout", true)
+            layout.CellSize = UDim2.fromOffset(cellWidth, cellHeight)
+            layout.CellPadding = UDim2.fromOffset(cellPadding, cellPadding)
+        else
+            selector.Size = self.SelectorSize
+            selector.Position = self.SelectorPosition
+            selector:SetAttribute("MobileSafeLayout", false)
+            layout.CellSize = UDim2.fromOffset(230, 46)
+            layout.CellPadding = UDim2.fromOffset(8, 8)
+        end
+    end
+
+    if prompt then
+        if compact then
+            local promptWidth = math.max(260, math.min(360 * scale, viewport.X - 36))
+            local promptHeight = math.max(42, 52 * scale)
+            prompt.Size = UDim2.fromOffset(promptWidth, promptHeight)
+            prompt.Position = UDim2.new(0.5, -promptWidth / 2, 1, -math.max(132, 146 * scale))
+            prompt:SetAttribute("MobileSafeLayout", true)
+        else
+            prompt.Size = self.PromptSize
+            prompt.Position = self.PromptPosition
+            prompt:SetAttribute("MobileSafeLayout", false)
+        end
+    end
+
+    if meter then
+        if compact then
+            local meterWidth = math.max(240, math.min(310 * scale, viewport.X - 56))
+            meter.Size = UDim2.fromOffset(meterWidth, math.max(12, 16 * scale))
+            meter.Position = UDim2.new(0.5, -meterWidth / 2, 1, -math.max(84, 96 * scale))
+            meter:SetAttribute("MobileSafeLayout", true)
+        else
+            meter.Size = self.MeterSize
+            meter.Position = self.MeterPosition
+            meter:SetAttribute("MobileSafeLayout", false)
+        end
+    end
+    return true
 end
 
 function HatchUIController:RequestHatchInput(inputType)
@@ -132,6 +210,7 @@ end
 function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSelect)
     self:Show()
     speciesIds = speciesIds or self.StarterSpecies
+    self.CurrentSpeciesOptionCount = #speciesIds
     self.OnSelectSpecies = onSelect or self.OnSelectSpecies
     self.SelectedSpeciesId = selectedSpeciesId or self.SelectedSpeciesId or speciesIds[1]
     local selectedButtonId = self.SelectedSpeciesId
@@ -185,6 +264,7 @@ function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSe
         end)
         self.SpeciesButtons[speciesId] = button
     end
+    self:ApplyResponsiveLayout()
 end
 
 function HatchUIController:SetProgress(progress)

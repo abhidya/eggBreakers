@@ -182,5 +182,17 @@ table.insert(suite.tests, { name = "mobile hud prompts do not overlap controls",
     MobileControlsController.Gui = nil
 end })
 
+table.insert(suite.tests, { name = "phone controls shrink and move hints out of play center", run = function()
+    local scale, compact = MobileControlsController:GetResponsiveScale(1, Vector2.new(844, 390))
+    Assert.equals(compact, true, "iPhone landscape uses compact controls")
+    Assert.truthy(scale < 1, "compact controls shrink buttons")
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1, ViewportSize = Vector2.new(844, 390) })
+    local gui = result.Gui
+    Assert.equals(gui:GetAttribute("MobileSafeLayout"), true, "gui records mobile-safe layout")
+    Assert.truthy(gui:FindFirstChild("NearestActionHintLabel").Position.Y.Scale == 0, "scent cue moves to top band on phones")
+    gui:Destroy()
+    MobileControlsController.Gui = nil
+end })
+
 TestRunner.registerSuite(suite)
 return suite

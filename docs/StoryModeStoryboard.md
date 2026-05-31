@@ -38,10 +38,28 @@ Use these labels consistently:
 
 ## Swarm audit additions — 2026-05-31
 
+- **Lane priority override from mobile evidence:** iPhone portrait and landscape are currently not playable because UI cards obstruct the play space. Fix mobile playability before adding new story polish. Required proof: live iPhone-sized portrait and landscape captures where hatch/species cards, HUD, context action, and mobile controls leave the dinosaur, food/water target, threat, and path visible and tappable.
+- Visible quality is now part of every story gate: screenshots must prove the player sees a real dinosaur, readable food, drinkable water, combat response, carcass/bone remains, and unobstructed mobile controls without developer labels.
 - G018 live proof must use one naming contract: `US27LiveProofPassed` through `US36LiveProofPassed` on `ReplicatedStorage.G018FinalGateProof`. Older `G018US01LiveProofPassed` style names are stale.
 - NPC ecosystem proof must show CPU-bounded brains, not all-NPC full scans forever. Live captures should include `BrainCycleBudget`, `BrainCycleTotal`, and no frozen/teleport-only static models.
 - Predator social proof now needs a pack/regroup beat before idle wandering; prey social proof still needs herd cohesion; omnivore proof needs plant plus carcass paths; future nest story proof needs a real mating/nesting beat, not only spawned props.
 - Asset search candidates remain references until previewed and inserted with reviewed scripts. Low-favorite foliage/nest results may be useful as kitbash material, but placeholder plates/blocks still fail this storyboard.
+
+## Playable-loop E2E story gate
+
+`src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` is the source E2E gate for the first-session survival spine. It must stay aligned with this storyboard and prove these behaviors without relying on client-only labels:
+
+| Story step | E2E gate |
+|---|---|
+| Hatch | Egg-state player cannot eat; repeated hatch input creates a hatched `utahraptor` state. |
+| Movement | Egg-state player cannot sprint; hatched player can sprint, receives a faster `CurrentWalkSpeed`, then returns to awake ground movement after rest. |
+| Eat/drink | Diet-valid food and validated shallow drinkable water restore hunger/thirst; swim/fish/deep water is rejected as a drink target; depleted food can respawn. |
+| Sleep/rest | Resting sets a readable sleep state, advances age, restores stamina, and can return to awake. |
+| Age/growth | Needs ticks advance `AgeSeconds`; growth reaches the next stage. |
+| Death/respawn | Death records `DeathState="Dying"` and final age; respawn returns to an unhatched egg while preserving saved rewards. |
+| NPC reactions | Prey flees the player; nearby NPCs stamp food/fight reaction attributes; hostile NPCs fight back when the player is in range; player-killed NPCs leave edible carcasses that deplete to readable bone/carcass remains. |
+
+Storyboard proof still needs screenshots, iPhone portrait/landscape playability captures, and saved-place persistence. The E2E gate is a behavior guard, not a substitute for visual acceptance.
 
 ## Story mode spine
 

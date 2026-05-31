@@ -236,5 +236,11 @@ table.insert(suite.tests, { name = "hud factory supports compact mobile bars", r
     root:Destroy()
 end })
 
+table.insert(suite.tests, { name = "hud scales down for phone viewport", run = function()
+    local scale, compact = HUDController:GetResponsiveScale(Vector2.new(390, 844))
+    Assert.equals(compact, true, "portrait phone uses compact HUD")
+    Assert.truthy(scale < 1, "compact HUD scales down")
+end })
+
 TestRunner.registerSuite(suite)
 return suite

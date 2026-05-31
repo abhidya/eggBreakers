@@ -1,13 +1,15 @@
 -- NPCAnimationService.lua
--- Drives Humanoid Animator tracks for NPCs based on the NPCState attribute.
+-- Drives Humanoid/AnimationController Animator tracks for NPCs based on NPCState.
 -- Animation IDs are sourced from SpeciesConfig.AnimationIds (salvaged from imported dino pack;
 -- per-rig validation required before final shipping).
 --
 -- State → track mapping:
---   Idle, HatchAtNest, Eat, Drink, Hide  → Idle track
+--   Idle, HatchAtNest, Hide              → Idle track
 --   Wander, Herd, SeekFood, SeekWater    → Walk track  (speed-blended with WalkSpeed)
---   Chase, Flee                           → Run  track  (speed-blended with SprintSpeed)
+--   Chase, Flee                          → Run  track  (speed-blended with SprintSpeed)
+--   Eat, Drink                           → Eat/Drink track
 --   Attack                               → Attack track
+--   Mate, ApexEvent                      → Call track, falling back to Idle
 --   Dead                                 → stops all tracks
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -37,9 +39,19 @@ local STATE_TO_KEY = {
     Chase       = "Run",
     Flee        = "Run",
     Attack      = "Attack",
+    Mate        = "Call",
     Dead        = "Dead",
     Despawn     = "Dead",
-    ApexEvent   = "Idle",
+    ApexEvent   = "Call",
+}
+
+local TRACK_FALLBACKS = {
+    Call = { "Idle" },
+    Drink = { "Eat", "Idle" },
+    Eat = { "Idle" },
+    Attack = { "Run", "Idle" },
+    Run = { "Walk", "Idle" },
+    Walk = { "Idle" },
 }
 
 -- Speed multipliers per key for blending (applied to AnimationTrack.Speed)
@@ -51,16 +63,31 @@ local KEY_SPEED_SCALE = {
 -- ──────────────────────────────────────────────────────────────
 -- Internal: load animation tracks for an NPC
 -- ──────────────────────────────────────────────────────────────
-local function loadTracksForNPC(npc, speciesId)
+local function resolveAnimator(npc)
     local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
-    if not humanoid then return nil end
-
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = humanoid
+    if humanoid then
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = humanoid
+        end
+        return animator, humanoid, "Humanoid"
     end
+    local controller = npc:FindFirstChildWhichIsA("AnimationController", true)
+    if controller then
+        local animator = controller:FindFirstChildOfClass("Animator")
+        if not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = controller
+        end
+        return animator, nil, "AnimationController"
+    end
+    return nil, nil, "MissingAnimator"
+end
 
+local function loadTracksForNPC(npc, speciesId)
+    local animator, humanoid, driverType = resolveAnimator(npc)
+    if not animator then return nil end
     local animIds = SpeciesConfig[speciesId] and SpeciesConfig[speciesId].AnimationIds or {}
     local tracks = {}
 
@@ -80,9 +107,21 @@ local function loadTracksForNPC(npc, speciesId)
 
     return {
         animator    = animator,
+        humanoid    = humanoid,
+        driverType  = driverType,
         tracks      = tracks,
         currentKey  = nil,
     }
+end
+
+local function resolveTrackKey(entry, key)
+    if key == "Dead" or entry.tracks[key] then return key end
+    for _, fallbackKey in ipairs(TRACK_FALLBACKS[key] or {}) do
+        if entry.tracks[fallbackKey] then
+            return fallbackKey
+        end
+    end
+    return key
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -129,9 +168,10 @@ function NPCAnimationService:Register(npcInstance, speciesId)
     end
 
     local entry = loadTracksForNPC(npcInstance, speciesId)
-    if not entry then return false, "no_humanoid" end
+    if not entry then return false, "no_animator" end
 
     NPCAnimationService._tracked[npcInstance] = entry
+    npcInstance:SetAttribute("NPCAnimationDriver", entry.driverType)
     return true
 end
 
@@ -158,17 +198,17 @@ function NPCAnimationService:UpdateRecord(record)
     if not entry then
         -- Auto-register lazily if Humanoid exists
         local ok = NPCAnimationService:Register(npc, record.SpeciesId or "")
-        if not ok then return false, "no_humanoid" end
+        if not ok then return false, "no_animator" end
         entry = NPCAnimationService._tracked[npc]
         if not entry then return false, "register_failed" end
     end
 
     local state = record.State or "Idle"
-    local key = STATE_TO_KEY[state] or "Idle"
+    local key = resolveTrackKey(entry, STATE_TO_KEY[state] or "Idle")
 
     -- Speed-blend Walk/Run based on Humanoid velocity magnitude vs config
     local speedScale = KEY_SPEED_SCALE[key] or 1.0
-    local humanoid = npc:FindFirstChildWhichIsA("Humanoid")
+    local humanoid = entry.humanoid or npc:FindFirstChildWhichIsA("Humanoid")
     if humanoid and (key == "Walk" or key == "Run") then
         local vel = humanoid.RootPart and humanoid.RootPart.AssemblyLinearVelocity
         if vel then
@@ -181,6 +221,8 @@ function NPCAnimationService:UpdateRecord(record)
     end
 
     applyKey(entry, key, speedScale)
+    npc:SetAttribute("NPCAnimationKey", key)
+    npc:SetAttribute("NPCAnimationState", state)
     return true
 end
 

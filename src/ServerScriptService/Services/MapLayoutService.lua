@@ -440,6 +440,7 @@ function MapLayoutService:AttachImportedDressingVisual(anchor, spec, role)
         end
         clone.Position = anchor.Position
     end
+    self:ClampInstanceAboveGround(clone, anchor:GetAttribute("GroundTopY"), anchor:GetAttribute("PlacementSurfaceSource"), 0)
 
     anchor.Transparency = 1
     anchor:SetAttribute("ReleaseHiddenProceduralVisual", true)
@@ -532,6 +533,7 @@ function MapLayoutService:AttachImportedFoodVisual(queryPart, opts)
     elseif clone:IsA("BasePart") then
         clone.Position = queryPart.Position
     end
+    self:ClampInstanceAboveGround(clone, queryPart:GetAttribute("GroundTopY"), queryPart:GetAttribute("PlacementSurfaceSource"), 0)
 
     queryPart:SetAttribute("ImportedFoodVisualAttached", true)
     queryPart:SetAttribute("ImportedFoodVisualTemplate", source:GetFullName())
@@ -1142,6 +1144,7 @@ MapLayoutService.NPCKindSpeciesIds = {
     AerialPredator = "pteranodon",
     Apex = "tyrannosaurus",
     Omnivore = "citipati",
+    SemiAquatic = "spinosaurus",
 }
 
 MapLayoutService.NPCKindFoodWhenDefeated = {
@@ -1152,6 +1155,7 @@ MapLayoutService.NPCKindFoodWhenDefeated = {
     AerialPredator = "PredatorCarcass",
     Apex = "LargeCarcass",
     Omnivore = "PreyCarcass",
+    SemiAquatic = "LargeCarcass",
 }
 
 MapLayoutService.NPCSpawnPlacements = {
@@ -1177,6 +1181,65 @@ MapLayoutService.NPCSpawnPlacements = {
     { name = "PterodactylFlyingPrey_01", position = Vector3.new(-180, 116, -1540), kind = "FlyingPrey", zone = "MountainNestingCliffs", flyingPrey = true },
     { name = "PterodactylFlyingPrey_02", position = Vector3.new(-1320, 72, 890), kind = "FlyingPrey", zone = "JungleBasin", flyingPrey = true },
 }
+
+local function appendPlacements(target, entries)
+    for _, entry in ipairs(entries) do
+        table.insert(target, entry)
+    end
+end
+
+appendPlacements(MapLayoutService.FoodPlacements, {
+    { name = "NurseryBerryNibble_01", zone = "NurseryGrove", diet = "Herbivore", nutrition = 26, position = Vector3.new(-2108, 12, 62), size = Vector3.new(6, 3, 6), kind = "Berry", cooldown = 50, vegetationType = "BerryBush" },
+    { name = "NurserySeedPodCluster_01", zone = "NurseryGrove", diet = "Omnivore", nutrition = 24, position = Vector3.new(-1915, 12, 140), size = Vector3.new(6, 3, 6), kind = "SeedPod", cooldown = 55, vegetationType = "SeedPodCluster" },
+    { name = "FernHorsetailPatch_01", zone = "FernPlains", diet = "Herbivore", nutrition = 30, position = Vector3.new(-1348, 12, 34), size = Vector3.new(12, 4, 9), kind = "Horsetail", cooldown = 65, vegetationType = "Horsetail" },
+    { name = "FernMossBed_01", zone = "FernPlains", diet = "Herbivore", nutrition = 22, position = Vector3.new(-980, 12, 210), size = Vector3.new(14, 2, 10), kind = "MossBed", cooldown = 70, vegetationType = "Moss" },
+    { name = "JungleFruitFall_01", zone = "JungleBasin", diet = "Omnivore", nutrition = 32, position = Vector3.new(-1265, 12, 1126), size = Vector3.new(8, 3, 8), kind = "FallenFruit", cooldown = 80, vegetationType = "FruitFall" },
+    { name = "JungleMushroomPatch_01", zone = "JungleBasin", diet = "Omnivore", nutrition = 28, position = Vector3.new(-1594, 12, 896), size = Vector3.new(9, 3, 9), kind = "Mushroom", cooldown = 95, vegetationType = "MushroomCluster" },
+    { name = "SwampLilyRoot_01", zone = "SwampDelta", diet = "Herbivore", nutrition = 28, position = Vector3.new(-205, 9, 908), size = Vector3.new(11, 2, 9), kind = "MarshPlant", cooldown = 75, vegetationType = "LilyRoot" },
+    { name = "SwampReedSeed_01", zone = "SwampDelta", diet = "Omnivore", nutrition = 24, position = Vector3.new(28, 9, 1048), size = Vector3.new(8, 3, 8), kind = "SeedPod", cooldown = 70, vegetationType = "ReedSeed" },
+    { name = "RedstoneCactusFruit_01", zone = "RedstoneCanyon", diet = "Omnivore", nutrition = 26, position = Vector3.new(-248, 13, -560), size = Vector3.new(7, 4, 7), kind = "CactusFruit", cooldown = 105, vegetationType = "CactusFruit" },
+    { name = "CityOvergrowthVines_01", zone = "ApocalypticCity", diet = "Herbivore", nutrition = 30, position = Vector3.new(540, 12, -240), size = Vector3.new(11, 3, 9), kind = "CityVines", cooldown = 110, vegetationType = "CityOvergrowth" },
+    { name = "FernFreshCarcass_01", zone = "FernPlains", diet = "Carnivore", nutrition = 44, position = Vector3.new(-1162, 12, -64), size = Vector3.new(8, 2, 5), kind = "PreyCarcass", cooldown = 130 },
+    { name = "JungleBirdCarcass_01", zone = "JungleBasin", diet = "Carnivore", nutrition = 34, position = Vector3.new(-1364, 12, 924), size = Vector3.new(7, 2, 4), kind = "AerialPreyCarcass", cooldown = 140 },
+    { name = "SwampFishCarcass_01", zone = "SwampDelta", diet = "Carnivore", nutrition = 36, position = Vector3.new(-8, 9, 922), size = Vector3.new(7, 2, 4), kind = "PreyCarcass", cooldown = 120 },
+    { name = "RedstoneBoneCache_01", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 48, position = Vector3.new(-68, 13, -598), size = Vector3.new(10, 2, 6), kind = "LargeCarcass", cooldown = 170 },
+})
+
+appendPlacements(MapLayoutService.FoodSourcePlacements, {
+    { name = "NurseryBerryNibble_A", zone = "NurseryGrove", diet = "Herbivore", nutrition = 30, respawnSeconds = 50, position = Vector3.new(-2108, 13, 62), size = Vector3.new(7, 2, 7), color = Color3.fromRGB(96, 166, 76), kind = "Berry" },
+    { name = "FernHorsetailPatch_A", zone = "FernPlains", diet = "Herbivore", nutrition = 36, respawnSeconds = 65, position = Vector3.new(-1348, 13, 34), size = Vector3.new(12, 2, 9), color = Color3.fromRGB(68, 150, 86), kind = "Horsetail" },
+    { name = "JungleFruitFall_A", zone = "JungleBasin", diet = "Omnivore", nutrition = 34, respawnSeconds = 80, position = Vector3.new(-1265, 13, 1126), size = Vector3.new(8, 2, 8), color = Color3.fromRGB(120, 158, 70), kind = "FallenFruit" },
+    { name = "SwampLilyRoot_A", zone = "SwampDelta", diet = "Herbivore", nutrition = 30, respawnSeconds = 75, position = Vector3.new(-205, 10, 908), size = Vector3.new(11, 2, 9), color = Color3.fromRGB(92, 144, 104), kind = "MarshPlant" },
+    { name = "RedstoneCactusFruit_A", zone = "RedstoneCanyon", diet = "Omnivore", nutrition = 28, respawnSeconds = 105, position = Vector3.new(-248, 14, -560), size = Vector3.new(7, 2, 7), color = Color3.fromRGB(154, 142, 68), kind = "CactusFruit" },
+    { name = "JungleBirdCarcass_A", zone = "JungleBasin", diet = "Carnivore", nutrition = 38, respawnSeconds = 140, position = Vector3.new(-1364, 13, 924), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(118, 60, 50), kind = "AerialPreyCarcass" },
+    { name = "SwampFishCarcass_A", zone = "SwampDelta", diet = "Carnivore", nutrition = 36, respawnSeconds = 120, position = Vector3.new(-8, 10, 922), size = Vector3.new(7, 1.5, 4), color = Color3.fromRGB(110, 62, 54), kind = "PreyCarcass" },
+    { name = "RedstoneBoneCache_A", zone = "RedstoneCanyon", diet = "Carnivore", nutrition = 48, respawnSeconds = 170, position = Vector3.new(-68, 14, -598), size = Vector3.new(10, 1.5, 6), color = Color3.fromRGB(148, 118, 86), kind = "LargeCarcass" },
+})
+
+appendPlacements(MapLayoutService.BiomeDressingPlacements, {
+    { name = "NurseryFernNurseryWall_A", zone = "NurseryGrove", kind = "ForestStand", position = Vector3.new(-2130, 12, -48), size = Vector3.new(90, 22, 24), color = Color3.fromRGB(64, 138, 70), material = Enum.Material.LeafyGrass, habitatFeature = "NurseryCover", scenicLandmark = true },
+    { name = "NurseryFallenLog_A", zone = "NurseryGrove", kind = "Log", position = Vector3.new(-2022, 11, 116), size = Vector3.new(46, 7, 9), color = Color3.fromRGB(104, 70, 42), material = Enum.Material.Wood, habitatFeature = "Cover" },
+    { name = "FernPlainsReedLine_A", zone = "FernPlains", kind = "ReedCluster", position = Vector3.new(-1128, 12, 276), size = Vector3.new(82, 14, 12), color = Color3.fromRGB(82, 144, 78), material = Enum.Material.LeafyGrass, habitatFeature = "LakeEdge", scenicLandmark = true },
+    { name = "FernPlainsTallGrassMaze_A", zone = "FernPlains", kind = "GrassStand", position = Vector3.new(-1264, 12, -40), size = Vector3.new(72, 16, 42), color = Color3.fromRGB(76, 150, 70), material = Enum.Material.Grass, habitatFeature = "Cover" },
+    { name = "JungleFallenCanopy_A", zone = "JungleBasin", kind = "FallenTree", position = Vector3.new(-1326, 13, 1038), size = Vector3.new(86, 12, 16), color = Color3.fromRGB(86, 62, 42), material = Enum.Material.Wood, habitatFeature = "JungleCover" },
+    { name = "JungleVineCurtain_A", zone = "JungleBasin", kind = "Vines", position = Vector3.new(-1506, 18, 956), size = Vector3.new(68, 34, 10), color = Color3.fromRGB(42, 122, 58), material = Enum.Material.LeafyGrass, habitatFeature = "JungleGate", scenicLandmark = true },
+    { name = "SwampReedWall_A", zone = "SwampDelta", kind = "ReedCluster", position = Vector3.new(-170, 9, 982), size = Vector3.new(118, 16, 14), color = Color3.fromRGB(72, 124, 88), material = Enum.Material.LeafyGrass, habitatFeature = "MarshCover" },
+    { name = "SwampDriftwood_A", zone = "SwampDelta", kind = "Log", position = Vector3.new(42, 9, 944), size = Vector3.new(58, 8, 12), color = Color3.fromRGB(88, 74, 54), material = Enum.Material.Wood, habitatFeature = "MarshCover" },
+    { name = "RedstoneRibCage_A", zone = "RedstoneCanyon", kind = "BoneRib", position = Vector3.new(-198, 15, -620), size = Vector3.new(44, 24, 16), color = Color3.fromRGB(214, 200, 166), material = Enum.Material.SmoothPlastic, habitatFeature = "CarcassLandmark", scenicLandmark = true },
+    { name = "CityVineOverpass_A", zone = "ApocalypticCity", kind = "CityVines", position = Vector3.new(570, 20, -308), size = Vector3.new(104, 30, 18), color = Color3.fromRGB(54, 108, 66), material = Enum.Material.LeafyGrass, habitatFeature = "CityOvergrowth", scenicLandmark = true },
+    { name = "MountainNestGrass_A", zone = "MountainNestingCliffs", kind = "NestGrass", position = Vector3.new(-96, 81, -1628), size = Vector3.new(90, 10, 42), color = Color3.fromRGB(116, 138, 92), material = Enum.Material.Grass, habitatFeature = "NestCover" },
+})
+
+appendPlacements(MapLayoutService.NPCSpawnPlacements, {
+    { name = "NurseryOmnivoreForager_01", position = Vector3.new(-1972, 14, 118), kind = "Omnivore", zone = "NurseryGrove", tutorialSafe = true },
+    { name = "FernPrey_03", position = Vector3.new(-1198, 14, 48), kind = "Prey", zone = "FernPlains", nestingHerd = true },
+    { name = "FernOmnivoreForager_01", position = Vector3.new(-1032, 14, 82), kind = "Omnivore", zone = "FernPlains" },
+    { name = "JunglePrey_02", position = Vector3.new(-1270, 14, 990), kind = "Prey", zone = "JungleBasin", nestingHerd = true },
+    { name = "JungleOmnivoreForager_01", position = Vector3.new(-1512, 14, 930), kind = "Omnivore", zone = "JungleBasin" },
+    { name = "SwampSemiAquatic_01", position = Vector3.new(-24, 12, 914), kind = "SemiAquatic", zone = "SwampDelta", dangerous = true },
+    { name = "RedstonePrey_02", position = Vector3.new(-215, 16, -624), kind = "Prey", zone = "RedstoneCanyon" },
+    { name = "MountainAerialPrey_02", position = Vector3.new(-210, 98, -1678), kind = "AerialPrey", zone = "MountainNestingCliffs", aerial = true, preferredAltitude = 36 },
+})
 
 MapLayoutService.PlayerSpawnPlacements = {
     { name = "CoelophysisRedstoneSpawn_01", speciesId = "coelophysis", zone = "RedstoneCanyon", position = Vector3.new(-1245, 15, -65), yawDegrees = 92 },
@@ -1358,17 +1421,67 @@ function MapLayoutService:RaycastTerrainSurfaceY(x, z)
 end
 
 function MapLayoutService:GetGroundSurfaceYForPosition(position, zoneId)
+    local zoneTopY = self:GetGroundTopYForZone(zoneId)
     local terrainY = self:RaycastTerrainSurfaceY(position.X, position.Z)
     if terrainY then
+        if terrainY < zoneTopY then
+            return zoneTopY, "ZoneTopClampedTerrain"
+        end
         return terrainY, "Terrain"
     end
-    return self:GetGroundTopYForZone(zoneId), "ZoneTop"
+    return zoneTopY, "ZoneTop"
 end
 
 function MapLayoutService:ResolveGroundedPartPosition(position, size, zoneId, clearance)
     local surfaceY, source = self:GetGroundSurfaceYForPosition(position, zoneId)
     local halfHeight = typeof(size) == "Vector3" and size.Y / 2 or 0
     return Vector3.new(position.X, surfaceY + halfHeight + (clearance or 0), position.Z), surfaceY, source
+end
+
+function MapLayoutService:ResolveAboveGroundPartPosition(position, size, zoneId, clearance)
+    local surfaceY, source = self:GetGroundSurfaceYForPosition(position, zoneId)
+    local halfHeight = typeof(size) == "Vector3" and size.Y / 2 or 0
+    local minimumY = surfaceY + halfHeight + (clearance or 0)
+    return Vector3.new(position.X, math.max(position.Y, minimumY), position.Z), surfaceY, source
+end
+
+function MapLayoutService:ResolveAboveGroundAnchorPosition(position, zoneId, clearance)
+    local surfaceY, source = self:GetGroundSurfaceYForPosition(position, zoneId)
+    local minimumY = surfaceY + (clearance or 0)
+    return Vector3.new(position.X, math.max(position.Y, minimumY), position.Z), surfaceY, source
+end
+
+function MapLayoutService:ClampInstanceAboveGround(instance, groundTopY, surfaceSource, clearance)
+    if not instance or type(groundTopY) ~= "number" then
+        return false
+    end
+
+    local minimumBottomY = groundTopY + (clearance or 0)
+    local bottomY = nil
+    if instance:IsA("BasePart") then
+        bottomY = instance.Position.Y - instance.Size.Y / 2
+    elseif instance:IsA("Model") then
+        local boxCFrame, boxSize = instance:GetBoundingBox()
+        bottomY = boxCFrame.Position.Y - boxSize.Y / 2
+    else
+        return false
+    end
+
+    local clamped = false
+    if bottomY < minimumBottomY then
+        local deltaY = minimumBottomY - bottomY
+        if instance:IsA("BasePart") then
+            instance.Position = instance.Position + Vector3.new(0, deltaY, 0)
+        else
+            instance:PivotTo(instance:GetPivot() + Vector3.new(0, deltaY, 0))
+        end
+        clamped = true
+    end
+
+    instance:SetAttribute("GroundTopY", groundTopY)
+    instance:SetAttribute("PlacementSurfaceSource", surfaceSource)
+    instance:SetAttribute("GroundClampApplied", clamped)
+    return clamped
 end
 
 function MapLayoutService:ResolveNPCSpawnMarkerPosition(spec, size)
@@ -1424,6 +1537,9 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     local waterCenter, surfaceY, surfaceSource = self:ResolveWaterCenter(water)
     marker.Position = waterCenter
     marker.Size = water.size
+    marker.CanCollide = false
+    marker.CanTouch = true
+    marker.CanQuery = true
     marker.Transparency = 1
     marker.Material = Enum.Material.Glass
     marker.Color = Color3.fromRGB(58, 137, 184)
@@ -1441,12 +1557,40 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker:SetAttribute("PlacementSurfaceSource", surfaceSource)
     marker:SetAttribute("SwimZone", water.swimZone == true)
     marker:SetAttribute("FishSpawnAllowed", water.fishSpawnAllowed == true)
-    marker:SetAttribute("InteractionHint", "Drink water")
+    local shallowWater = water.size.Y <= 6
+    local drinkableWater = shallowWater and water.swimZone ~= true and water.fishSpawnAllowed ~= true
+    local waterIntegrity = shallowWater and "Shallow" or "Deep"
+    if drinkableWater then
+        waterIntegrity = "DrinkableShallow"
+    elseif water.swimZone == true or water.fishSpawnAllowed == true then
+        waterIntegrity = shallowWater and "SwimShallow" or "SwimDeep"
+    end
+    marker:SetAttribute("WaterDepthClass", shallowWater and "Shallow" or "Deep")
+    marker:SetAttribute("ShallowDrinkable", drinkableWater)
+    marker:SetAttribute("WaterIntegrity", waterIntegrity)
+    marker:SetAttribute("InteractionHint", drinkableWater and "Drink water" or "Swim")
     marker:SetAttribute("VisibleGameplayAffordance", false)
     marker:SetAttribute("GameplayQuery", true)
     marker:SetAttribute("InvisibleQueryHelper", true)
     if not CollectionService:HasTag(marker, "WaterSource") then
         CollectionService:AddTag(marker, "WaterSource")
+    end
+    if drinkableWater then
+        if not CollectionService:HasTag(marker, "DrinkableWater") then
+            CollectionService:AddTag(marker, "DrinkableWater")
+        end
+        if CollectionService:HasTag(marker, "SwimWater") then
+            CollectionService:RemoveTag(marker, "SwimWater")
+        end
+    else
+        if CollectionService:HasTag(marker, "DrinkableWater") then
+            CollectionService:RemoveTag(marker, "DrinkableWater")
+        end
+        if water.swimZone == true or water.fishSpawnAllowed == true then
+            if not CollectionService:HasTag(marker, "SwimWater") then
+                CollectionService:AddTag(marker, "SwimWater")
+            end
+        end
     end
     self:EnsureShallowWaterVisual(marker, water)
     return marker
@@ -1521,15 +1665,19 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
             food.Shape = Enum.PartType.Block
             food.Material = placement.diet == "Carnivore" and Enum.Material.Leather or Enum.Material.Grass
             food.Color = placement.diet == "Carnivore" and Color3.fromRGB(120, 55, 45) or Color3.fromRGB(64, 135, 54)
-            food.Size = placement.size
-            food.Position = placement.position
             food:SetAttribute("CreatorStoreOnly", nil)
             food:SetAttribute("ImportedVisibleAsset", nil)
             food:SetAttribute("AssetManifestId", nil)
             food:SetAttribute("Decorative", false)
             food.Parent = zoneFolder
         end
+        food.Size = placement.size
+        local foodPosition, groundTopY, surfaceSource = self:ResolveAboveGroundPartPosition(placement.position, food.Size, placement.zone, 0)
+        food.Position = foodPosition
         food:SetAttribute("ZoneId", placement.zone)
+        food:SetAttribute("GroundTopY", groundTopY)
+        food:SetAttribute("PlacementSurfaceSource", surfaceSource)
+        food:SetAttribute("FloatingAllowed", false)
         self:ApplyFoodMetadata(food, placement)
         food:SetAttribute("CreatorStoreOnly", nil)
         food:SetAttribute("ImportedVisibleAsset", nil)
@@ -1672,13 +1820,17 @@ function MapLayoutService:EnsureFoodSource(folders, source)
         existing.Material = source.diet == "Herbivore" and Enum.Material.Grass or Enum.Material.Slate
     end
     existing.Parent = zoneFolder
-    existing.Position = source.position
     existing.Size = source.size
+    local sourcePosition, groundTopY, surfaceSource = self:ResolveAboveGroundPartPosition(source.position, existing.Size, source.zone, 0)
+    existing.Position = sourcePosition
     existing.Color = source.color
     existing.CanCollide = false
     existing.CanTouch = true
     existing.CanQuery = true
     existing:SetAttribute("ZoneId", source.zone)
+    existing:SetAttribute("GroundTopY", groundTopY)
+    existing:SetAttribute("PlacementSurfaceSource", surfaceSource)
+    existing:SetAttribute("FloatingAllowed", false)
     self:ApplyFoodMetadata(existing, {
         diet = source.diet,
         nutrition = source.nutrition,
@@ -1710,7 +1862,7 @@ function MapLayoutService:EnsureFoodSources()
 end
 
 
-function MapLayoutService:ApplyDressingAttributes(part, spec, role)
+function MapLayoutService:ApplyDressingAttributes(part, spec, role, groundTopY, surfaceSource)
     part.Anchored = true
     part.CanCollide = false
     part.CanTouch = false
@@ -1742,7 +1894,8 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("LavaVisual", spec.lavaVisual == true)
     part:SetAttribute("HabitatFeature", spec.habitatFeature)
     part:SetAttribute("AvoidRouteCenters", true)
-    part:SetAttribute("GroundTopY", self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil)
+    part:SetAttribute("GroundTopY", groundTopY or (self.ZoneTerrain[spec.zone] and self.ZoneTerrain[spec.zone].topY or nil))
+    part:SetAttribute("PlacementSurfaceSource", surfaceSource)
     part:SetAttribute("FloatingAllowed", false)
     if not CollectionService:HasTag(part, "BiomeDressing") then
         CollectionService:AddTag(part, "BiomeDressing")
@@ -1763,6 +1916,7 @@ function MapLayoutService:EnsureBiomeDressing(folders)
         end
 
         if spec.kind == "Tree" then
+            local anchorPosition, groundTopY, surfaceSource = self:ResolveAboveGroundAnchorPosition(spec.position, spec.zone, 0)
             local trunk = zoneFolder:FindFirstChild(spec.name .. "_Trunk")
             if not trunk then
                 trunk = Instance.new("Part")
@@ -1771,9 +1925,9 @@ function MapLayoutService:EnsureBiomeDressing(folders)
                 trunk.Parent = zoneFolder
             end
             trunk.Size = spec.trunkSize
-            trunk.Position = spec.position + Vector3.new(0, spec.trunkSize.Y / 2, 0)
+            trunk.Position = anchorPosition + Vector3.new(0, spec.trunkSize.Y / 2, 0)
             trunk.Color = spec.trunkColor
-            self:ApplyDressingAttributes(trunk, spec, "VisibleTreeTrunk")
+            self:ApplyDressingAttributes(trunk, spec, "VisibleTreeTrunk", groundTopY, surfaceSource)
 
             local canopy = zoneFolder:FindFirstChild(spec.name .. "_Canopy")
             if not canopy then
@@ -1785,9 +1939,9 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             local canopySize = getReadableFallbackCanopySize(spec)
             canopy.Shape = (spec.zone == "NurseryGrove" or spec.zone == "FernPlains") and Enum.PartType.Ball or Enum.PartType.Block
             canopy.Size = canopySize
-            canopy.Position = spec.position + Vector3.new(0, spec.trunkSize.Y + canopySize.Y * 0.32, 0)
+            canopy.Position = anchorPosition + Vector3.new(0, spec.trunkSize.Y + canopySize.Y * 0.32, 0)
             canopy.Color = spec.canopyColor
-            self:ApplyDressingAttributes(canopy, spec, "HiddenTreeCanopy")
+            self:ApplyDressingAttributes(canopy, spec, "HiddenTreeCanopy", groundTopY, surfaceSource)
 
             local importedTree = self:AttachImportedDressingVisual(trunk, spec, "ImportedTreeDressing")
             if importedTree then
@@ -1806,9 +1960,9 @@ function MapLayoutService:EnsureBiomeDressing(folders)
                 browse.Parent = zoneFolder
             end
             browse.Size = Vector3.new(math.max(8, spec.canopySize.X * 0.45), 4, math.max(8, spec.canopySize.Z * 0.45))
-            browse.Position = spec.position + Vector3.new(0, spec.browseHeight or 6, 0)
+            browse.Position = anchorPosition + Vector3.new(0, spec.browseHeight or 6, 0)
             browse.Color = spec.canopyColor
-            self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery")
+            self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery", groundTopY, surfaceSource)
             self:ApplyBrowseFoodAttributes(browse, spec, { treeBrowse = true })
             if not CollectionService:HasTag(browse, "TreeProp") then
                 CollectionService:AddTag(browse, "TreeProp")
@@ -1822,10 +1976,11 @@ function MapLayoutService:EnsureBiomeDressing(folders)
             end
             prop.Shape = spec.shape or Enum.PartType.Block
             prop.Size = spec.size
-            prop.Position = spec.position
+            local propPosition, groundTopY, surfaceSource = self:ResolveAboveGroundPartPosition(spec.position, prop.Size, spec.zone, 0)
+            prop.Position = propPosition
             prop.Color = spec.color
             prop.Material = spec.material
-            self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp")
+            self:ApplyDressingAttributes(prop, spec, "VisibleBiomeProp", groundTopY, surfaceSource)
             self:AttachImportedDressingVisual(prop, spec, "ImportedBiomeDressing")
 
             if self:IsVegetationBrowseSpec(spec) then
@@ -1838,9 +1993,9 @@ function MapLayoutService:EnsureBiomeDressing(folders)
                     browse.Parent = zoneFolder
                 end
                 browse.Size = spec.size
-                browse.Position = spec.position
+                browse.Position = propPosition
                 browse.Color = spec.color
-                self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery")
+                self:ApplyDressingAttributes(browse, spec, "TreeBrowseQuery", groundTopY, surfaceSource)
                 self:ApplyBrowseFoodAttributes(browse, spec, { treeBrowse = false })
             end
         end
@@ -2042,17 +2197,24 @@ function MapLayoutService:EnsureSpawnSafety()
         spawn.Size = Vector3.new(18, 2, 18)
         spawn.Parent = spawnFolder
     end
-    spawn.Position = self:CompactPosition(Vector3.new(-2000, 12, 0))
+    local fallbackSpawnPosition = self:CompactPosition(Vector3.new(-2000, 12, 0))
     spawn:SetAttribute("GameplayVolume", true)
     spawn:SetAttribute("ZoneId", "NurseryGrove")
     spawn:SetAttribute("PlayerSpawn", true)
     spawn:SetAttribute("StarterSpeciesSpawn", true)
     spawn:SetAttribute("SpeciesId", "starter_fallback")
 
-    self:EnsurePlayerSpawnMarkers(folders)
-
     self:EnsureTerrainContinuity(folders)
     self:EnsureBiomeElevation(folders)
+    local groundedFallbackPosition, fallbackGroundTopY, fallbackSurfaceSource = self:ResolveGroundedPartPosition(fallbackSpawnPosition, spawn.Size, "NurseryGrove", 0)
+    spawn.Position = groundedFallbackPosition
+    spawn:SetAttribute("GroundTopY", fallbackGroundTopY)
+    spawn:SetAttribute("PlacementSurfaceSource", fallbackSurfaceSource)
+    spawn:SetAttribute("FloatingAllowed", false)
+    spawn:SetAttribute("AvoidOverlap", true)
+    spawn:SetAttribute("PlacementRadiusStuds", self:GetPlacementRadius(spawn.Size))
+
+    self:EnsurePlayerSpawnMarkers(folders)
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
     self:EnsureBiomeDressing(folders)
@@ -2189,12 +2351,10 @@ end
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- EnsureGroundedDressing(folders)  [ADDITIVE]
--- Raycast-reseats every visible biome-dressing / scenery / food-visual part onto
--- the real (sculpted) terrain surface and refreshes its GroundTopY attribute, so
--- nothing floats after elevation is applied. No-op without live Terrain (so the
--- floating-asset validation still passes against authored positions in tests).
--- Tagged invisible gameplay query parts are intentionally skipped — only visible
--- decorative parts are re-seated; the query volumes keep their authored Y.
+-- Raycast-reseats ground-contact biome-dressing anchors onto the real sculpted
+-- terrain surface and refreshes their GroundTopY attribute. Elevated canopies,
+-- browse volumes, and imported multi-part dressing are clamped as whole assets
+-- during placement instead of being flattened child-by-child here.
 -- ──────────────────────────────────────────────────────────────────────────────
 function MapLayoutService:EnsureGroundedDressing(folders)
     folders = folders or self:EnsureMapFolders()
@@ -2212,10 +2372,12 @@ function MapLayoutService:EnsureGroundedDressing(folders)
     for _, root in ipairs(roots) do
         if root then
             for _, inst in ipairs(root:GetDescendants()) do
+                local role = inst:GetAttribute("PlacementRole")
                 if inst:IsA("BasePart")
                     and inst.Transparency < 1
                     and inst:GetAttribute("FloatingAllowed") ~= true
-                    and inst:GetAttribute("BiomeDressing") == true then
+                    and inst:GetAttribute("BiomeDressing") == true
+                    and (role == "VisibleTreeTrunk" or role == "VisibleBiomeProp") then
                     if wb.RegroundPart(inst) then
                         grounded = grounded + 1
                     end

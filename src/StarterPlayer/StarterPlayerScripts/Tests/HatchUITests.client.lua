@@ -226,5 +226,14 @@ table.insert(suite.tests, { name = "hatch prompt clears mobile action guidance",
     Assert.truthy(meterBottom <= -360, "hatch meter clears action guidance labels")
 end })
 
+table.insert(suite.tests, { name = "hatch screen has compact phone scale", run = function()
+    local scale, compact = HatchUIController:GetResponsiveScale(Vector2.new(844, 390))
+    Assert.equals(compact, true, "iPhone landscape uses compact hatch layout")
+    Assert.truthy(scale < 1, "compact hatch layout shrinks cards")
+    local portraitScale, portraitCompact = HatchUIController:GetResponsiveScale(Vector2.new(390, 844))
+    Assert.equals(portraitCompact, true, "iPhone portrait uses compact hatch layout")
+    Assert.truthy(portraitScale < 1, "portrait hatch layout shrinks cards")
+end })
+
 TestRunner.registerSuite(suite)
 return suite

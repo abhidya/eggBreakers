@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
+local NPCAnimationService = require(game:GetService("ServerScriptService").Services.NPCAnimationService)
 local NPCSpawnService = require(game:GetService("ServerScriptService").Services.NPCSpawnService)
 
 local suite = { name = "NPCServiceTests.server", category = "Integration", tests = {} }
@@ -243,6 +244,11 @@ end })
 table.insert(suite.tests, { name = "humanoid chase uses MoveTo setup without teleporting", run = function()
     resetNPCs()
     local npc, root, humanoid = makeHumanoidNPC("HumanoidChaseNPC", Vector3.new(0, 3, 0))
+    local body = Instance.new("Part")
+    body.Name = "ImportedBodyPart"
+    body.Position = root.Position
+    body.Anchored = true
+    body.Parent = npc
     local _, record = NPCService:Register(npc, "Predator")
     record.Hatched = true
 
@@ -252,6 +258,8 @@ table.insert(suite.tests, { name = "humanoid chase uses MoveTo setup without tel
     Assert.equals(npc:GetAttribute("MovementSurface"), "Ground", "ground humanoid movement surface")
     Assert.equals(npc:GetAttribute("GroundClampApplied"), true, "humanoid target y was ground-clamped")
     Assert.truthy(root.Anchored == false, "humanoid root is unanchored for physics movement")
+    Assert.truthy(body.Anchored == false, "all imported humanoid rig parts are unanchored for movement")
+    Assert.equals(npc:GetAttribute("HumanoidRigMotionReady"), true, "humanoid rig motion readiness is stamped")
     Assert.truthy(humanoid.WalkSpeed >= 20, "chase uses sprint-speed intent")
     Assert.truthy((root.Position - Vector3.new(0, 3, 0)).Magnitude < 0.1, "MoveTo path does not PivotTo-teleport humanoid root")
 
@@ -295,6 +303,37 @@ table.insert(suite.tests, { name = "staged RootPart rig movement is bounded and 
     npc:Destroy()
 end })
 
+table.insert(suite.tests, { name = "kinematic heartbeat advances static rig without full-target teleport", run = function()
+    resetNPCs()
+    local npc = makeStagedRootRig("KinematicHeartbeatNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Predator")
+    record.Hatched = true
+    record.MoveTarget = Vector3.new(30, 3, 0)
+
+    Assert.truthy(NPCService:StepKinematicMoveTarget(record, 0.5), "kinematic heartbeat step succeeds")
+    local moved = NPCService:GetRecordPosition(record)
+    Assert.truthy(moved.X > 0, "static rig advances toward target")
+    Assert.truthy(moved.X < 10, "static rig does not jump to full target or brain step")
+    Assert.equals(npc:GetAttribute("KinematicSmoothingActive"), true, "smoothing activity is visible")
+    Assert.equals(npc:GetAttribute("KinematicMoveTarget"), "30.0,3.0,0.0", "smooth target stamped")
+
+    npc:Destroy()
+end })
+
+table.insert(suite.tests, { name = "animation service accepts non-humanoid imported rig controllers", run = function()
+    local npc = makeStagedRootRig("AnimationControllerNPC", Vector3.new(0, 3, 0))
+    local registered, reason = NPCAnimationService:Register(npc, "oviraptor")
+
+    Assert.truthy(registered, "animation controller rig registers")
+    Assert.equals(npc:GetAttribute("NPCAnimationDriver"), "AnimationController", "animation driver records controller rig")
+    local updated = NPCAnimationService:UpdateRecord({ Instance = npc, SpeciesId = "oviraptor", State = "Mate" })
+    Assert.truthy(updated, "animation service updates mate state")
+    Assert.equals(npc:GetAttribute("NPCAnimationState"), "Mate", "mate animation state is visible")
+
+    NPCAnimationService:Unregister(npc)
+    npc:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "brain movement constants keep predator runner bounded", run = function()
     resetNPCs()
@@ -334,6 +373,8 @@ table.insert(suite.tests, { name = "predator chases attacks and prey death leave
     Assert.equals(predatorRecord.State, "Attack", "predator attacks close prey")
     Assert.equals(preyRecord.State, "Dead", "prey dies from attack")
     Assert.notNil(preyRecord.Carcass, "dead prey leaves carcass")
+    Assert.equals(preyRecord.Carcass, prey, "dead prey preserves the defeated model as carcass")
+    Assert.equals(prey:GetAttribute("DeadModelCarcass"), true, "actual NPC model is marked as carcass")
     Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "FoodSource"), "carcass is food source")
     Assert.truthy(CollectionService:HasTag(preyRecord.Carcass, "CarnivoreFoodCandidate"), "carcass is a carnivore food candidate")
     Assert.equals(preyRecord.Carcass:GetAttribute("PotentialCarnivoreFood"), true, "carcass potential carnivore food")
@@ -374,9 +415,63 @@ table.insert(suite.tests, { name = "predator chase attack creates edible carcass
     NPCService:TickBrain(predatorRecord, {}, 1)
     Assert.equals(predatorRecord.State, "Eat", "predator eats created carcass")
     Assert.equals(preyRecord.Carcass:GetAttribute("Depleted"), true, "created carcass depleted by predator")
+    Assert.equals(preyRecord.Carcass:GetAttribute("CarcassConsumed"), true, "eaten carcass is marked consumed")
+    Assert.equals(preyRecord.Carcass:GetAttribute("CarcassVisualState"), "Bones", "eaten carcass switches to bones state")
+    Assert.truthy((preyRecord.Carcass:GetAttribute("BonesReplacement") or "") ~= "", "eaten carcass records bones replacement")
+    Assert.falsy(CollectionService:HasTag(preyRecord.Carcass, "FoodSource"), "consumed carcass is no longer edible food")
     Assert.truthy(predatorRecord.Hunger > 20, "carcass restores predator hunger")
 
+    local bones = workspace:FindFirstChild(preyRecord.Carcass:GetAttribute("BonesReplacement") or "", true)
+    if bones then bones:Destroy() end
     predator:Destroy(); prey:Destroy(); preyRecord.Carcass:Destroy()
+end })
+
+table.insert(suite.tests, { name = "damaged NPC counterattacks its attacker on next brain tick", run = function()
+    resetNPCs()
+    local attacker = makeNPC("CounterattackPredatorNPC", Vector3.new(0, 3, 0))
+    local defender = makeNPC("CounterattackPreyNPC", Vector3.new(6, 3, 0))
+    local _, attackerRecord = NPCService:Register(attacker, "Predator")
+    local _, defenderRecord = NPCService:Register(defender, "Prey")
+    attackerRecord.Hatched = true
+    defenderRecord.Hatched = true
+    attackerRecord.Health = 140
+    defenderRecord.Health = 80
+
+    NPCService:AttackRecord(attackerRecord, defenderRecord)
+    Assert.equals(defender:GetAttribute("FightBackArmed"), true, "damaged NPC arms fight-back")
+
+    NPCService:TickBrain(defenderRecord, {}, 1)
+    Assert.equals(defenderRecord.State, "Attack", "damaged NPC counterattacks instead of staying passive")
+    Assert.equals(defender:GetAttribute("FightEventState"), "Counterattacking", "counterattack state visible")
+    Assert.equals(defender:GetAttribute("AttackTarget"), "CounterattackPredatorNPC", "counterattack target names attacker")
+    Assert.truthy(attackerRecord.Health < 140, "counterattack applies defender damage")
+
+    attacker:Destroy(); defender:Destroy()
+end })
+
+table.insert(suite.tests, { name = "player-damaged NPC fights back against nearby player", run = function()
+    resetNPCs()
+    local npc = makeNPC("PlayerAggroNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+    record.Health = 70
+    local root = Instance.new("Part")
+    root.Name = "HumanoidRootPart"
+    root.Position = Vector3.new(6, 3, 0)
+    local character = Instance.new("Model")
+    root.Parent = character
+    local player = { Name = "CounterPlayer", UserId = 4242, Character = character }
+
+    NPCService:DamageRecord(record, 5)
+    npc:SetAttribute("LastDamagedByUserId", player.UserId)
+    npc:SetAttribute("LastDamagedAt", os.clock())
+    NPCService:TickBrain(record, { player }, 1)
+
+    Assert.equals(record.State, "Attack", "player-damaged NPC attacks nearby player")
+    Assert.equals(npc:GetAttribute("FightBackTarget"), "CounterPlayer", "fight-back target resolves player name")
+    Assert.equals(npc:GetAttribute("AttackTarget"), "CounterPlayer", "attack target names player")
+
+    npc:Destroy(); character:Destroy()
 end })
 
 
@@ -395,9 +490,10 @@ table.insert(suite.tests, { name = "living prey are potential carnivore food can
     Assert.falsy(predator:GetAttribute("PotentialCarnivoreFood"), "predator is not prey food")
 
     NPCService:MarkPreyDead(preyRecord)
-    Assert.equals(prey:GetAttribute("CarnivoreFoodCandidate"), false, "dead prey instance no longer advertises living target")
-    Assert.falsy(CollectionService:HasTag(prey, "CarnivoreFoodCandidate"), "dead prey instance candidate tag removed")
-    Assert.notNil(preyRecord.Carcass, "dead prey creates separate carcass food")
+    Assert.equals(preyRecord.Carcass, prey, "dead prey model is reused as carcass food")
+    Assert.equals(prey:GetAttribute("DeadModelCarcass"), true, "dead prey actual model becomes carcass")
+    Assert.equals(prey:GetAttribute("CarnivoreFoodCandidate"), true, "dead prey carcass advertises carnivore food")
+    Assert.truthy(CollectionService:HasTag(prey, "CarnivoreFoodCandidate"), "dead prey carcass candidate tag remains")
     Assert.equals(preyRecord.Carcass:GetAttribute("PotentialCarnivoreFood"), true, "carcass advertises carnivore food potential")
 
     prey:Destroy(); predator:Destroy(); preyRecord.Carcass:Destroy()
@@ -469,6 +565,34 @@ table.insert(suite.tests, { name = "food and fight events stamp nearby NPC react
     Assert.truthy((predator:GetAttribute("FightSignalReactionAffected") or 0) >= 1, "fight affected count stamped")
 
     eater:Destroy(); bystander:Destroy(); food:Destroy(); predator:Destroy(); prey:Destroy()
+end })
+
+table.insert(suite.tests, { name = "food signal pulls moderately hungry bystander toward edible source", run = function()
+    resetNPCs()
+    local eater = makeNPC("FoodSignalEaterNPC", Vector3.new(0, 3, 0))
+    local bystander = makeNPC("FoodSignalBystanderNPC", Vector3.new(12, 3, 0))
+    local eatenFood = makeTaggedPart("FoodSignalEatenFern", "FoodSource", Vector3.new(4, 3, 0))
+    local spareFood = makeTaggedPart("FoodSignalSpareFern", "FoodSource", Vector3.new(30, 3, 0))
+    eatenFood:SetAttribute("Diet", "Herbivore")
+    eatenFood:SetAttribute("Nutrition", 20)
+    spareFood:SetAttribute("Diet", "Herbivore")
+    spareFood:SetAttribute("Nutrition", 20)
+    local _, eaterRecord = NPCService:Register(eater, "Prey")
+    local _, bystanderRecord = NPCService:Register(bystander, "Prey")
+    eaterRecord.Hatched = true
+    bystanderRecord.Hatched = true
+    bystanderRecord.Hunger = 70
+    bystanderRecord.Thirst = 90
+
+    NPCService:Eat(eaterRecord, eatenFood)
+    NPCService:TickBrain(bystanderRecord, {}, 1)
+
+    Assert.equals(bystanderRecord.State, "SeekFood", "food signal drives seek-food before hunger is critical")
+    Assert.equals(bystander:GetAttribute("ReactionConsumed"), "Food", "food reaction is consumed by movement")
+    Assert.equals(bystander:GetAttribute("BrainTargetName"), "FoodSignalSpareFern", "bystander retargets edible nearby food")
+    Assert.truthy((NPCService:GetRecordPosition(bystanderRecord) - Vector3.new(12, 3, 0)).Magnitude > 0, "bystander moves toward food source")
+
+    eater:Destroy(); bystander:Destroy(); eatenFood:Destroy(); spareFood:Destroy()
 end })
 
 
@@ -733,6 +857,38 @@ table.insert(suite.tests, { name = "healthy same-species NPCs enter mating beat"
     Assert.truthy((first:GetAttribute("MateDistance") or 0) > 0, "mate distance stamped")
 
     first:Destroy(); second:Destroy()
+end })
+
+table.insert(suite.tests, { name = "mating signal pulls same-species bystander into social beat", run = function()
+    resetNPCs()
+    local first = makeNPC("MateSignalFirstOviraptor", Vector3.new(0, 3, 0))
+    local second = makeNPC("MateSignalSecondOviraptor", Vector3.new(12, 3, 0))
+    local third = makeNPC("MateSignalThirdOviraptor", Vector3.new(50, 3, 0))
+    local _, firstRecord = NPCService:Register(first, "Omnivore")
+    local _, secondRecord = NPCService:Register(second, "Omnivore")
+    local _, thirdRecord = NPCService:Register(third, "Omnivore")
+    firstRecord.Hatched = true
+    secondRecord.Hatched = true
+    thirdRecord.Hatched = true
+    firstRecord.Hunger = 90
+    firstRecord.Thirst = 90
+    secondRecord.Hunger = 90
+    secondRecord.Thirst = 90
+    thirdRecord.Hunger = 90
+    thirdRecord.Thirst = 90
+    firstRecord.Herding = false
+    secondRecord.Herding = false
+    thirdRecord.Herding = false
+
+    NPCService:TickBrain(firstRecord, {}, 1)
+    Assert.equals(third:GetAttribute("ReactionIntent"), "SocialMate", "same-species bystander receives mate signal")
+
+    NPCService:TickBrain(thirdRecord, {}, 1)
+    Assert.equals(thirdRecord.State, "Mate", "mate signal drives social mate state")
+    Assert.equals(third:GetAttribute("ReactionConsumed"), "Mate", "mate reaction is consumed")
+    Assert.truthy(NPCService:GetRecordPosition(thirdRecord).X < 50, "third NPC moves toward mate signal")
+
+    first:Destroy(); second:Destroy(); third:Destroy()
 end })
 
 return suite

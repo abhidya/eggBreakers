@@ -149,6 +149,17 @@ fresh-Play-session proofs.
 rest/sleep with age ticking → growth → dying/death age → respawn/nest. For biome work, distinguish candidate/catalog
 assets from assets inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
 
+**Priority override from user mobile evidence (2026-05-31):** iPhone portrait and landscape are currently not playable
+because UI cards block the play space. Fix mobile card/HUD layout before new story polish. Required proof: live
+iPhone-sized portrait and landscape captures where the dinosaur, path, food/water target, threat, context action, and
+mobile controls remain visible and tappable.
+
+**E2E story gate (2026-05-31):** `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` must remain the
+behavior guard for hatch → movement/sprint → eat/drink → rest/sleep with age ticking → growth → dying/death age →
+respawn, plus validated shallow water drinkability, NPC reaction/fight-back proof (prey flee, food/fight signal stamps,
+hostile NPC attack state), and player-killed carcass-to-bone/carcass-remains proof. This does not replace the storyboard
+screenshot gates; it prevents the playable loop from drifting while visual work continues.
+
 **H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (current four starters first, then each promoted hatch-pool/NPC fauna species), validate
 individually and record a pass/fail matrix WITH screenshots: spawns; renders as correct mesh; PrimaryPart/collision/
 hitbox sane; scale correct per growth stage; locomotion matches movement mode (ground/air/water) with no teleport or

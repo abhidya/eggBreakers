@@ -5,7 +5,7 @@ local RemoteValidationService = require(script.Parent.RemoteValidationService)
 local SurvivalService = require(script.Parent.SurvivalService)
 local WaterService = require(script.Parent.WaterService)
 
-local FoodWaterService = { DepletionLoopRunning = false }
+local FoodWaterService = { DepletionLoopRunning = false, CarcassConsumedCallbacks = {} }
 FoodWaterService.EatDistance = 12
 FoodWaterService.DrinkDistance = 14
 FoodWaterService.FoodGrowthGrant = 4
@@ -105,6 +105,27 @@ function FoodWaterService:MarkFoodEaten(target, context)
         target:SetAttribute("DepletedUntil", context.At + cooldown)
     end
     return true, context
+end
+
+function FoodWaterService:OnCarcassConsumed(callback)
+    if type(callback) ~= "function" then return false, "bad_callback" end
+    table.insert(self.CarcassConsumedCallbacks, callback)
+    return true
+end
+
+function FoodWaterService:NotifyCarcassConsumed(target, eater, state, context)
+    if not target or target:GetAttribute("CarcassFoodSource") ~= true then
+        return false, "not_carcass"
+    end
+    local notified = 0
+    for _, callback in ipairs(self.CarcassConsumedCallbacks) do
+        local ok = pcall(callback, target, eater, state, context)
+        if ok then
+            notified = notified + 1
+        end
+    end
+    target:SetAttribute("CarcassConsumeCallbacks", notified)
+    return true, notified
 end
 
 --- Resolve the separate visible foliage child (added by MapLayoutService) so
@@ -334,6 +355,9 @@ function FoodWaterService:RequestEat(player, target)
     state.Hunger = math.min(100, state.Hunger + nutrition)
     local context = self:BuildEatContext(target, player.Name, state.Diet, nutrition)
     self:MarkFoodEaten(target, context)
+    if target:GetAttribute("CarcassFoodSource") == true then
+        self:NotifyCarcassConsumed(target, player, state, context)
+    end
     self:StampEaterFeedback(player, state, context)
     SurvivalService:AddGrowth(player, self.FoodGrowthGrant)
     return true, state

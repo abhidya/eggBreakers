@@ -176,7 +176,7 @@ function CombatService:ApplyDamage(target, damage, attacker, isCrit)
     if not target then return false, "missing_target" end
     local npcRecord = NPCService:FindRecordForInstance(target)
     if npcRecord then
-        local ok, reason = NPCService:DamageRecord(npcRecord, damage)
+        local ok, reason = NPCService:DamageRecord(npcRecord, damage, attacker)
         self:StampDamageAttributes(target, damage, attacker)
         target:SetAttribute("Health", npcRecord.Health)
         if npcRecord.State == "Dead" then
