@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local UIFactory = require(script.Parent.UIFactory)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
@@ -36,8 +37,9 @@ function HatchUIController:Show()
     overlay.Size = UDim2.fromScale(1, 1)
     overlay.BackgroundColor3 = Color3.fromRGB(32, 22, 12)
     overlay.BackgroundTransparency = 0.2
+    overlay.Active = true
     overlay.Parent = gui
-    local prompt = Instance.new("TextLabel")
+    local prompt = Instance.new("TextButton")
     prompt.Name = "InputPrompt"
     prompt.Size = self.PromptSize
     prompt.Position = self.PromptPosition
@@ -46,6 +48,8 @@ function HatchUIController:Show()
     prompt.TextScaled = true
     prompt.TextColor3 = Color3.new(1, 1, 1)
     prompt.BackgroundTransparency = 1
+    prompt.AutoButtonColor = true
+    prompt:SetAttribute("HatchInputButton", true)
     prompt.Parent = overlay
     local selector = Instance.new("Frame")
     selector.Name = "SpeciesSelector"
@@ -80,6 +84,34 @@ function HatchUIController:Show()
     end
     self.Gui = gui
     return gui
+end
+
+function HatchUIController:RequestHatchInput(inputType)
+    if self.Gui and self.Gui.Enabled == false then return end
+    if self.OnHatchInput then
+        self.OnHatchInput(inputType or "tap")
+    end
+end
+
+function HatchUIController:BindHatchInput(onHatch)
+    self:Show()
+    self.OnHatchInput = onHatch or self.OnHatchInput
+    if self.HatchInputBound then return end
+    self.HatchInputBound = true
+
+    local overlay = self.Gui and self.Gui:FindFirstChild("MuffledOverlay")
+    local prompt = overlay and overlay:FindFirstChild("InputPrompt")
+    if prompt and prompt:IsA("TextButton") then
+        prompt.Activated:Connect(function()
+            self:RequestHatchInput("tap")
+        end)
+    end
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.Space then
+            self:RequestHatchInput("space")
+        end
+    end)
 end
 
 function HatchUIController:SetSpeciesOptions(speciesIds, selectedSpeciesId, onSelect)

@@ -154,6 +154,25 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     cleanup(player)
 end })
 
+table.insert(suite.tests, { name = "starter visual fallback hatches citipati into imported dinosaur", run = function()
+    setupImportedVisuals()
+    local player = MockPlayer.new(11022, "CitipatiVisualTester")
+    local character, head = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "citipati")
+    for _ = 1, 5 do SurvivalService:RequestHatch(player, "tap") end
+
+    local ok, mode = CharacterVisualService:ApplyForState(player, state)
+
+    Assert.truthy(ok, "citipati starter visual fallback applied")
+    Assert.truthy(mode == "dinosaur_model" or mode == "staged_dinosaur_mesh", "citipati renders as imported dinosaur proxy")
+    Assert.equals(head.Transparency, 1, "default avatar hidden after citipati hatch")
+    local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+    Assert.notNil(visual, "citipati dinosaur visual exists")
+    Assert.truthy(visual:GetAttribute("ImportedVisual"), "citipati proxy remains an imported asset clone")
+    cleanup(player)
+end })
+
 
 table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs are rotated to face player forward", run = function()
     local player = MockPlayer.new(11006, "DinosaurForwardProbe")

@@ -29,7 +29,10 @@ table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur select
     HatchUIController:SetSpeciesOptions({ "parasaurolophus", "utahraptor" }, "utahraptor", function() end)
     local overlay = gui:FindFirstChild("MuffledOverlay")
     local selector = overlay and overlay:FindFirstChild("SpeciesSelector")
+    local prompt = overlay and overlay:FindFirstChild("InputPrompt")
     Assert.notNil(selector, "species selector exists")
+    Assert.truthy(prompt and prompt:IsA("TextButton"), "hatch prompt is an input button")
+    Assert.equals(prompt:GetAttribute("HatchInputButton"), true, "hatch prompt is marked as hatch input")
     local parasaurolophus = selector:FindFirstChild("Species_parasaurolophus")
     local raptor = selector:FindFirstChild("Species_utahraptor")
     Assert.notNil(parasaurolophus, "parasaurolophus option exists")
@@ -45,6 +48,39 @@ table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur select
     HatchUIController.Selector = oldSelector
     HatchUIController.SpeciesButtons = oldButtons
     HatchUIController.SelectedSpeciesId = oldSelected
+end })
+
+table.insert(suite.tests, { name = "hatch screen binds crack input callback", run = function()
+    local oldGui = HatchUIController.Gui
+    local oldSelector = HatchUIController.Selector
+    local oldButtons = HatchUIController.SpeciesButtons
+    local oldSelected = HatchUIController.SelectedSpeciesId
+    local oldBound = HatchUIController.HatchInputBound
+    local oldCallback = HatchUIController.OnHatchInput
+    HatchUIController.Gui = nil
+    HatchUIController.Selector = nil
+    HatchUIController.SpeciesButtons = nil
+    HatchUIController.SelectedSpeciesId = nil
+    HatchUIController.HatchInputBound = nil
+    HatchUIController.OnHatchInput = nil
+
+    local requested = nil
+    local gui = HatchUIController:Show()
+    HatchUIController:BindHatchInput(function(inputType)
+        requested = inputType
+    end)
+    local prompt = gui.MuffledOverlay:FindFirstChild("InputPrompt")
+    Assert.truthy(prompt and prompt:IsA("TextButton"), "hatch prompt accepts activation")
+    HatchUIController:RequestHatchInput("tap")
+    Assert.equals(requested, "tap", "prompt activation requests hatch")
+
+    gui:Destroy()
+    HatchUIController.Gui = oldGui
+    HatchUIController.Selector = oldSelector
+    HatchUIController.SpeciesButtons = oldButtons
+    HatchUIController.SelectedSpeciesId = oldSelected
+    HatchUIController.HatchInputBound = oldBound
+    HatchUIController.OnHatchInput = oldCallback
 end })
 
 table.insert(suite.tests, { name = "default hatch selector renders the four curated starters", run = function()

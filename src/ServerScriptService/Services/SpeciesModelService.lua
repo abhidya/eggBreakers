@@ -39,19 +39,32 @@ local function resolveStagedPath(path)
     return nil, reason or "missing_staged_model"
 end
 
+local function resolveConfiguredPath(species, growthStage)
+    local configuredPath = species and species.ModelPaths and species.ModelPaths[growthStage]
+    if not configuredPath then return nil, "missing_stage_path" end
+    if string.sub(configuredPath, 1, 9) == "staged://" then
+        return resolveStagedPath(configuredPath)
+    end
+    return resolvePath(configuredPath)
+end
+
 function SpeciesModelService:ResolveModel(speciesId, growthStage, options)
     options = options or {}
     local species = SpeciesConfig[speciesId]
     if not species or not species.ModelPaths then return nil, "missing_species" end
     local configuredPath = species.ModelPaths[growthStage]
-    if not configuredPath then return nil, "missing_stage_path" end
-    if string.sub(configuredPath, 1, 9) == "staged://" then
-        return resolveStagedPath(configuredPath)
-    end
-    local exact = resolvePath(configuredPath)
+    local exact, exactReason = resolveConfiguredPath(species, growthStage)
     if exact then return exact end
+    local fallbackId = species.VisualFallbackSpeciesId
+    if fallbackId then
+        local fallbackSpecies = SpeciesConfig[fallbackId]
+        local fallbackModel = resolveConfiguredPath(fallbackSpecies, growthStage)
+        if fallbackModel then
+            return fallbackModel, "visual_fallback_" .. fallbackId
+        end
+    end
     if options.requireExact then
-        return nil, "missing_exact_model"
+        return nil, exactReason or "missing_exact_model"
     end
     local rootPath = string.match(configuredPath, "(.+)/[^/]+$")
     local root = rootPath and resolvePath(rootPath)

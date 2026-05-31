@@ -185,4 +185,19 @@ for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
     SpeciesConfig[speciesId] = nil
 end
 
+local starterVisualFallbacks = {
+    citipati = "oviraptor",
+    coelophysis = "oviraptor",
+}
+
+for speciesId, fallbackId in pairs(starterVisualFallbacks) do
+    local species = SpeciesConfig[speciesId]
+    local fallback = SpeciesConfig[fallbackId]
+    if species and fallback and fallback.ModelPaths then
+        species.VisualFallbackSpeciesId = fallbackId
+        species.VisualFallbackReason = "release_safe_imported_starter_proxy"
+        species.ModelPaths = species.ModelPaths or fallback.ModelPaths
+    end
+end
+
 return SpeciesConfig
