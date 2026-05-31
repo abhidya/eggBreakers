@@ -161,6 +161,7 @@ end
 -- ─────────────────────────────────────────────────────────────
 MapLayoutService.FoliageVisualName = "EdibleFoliageVisual"
 MapLayoutService.ImportedFoodVisualName = "ImportedFoodVisual"
+MapLayoutService.ImportedDressingVisualName = "ImportedDressingVisual"
 MapLayoutService.ImportedAssetLibraryName = "ImportedAssetLibrary"
 
 MapLayoutService.HerbivoreFoliageColor = Color3.fromRGB(86, 168, 78)
@@ -222,6 +223,33 @@ local function lowerContains(value, token)
     return string.find(string.lower(value), string.lower(token), 1, true) ~= nil
 end
 
+local function rejectImportedTemplateName(name)
+    local lower = string.lower(name or "")
+    return string.find(lower, "test", 1, true) ~= nil
+        or string.find(lower, "probe", 1, true) ~= nil
+        or string.find(lower, "playable", 1, true) ~= nil
+        or string.find(lower, "dinosaur", 1, true) ~= nil
+        or string.find(lower, "egg", 1, true) ~= nil
+end
+
+local function hasAnyToken(name, tokens)
+    for _, token in ipairs(tokens) do
+        if lowerContains(name, token) then
+            return true
+        end
+    end
+    return false
+end
+
+local function removeExecutableCode(instance)
+    if instance:IsA("Script") or instance:IsA("LocalScript") then
+        instance:Destroy()
+    elseif instance:IsA("ModuleScript") then
+        instance:SetAttribute("ImportedScriptAudited", true)
+        instance:SetAttribute("Sandboxed", true)
+    end
+end
+
 function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
     if not (instance and (instance:IsA("Model") or instance:IsA("BasePart")) and hasVisibleBasePart(instance)) then
         return false
@@ -269,6 +297,156 @@ function MapLayoutService:ResolveImportedFoodVisualTemplate(queryPart, opts)
         end
     end
     return bestFallback
+end
+
+function MapLayoutService:ImportedDressingTokensForSpec(spec)
+    local kind = spec and spec.kind or ""
+    local zone = spec and spec.zone or ""
+    if kind == "Tree" or kind == "ForestStand" or kind == "FlowerCluster" or kind == "DryScrub" then
+        if zone == "SwampDelta" then
+            return { "swamp", "log", "plant", "bush", "cycad" }
+        end
+        if zone == "JungleBasin" then
+            return { "jungle", "bush", "cycad", "plant", "log" }
+        end
+        return { "plant", "bush", "fern", "cycad", "tree", "log" }
+    end
+    if kind == "Rubble" or kind == "CityRuin" or kind == "CityTower" or zone == "ApocalypticCity" then
+        return { "ruin", "wall", "concrete", "rubble", "road", "sign" }
+    end
+    if kind == "Rock" or kind == "Boulder" or kind == "Cliff" or kind == "MountainPeak" then
+        return { "rock", "cave", "riverrocks", "desertrock", "cliff" }
+    end
+    if kind == "Volcano" or kind == "LavaVisual" or kind == "DesertDune" then
+        return { "volcano", "desertrock", "rock", "cave" }
+    end
+    if kind == "LakeShore" or kind == "RiverBend" then
+        return { "riverrocks", "swamp", "log", "rock" }
+    end
+    return { string.lower(kind), string.lower(zone), "rock", "plant" }
+end
+
+function MapLayoutService:ResolveImportedDressingTemplate(spec)
+    local library = ReplicatedStorage:FindFirstChild(self.ImportedAssetLibraryName)
+    if not library then return nil end
+    local tokens = self:ImportedDressingTokensForSpec(spec)
+    local bestFallback = nil
+    for _, child in ipairs(library:GetChildren()) do
+        if (child:IsA("Model") or child:IsA("BasePart"))
+            and not rejectImportedTemplateName(child.Name)
+            and hasVisibleBasePart(child)
+            and hasAnyToken(child.Name, tokens) then
+            if child:GetAttribute("ImportedVisibleAsset") == true then
+                return child
+            end
+            bestFallback = bestFallback or child
+        end
+    end
+    return bestFallback
+end
+
+function MapLayoutService:SanitizeImportedDressingClone(clone, source, spec, role)
+    clone.Name = self.ImportedDressingVisualName
+    clone:SetAttribute("ImportedDressingVisual", true)
+    clone:SetAttribute("BiomeDressing", true)
+    clone:SetAttribute("Decorative", true)
+    clone:SetAttribute("ZoneId", spec.zone)
+    clone:SetAttribute("DressingKind", spec.kind)
+    clone:SetAttribute("PlacementRole", role or "ImportedBiomeDressing")
+    clone:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+    clone:SetAttribute("FlowerCluster", spec.flowerCluster == true)
+    clone:SetAttribute("LavaVisual", spec.lavaVisual == true)
+    clone:SetAttribute("ImportedVisibleAsset", true)
+    clone:SetAttribute("CreatorStoreOnly", clone:GetAttribute("CreatorStoreOnly") ~= false)
+    clone:SetAttribute("SourcePath", source:GetFullName())
+    clone:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId") or source:GetAttribute("SourceAssetId"))
+    clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or source:GetAttribute("AssetManifestId") or ("ImportedDressing_" .. tostring(spec.name)))
+    clone:SetAttribute("AvoidRouteCenters", true)
+    clone:SetAttribute("FloatingAllowed", false)
+
+    for _, descendant in ipairs(clone:GetDescendants()) do
+        removeExecutableCode(descendant)
+    end
+    for _, descendant in ipairs(clone:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = false
+            descendant.CanTouch = false
+            descendant.CanQuery = false
+            descendant:SetAttribute("ImportedDressingVisual", true)
+            descendant:SetAttribute("BiomeDressing", true)
+            descendant:SetAttribute("Decorative", true)
+            descendant:SetAttribute("ZoneId", spec.zone)
+            descendant:SetAttribute("DressingKind", spec.kind)
+            descendant:SetAttribute("PlacementRole", role or "ImportedBiomeDressing")
+            descendant:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+            descendant:SetAttribute("FlowerCluster", spec.flowerCluster == true)
+            descendant:SetAttribute("LavaVisual", spec.lavaVisual == true)
+            descendant:SetAttribute("ImportedVisibleAsset", true)
+            descendant:SetAttribute("CreatorStoreOnly", true)
+            descendant:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId"))
+            descendant:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId"))
+            descendant:SetAttribute("AvoidRouteCenters", true)
+            descendant:SetAttribute("FloatingAllowed", false)
+            if not CollectionService:HasTag(descendant, "BiomeDressing") then
+                CollectionService:AddTag(descendant, "BiomeDressing")
+            end
+        end
+    end
+    if clone:IsA("BasePart") then
+        clone.Anchored = true
+        clone.CanCollide = false
+        clone.CanTouch = false
+        clone.CanQuery = false
+        if not CollectionService:HasTag(clone, "BiomeDressing") then
+            CollectionService:AddTag(clone, "BiomeDressing")
+        end
+    end
+end
+
+function MapLayoutService:AttachImportedDressingVisual(anchor, spec, role)
+    if not anchor then return nil end
+    local existing = anchor:FindFirstChild(self.ImportedDressingVisualName)
+    if existing then existing:Destroy() end
+    local source = self:ResolveImportedDressingTemplate(spec)
+    if not source then
+        anchor:SetAttribute("ImportedDressingVisualAttached", false)
+        return nil
+    end
+
+    local clone = source:Clone()
+    self:SanitizeImportedDressingClone(clone, source, spec, role)
+    clone.Parent = anchor
+
+    local targetSize = spec.kind == "Tree" and getReadableFallbackCanopySize(spec) or spec.size
+    if clone:IsA("Model") then
+        if not clone.PrimaryPart then
+            clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true)
+        end
+        if clone.PrimaryPart then
+            local _, size = clone:GetBoundingBox()
+            local currentMax = math.max(size.X, size.Y, size.Z)
+            local targetMax = targetSize and math.max(targetSize.X, targetSize.Y, targetSize.Z) or currentMax
+            if currentMax > 0 and targetMax > 0 then
+                pcall(function()
+                    clone:ScaleTo(math.max(0.15, math.min(1.25, targetMax / currentMax)))
+                end)
+            end
+            clone:PivotTo(CFrame.new(anchor.Position))
+        end
+    elseif clone:IsA("BasePart") then
+        if targetSize then
+            clone.Size = targetSize
+        end
+        clone.Position = anchor.Position
+    end
+
+    anchor.Transparency = 1
+    anchor:SetAttribute("ReleaseHiddenProceduralVisual", true)
+    anchor:SetAttribute("ProceduralGameplayVisual", nil)
+    anchor:SetAttribute("ImportedDressingVisualAttached", true)
+    anchor:SetAttribute("ImportedDressingTemplate", source:GetFullName())
+    return clone
 end
 
 function MapLayoutService:RemoveImportedFoodVisual(queryPart)
