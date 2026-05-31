@@ -17,6 +17,9 @@ NPCService.BrainStepStuds = 8
 NPCService.AttackDistance = 10
 NPCService.WanderRadius = 28
 NPCService.HerdRadius = 65
+-- DYING PIPELINE tunables (additive; safe when world absent).
+NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
+NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
 NPCService.ApexThreatRadius = 140
 NPCService.KindProfiles = {
     Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "gallimimus" },
@@ -143,6 +146,84 @@ function NPCService:Register(npc, kind)
     return true, record
 end
 
+-- DYING PIPELINE: play a brief death state on the NPC body and let it settle.
+-- "Ragdoll-ish": disable the Humanoid (no MoveTo fights), unanchor the root so the body
+-- drops/settles under physics if it was anchored, and stamp readable death attributes.
+-- Fully guarded: a no-op when there is no Instance (headless tests stay green).
+function NPCService:PlayDeathSettle(record)
+    if not record then return false, "missing_record" end
+    local npc = record.Instance
+    if not npc then return false, "missing_npc" end
+    record.DiedAt = os.time()
+    if npc.SetAttribute then
+        npc:SetAttribute("Dead", true)
+        npc:SetAttribute("DeathState", "Settling")
+        npc:SetAttribute("DiedAt", record.DiedAt)
+        npc:SetAttribute("ActiveNPCBrain", false)
+    end
+    -- Stop the brain from issuing further moves toward this body.
+    record.MoveTarget = nil
+    local humanoid = npc.FindFirstChildWhichIsA and npc:FindFirstChildWhichIsA("Humanoid")
+    if humanoid then
+        -- Settle in place: cancel any in-flight MoveTo and let physics take over.
+        if humanoid.Move then humanoid:Move(Vector3.new(0, 0, 0), false) end
+        pcall(function()
+            humanoid.PlatformStand = true
+            humanoid.AutoRotate = false
+            humanoid.WalkSpeed = 0
+        end)
+    end
+    -- Unanchor parts so the body ragdoll-settles instead of standing frozen.
+    if npc.GetDescendants then
+        for _, descendant in ipairs(npc:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                descendant.Anchored = false
+                descendant.CanCollide = true
+            end
+        end
+    elseif npc:IsA("BasePart") then
+        npc.Anchored = false
+    end
+    return true
+end
+
+-- DYING PIPELINE: tear down the dead NPC body and despawn the carcass food source after a
+-- timeout, so downed prey reads as a carcass (StoryModeStoryboard 'dying' beat: "downed prey
+-- becomes carcass food, not a disappearing model") and then cleans up. Deferred + guarded:
+-- tolerates an already-destroyed/parentless instance (tests Destroy carcasses immediately).
+function NPCService:ScheduleCarcassDespawn(record, carcass, despawnSeconds)
+    if not record then return false, "missing_record" end
+    local delay = despawnSeconds or self.CarcassDespawnSeconds
+    -- Retire the original NPC body shortly after the settle beat: it is now represented by
+    -- the carcass food source, so remove the live model to avoid a duplicate visual.
+    local npc = record.Instance
+    if typeof(task) == "table" and type(task.delay) == "function" then
+        if npc then
+            task.delay(self.DeathSettleSeconds, function()
+                if npc and npc.Parent then
+                    if npc.SetAttribute then npc:SetAttribute("DeathState", "Despawned") end
+                    npc:Destroy()
+                end
+            end)
+        end
+        if carcass then
+            task.delay(delay, function()
+                if carcass and carcass.Parent then
+                    carcass:Destroy()
+                end
+                record.Carcass = nil
+            end)
+        end
+    end
+    if record.Instance and record.Instance.SetAttribute then
+        record.Instance:SetAttribute("CarcassDespawnSeconds", delay)
+    end
+    if carcass and carcass.SetAttribute then
+        carcass:SetAttribute("DespawnAfterSeconds", delay)
+    end
+    return true
+end
+
 function NPCService:Transition(record, nextState)
     if not self.AllowedStates[nextState] then return false, "bad_state" end
     record.State = nextState
@@ -162,7 +243,12 @@ function NPCService:Transition(record, nextState)
                 CollectionService:RemoveTag(record.Instance, "CarnivoreFoodCandidate")
             end
         end
+        -- DYING PIPELINE: settle the body (death state), then convert to a readable carcass
+        -- food source (synchronous so Dead-state assertions still find record.Carcass), and
+        -- finally schedule a despawn timeout. All steps are additive + world-absent safe.
+        self:PlayDeathSettle(record)
         record.Carcass = self:CreateCarcassFoodSource(record)
+        self:ScheduleCarcassDespawn(record, record.Carcass)
     end
     return true
 end
