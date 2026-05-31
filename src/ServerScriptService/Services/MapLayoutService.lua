@@ -980,6 +980,59 @@ MapLayoutService.BiomeDressingPlacements = {
         habitatFeature = "Desert",
         scenicLandmark = true,
     },
+    {
+        name = "RedstoneGatewayRockShelf_A",
+        zone = "RedstoneCanyon",
+        kind = "Cliff",
+        position = Vector3.new(332, 20, -650),
+        size = Vector3.new(116, 36, 42),
+        color = Color3.fromRGB(146, 88, 62),
+        material = Enum.Material.Sandstone,
+        scenicLandmark = true,
+    },
+    {
+        name = "RedstoneGatewayRockShelf_B",
+        zone = "RedstoneCanyon",
+        kind = "Boulder",
+        position = Vector3.new(430, 18, -470),
+        size = Vector3.new(74, 28, 54),
+        color = Color3.fromRGB(154, 91, 58),
+        material = Enum.Material.Sandstone,
+        scenicLandmark = true,
+    },
+    {
+        name = "OldEdenCollapsedSkyline_A",
+        zone = "ApocalypticCity",
+        kind = "CityTower",
+        position = Vector3.new(520, 42, -480),
+        size = Vector3.new(58, 86, 42),
+        color = Color3.fromRGB(92, 94, 90),
+        material = Enum.Material.Concrete,
+        habitatFeature = "CityRuin",
+        scenicLandmark = true,
+    },
+    {
+        name = "OldEdenRoadBarricade_A",
+        zone = "ApocalypticCity",
+        kind = "CityRuin",
+        position = Vector3.new(458, 16, -292),
+        size = Vector3.new(96, 24, 34),
+        color = Color3.fromRGB(74, 76, 72),
+        material = Enum.Material.Concrete,
+        habitatFeature = "CityRuin",
+        scenicLandmark = true,
+    },
+    {
+        name = "OldEdenOvergrownRubble_B",
+        zone = "ApocalypticCity",
+        kind = "Rubble",
+        position = Vector3.new(690, 15, -420),
+        size = Vector3.new(82, 24, 48),
+        color = Color3.fromRGB(82, 92, 78),
+        material = Enum.Material.Concrete,
+        habitatFeature = "CityRuin",
+        scenicLandmark = true,
+    },
 
 }
 
@@ -1167,20 +1220,33 @@ function MapLayoutService:FillTerrainBlock(terrain, center, size, material)
     terrain:FillBlock(CFrame.new(center), size, material)
 end
 
+function MapLayoutService:ClearProceduralTerrain(terrain)
+    local underlay = self.FullMapTerrainUnderlay
+    local clearSize = Vector3.new(underlay.size.X + 240, 180, underlay.size.Z + 240)
+    local clearCenter = Vector3.new(underlay.center.X, 54, underlay.center.Z)
+    terrain:FillBlock(CFrame.new(clearCenter), clearSize, Enum.Material.Air)
+end
+
 function MapLayoutService:FillTerrainWaterBody(terrain, center, size)
+    self:FillTerrainSoftFootprint(terrain, center, size, Enum.Material.Water, 0.72)
+end
+
+function MapLayoutService:FillTerrainSoftFootprint(terrain, center, size, material, stepScale)
     local longAxisIsX = size.X >= size.Z
     local longSize = longAxisIsX and size.X or size.Z
     local shortSize = longAxisIsX and size.Z or size.X
     local radius = math.max(8, shortSize * 0.5)
-    local step = math.max(radius * 0.72, 10)
+    local step = math.max(radius * (stepScale or 0.82), 10)
     local count = math.max(1, math.ceil(longSize / step))
     local start = -((count - 1) * step) * 0.5
     for index = 1, count do
         local offset = start + (index - 1) * step
+        local edgeWobble = math.sin(index * 1.73) * radius * 0.16
+        local localRadius = radius * (0.9 + ((index % 3) * 0.05))
         local position = longAxisIsX
-            and Vector3.new(center.X + offset, center.Y, center.Z)
-            or Vector3.new(center.X, center.Y, center.Z + offset)
-        terrain:FillCylinder(CFrame.new(position), size.Y, radius, Enum.Material.Water)
+            and Vector3.new(center.X + offset, center.Y, center.Z + edgeWobble)
+            or Vector3.new(center.X + edgeWobble, center.Y, center.Z + offset)
+        terrain:FillCylinder(CFrame.new(position), size.Y, localRadius, material)
     end
 end
 
@@ -1434,8 +1500,10 @@ end
 function MapLayoutService:EnsureTerrainContinuity(folders)
     local terrain = Workspace.Terrain
 
+    self:ClearProceduralTerrain(terrain)
     self:FillTerrainBlock(terrain, self.FullMapTerrainUnderlay.center, self.FullMapTerrainUnderlay.size, self.FullMapTerrainUnderlay.material)
     folders.Map:SetAttribute("FullMapTerrainUnderlay", true)
+    folders.Map:SetAttribute("ProceduralTerrainCleared", true)
     folders.Map:SetAttribute("FullMapTerrainUnderlaySize", string.format("%d,%d,%d", self.FullMapTerrainUnderlay.size.X, self.FullMapTerrainUnderlay.size.Y, self.FullMapTerrainUnderlay.size.Z))
     local underlay = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. self.FullMapUnderlay.name)
     if not underlay then
@@ -1456,7 +1524,7 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
     underlay:SetAttribute("GroundTopY", self.FullMapUnderlay.topY)
 
     for zoneId, zone in pairs(self.ZoneTerrain) do
-        self:FillTerrainBlock(terrain, zone.center, zone.size, zone.material)
+        self:FillTerrainSoftFootprint(terrain, zone.center, zone.size, zone.material, 0.78)
         local zoneFolder = folders.Zones:FindFirstChild(zoneId)
         if zoneFolder then
             zoneFolder:SetAttribute("TerrainBacked", true)
@@ -1465,7 +1533,7 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
     end
 
     for _, route in ipairs(self.RouteTerrain) do
-        self:FillTerrainBlock(terrain, route.center, route.size, route.material)
+        self:FillTerrainSoftFootprint(terrain, route.center, route.size, route.material, 0.72)
         self:EnsureRouteMarker(folders, route)
     end
 
