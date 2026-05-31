@@ -214,7 +214,7 @@ function G016LiveProofHarness:Run(options)
         state.Stamina = 100
         root.CFrame = CFrame.new(target.Position + Vector3.new(0, 0, -4))
         RateLimitService:ClearPlayer(player)
-        local attackOk = CombatService:RequestAttack(player, "Nibble", target)
+        local attackOk = CombatService:RequestAttack(player, SpeciesConfig[state.SpeciesId].Abilities.PrimaryAttack, target)
         assertTrue(attackOk == true, "combat attack request failed")
         assertTrue((target:GetAttribute("Health") or 1) <= 5, "combat did not reduce real target health")
         local callOk, callResult = CallService:RequestCall(player, "Warning")

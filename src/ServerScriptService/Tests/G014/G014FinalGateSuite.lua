@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local Bootstrap = require(ServerScriptService.Bootstrap)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
@@ -91,10 +92,11 @@ table.insert(suite.tests, { name = "hatch, drink, and combat are server authorit
     target:SetAttribute("Health", 30)
     target.Parent = Workspace
     CollectionService:AddTag(target, "Damageable")
-    local attackOk = CombatService:RequestAttack(player, "Claw", target)
+    local attack = SpeciesConfig.utahraptor.Abilities.PrimaryAttack
+    local attackOk = CombatService:RequestAttack(player, attack, target)
     Assert.truthy(attackOk, "valid attack rejected")
     Assert.truthy((target:GetAttribute("Health") or 30) < 30, "attack did not reduce health")
-    Assert.equals(target:GetAttribute("LastServerDamage"), 7, "server damage marker")
+    Assert.equals(target:GetAttribute("LastServerDamage"), SpeciesConfig.utahraptor.BaseStats.Hatchling.Damage, "server damage marker")
     target:Destroy(); water:Destroy(); cleanupPlayer(player)
 end })
 

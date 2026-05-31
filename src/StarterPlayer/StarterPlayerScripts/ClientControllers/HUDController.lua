@@ -254,6 +254,19 @@ function HUDController:BuildStoryCue(payload)
     local biome = tostring(payloadBiome(payload) or "Wilds")
     local parts = { string.format("%s %s", biomeIcons[biome] or "🧭", biome) }
 
+    local deathState = tostring(payload.deathState or "")
+    local sleepState = tostring(payload.sleepState or "")
+    if deathState ~= "" or sleepState == "Dead" or payload.diedAtAgeSeconds ~= nil then
+        table.insert(parts, deathState ~= "" and ("☠ " .. deathState) or "☠")
+    elseif payload.resting == true or sleepState == "Resting" then
+        table.insert(parts, "💤")
+    end
+
+    local ageSeconds = tonumber(payload.ageSeconds)
+    if ageSeconds and ageSeconds > 0 then
+        table.insert(parts, string.format("⏱%ds", math.floor(ageSeconds + 0.5)))
+    end
+
     local stage = tostring(payload.growthStage or "")
     if stage == "Hatchling" or payload.hatched == false then
         table.insert(parts, "🐣")

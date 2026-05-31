@@ -1,6 +1,7 @@
 local Assert = require(game:GetService("ReplicatedStorage").Shared.TestFramework.Assert)
 local CollectionService = game:GetService("CollectionService")
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(game:GetService("ReplicatedStorage").Shared.SpeciesConfig)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
 local CombatService = require(game:GetService("ServerScriptService").Services.CombatService)
@@ -82,6 +83,18 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     SurvivalService:AddGrowth(player, 25)
     Assert.equals(state.GrowthStage, "Juvenile", "growth reaches juvenile")
 
+    local ageBeforeRest = state.AgeSeconds or 0
+    state.Health = math.max(1, state.Health - 10)
+    state.Stamina = 0
+    Assert.truthy(SurvivalService:SetResting(player, true), "rest starts")
+    SurvivalService:ApplyNeedsTick(player, 2)
+    Assert.equals(state.SleepState, "Resting", "rest/sleep state is readable")
+    Assert.truthy((state.AgeSeconds or 0) > ageBeforeRest, "age advances during survival loop")
+    Assert.truthy(state.Stamina > 0, "rest restores stamina")
+    Assert.truthy(state.Health > 0, "rest keeps recovery state alive")
+    Assert.truthy(SurvivalService:SetResting(player, false), "rest stops")
+    Assert.equals(state.SleepState, "Awake", "sleep state returns to awake")
+
     local prey = Instance.new("Part")
     prey.Name = "DamageablePrey"
     prey.Position = Vector3.new(5, 3, 0)
@@ -89,7 +102,9 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     prey.Parent = workspace
     CollectionService:AddTag(prey, "Damageable")
     RateLimitService:ClearPlayer(player)
-    Assert.truthy(CombatService:RequestAttack(player, "Claw", prey), "attack succeeds")
+    local playerSpecies = SpeciesConfig[state.SpeciesId]
+    local playerAttack = playerSpecies.Abilities.PrimaryAttack
+    Assert.truthy(CombatService:RequestAttack(player, playerAttack, prey), "attack succeeds")
     Assert.truthy(prey:GetAttribute("Health") < 10, "real damage reduces health")
 
     ensureCarcassAsset()
@@ -112,7 +127,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     state.Stamina = 100
     root.Position = preyRoot.Position + Vector3.new(2, 0, 0)
     RateLimitService:ClearPlayer(player)
-    Assert.truthy(CombatService:RequestAttack(player, "Claw", preyModel), "player can attack registered dinosaur NPC")
+    Assert.truthy(CombatService:RequestAttack(player, playerAttack, preyModel), "player can attack registered dinosaur NPC")
     Assert.equals(record.State, "Dead", "player attack kills NPC prey")
     Assert.notNil(record.Carcass, "player-killed NPC leaves carcass")
     Assert.truthy(CollectionService:HasTag(record.Carcass, "FoodSource"), "player-killed NPC carcass is food")
@@ -134,6 +149,8 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
 
     SurvivalService:Kill(player, "LoopTest")
     Assert.equals(state.Dead, true, "death recorded")
+    Assert.equals(state.DeathState, "Dying", "death is readable as dying")
+    Assert.equals(state.DiedAtAgeSeconds, state.AgeSeconds, "death records final age")
     local respawned = SurvivalService:Respawn(player)
     Assert.equals(respawned.Hatched, false, "respawn returns egg")
     Assert.equals(PlayerDataService:Get(player).Fossils, 2, "saved reward survives respawn")

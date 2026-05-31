@@ -193,6 +193,32 @@ table.insert(suite.tests, { name = "story cue exposes biome needs threat fish an
     Assert.truthy(string.find(swamp, "🪺x2", 1, true) ~= nil, "nest egg state appears when replicated")
 end })
 
+table.insert(suite.tests, { name = "story cue exposes rest age and dying state", run = function()
+    local resting = HUDController:BuildStoryCue({
+        species = "parasaurolophus",
+        diet = "Herbivore",
+        growthStage = "Juvenile",
+        ageSeconds = 42,
+        resting = true,
+        sleepState = "Resting",
+        ecosystemProfile = { PreferredBiome = "NurseryGrove" },
+    })
+    Assert.truthy(string.find(resting, "💤", 1, true) ~= nil, "resting/sleep state is visible")
+    Assert.truthy(string.find(resting, "⏱42s", 1, true) ~= nil, "age seconds are visible")
+
+    local dying = HUDController:BuildStoryCue({
+        species = "utahraptor",
+        diet = "Carnivore",
+        growthStage = "Adult",
+        ageSeconds = 88,
+        deathState = "Dying",
+        diedAtAgeSeconds = 88,
+        currentBiome = "RedstoneCanyon",
+    })
+    Assert.truthy(string.find(dying, "☠ Dying", 1, true) ~= nil, "dying state is visible")
+    Assert.truthy(string.find(dying, "⏱88s", 1, true) ~= nil, "death age remains visible")
+end })
+
 table.insert(suite.tests, { name = "hud factory supports compact mobile bars", run = function()
     local root = Instance.new("Frame")
     local fill = UIFactory:CreateBar(root, "Hunger", 20, {

@@ -7,13 +7,13 @@
 | US03 | Herbivore eats plants | PASS | PASS | PASS | BLOCKED | PASS | FAIL | FAIL | Logic exists; visible final plant food imported/release-ready placement not fully proven. |
 | US04 | Carnivore eats meat/carcass | PASS | PASS | PASS | BLOCKED | PASS | FAIL | FAIL | Source now creates carcass from imported visual when available; release placement/import audit remains below 500. |
 | US05 | Drink water | PASS | PASS | PASS | N/A | PASS | PASS | PASS | `FoodWaterService:RequestDrink` requires alive + hatched + nearby WaterSource. |
-| US06 | Survival tick/growth | PASS | PASS | PASS | PASS | PASS | N/A | PASS | Needs loop, stamina regen, growth, and juvenile E2E tests exist. |
+| US06 | Survival tick/growth/rest/age | PASS | PASS | PASS | PASS | PASS | N/A | PASS | Needs loop, stamina regen, rest/sleep recovery, readable age, and juvenile E2E tests exist. |
 | US07 | Combat damage | PASS | PASS | PASS | N/A | PASS | N/A | PASS | Combat applies Health and LastServerDamage; PendingServerDamage remains telemetry only. |
 | US08 | NPC ecosystem | PASS | PASS | BLOCKED | N/A | N/A | FAIL | FAIL | NPCs now resolve imported models when library exists; full release validation still blocked by import count. |
 | US09 | Old Eden city/fossils | PASS | PASS | BLOCKED | PASS | PASS | FAIL | FAIL | Server rewards exist; imported city prop release-ready audit incomplete. |
 | US10 | Group/calls | PASS | PASS | PASS | BLOCKED | PASS | N/A | BLOCKED | Server flow fixed; full client group panel E2E not proven. |
 | US11 | Nesting | PASS | PASS | PASS | N/A | PASS | FAIL | FAIL | Nest outcome exists; imported nest release-ready audit incomplete. |
-| US12 | Death/respawn | PASS | PASS | PASS | PASS | PASS | N/A | PASS | Server death/respawn/account persistence tests exist. |
+| US12 | Death/dying/respawn | PASS | PASS | PASS | PASS | PASS | N/A | PASS | Server death/respawn/account persistence tests now include readable dying state and death age. |
 | US13 | Client UI/mobile controls | PASS | PASS | BLOCKED | PASS | N/A | PASS | BLOCKED | `ClientBootstrap.client.lua` now loads controllers; fresh mobile device proof still needed. |
 | US14 | Asset import honesty | PASS | PASS | N/A | N/A | PASS | FAIL | FAIL | Live materialized quality-approved unique primary imports are now 23/500 after quality quarantine; catalog rows are not counted. |
 | US15 | Fresh full QA gate | PASS | PASS | FAIL | BLOCKED | PASS | FAIL | FAIL | Fresh Studio hatch smoke passed, but full all-category TestRunner and 500 release assets still fail. |
@@ -29,3 +29,9 @@ Current G014 continuation evidence supersedes stale G015-only counts: active `eg
 - `AssetImportAuditService.lua` now quarantines non-required low-quality/mesh imported roots during mutate audits and reports `qualityAssetsQuarantined` separately.
 - `MapLayoutService.lua` now uses exact half-scale source compaction, re-centers mismatched food/carcass placements into their declared zones, keeps procedural food/tree visuals hidden, and tags NPC spawns as potential food when defeated.
 - No client UI or combat files were changed in this patch. Live G014 release count remains an honest 23/500 until Studio is synced and rerun.
+
+## Swarm story coverage audit — 2026-05-31
+
+- `E2E_PlayableLoopClosure.lua` now covers the hatch → eat/drink → growth → rest/sleep → age → fight/eat carcass → city/fossil → dying/respawn spine in one server-authoritative loop.
+- `ClientHUDTests.client.lua` now proves the HUD story cue exposes rest/sleep, age seconds, and readable dying state from the stat payload.
+- Release status remains blocked by the live import/materialization gate and fresh mobile-device proof, not by missing source-level story coverage for rest/age/death.

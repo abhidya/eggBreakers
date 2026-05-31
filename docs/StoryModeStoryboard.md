@@ -1,7 +1,7 @@
 # eggBreakers — Story Mode Storyboard & Asset Value Matrix
 
-**Status:** Draft v0.1  
-**Last refreshed:** 2026-05-30  
+**Status:** Draft v0.1
+**Last refreshed:** 2026-05-31
 **Scope:** Story, storyboard beats, and asset/UI/UX value only. This is not an implementation plan and does not claim assets are already placed or wired.
 
 ## Source of truth and evidence reviewed
@@ -15,7 +15,9 @@
 - `src/ServerScriptService/Services/MapLayoutService.lua` — current biome layout, food/water placements, and food metadata.
 - `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*` — current HUD/mobile/waypoint affordance evidence.
 - `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua` — hatch/select/first-food regression coverage for the playable opening loop.
+- `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` — server-authoritative hatch, eat/drink, growth, rest/age, fight, city/fossil, dying, and respawn loop coverage.
 - `src/StarterPlayer/StarterPlayerScripts/Tests/HatchUITests.client.lua` — client selector rendering and selected-option coverage.
+- `src/StarterPlayer/StarterPlayerScripts/Tests/ClientHUDTests.client.lua` — client HUD coverage for growth, role, story cue, rest/sleep, age, oxygen, threat, and dying readability.
 - Live Studio read-only audit, 2026-05-30 — `Workspace.dinosaur` is a staged mesh dino library; `Workspace.Map` remains mostly primitive placeholders.
 
 ## Validation language
@@ -82,8 +84,8 @@ Every scene below must earn four kinds of value:
 
 **Storyboard frames**
 
-1. **Herbivore path:** baby Gallimimus approaches fern cluster with soft green shimmer.
-2. **Carnivore path:** baby Velociraptor approaches a small safe carcass cache; meat/bone silhouette is unmistakable.
+1. **Herbivore path:** baby Parasaurolophus approaches fern cluster with soft green shimmer.
+2. **Carnivore path:** baby Utahraptor approaches a small safe carcass cache; meat/bone silhouette is unmistakable.
 3. **Water path:** shoreline and reflection make drinkable water obvious before UI appears.
 4. **Feedback:** bite/slurp audio + small growth sparkle + bar fill; no giant text spam.
 
@@ -99,7 +101,7 @@ Every scene below must earn four kinds of value:
 | Layer | Required value | Validated references |
 |---|---|---|
 | Visual | Open plains, herds, readable predator silhouettes, real dino meshes instead of primitive blobs. | Validated staged assets: live `Workspace.dinosaur` has clean mesh groups for Herbivores/Carnivores/Omnivores/Aquatic. Search ref: `rigged dinosaur` → `ecb52c0b-842b-4101-bd90-246afe79029c`. Manifest clean dinosaur candidates: `18759347676` Rigged Dinosaur Models; `129426942556570` Rigged Dinosaur Models 2; `17490043673` Dinosaur; `5151489661` Dinosaur. |
-| Mechanical | Sneak/flee/sprint/attack decision; stamina matters; pack/herd proximity matters. | `SpeciesConfig.lua`: Gallimimus scout, Triceratops defensive tank, Velociraptor pack hunter, Carnotaurus chase predator. |
+| Mechanical | Sneak/flee/sprint/attack decision; stamina matters; pack/herd proximity matters. | `SpeciesConfig.lua`: Coelophysis fast starter, Parasaurolophus social herbivore, Utahraptor pack hunter, Citipati omnivore scavenger. |
 | UI | Threat indicator, stamina warning, target health only after engagement, call button. | Current HUD/mobile controls include Attack, Sprint, Call, RestHide; story docs call for threat UI. |
 | UX | Player learns “not every dino is safe” by sight and sound, not by surprise stat loss. | Needs roar/call audio and telegraphed lunge VFX. |
 
@@ -122,17 +124,18 @@ Every scene below must earn four kinds of value:
 | Layer | Required value | Validated references |
 |---|---|---|
 | Visual | Scale-up, stronger posture, new body variant or clear size change. | `SpeciesConfig.lua` growth stages for all species; staged mesh library can supply species base meshes, but growth variants are not proven. |
-| Mechanical | Stage-up changes stats, ability affordance, diet/role stays clear. | `SpeciesConfig.lua` BaseStats and Abilities per species. |
-| UI | Growth badge, role card, unlock toast, ability highlight. | `HUDController:BuildGrowthBadge`, `BuildRoleCard`, `BuildDietGuidance`. |
+| Mechanical | Stage-up changes stats, rest/sleep slows needs and restores stamina/health, age advances through the survival loop, ability affordance and diet/role stay clear. | `SpeciesConfig.lua` BaseStats and Abilities per species; `SurvivalService:SetResting` and `ApplyNeedsTick`; `E2E_PlayableLoopClosure.lua`. |
+| UI | Growth badge, role card, rest/sleep cue, age cue, unlock toast, ability highlight. | `HUDController:BuildGrowthBadge`, `BuildRoleCard`, `BuildDietGuidance`, `BuildStoryCue`; `ClientHUDTests.client.lua`. |
 | UX | Player feels earned progress, not just number inflation. | Needs animation/VFX/audio to sell transformation. |
 
 **Storyboard frames**
 
-1. **Rest after feeding:** player finds cover, growth meter hits threshold.
+1. **Rest after feeding:** player finds cover, sleep/rest cue appears, age continues to tick, and hunger/thirst slow instead of freezing.
 2. **Body pulse:** camera low, body scales, new ability icon lights.
 3. **World reaction:** nearby small prey flee or herd call responds.
+4. **Bad ending clarity:** if the player dies, the story cue and server state say "Dying", record final age, and respawn returns to egg without losing account progress.
 
-**Acceptance check:** before/after screenshots prove visual growth and UI state change.
+**Acceptance check:** before/after screenshots prove visual growth and UI state change; source E2E proves rest/sleep recovery, age progression, dying state, death age, and respawn persistence.
 
 ---
 

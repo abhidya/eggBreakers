@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local Bootstrap = require(ServerScriptService.Bootstrap)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
@@ -99,7 +100,8 @@ table.insert(suite.tests, { name = "combat applies actual health damage, not Pen
     target:SetAttribute("Health", 30)
     target.Parent = Workspace
     CollectionService:AddTag(target, "Damageable")
-    local ok = CombatService:RequestAttack(player, "Claw", target)
+    local attack = SpeciesConfig.utahraptor.Abilities.PrimaryAttack
+    local ok = CombatService:RequestAttack(player, attack, target)
     local pending = target:GetAttribute("PendingServerDamage")
     local health = target:GetAttribute("Health")
     target:Destroy()
