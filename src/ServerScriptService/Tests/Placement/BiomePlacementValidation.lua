@@ -311,6 +311,28 @@ table.insert(suite.tests, { name = "full map terrain underlay is single and comp
     Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2350,12,2200", "50% compact full map underlay covers all biomes and routes")
 end })
 
+table.insert(suite.tests, { name = "story biome gates are visible landmarks", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local gateCount = 0
+    local zoneGateCount = {}
+    for _, descendant in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("BiomeGate") == true and descendant:GetAttribute("PlacementRole") == "VisibleBiomeProp" then
+            gateCount = gateCount + 1
+            local zoneId = descendant:GetAttribute("ZoneId")
+            zoneGateCount[zoneId] = (zoneGateCount[zoneId] or 0) + 1
+            Assert.truthy(descendant.Size.X >= 90 or descendant.Size.Y >= 35 or descendant.Size.Z >= 24, "biome gate has landmark scale: " .. descendant.Name)
+        end
+    end
+
+    Assert.truthy(gateCount >= 8, "story map exposes route gates as visible landmarks")
+    Assert.truthy((zoneGateCount.NurseryGrove or 0) >= 1, "nursery has a readable outbound gate")
+    Assert.truthy((zoneGateCount.JungleBasin or 0) >= 1, "jungle has a canopy gate")
+    Assert.truthy((zoneGateCount.RedstoneCanyon or 0) >= 2, "redstone has canyon gate silhouettes")
+    Assert.truthy((zoneGateCount.ApocalypticCity or 0) >= 1, "Old Eden has an entry ruin gate")
+end })
+
 table.insert(suite.tests, { name = "compact map keeps every biome in playable range", run = function()
     local nurseryCenter = MapLayoutService.ZoneTerrain.NurseryGrove.center
     local biomeCount = 0

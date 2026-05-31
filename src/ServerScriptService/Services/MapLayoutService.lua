@@ -354,6 +354,7 @@ function MapLayoutService:SanitizeImportedDressingClone(clone, source, spec, rol
     clone:SetAttribute("DressingKind", spec.kind)
     clone:SetAttribute("PlacementRole", role or "ImportedBiomeDressing")
     clone:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+    clone:SetAttribute("BiomeGate", spec.biomeGate == true)
     clone:SetAttribute("FlowerCluster", spec.flowerCluster == true)
     clone:SetAttribute("LavaVisual", spec.lavaVisual == true)
     clone:SetAttribute("ImportedVisibleAsset", true)
@@ -380,6 +381,7 @@ function MapLayoutService:SanitizeImportedDressingClone(clone, source, spec, rol
             descendant:SetAttribute("DressingKind", spec.kind)
             descendant:SetAttribute("PlacementRole", role or "ImportedBiomeDressing")
             descendant:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+            descendant:SetAttribute("BiomeGate", spec.biomeGate == true)
             descendant:SetAttribute("FlowerCluster", spec.flowerCluster == true)
             descendant:SetAttribute("LavaVisual", spec.lavaVisual == true)
             descendant:SetAttribute("ImportedVisibleAsset", true)
@@ -988,7 +990,9 @@ MapLayoutService.BiomeDressingPlacements = {
         size = Vector3.new(116, 36, 42),
         color = Color3.fromRGB(146, 88, 62),
         material = Enum.Material.Sandstone,
+        habitatFeature = "BiomeGate",
         scenicLandmark = true,
+        biomeGate = true,
     },
     {
         name = "RedstoneGatewayRockShelf_B",
@@ -998,7 +1002,105 @@ MapLayoutService.BiomeDressingPlacements = {
         size = Vector3.new(74, 28, 54),
         color = Color3.fromRGB(154, 91, 58),
         material = Enum.Material.Sandstone,
+        habitatFeature = "BiomeGate",
         scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "NurseryFernLivingArch_A",
+        zone = "NurseryGrove",
+        kind = "ForestStand",
+        position = Vector3.new(-1788, 18, 4),
+        size = Vector3.new(118, 42, 24),
+        color = Color3.fromRGB(62, 132, 64),
+        material = Enum.Material.LeafyGrass,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "FernNurseryReturnArch_B",
+        zone = "FernPlains",
+        kind = "ForestStand",
+        position = Vector3.new(-1598, 18, -82),
+        size = Vector3.new(96, 36, 22),
+        color = Color3.fromRGB(76, 142, 62),
+        material = Enum.Material.LeafyGrass,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "JungleCanopyGate_A",
+        zone = "JungleBasin",
+        kind = "ForestStand",
+        position = Vector3.new(-1578, 21, 686),
+        size = Vector3.new(132, 54, 30),
+        color = Color3.fromRGB(30, 92, 48),
+        material = Enum.Material.LeafyGrass,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "FernLakeReedGate_A",
+        zone = "FernPlains",
+        kind = "LakeShore",
+        position = Vector3.new(-1180, 13, 318),
+        size = Vector3.new(128, 16, 24),
+        color = Color3.fromRGB(72, 150, 188),
+        material = Enum.Material.Glass,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "SwampCausewayGate_A",
+        zone = "SwampDelta",
+        kind = "RiverBend",
+        position = Vector3.new(-545, 10, 956),
+        size = Vector3.new(148, 18, 28),
+        color = Color3.fromRGB(54, 122, 116),
+        material = Enum.Material.Glass,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "RedstoneCanyonArch_A",
+        zone = "RedstoneCanyon",
+        kind = "Cliff",
+        position = Vector3.new(-468, 30, -328),
+        size = Vector3.new(142, 58, 28),
+        color = Color3.fromRGB(158, 92, 58),
+        material = Enum.Material.Sandstone,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "OldEdenEntryRuins_A",
+        zone = "ApocalypticCity",
+        kind = "CityRuin",
+        position = Vector3.new(314, 28, -328),
+        size = Vector3.new(156, 48, 34),
+        color = Color3.fromRGB(86, 88, 84),
+        material = Enum.Material.Concrete,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
+    },
+    {
+        name = "MountainNestBoneGate_A",
+        zone = "MountainNestingCliffs",
+        kind = "Cliff",
+        position = Vector3.new(-78, 98, -1438),
+        size = Vector3.new(124, 54, 28),
+        color = Color3.fromRGB(150, 145, 132),
+        material = Enum.Material.Rock,
+        habitatFeature = "BiomeGate",
+        scenicLandmark = true,
+        biomeGate = true,
     },
     {
         name = "OldEdenCollapsedSkyline_A",
@@ -1632,6 +1734,7 @@ function MapLayoutService:ApplyDressingAttributes(part, spec, role)
     part:SetAttribute("PlacementRole", role)
     part:SetAttribute("DressingKind", spec.kind)
     part:SetAttribute("ScenicLandmark", spec.scenicLandmark == true)
+    part:SetAttribute("BiomeGate", spec.biomeGate == true)
     part:SetAttribute("FlowerCluster", spec.flowerCluster == true)
     part:SetAttribute("LavaVisual", spec.lavaVisual == true)
     part:SetAttribute("HabitatFeature", spec.habitatFeature)

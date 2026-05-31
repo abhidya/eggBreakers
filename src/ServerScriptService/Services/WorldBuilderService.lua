@@ -448,12 +448,12 @@ function WorldBuilderService.EnsureSkyAndAtmosphere()
         atmosphere.Name = "EggBreakersAtmosphere"
         atmosphere.Parent = Lighting
     end
-    atmosphere.Density = 0.32
-    atmosphere.Offset = 0.1
-    atmosphere.Color = Color3.fromRGB(199, 199, 199)
-    atmosphere.Decay = Color3.fromRGB(106, 112, 125)
-    atmosphere.Glare = 0.2
-    atmosphere.Haze = 1.6
+    atmosphere.Density = 0.18
+    atmosphere.Offset = 0.18
+    atmosphere.Color = Color3.fromRGB(214, 219, 211)
+    atmosphere.Decay = Color3.fromRGB(112, 124, 112)
+    atmosphere.Glare = 0.08
+    atmosphere.Haze = 0.45
 
     -- Calm dawn mood (does not assert over weather state).
     Lighting.ClockTime = 7.5
@@ -462,6 +462,7 @@ function WorldBuilderService.EnsureSkyAndAtmosphere()
     Lighting.ExposureCompensation = 0.1
     Lighting.OutdoorAmbient = Color3.fromRGB(120, 122, 130)
     Lighting.Ambient = Color3.fromRGB(70, 70, 78)
+    Lighting.FogEnd = 1000000
     Lighting:SetAttribute("EggBreakersSkyApplied", true)
 
     return sky
