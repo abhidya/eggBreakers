@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local NPCService = require(script.Parent.NPCService)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
@@ -57,6 +58,12 @@ local function hasVisiblePart(instance)
 end
 
 function NPCSpawnService:ResolveImportedNPCModel(kind)
+    local profile = NPCService:GetKindProfile(kind)
+    local speciesId = profile and profile.SpeciesId
+    if speciesId then
+        local staged = StagedMeshLibrary:ResolveModel(speciesId)
+        if staged and hasVisiblePart(staged) then return staged end
+    end
     for _, path in ipairs(self.NPCModelCandidatePaths[kind] or {}) do
         local candidate = resolvePath(path)
         if candidate and hasVisiblePart(candidate) then return candidate end

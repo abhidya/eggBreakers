@@ -435,6 +435,24 @@ function CharacterVisualService:_applySpeciesOrientationCorrection(model, specie
     return changed
 end
 
+function CharacterVisualService:_resolveStagedModel(speciesId)
+    if not speciesId then return nil end
+    local shared = ReplicatedStorage:FindFirstChild("Shared")
+    local moduleScript = shared and shared:FindFirstChild("StagedMeshLibrary")
+    if not moduleScript or not moduleScript:IsA("ModuleScript") then
+        return nil
+    end
+    local okRequire, library = pcall(require, moduleScript)
+    if not okRequire or type(library) ~= "table" or type(library.ResolveModel) ~= "function" then
+        return nil
+    end
+    local okResolve, model = pcall(library.ResolveModel, library, speciesId)
+    if okResolve and typeof(model) == "Instance" then
+        return model
+    end
+    return nil
+end
+
 function CharacterVisualService:_prepareDinosaurClone(model, state)
     local clone = self:_prepareVisualClone(model, self.DinosaurVisualName)
     clone:SetAttribute("VisualKind", "ImportedDinosaur")
@@ -530,13 +548,20 @@ function CharacterVisualService:_attachModel(character, root, model)
         self:_applySpeciesOrientationCorrection(model, model:GetAttribute("SpeciesId"), root)
         self:_orientDinosaurForward(model, root)
     end
-    for _, descendant in ipairs(model:GetDescendants()) do
-        if descendant:IsA("BasePart") then
-            self:_weldToRoot(descendant, root, model:IsA("Model") or offsets[descendant] ~= nil)
+    -- Rigged staged meshes carry a Motor6D/AnimationController rig: welding every
+    -- BasePart to the root fights the rig. For such models weld ONLY the
+    -- PrimaryPart and let the internal Motor6D joints hold the remaining parts.
+    if model:IsA("Model") and model.PrimaryPart and model:FindFirstChildWhichIsA("Motor6D", true) then
+        self:_weldToRoot(primary, root, true)
+    else
+        for _, descendant in ipairs(model:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                self:_weldToRoot(descendant, root, model:IsA("Model") or offsets[descendant] ~= nil)
+            end
         end
-    end
-    if model:IsA("BasePart") then
-        self:_weldToRoot(model, root)
+        if model:IsA("BasePart") then
+            self:_weldToRoot(model, root)
+        end
     end
     return model
 end
@@ -574,6 +599,22 @@ function CharacterVisualService:ApplyForState(player, state, options)
         local egg, reason = self:_createEggVisual(character, root)
         if egg then return true, reason end
         return false, reason
+    end
+
+    if state.SpeciesId then
+        root:SetAttribute("SpeciesId", state.SpeciesId)
+    end
+
+    -- Prefer the runtime-staged rigged mesh (Motor6D rig) when available; this
+    -- gives the player their actual species dino instead of a placeholder model.
+    -- Safe + additive: if StagedMeshLibrary or the staging Workspace folder is
+    -- absent, fall through to the existing SpeciesModelService path unchanged.
+    local stagedModel = self:_resolveStagedModel(state.SpeciesId)
+    if stagedModel then
+        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(stagedModel, state))
+        if attached then
+            return true, "staged_dinosaur_mesh"
+        end
     end
 
     local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "gallimimus", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
