@@ -36,6 +36,13 @@ Use these labels consistently:
 - **Needs rating lookup** — current local evidence does not include Creator Store ratings/favorites/trust; do not call these “high rated” until searched externally or inspected in Studio.
 - **Reject / placeholder** — primitive, generated, ball/square, CSG fallback, AI-generated slop, or asset with no clear visual/mechanical/UI/UX job.
 
+## Swarm audit additions — 2026-05-31
+
+- G018 live proof must use one naming contract: `US27LiveProofPassed` through `US36LiveProofPassed` on `ReplicatedStorage.G018FinalGateProof`. Older `G018US01LiveProofPassed` style names are stale.
+- NPC ecosystem proof must show CPU-bounded brains, not all-NPC full scans forever. Live captures should include `BrainCycleBudget`, `BrainCycleTotal`, and no frozen/teleport-only static models.
+- Predator social proof now needs a pack/regroup beat before idle wandering; prey social proof still needs herd cohesion; omnivore proof needs plant plus carcass paths; future nest story proof needs a real mating/nesting beat, not only spawned props.
+- Asset search candidates remain references until previewed and inserted with reviewed scripts. Low-favorite foliage/nest results may be useful as kitbash material, but placeholder plates/blocks still fail this storyboard.
+
 ## Story mode spine
 
 The story is not quest-dialogue driven. The ecosystem is the quest-giver:

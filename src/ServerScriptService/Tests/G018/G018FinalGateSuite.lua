@@ -8,7 +8,7 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 local AssetImportAuditService = require(ServerScriptService.Services.AssetImportAuditService)
 
-local Registry = require(script.Parent.G018UserStoryTestRegistry)
+local Registry = require(script.Parent.UserStoryTestRegistry)
 local StoryAssertions = require(script.Parent.StoryAssertions)
 
 local suite = { name = "G018FinalGate", category = "G018FinalGate", tests = {} }
@@ -62,10 +62,10 @@ end })
 
 table.insert(suite.tests, { name = "G018 registry enumerates ecosystem expansion stories", run = function()
     local stories = Registry.all()
-    Assert.equals(#stories, 11, "G018 registry must enumerate 11 ecosystem stories")
+    Assert.equals(#stories, 10, "G018 registry must enumerate US27-US36 ecosystem stories")
     local seen = {}
     for index, story in ipairs(stories) do
-        Assert.equals(story.id, string.format("G018-US%02d", index), "G018 story order/id contract")
+        Assert.equals(story.id, string.format("US%02d", index + 26), "G018 story order/id contract")
         Assert.falsy(seen[story.id], "duplicate story id " .. tostring(story.id))
         seen[story.id] = true
         Assert.truthy(type(story.title) == "string" and #story.title > 0, story.id .. " title required")

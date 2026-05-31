@@ -7,6 +7,7 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local SurvivalService = require(ServerScriptService.Services.SurvivalService)
 local StatReplicationService = require(ServerScriptService.Services.StatReplicationService)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
+local G018LiveProofHarness = require(script.Parent.G018LiveProofHarness)
 
 local suite = { name = "G018EcosystemProfileTests", category = "Integration", tests = {} }
 
@@ -79,6 +80,15 @@ table.insert(suite.tests, { name = "remote stat contract advertises G018 profile
     Assert.truthy(seen.ageSeconds, "age in stat payload contract")
     Assert.truthy(seen.deathState, "death state in stat payload contract")
     Assert.truthy(seen.diedAtAgeSeconds, "death age in stat payload contract")
+end })
+
+table.insert(suite.tests, { name = "G018 live proof harness uses US27-US36 matrix contract", run = function()
+    Assert.truthy(G018LiveProofHarness:AssertContractOnly(), "live proof harness follows US27-US36 contract")
+    local stories = G018LiveProofHarness:RequiredStories()
+    Assert.equals(#stories, 10, "ten G018 ecosystem stories required")
+    Assert.equals(stories[1].id, "US27", "first story id")
+    Assert.equals(stories[#stories].id, "US36", "last story id")
+    Assert.equals(stories[1].liveProof, "US27LiveProofPassed", "proof attr matches live matrix")
 end })
 
 return TestRunner.registerSuite(suite)

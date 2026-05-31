@@ -587,4 +587,87 @@ table.insert(suite.tests, { name = "herding omnivore eats plant and carcass diet
     omnivore:Destroy(); herdMate:Destroy(); plant:Destroy(); carcass:Destroy()
 end })
 
+table.insert(suite.tests, { name = "NPC brain tick uses round-robin CPU budget", run = function()
+    local oldRecords = NPCService.NPCs
+    local oldBudget = NPCService.MaxBrainTicksPerCycle
+    local oldIndex = NPCService.BrainRoundRobinIndex
+    resetNPCs()
+    NPCService.MaxBrainTicksPerCycle = 2
+    NPCService.BrainRoundRobinIndex = 1
+
+    local a = makeNPC("BudgetA", Vector3.new(0, 3, 0))
+    local b = makeNPC("BudgetB", Vector3.new(10, 3, 0))
+    local c = makeNPC("BudgetC", Vector3.new(20, 3, 0))
+    NPCService:Register(a, "Prey")
+    NPCService:Register(b, "Prey")
+    NPCService:Register(c, "Prey")
+
+    local active = NPCService:TickNPCs({})
+    Assert.equals(active, 2, "only budgeted brains tick")
+    Assert.equals(a:GetAttribute("BrainDeferred"), false, "first NPC ticked")
+    Assert.equals(b:GetAttribute("BrainDeferred"), false, "second NPC ticked")
+    Assert.equals(c:GetAttribute("BrainDeferred"), true, "third NPC deferred")
+    Assert.equals(a:GetAttribute("BrainCycleBudget"), 2, "budget stamped")
+    Assert.equals(a:GetAttribute("BrainCycleTotal"), 3, "total stamped")
+
+    NPCService:TickNPCs({})
+    Assert.equals(c:GetAttribute("BrainDeferred"), false, "deferred NPC gets next cycle")
+
+    a:Destroy(); b:Destroy(); c:Destroy()
+    NPCService.NPCs = oldRecords
+    NPCService.MaxBrainTicksPerCycle = oldBudget
+    NPCService.BrainRoundRobinIndex = oldIndex
+end })
+
+table.insert(suite.tests, { name = "pack predators regroup before idle wandering", run = function()
+    resetNPCs()
+    local alpha = makeNPC("PackAlphaRaptor", Vector3.new(0, 3, 0))
+    local beta = makeNPC("PackBetaRaptor", Vector3.new(24, 3, 0))
+    local _, alphaRecord = NPCService:Register(alpha, "Predator")
+    local _, betaRecord = NPCService:Register(beta, "Predator")
+    alphaRecord.Hatched = true
+    betaRecord.Hatched = true
+    alphaRecord.Hunger = 90
+    alphaRecord.Thirst = 90
+    betaRecord.Hunger = 90
+    betaRecord.Thirst = 90
+
+    NPCService:TickBrain(alphaRecord, {}, 1)
+
+    Assert.equals(alphaRecord.State, "Pack", "predator enters pack regroup state")
+    Assert.equals(alpha:GetAttribute("PackHunter"), true, "pack hunter marker visible")
+    Assert.equals(alpha:GetAttribute("PackSize"), 2, "pack size visible")
+    Assert.equals(alpha:GetAttribute("PackLeader"), "PackAlphaRaptor", "stable pack leader visible")
+    Assert.equals(alpha:GetAttribute("PackGroupId"), "Pack:PackAlphaRaptor", "pack group id visible")
+    Assert.equals(alpha:GetAttribute("LastBrainAction"), "Pack", "pack action stamped")
+
+    alpha:Destroy(); beta:Destroy()
+end })
+
+table.insert(suite.tests, { name = "healthy same-species NPCs enter mating beat", run = function()
+    resetNPCs()
+    local first = makeNPC("MateFirstOviraptor", Vector3.new(0, 3, 0))
+    local second = makeNPC("MateSecondOviraptor", Vector3.new(12, 3, 0))
+    local _, firstRecord = NPCService:Register(first, "Omnivore")
+    local _, secondRecord = NPCService:Register(second, "Omnivore")
+    firstRecord.Hatched = true
+    secondRecord.Hatched = true
+    firstRecord.Hunger = 90
+    firstRecord.Thirst = 90
+    secondRecord.Hunger = 90
+    secondRecord.Thirst = 90
+    firstRecord.Herding = false
+    secondRecord.Herding = false
+
+    NPCService:TickBrain(firstRecord, {}, 1)
+
+    Assert.equals(firstRecord.State, "Mate", "healthy matching NPC enters mating beat")
+    Assert.equals(first:GetAttribute("MateEligible"), true, "mate eligibility visible")
+    Assert.equals(first:GetAttribute("MateTarget"), "MateSecondOviraptor", "mate target visible")
+    Assert.equals(first:GetAttribute("LastBrainAction"), "Mate", "mate action stamped")
+    Assert.truthy((first:GetAttribute("MateDistance") or 0) > 0, "mate distance stamped")
+
+    first:Destroy(); second:Destroy()
+end })
+
 return suite

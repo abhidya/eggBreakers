@@ -38,17 +38,16 @@ Unaudited executable imports still fail release readiness. ModuleScripts may rem
 
 | G018 story | Beat relevance | Current audit status |
 | --- | --- | --- |
-| G018-US01 small prey | Beats 2, 4, 8 | Source profile/spawn coverage exists; live predator/prey proof blocked |
-| G018-US02 fish schools | Beat 5 | Source fish-in-water assertion added; live aquatic hunting proof blocked |
-| G018-US03 water integrity | Beats 1, 5 | Source water/drink/swim checks exist; live water-volume proof blocked |
-| G018-US04 grazing | Beats 1, 3, 4 | Source food/depletion/growth coverage exists; live grazing orientation/depletion proof blocked |
-| G018-US05 flight stamina | Beats 4, 8 optional aerial extension | Source capability tests exist; live flyer proof blocked |
-| G018-US06 swim oxygen | Beat 5 | Source oxygen drain/recovery exists; live swim/oxygen UI proof blocked |
-| G018-US07 apex events | Beat 6 | Source apex warning assertion added; live apex event proof blocked |
-| G018-US08 herding | Beats 2, 4, 8 | Source herding metadata/brain coverage exists; live coordinated-motion proof blocked |
-| G018-US09 stat profiles | Beat 3 and all roles | Source profile payload coverage exists; client/mobile proof blocked |
-| G018-US10 omnivore | Beats 1, 2, 8 | Source diet-gate coverage exists outside this audit; live omnivore path blocked |
-| G018-US11 final QA | All beats | Gate remains fail/block until live proof and 500-asset count pass |
+| US27 small prey | Beats 2, 4, 8 | Source profile/spawn coverage exists; live predator/prey proof blocked |
+| US28 fish schools | Beat 5 | Source fish-in-water assertion exists; live aquatic hunting proof blocked |
+| US29 water integrity | Beats 1, 5 | Source water/drink/swim checks exist; live water-volume proof blocked |
+| US30 grazing | Beats 1, 3, 4 | Source food/depletion/growth coverage exists; live grazing orientation/depletion proof blocked |
+| US31 flight stamina | Beats 4, 8 optional aerial extension | Source capability tests exist; live flyer proof blocked |
+| US32 swim oxygen | Beat 5 | Source oxygen drain/recovery exists; live swim/oxygen UI proof blocked |
+| US33 apex events | Beat 6 | Source apex warning assertion exists; live apex event proof blocked |
+| US34 herding and pack sociality | Beats 2, 4, 8 | Source herding metadata/brain coverage and pack regroup attributes exist; live coordinated-motion/body-block proof blocked |
+| US35 stat profiles | Beat 3 and all roles | Source profile payload coverage exists; client/mobile proof blocked |
+| US36 omnivore | Beats 1, 2, 8 | Source diet-gate and NPC mating beat coverage exists; live omnivore path and nest lineage proof blocked |
 
 ## Remaining Risks
 

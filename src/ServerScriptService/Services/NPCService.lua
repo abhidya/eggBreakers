@@ -7,7 +7,7 @@ local FoodWaterService = require(script.Parent.FoodWaterService)
 local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
 NPCService.MaxActive = 30
-NPCService.AllowedStates = { HatchAtNest=true, Idle=true, Wander=true, Herd=true, SeekFood=true, Eat=true, SeekWater=true, Drink=true, Hide=true, Flee=true, Chase=true, Attack=true, ApexEvent=true, Dead=true, Despawn=true }
+NPCService.AllowedStates = { HatchAtNest=true, Idle=true, Wander=true, Herd=true, Pack=true, Mate=true, SeekFood=true, Eat=true, SeekWater=true, Drink=true, Hide=true, Flee=true, Chase=true, Attack=true, ApexEvent=true, Dead=true, Despawn=true }
 NPCService.NPCs = {}
 NPCService.FleeDistance = 80
 NPCService.TickSeconds = 1
@@ -22,6 +22,11 @@ NPCService.ApexEventCooldownSeconds = 12
 NPCService.StuckDistanceEpsilon = 0.35
 NPCService.StuckRecoveryTicks = 2
 NPCService.StuckRecoveryNudgeStuds = 6
+NPCService.MaxBrainTicksPerCycle = 30
+NPCService.BrainRoundRobinIndex = 1
+NPCService.PackRadius = 75
+NPCService.MateRadius = 34
+NPCService.MateCooldownSeconds = 90
 -- DYING PIPELINE tunables (additive; safe when world absent).
 NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
 NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
@@ -29,8 +34,8 @@ NPCService.ApexThreatRadius = 140
 NPCService.KindProfiles = {
     Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "parasaurolophus" },
     AerialPrey = { Diet = "Carnivore", Health = 45, Damage = 6, Herding = true, SpeciesId = "quetzalcoatlus", FlightCapable = true, PreferredAltitude = 32, AerialPrey = true },
-    Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "utahraptor" },
-    AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pteranodon", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true },
+    Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "utahraptor", PackHunter = true },
+    AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pteranodon", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true, PackHunter = true },
     Apex = { Diet = "Carnivore", Health = 260, Damage = 80, Apex = true, SpeciesId = "tyrannosaurus", ThreatRadius = 140 },
     Omnivore = { Diet = "Omnivore", Health = 95, Damage = 18, Herding = true, SpeciesId = "oviraptor" },
     SemiAquatic = { Diet = "Carnivore", Health = 220, Damage = 60, SpeciesId = "spinosaurus" },
@@ -113,6 +118,9 @@ function NPCService:Register(npc, kind)
         PreferredAltitude = profile.PreferredAltitude or pivotPosition.Y,
         HuntsAerialPrey = profile.HuntsAerialPrey == true,
         AerialPrey = profile.AerialPrey == true or kind == "AerialPrey" or kind == "FlyingPrey",
+        PackHunter = profile.PackHunter == true,
+        MateEligible = true,
+        LastMateAt = 0,
     }
     record.PotentialCarnivoreFood = self:IsPreyKind(kind)
     if npc then
@@ -127,6 +135,8 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("ApexEventState", record.Apex and "Ready" or "Ineligible")
         npc:SetAttribute("ApexEventActive", false)
         npc:SetAttribute("HerdingEnabled", record.Herding)
+        npc:SetAttribute("PackHunter", record.PackHunter)
+        npc:SetAttribute("MateEligible", record.MateEligible)
         npc:SetAttribute("HerdCoordinatedMotion", false)
         npc:SetAttribute("FlightCapable", record.FlightCapable)
         npc:SetAttribute("Flying", record.FlightCapable)
@@ -697,6 +707,42 @@ function NPCService:FindNearestThreat(record, maxDistance)
     return best, bestDistance
 end
 
+function NPCService:FindNearestSocialMate(record, maxDistance)
+    if not record or record.MateEligible ~= true or record.State == "Dead" then return nil, nil end
+    local position = self:GetRecordPosition(record)
+    local best, bestDistance = nil, maxDistance or self.MateRadius
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and candidate.MateEligible == true and candidate.SpeciesId == record.SpeciesId then
+            local distance = (self:GetRecordPosition(candidate) - position).Magnitude
+            if distance <= bestDistance then
+                best, bestDistance = candidate, distance
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+function NPCService:TryMate(record)
+    local now = os.time()
+    if not record or record.MateEligible ~= true or (record.Health or 0) <= 0 then return false, "not_eligible" end
+    if (record.Hunger or 0) < 65 or (record.Thirst or 0) < 65 then return false, "needs_low" end
+    if record.LastMateAt and now - record.LastMateAt < self.MateCooldownSeconds then return false, "cooldown" end
+    local mate, distance = self:FindNearestSocialMate(record, self.MateRadius)
+    if not mate then return false, "missing_mate" end
+
+    record.MateTarget = mate.Instance
+    record.LastMateAt = now
+    mate.LastMateAt = mate.LastMateAt or now
+    if record.Instance then
+        record.Instance:SetAttribute("MateTarget", mate.Instance and mate.Instance.Name or "")
+        record.Instance:SetAttribute("MateDistance", distance)
+        record.Instance:SetAttribute("MateCooldownSeconds", self.MateCooldownSeconds)
+        record.Instance:SetAttribute("LastBrainAction", "Mate")
+    end
+    self:OrientToward(record, self:GetRecordPosition(mate), "Mate")
+    return self:Transition(record, "Mate")
+end
+
 function NPCService:FindHerdCenter(record)
     if not record or record.Herding ~= true then return nil, 0 end
     local position = self:GetRecordPosition(record)
@@ -717,6 +763,48 @@ function NPCService:FindHerdCenter(record)
         end
     end
     return total / count, count, leaderName
+end
+
+function NPCService:ApplyPackBehavior(record)
+    if not record or record.PackHunter ~= true then return false, "not_pack_hunter" end
+    local position = self:GetRecordPosition(record)
+    local radius = record.PackRadius or self.PackRadius
+    local total = position
+    local count = 1
+    local leaderName = record.Instance and record.Instance.Name or "NPC"
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= record and candidate.State ~= "Dead" and candidate.PackHunter == true and candidate.SpeciesId == record.SpeciesId then
+            local candidatePosition = self:GetRecordPosition(candidate)
+            if (candidatePosition - position).Magnitude <= radius then
+                total = total + candidatePosition
+                count = count + 1
+                if candidate.Instance and tostring(candidate.Instance.Name) < leaderName then
+                    leaderName = candidate.Instance.Name
+                end
+            end
+        end
+    end
+    if count < 2 then
+        if record.Instance then
+            record.Instance:SetAttribute("PackSize", 1)
+            record.Instance:SetAttribute("PackEventState", "Solo")
+        end
+        return false, "solo"
+    end
+
+    local center = total / count
+    local target = center
+    if record.Instance then
+        record.Instance:SetAttribute("PackSize", count)
+        record.Instance:SetAttribute("PackLeader", leaderName)
+        record.Instance:SetAttribute("PackGroupId", "Pack:" .. leaderName)
+        record.Instance:SetAttribute("PackCenterX", center.X)
+        record.Instance:SetAttribute("PackCenterY", center.Y)
+        record.Instance:SetAttribute("PackCenterZ", center.Z)
+        record.Instance:SetAttribute("PackEventState", "Regrouping")
+    end
+    self:MoveToward(record, target, self.MoveStep * 0.75, "Pack")
+    return self:Transition(record, "Pack")
 end
 
 function NPCService:ApplyHerding(record)
@@ -929,6 +1017,14 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         local herdOk = self:ApplyHerding(record)
         if herdOk then return true end
     end
+
+    if record.PackHunter == true then
+        local packOk = self:ApplyPackBehavior(record)
+        if packOk then return true end
+    end
+
+    local mateOk = self:TryMate(record)
+    if mateOk then return true end
 
     local wanderTarget = record.SpawnPosition + Vector3.new(math.sin(os.clock()) * 18, 0, math.cos(os.clock()) * 18)
     self:MoveToward(record, wanderTarget, self.MoveStep * 0.5, "Wander")
@@ -1249,14 +1345,36 @@ end
 function NPCService:TickNPCs(players)
     self:PruneStaleRecords()
     local active = 0
-    for _, record in ipairs(self.NPCs) do
+    local total = #self.NPCs
+    if total == 0 then return 0 end
+    local budget = math.max(1, math.min(self.MaxBrainTicksPerCycle or self.MaxActive or total, total))
+    local startIndex = math.clamp(self.BrainRoundRobinIndex or 1, 1, total)
+    local ticked = {}
+    for offset = 0, budget - 1 do
+        local index = ((startIndex + offset - 1) % total) + 1
+        ticked[index] = true
+        local record = self.NPCs[index]
         local ok = self:TickBrain(record, players, self.TickSeconds)
         if record.Instance then
             record.Instance:SetAttribute("ActiveNPCBrain", true)
             record.Instance:SetAttribute("BrainState", record.State)
+            record.Instance:SetAttribute("BrainCycleBudget", budget)
+            record.Instance:SetAttribute("BrainCycleTotal", total)
+            record.Instance:SetAttribute("BrainDeferred", false)
         end
         if ok then
             active = active + 1
+        end
+    end
+    self.BrainRoundRobinIndex = ((startIndex + budget - 1) % total) + 1
+    if budget < total then
+        for index = 1, total do
+            local record = self.NPCs[index]
+            if record.Instance and not ticked[index] then
+                record.Instance:SetAttribute("BrainDeferred", true)
+                record.Instance:SetAttribute("BrainCycleBudget", budget)
+                record.Instance:SetAttribute("BrainCycleTotal", total)
+            end
         end
     end
     return active

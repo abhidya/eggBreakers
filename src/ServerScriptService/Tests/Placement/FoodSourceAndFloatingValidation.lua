@@ -141,4 +141,46 @@ table.insert(suite.tests, { name = "visible floating assets fail unless explicit
     probeRoot:Destroy()
 end })
 
+table.insert(suite.tests, { name = "visible buried assets fail ground gate", run = function()
+    local buried = Instance.new("Part")
+    buried.Name = "BuriedVisibleAsset"
+    buried.Size = Vector3.new(4, 4, 4)
+    buried.Position = Vector3.new(0, 10.5, 0)
+    buried:SetAttribute("GroundTopY", 10)
+    buried.Parent = workspace
+
+    local result = PlacementValidationService:ValidateNoFloatingVisibleAssets(buried)
+    Assert.falsy(result.passed, "buried asset should fail")
+    Assert.truthy(string.find(result.failures[1], "clips below ground", 1, true) ~= nil, "buried failure names clipping")
+
+    buried.Position = Vector3.new(0, 12.25, 0)
+    result = PlacementValidationService:ValidateNoFloatingVisibleAssets(buried)
+    Assert.truthy(result.passed, table.concat(result.failures, "; "))
+
+    buried:Destroy()
+end })
+
+table.insert(suite.tests, { name = "visible asset ground gate inherits zone from model root", run = function()
+    local model = Instance.new("Model")
+    model.Name = "GroundedStoryAssetModel"
+    model:SetAttribute("ZoneId", "NurseryGrove")
+    model.Parent = workspace
+
+    local part = Instance.new("Part")
+    part.Name = "StoryAssetChildPart"
+    part.Size = Vector3.new(4, 4, 4)
+    part.Position = Vector3.new(-2000, 9.5, 0)
+    part.Parent = model
+
+    local result = PlacementValidationService:ValidateNoFloatingVisibleAssets(model)
+    Assert.falsy(result.passed, "child part inherits zone top and fails when buried")
+    Assert.truthy(string.find(result.failures[1], "clips below ground", 1, true) ~= nil, "inherited zone catches clipping")
+
+    part.Position = Vector3.new(-2000, 11.25, 0)
+    result = PlacementValidationService:ValidateNoFloatingVisibleAssets(model)
+    Assert.truthy(result.passed, table.concat(result.failures, "; "))
+
+    model:Destroy()
+end })
+
 return TestRunner.registerSuite(suite)
