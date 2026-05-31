@@ -468,13 +468,13 @@ MapLayoutService.FoodPlacements = {
 }
 
 MapLayoutService.ShallowWater = {
-    { name = "NurseryTutorialWater", center = Vector3.new(-1960, 10, -18), size = Vector3.new(64, 3, 42), tutorialSafe = true },
-    { name = "FernPlainsPond", center = Vector3.new(-1080, 10, 205), size = Vector3.new(190, 5, 120) },
-    { name = "SwampDeltaChannel", center = Vector3.new(-80, 8, 950), size = Vector3.new(760, 4, 115) },
-    { name = "CityCanalShallow", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
-    { name = "FernLakeSwimZone", center = Vector3.new(-1080, 10, 250), size = Vector3.new(220, 5, 150), swimZone = true, fishSpawnAllowed = true },
-    { name = "SwampRiverFishRun", center = Vector3.new(-70, 8, 970), size = Vector3.new(820, 5, 70), swimZone = true, fishSpawnAllowed = true },
-    { name = "JungleRiverCrossing", center = Vector3.new(-1320, 10, 780), size = Vector3.new(360, 5, 64), swimZone = true, fishSpawnAllowed = true },
+    { name = "NurseryTutorialWater", zone = "NurseryGrove", center = Vector3.new(-1960, 10, -18), size = Vector3.new(64, 3, 42), tutorialSafe = true },
+    { name = "FernPlainsPond", zone = "FernPlains", center = Vector3.new(-1080, 10, 205), size = Vector3.new(190, 5, 120) },
+    { name = "SwampDeltaChannel", zone = "SwampDelta", center = Vector3.new(-80, 8, 950), size = Vector3.new(760, 4, 115) },
+    { name = "CityCanalShallow", zone = "ApocalypticCity", center = Vector3.new(820, 10, 300), size = Vector3.new(430, 4, 90) },
+    { name = "FernLakeSwimZone", zone = "FernPlains", center = Vector3.new(-1080, 10, 250), size = Vector3.new(220, 5, 150), swimZone = true, fishSpawnAllowed = true },
+    { name = "SwampRiverFishRun", zone = "SwampDelta", center = Vector3.new(-70, 8, 970), size = Vector3.new(820, 5, 70), swimZone = true, fishSpawnAllowed = true },
+    { name = "JungleRiverCrossing", zone = "JungleBasin", center = Vector3.new(-1320, 10, 780), size = Vector3.new(360, 5, 64), swimZone = true, fishSpawnAllowed = true },
 }
 
 MapLayoutService.FoodSourcePlacements = {
@@ -1015,6 +1015,8 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
     marker.Size = water.size
     marker:SetAttribute("ShallowWater", true)
     marker:SetAttribute("WaterSource", true)
+    marker:SetAttribute("ZoneId", water.zone)
+    marker:SetAttribute("BiomeId", water.zone)
     marker:SetAttribute("ProceduralWaterSource", true)
     marker:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
     marker:SetAttribute("ReleaseVisibleGeneratedPartReason", "Procedural shallow water source representation")
@@ -1166,6 +1168,11 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
         self:FillTerrainBlock(terrain, water.center, water.size, Enum.Material.Water)
         self:EnsureShallowWaterMarker(folders, water)
     end
+
+    local WaterService = require(script.Parent.WaterService)
+    local FishService = require(script.Parent.FishService)
+    WaterService:ValidateAllWaterSources()
+    FishService:EnsureFishSchoolsForWaterSources()
 end
 
 

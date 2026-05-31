@@ -3,6 +3,7 @@ local CollectionService = game:GetService("CollectionService")
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
+local WaterService = require(game:GetService("ServerScriptService").Services.WaterService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local suite = { name = "WaterServiceTests.server", category = "Integration", tests = {} }
 
@@ -36,6 +37,19 @@ table.insert(suite.tests, { name = "thirst updates", run = function()
     FoodWaterService:RequestDrink(p, water)
     Assert.between(state.Thirst, 64, 100, "thirst restored")
     Assert.equals(state.Growth, FoodWaterService.WaterGrowthGrant, "drinking contributes readable growth progress")
+    water:Destroy()
+end })
+
+table.insert(suite.tests, { name = "swim water is not a drink target", run = function()
+    local p, water = setup(33006, 3)
+    water.Name = "SwimOnlyWater"
+    water.Size = Vector3.new(24, 5, 24)
+    water:SetAttribute("SwimZone", true)
+    water:SetAttribute("FishSpawnAllowed", true)
+    WaterService:ValidateAllWaterSources()
+    local ok, reason = FoodWaterService:RequestDrink(p, water)
+    Assert.falsy(ok, "swim water rejected as drink source")
+    Assert.equals(reason, "swim_water", "swim water rejection reason")
     water:Destroy()
 end })
 

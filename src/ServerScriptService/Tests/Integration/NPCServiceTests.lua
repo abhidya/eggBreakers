@@ -378,8 +378,43 @@ table.insert(suite.tests, { name = "apex NPC stamps territory event and scares n
     Assert.equals(apexRecord.State, "ApexEvent", "apex territory event state")
     Assert.equals(apex:GetAttribute("ApexCategory"), true, "apex flag on instance")
     Assert.equals(apex:GetAttribute("ApexEventActive"), true, "apex event stamped")
+    Assert.equals(apex:GetAttribute("ApexEventState"), "Broadcast", "apex event broadcast state visible")
+    Assert.equals(apex:GetAttribute("ApexEventGateReason"), "ready", "apex event gate reason visible")
     Assert.truthy(apex:GetAttribute("ApexEventAffected") >= 1, "nearby NPC affected")
+    Assert.equals(apex:GetAttribute("ApexEventSourceX"), 0, "apex source x visible for HUD/live proof")
+    Assert.equals(apex:GetAttribute("ApexEventSourceY"), 3, "apex source y visible for HUD/live proof")
+    Assert.equals(apex:GetAttribute("ApexEventSourceZ"), 0, "apex source z visible for HUD/live proof")
+    Assert.equals(apex:GetAttribute("ApexEventCooldownSeconds"), NPCService.ApexEventCooldownSeconds, "apex cooldown visible")
     Assert.equals(prey:GetAttribute("LastApexThreat"), "ApexTyrannosaurusNPC", "prey sees apex threat")
+    Assert.equals(prey:GetAttribute("ApexThreatState"), "Warned", "affected prey has warning state")
+    Assert.equals(prey:GetAttribute("ApexThreatSourceX"), 0, "prey sees apex source x")
+
+    apex:Destroy(); prey:Destroy()
+end })
+
+table.insert(suite.tests, { name = "apex observable event is cooldown gated between broadcasts", run = function()
+    resetNPCs()
+    local apex = makeNPC("ApexCooldownNPC", Vector3.new(0, 3, 0))
+    local prey = makeNPC("ApexCooldownPreyNPC", Vector3.new(30, 3, 0))
+    local _, apexRecord = NPCService:Register(apex, "Apex")
+    NPCService:Register(prey, "Prey")
+    apexRecord.Hatched = true
+
+    Assert.truthy(NPCService:StampApexEvent(apexRecord, 100), "first apex broadcast succeeds")
+    Assert.equals(apex:GetAttribute("ApexEventActive"), true, "first event active")
+    Assert.equals(apex:GetAttribute("ApexEventSequence"), 1, "first event sequence stamped")
+    local ok, reason = NPCService:StampApexEvent(apexRecord, 105)
+    Assert.falsy(ok, "second apex broadcast inside cooldown is gated")
+    Assert.equals(reason, "cooldown", "cooldown gate reason returned")
+    Assert.equals(apex:GetAttribute("ApexEventActive"), false, "cooldown state visible")
+    Assert.equals(apex:GetAttribute("ApexEventState"), "Gated", "gated event state visible")
+    Assert.equals(apex:GetAttribute("ApexEventGateReason"), "cooldown", "cooldown reason visible")
+    Assert.truthy(apex:GetAttribute("ApexEventCooldownRemaining") > 0, "cooldown remaining visible")
+    Assert.equals(apex:GetAttribute("ApexEventSequence"), 1, "gated event does not advance sequence")
+
+    Assert.truthy(NPCService:StampApexEvent(apexRecord, 113), "apex rebroadcasts after cooldown")
+    Assert.equals(apex:GetAttribute("ApexEventActive"), true, "rebroadcast active")
+    Assert.equals(apex:GetAttribute("ApexEventSequence"), 2, "rebroadcast advances sequence")
 
     apex:Destroy(); prey:Destroy()
 end })
@@ -404,6 +439,45 @@ table.insert(suite.tests, { name = "apex event takes priority over predator chas
     Assert.falsy(apex:GetAttribute("AttackRangeConfirmed"), "apex event did not fall through to attack")
 
     apex:Destroy(); prey:Destroy(); character:Destroy()
+end })
+
+table.insert(suite.tests, { name = "herding prey exposes center target and coordinated motion", run = function()
+    resetNPCs()
+    local lead = makeNPC("HerdAlphaPreyNPC", Vector3.new(0, 3, 0))
+    local member = makeNPC("HerdMemberPreyNPC", Vector3.new(30, 3, 0))
+    local third = makeNPC("HerdThirdPreyNPC", Vector3.new(60, 3, 0))
+    local _, leadRecord = NPCService:Register(lead, "Prey")
+    local _, memberRecord = NPCService:Register(member, "Prey")
+    local _, thirdRecord = NPCService:Register(third, "Prey")
+    leadRecord.Hatched = true
+    memberRecord.Hatched = true
+    thirdRecord.Hatched = true
+    leadRecord.Hunger = 90
+    leadRecord.Thirst = 90
+    memberRecord.Hunger = 90
+    memberRecord.Thirst = 90
+    thirdRecord.Hunger = 90
+    thirdRecord.Thirst = 90
+
+    NPCService:TickBrain(leadRecord, {}, 1)
+    Assert.equals(leadRecord.State, "Herd", "prey enters herd state")
+    Assert.equals(lead:GetAttribute("HerdSize"), 3, "herd size visible")
+    Assert.equals(lead:GetAttribute("HerdLeader"), "HerdAlphaPreyNPC", "stable herd leader visible")
+    Assert.equals(lead:GetAttribute("HerdGroupId"), "Herd:HerdAlphaPreyNPC", "herd group id visible")
+    Assert.equals(lead:GetAttribute("HerdCenterX"), 30, "numeric herd center x visible")
+    Assert.equals(lead:GetAttribute("HerdCenterY"), 3, "numeric herd center y visible")
+    Assert.equals(lead:GetAttribute("HerdCenterZ"), 0, "numeric herd center z visible")
+    Assert.equals(lead:GetAttribute("HerdTargetX"), 30, "herd target x visible")
+    Assert.equals(lead:GetAttribute("HerdTargetY"), 3, "herd target y visible")
+    Assert.equals(lead:GetAttribute("HerdTargetZ"), 0, "herd target z visible")
+    Assert.equals(lead:GetAttribute("HerdCoordinatedMotion"), true, "coordinated motion flag visible")
+    Assert.equals(lead:GetAttribute("HerdEventState"), "Regrouping", "herd regroup state visible")
+    Assert.truthy(lead:GetAttribute("HerdMotionX") > 0.9, "herd motion points toward center")
+    Assert.between(lead:GetAttribute("HerdCohesionDistance"), 29.9, 30.1, "cohesion distance visible")
+    Assert.equals(lead:GetAttribute("LastBrainAction"), "Herd", "herd action visible")
+    Assert.truthy((NPCService:GetRecordPosition(leadRecord) - Vector3.new(0, 3, 0)).Magnitude > 0, "herd leader moves toward center")
+
+    lead:Destroy(); member:Destroy(); third:Destroy()
 end })
 
 table.insert(suite.tests, { name = "herding omnivore eats plant and carcass diets", run = function()

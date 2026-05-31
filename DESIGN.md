@@ -10,13 +10,13 @@
 ## Brand
 
 - **Personality:** natural, dangerous, readable, kid-accessible, prehistoric survival with light mystery.
-- **Trust signals:** real dinosaur silhouettes, clear food/water affordances, honest Creator Store provenance, script-stripped imported assets, visible cause/effect for every stat change.
-- **Avoid:** default Roblox avatar as dinosaur, primitive/CSG placeholder creatures, ball food, square water, misleading waypoint arrows, noisy imported scripts/sounds, generic quest-giver UI.
+- **Trust signals:** real dinosaur silhouettes, clear food/water affordances, honest Creator Store provenance, reviewed imported scripts, visible cause/effect for every stat change.
+- **Avoid:** default Roblox avatar as dinosaur, primitive/CSG placeholder creatures, ball food, square water, misleading waypoint arrows, unreviewed imported scripts/sounds, generic quest-giver UI.
 
 ## Product goals
 
 - **Goals:** make the player feel like a dinosaur; make food/water/combat/growth readable without developer labels; turn each biome into a story beat backed by visual/mechanical/UI/UX assets.
-- **Non-goals:** dialogue-heavy quest mode, shipping imported free-model behavior scripts, counting catalog-only assets as release-ready, replacing every system before story/asset quality is proven.
+- **Non-goals:** dialogue-heavy quest mode, shipping unreviewed free-model behavior scripts, counting catalog-only assets as release-ready, replacing every system before story/asset quality is proven.
 - **Success signals:** screenshots clearly show dino identity, real food/water, biome identity, combat feedback, nest/home ownership, and city mystery.
 
 ## Personas and jobs
@@ -87,7 +87,7 @@
 
 - **Framework/styling system:** Roblox Luau, Rojo-managed source, existing client controllers and services.
 - **Design-token constraints:** existing `UIFactory` colors/buttons unless refreshed deliberately.
-- **Performance constraints:** no imported executable scripts in shipping Workspace; strip looped/autoplay audio; avoid excessive particles.
+- **Performance constraints:** imported executable scripts may ship only after review, ownership assignment, authority/sandbox checks, and focused tests; strip or rewrite uncontrolled looped/autoplay audio; avoid excessive particles.
 - **Compatibility constraints:** Creator Store assets must be sanitized, tagged, provenance-tracked, and screenshot-proven.
 - **Test/screenshot expectations:** story-mode acceptance requires screenshots of visual target plus UI affordance, not just passing code tests.
 

@@ -111,8 +111,8 @@ Your responsibility, every wave, forever until the slice is done:
 **A. ASSET QUALITY GATE & SOURCING** — gate every asset: accept Creator-Store textured mesh, reject primitive/CSG/
 AI-generated/test. Use `Roblox_Search.search_assets` to source missing/weak assets (real velociraptor + gallimimus
 meshes; recognizable FOOD: foliage/ferns/fruit + dino CARCASS/meat; believable WATER; a proper food-finding WAYPOINT
-UI; impact/blood VFX; roar/eat SFX); `preview_asset` to compare; strip scripts + looped sounds; tag SourceAssetId/
-AssetManifestId/CreatorStoreOnly/ImportedVisibleAsset.
+  UI; impact/blood VFX; roar/eat SFX); `preview_asset` to compare; review imported scripts, strip/rewrite only unsafe or
+  uncontrolled behavior, tame looped sounds, and tag SourceAssetId/AssetManifestId/CreatorStoreOnly/ImportedVisibleAsset.
 
 **B. ROSTER & NPC LIFE / BEHAVIOR** — fix default-avatar->dino; wire 56 staged meshes into player+NPC; replace
 primitive NPCs; add Animator + populate `SpeciesConfig.AnimationIds` (idle/walk/run/eat/attack/hurt/death); locomotion

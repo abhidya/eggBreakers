@@ -4,6 +4,7 @@ local WaterService = require(script.Parent.WaterService)
 
 local FishService = {}
 FishService.FishTag = "FishSource"
+FishService.FishSchoolTag = "FishSchool"
 FishService.DefaultNutrition = 18
 FishService.DefaultRespawnSeconds = 90
 
@@ -18,7 +19,8 @@ function FishService:GetFolder()
 end
 
 function FishService:CreateFishSource(water, name, offset)
-    if not WaterService:IsWaterSource(water) then return nil, "not_water" end
+    local habitatOk, habitatReason = WaterService:IsValidFishHabitat(water)
+    if not habitatOk then return nil, habitatReason end
     local center, sizeOrReason = WaterService:GetBounds(water)
     if not center then return nil, sizeOrReason end
     local size = sizeOrReason
@@ -40,11 +42,16 @@ function FishService:CreateFishSource(water, name, offset)
     fish:SetAttribute("FoodKind", "Fish")
     fish:SetAttribute("Nutrition", self.DefaultNutrition)
     fish:SetAttribute("RespawnCooldownSeconds", self.DefaultRespawnSeconds)
+    fish:SetAttribute("FishSchool", true)
     fish:SetAttribute("WaterSource", water.Name)
+    fish:SetAttribute("WaterSourceName", water.Name)
+    fish:SetAttribute("ZoneId", water:GetAttribute("ZoneId"))
+    fish:SetAttribute("BiomeId", water:GetAttribute("BiomeId") or water:GetAttribute("ZoneId"))
     fish:SetAttribute("Depleted", false)
     fish.Parent = self:GetFolder()
     CollectionService:AddTag(fish, "FoodSource")
     CollectionService:AddTag(fish, self.FishTag)
+    CollectionService:AddTag(fish, self.FishSchoolTag)
     WaterService:MarkFishHabitat(water)
     return fish
 end
@@ -64,6 +71,30 @@ function FishService:MoveWithinWater(fish, water, offset)
     fish.Position = center + clamped
     fish:SetAttribute("LastSwimOffset", string.format("%.1f,%.1f,%.1f", clamped.X, clamped.Y, clamped.Z))
     return true
+end
+
+function FishService:FindSchoolForWater(water)
+    local waterName = water and water.Name
+    if not waterName then return nil end
+    for _, fish in ipairs(CollectionService:GetTagged(self.FishSchoolTag)) do
+        if fish.Parent ~= nil and fish:GetAttribute("WaterSourceName") == waterName then
+            return fish
+        end
+    end
+    return nil
+end
+
+function FishService:EnsureFishSchoolsForWaterSources()
+    local created = 0
+    for _, water in ipairs(CollectionService:GetTagged(WaterService.WaterTag)) do
+        if WaterService:IsValidFishHabitat(water) and not self:FindSchoolForWater(water) then
+            local fish = self:CreateFishSource(water, water.Name .. "_FishSchool", Vector3.new(0, 0, 0))
+            if fish then
+                created = created + 1
+            end
+        end
+    end
+    return created
 end
 
 return FishService

@@ -8,7 +8,9 @@
 --   HUDController:BuildGrowthBadge(payload)        -> string
 --   HUDController:BuildRoleCard(payload)            -> string
 --   HUDController:BuildDietGuidance(payload)        -> string
+--   HUDController:BuildThreatBadge(payload)         -> string
 --   HUDController:BuildDeltaText(previous, current) -> string
+--   HUDController:ShouldShowOxygen(payload)         -> bool
 --   HUDController:ApplyStatUpdate(payload)
 --   HUDController:SetBar(name, value)
 --   HUDController:EnsureGui()                       -> gui
@@ -25,6 +27,16 @@ local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
 
 local stageOrder = { Hatchling = 1, Juvenile = 2, SubAdult = 3, Adult = 4 }
 local dietIcons  = { Herbivore = "🌿", Carnivore = "🍖", Omnivore = "🌿🍖" }
+local categoryIcons = {
+    SmallPrey = "🐾",
+    DefensiveHerbivore = "🛡",
+    PackPredator = "⟐",
+    ApexCandidate = "⚠",
+    Apex = "⚠",
+    Omnivore = "🍽️",
+    Flyer = "🪽",
+    SemiAquatic = "🌊",
+}
 
 -- HUD panel layout
 local PANEL_W    = 338
@@ -72,22 +84,93 @@ function HUDController:BuildGrowthBadge(payload)
     return string.format("⭐ LV %d  %.0f%% %s", level, growth, nextHint)
 end
 
+local function firstTruthyProfileIcon(profile)
+    if type(profile) ~= "table" then return nil end
+    if profile.Apex == true or profile.ApexEventEligible == true or profile.ThreatRadius ~= nil then return "⚠" end
+    if profile.SemiAquatic == true or profile.RiverPredator == true then return "🌊" end
+    if profile.CanFly == true or profile.Soaring == true then return "🪽" end
+    if profile.PackHunter == true then return "⟐" end
+    if profile.Herding == true then return "👥" end
+    if profile.CanGraze == true then return "🌿" end
+    if profile.SmallPrey == true then return "🐾" end
+    return nil
+end
+
+function HUDController:BuildMovementBadge(payload)
+    local modes = payload and payload.movementModes or {}
+    local parts = {}
+    if modes.Ground or modes.ground then table.insert(parts, "👣") end
+    if modes.Swim or modes.swim or modes.swimming then table.insert(parts, "🌊") end
+    if modes.Flight or modes.flight or modes.flying then table.insert(parts, "🪽") end
+    if #parts == 0 then return "👣" end
+    return table.concat(parts, "")
+end
+
+function HUDController:BuildThreatBadge(payload)
+    payload = payload or {}
+    local profile = payload.ecosystemProfile
+    local status = payload.statusEffects
+    local category = tostring(payload.creatureCategory or "")
+    local isThreat = category == "Apex" or category == "ApexCandidate"
+    if type(profile) == "table" then
+        isThreat = isThreat or profile.Apex == true or profile.ApexEventEligible == true
+    end
+    if type(status) == "table" then
+        isThreat = isThreat or status.ApexThreatNearby == true or status.apexThreatNearby == true
+    end
+    if not isThreat then return "" end
+
+    local radius = type(profile) == "table" and tonumber(profile.ThreatRadius or profile.threatRadius) or nil
+    if radius then
+        return string.format("⚠ %.0fm", radius)
+    end
+    return "⚠"
+end
+
 -- Returns a compact species role card: "🦖 Velociraptor  🍖  🦷 Claw"
 -- Tests assert: DisplayName, diet icon, no "Carnivore" word, no "Role:" label.
 function HUDController:BuildRoleCard(payload)
+    payload = payload or {}
     local speciesId   = tostring(payload.species or "gallimimus")
     local species     = SpeciesConfig[speciesId] or SpeciesConfig[string.lower(speciesId)]
     local displayName = species and species.DisplayName or speciesId
     local diet        = tostring(payload.diet or (species and species.Diet) or "Food")
+    local category    = tostring(payload.creatureCategory or (species and species.CreatureCategory) or "")
+    local profileIcon = firstTruthyProfileIcon(payload.ecosystemProfile or (species and species.EcosystemProfile))
+    local categoryIcon = categoryIcons[category]
+    local movement = self:BuildMovementBadge({
+        movementModes = payload.movementModes or (species and species.MovementModes) or {},
+    })
+    local threat = self:BuildThreatBadge({
+        creatureCategory = category,
+        ecosystemProfile = payload.ecosystemProfile or (species and species.EcosystemProfile),
+        statusEffects = payload.statusEffects,
+    })
     local attack      = tostring(
         species and species.Abilities and species.Abilities.PrimaryAttack or "Nibble"
     )
-    return string.format("🦖 %s  %s  🦷 %s", displayName, dietIcons[diet] or "🍽️", attack)
+    local badges = {}
+    local function addBadge(value)
+        if not value or value == "" then return end
+        for _, existing in ipairs(badges) do
+            if existing == value then return end
+        end
+        table.insert(badges, value)
+    end
+    addBadge(dietIcons[diet] or "🍽️")
+    addBadge(movement)
+    addBadge(categoryIcon)
+    addBadge(profileIcon)
+    if threat ~= "⚠" or (categoryIcon ~= "⚠" and profileIcon ~= "⚠") then
+        addBadge(threat)
+    end
+    return string.format("🦖 %s  %s  🦷 %s", displayName, table.concat(badges, " "), attack)
 end
 
 -- Returns icon-only diet + movement guidance: "🌿 + 💧 = ⭐"
 -- Tests assert: food icon present, water icon present, no long-form words.
 function HUDController:BuildDietGuidance(payload)
+    payload = payload or {}
     local diet     = tostring(payload.diet or "Food")
     local foodIcon = dietIcons[diet] or "🍽️"
     local movementModes = payload.movementModes or {}
@@ -100,6 +183,15 @@ function HUDController:BuildDietGuidance(payload)
         moveHint = "⭐"
     end
     return string.format("%s + 💧 = %s", foodIcon, moveHint)
+end
+
+function HUDController:ShouldShowOxygen(payload)
+    payload = payload or {}
+    local maxOxy = tonumber(payload.maxOxygen) or 0
+    if maxOxy <= 0 then return false end
+    if payload.swimming == true or payload.underwater == true or payload.submerged == true then return true end
+    local oxygen = tonumber(payload.oxygen)
+    return oxygen ~= nil and oxygen < maxOxy
 end
 
 -- Returns a compact delta string showing what changed since the last tick.
@@ -236,10 +328,13 @@ function HUDController:EnsureGui()
     local oxyBar = root:FindFirstChild("OxygenBar")
     local oxyLbl = root:FindFirstChild("OxygenLabel")
     local oxyVal = root:FindFirstChild("OxygenValueLabel")
-    self._oxygenVisible = true  -- will be toggled by ApplyStatUpdate
+    self._oxygenVisible = false
     self._oxygenBar     = oxyBar
     self._oxygenLabel   = oxyLbl
     self._oxygenValue   = oxyVal
+    if oxyBar then oxyBar.Visible = false end
+    if oxyLbl then oxyLbl.Visible = false end
+    if oxyVal then oxyVal.Visible = false end
 
     gui.Parent   = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui     = gui
@@ -311,14 +406,19 @@ function HUDController:ApplyStatUpdate(payload)
     self:SetBar("stamina", payload.stamina)
     self:SetBar("growth",  payload.growth)
 
-    -- Oxygen: show only when the creature has an oxygen stat (swimming species
-    -- or currently underwater).  maxOxygen > 0 signals the server considers it relevant.
+    -- Oxygen: progressive disclosure. The stat exists for server authority, but
+    -- the row appears only during water risk or while recovering from oxygen loss.
     local maxOxy = tonumber(payload.maxOxygen) or 0
-    local showOxy = maxOxy > 0
+    local showOxy = self:ShouldShowOxygen(payload)
     setOxygenRowVisible(self, showOxy)
+    if self._oxygenLabel then self._oxygenLabel:SetAttribute("OxygenRelevant", showOxy) end
     if showOxy then
         local oxyPct = math.clamp((tonumber(payload.oxygen) or maxOxy) / maxOxy * 100, 0, 100)
         self:SetBar("oxygen", oxyPct)
+        if self._oxygenValue then
+            self._oxygenValue:SetAttribute("OxygenPercent", round(oxyPct))
+            self._oxygenValue:SetAttribute("OxygenDanger", oxyPct < 35)
+        end
     end
 end
 

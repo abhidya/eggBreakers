@@ -83,9 +83,78 @@ table.insert(suite.tests, { name = "species role card explains diet role and act
     local card = HUDController:BuildRoleCard({ species = "velociraptor", diet = "Carnivore" })
     Assert.truthy(string.find(card, "Velociraptor", 1, true) ~= nil, "display name appears")
     Assert.truthy(string.find(card, "🍖", 1, true) ~= nil, "diet icon appears")
+    Assert.truthy(string.find(card, "👣", 1, true) ~= nil, "movement badge appears")
+    Assert.truthy(string.find(card, "⟐", 1, true) ~= nil, "pack/profile badge appears")
     Assert.truthy(string.find(card, "Carnivore", 1, true) == nil, "diet word removed for density")
     Assert.truthy(string.find(card, "Role:", 1, true) == nil, "role label removed for density")
     Assert.truthy(string.find(card, "Claw", 1, true) ~= nil, "primary action appears")
+end })
+
+table.insert(suite.tests, { name = "ecosystem profile badges expose species category and movement", run = function()
+    local prey = HUDController:BuildRoleCard({
+        species = "gallimimus",
+        diet = "Herbivore",
+        creatureCategory = "SmallPrey",
+        movementModes = { Ground = true },
+        ecosystemProfile = { SmallPrey = true, Herding = true, CanGraze = true },
+    })
+    Assert.truthy(string.find(prey, "Gallimimus", 1, true) ~= nil, "species display name appears")
+    Assert.truthy(string.find(prey, "🌿", 1, true) ~= nil, "diet/profile plant badge appears")
+    Assert.truthy(string.find(prey, "🐾", 1, true) ~= nil, "small prey category badge appears")
+    Assert.truthy(string.find(prey, "👣", 1, true) ~= nil, "ground movement badge appears")
+
+    local swimmer = HUDController:BuildRoleCard({
+        species = "spinosaurus",
+        diet = "Carnivore",
+        creatureCategory = "SemiAquatic",
+        movementModes = { Ground = true, Swim = true },
+        ecosystemProfile = { SemiAquatic = true, RiverPredator = true, ApexEventEligible = true },
+    })
+    Assert.truthy(string.find(swimmer, "Spinosaurus", 1, true) ~= nil, "swimmer species appears")
+    Assert.truthy(string.find(swimmer, "🌊", 1, true) ~= nil, "swim/profile badge appears")
+    Assert.truthy(string.find(swimmer, "⚠", 1, true) ~= nil, "apex-eligible threat badge appears")
+end })
+
+table.insert(suite.tests, { name = "oxygen uses progressive disclosure", run = function()
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 60,
+        swimming = false,
+        movementModes = { Swim = true },
+    }), false, "full oxygen on shore stays hidden even for swimmers")
+
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 60,
+        swimming = true,
+    }), true, "active swimming shows oxygen")
+
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 34,
+        swimming = false,
+    }), true, "oxygen recovery remains visible after loss")
+end })
+
+table.insert(suite.tests, { name = "apex threat badge is compact and observable", run = function()
+    local apex = HUDController:BuildThreatBadge({
+        species = "tyrannosaurus",
+        creatureCategory = "Apex",
+        ecosystemProfile = { Apex = true, ThreatRadius = 140 },
+    })
+    Assert.equals(apex, "⚠ 140m", "apex threat radius is visible without prose")
+
+    local statusThreat = HUDController:BuildThreatBadge({
+        creatureCategory = "SmallPrey",
+        statusEffects = { ApexThreatNearby = true },
+    })
+    Assert.equals(statusThreat, "⚠", "nearby apex status is observable")
+
+    local calm = HUDController:BuildThreatBadge({
+        creatureCategory = "SmallPrey",
+        ecosystemProfile = { Herding = true },
+    })
+    Assert.equals(calm, "", "non-threat profiles stay quiet")
 end })
 
 table.insert(suite.tests, { name = "hud factory supports compact mobile bars", run = function()

@@ -82,7 +82,9 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
         state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
     end
     state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
-    state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) + (stats.OxygenRegen or 12) * deltaSeconds, 0, state.MaxOxygen)
+    if state.Underwater ~= true then
+        state.Oxygen = clamp((state.Oxygen or state.MaxOxygen) + (stats.OxygenRegen or 12) * deltaSeconds, 0, state.MaxOxygen)
+    end
     if state.Hunger <= 0 or state.Thirst <= 0 then
         self:ApplyDamage(player, 3 * deltaSeconds, "Starvation/Dehydration")
     end
@@ -118,6 +120,7 @@ end
 function SurvivalService:AddGrowth(player, amount)
     local state = self:GetState(player)
     if not state or state.Dead then return false end
+    state.JustMaturedTo = nil
     state.Growth = clamp(state.Growth + amount, 0, 100)
     local nextStage = state.Growth >= 75 and "Adult" or state.Growth >= 50 and "SubAdult" or state.Growth >= 25 and "Juvenile" or "Hatchling"
     if nextStage ~= state.GrowthStage then

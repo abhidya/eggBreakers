@@ -17,6 +17,7 @@ NPCService.BrainStepStuds = 8
 NPCService.AttackDistance = 10
 NPCService.WanderRadius = 28
 NPCService.HerdRadius = 65
+NPCService.ApexEventCooldownSeconds = 12
 -- DYING PIPELINE tunables (additive; safe when world absent).
 NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
 NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
@@ -116,7 +117,13 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("Diet", record.Diet)
         npc:SetAttribute("SpeciesId", record.SpeciesId)
         npc:SetAttribute("ApexCategory", record.Apex)
+        npc:SetAttribute("ApexEventEligible", record.Apex)
+        npc:SetAttribute("ApexThreatRadius", record.ThreatRadius)
+        npc:SetAttribute("ApexEventCooldownSeconds", self.ApexEventCooldownSeconds)
+        npc:SetAttribute("ApexEventState", record.Apex and "Ready" or "Ineligible")
+        npc:SetAttribute("ApexEventActive", false)
         npc:SetAttribute("HerdingEnabled", record.Herding)
+        npc:SetAttribute("HerdCoordinatedMotion", false)
         npc:SetAttribute("FlightCapable", record.FlightCapable)
         npc:SetAttribute("Flying", record.FlightCapable)
         npc:SetAttribute("AerialPrey", record.AerialPrey)
@@ -589,43 +596,116 @@ end
 function NPCService:ApplyHerding(record)
     local center, count, leaderName = self:FindHerdCenter(record)
     if not center or count < 2 then
-        if record.Instance then record.Instance:SetAttribute("HerdSize", count or 1) end
+        if record.Instance then
+            record.Instance:SetAttribute("HerdSize", count or 1)
+            record.Instance:SetAttribute("HerdCoordinatedMotion", false)
+            record.Instance:SetAttribute("HerdEventState", "Solo")
+        end
         return false, "no_herd"
     end
+    local position = self:GetRecordPosition(record)
+    local toCenter = center - position
+    local distance = toCenter.Magnitude
+    local motion = distance > 0.05 and toCenter.Unit or Vector3.new(0, 0, 0)
+    local herdTarget = distance > self.InteractDistance and center or position
+    local groupId = "Herd:" .. tostring(leaderName)
     record.HerdCenter = center
     record.HerdSize = count
+    record.HerdLeader = leaderName
+    record.HerdGroupId = groupId
+    record.HerdMotion = motion
+    record.HerdTarget = herdTarget
+    record.HerdCohesionDistance = distance
     if record.Instance then
         record.Instance:SetAttribute("HerdSize", count)
         record.Instance:SetAttribute("HerdLeader", leaderName)
-        record.Instance:SetAttribute("HerdCenter", string.format("%.1f,%.1f,%.1f", center.X, center.Y, center.Z))
+        record.Instance:SetAttribute("HerdGroupId", groupId)
+        record.Instance:SetAttribute("HerdCenter", self:FormatVector3(center))
+        record.Instance:SetAttribute("HerdCenterX", center.X)
+        record.Instance:SetAttribute("HerdCenterY", center.Y)
+        record.Instance:SetAttribute("HerdCenterZ", center.Z)
+        record.Instance:SetAttribute("HerdMotionX", motion.X)
+        record.Instance:SetAttribute("HerdMotionY", motion.Y)
+        record.Instance:SetAttribute("HerdMotionZ", motion.Z)
+        record.Instance:SetAttribute("HerdTarget", self:FormatVector3(herdTarget))
+        record.Instance:SetAttribute("HerdTargetX", herdTarget.X)
+        record.Instance:SetAttribute("HerdTargetY", herdTarget.Y)
+        record.Instance:SetAttribute("HerdTargetZ", herdTarget.Z)
+        record.Instance:SetAttribute("HerdCohesionDistance", distance)
+        record.Instance:SetAttribute("HerdCoordinatedMotion", true)
+        record.Instance:SetAttribute("HerdEventState", distance > self.InteractDistance and "Regrouping" or "Cohesive")
     end
-    local distance = (center - self:GetRecordPosition(record)).Magnitude
     if distance > self.InteractDistance then
-        self:MoveToward(record, center, self.MoveStep * 0.75)
+        self:MoveToward(record, center, self.MoveStep * 0.75, "Herd")
     end
     return self:Transition(record, "Herd")
 end
 
-function NPCService:StampApexEvent(record)
+function NPCService:GetApexEventNow()
+    return os.clock()
+end
+
+function NPCService:CanTriggerApexEvent(record, now)
     if not record or record.Apex ~= true then return false, "not_apex" end
+    now = now or self:GetApexEventNow()
+    local cooldown = record.ApexEventCooldownSeconds or self.ApexEventCooldownSeconds
+    local last = record.LastApexEventAt
+    if last and (now - last) < cooldown then
+        return false, "cooldown", cooldown - (now - last)
+    end
+    return true, "ready", 0
+end
+
+function NPCService:StampApexEvent(record, now)
+    if not record or record.Apex ~= true then return false, "not_apex" end
+    now = now or self:GetApexEventNow()
+    local canTrigger, gateReason, remaining = self:CanTriggerApexEvent(record, now)
+    if not canTrigger then
+        if record.Instance then
+            record.Instance:SetAttribute("ApexEventActive", false)
+            record.Instance:SetAttribute("ApexEventState", "Gated")
+            record.Instance:SetAttribute("ApexEventGateReason", gateReason)
+            record.Instance:SetAttribute("ApexEventCooldownRemaining", remaining or 0)
+            record.Instance:SetAttribute("ApexThreatRadius", record.ThreatRadius or self.ApexThreatRadius)
+        end
+        return false, gateReason
+    end
     local affected = 0
+    local apexPosition = self:GetRecordPosition(record)
     for _, candidate in ipairs(self.NPCs) do
         if candidate ~= record and candidate.State ~= "Dead" and candidate.Apex ~= true then
-            local distance = (self:GetRecordPosition(candidate) - self:GetRecordPosition(record)).Magnitude
+            local distance = (self:GetRecordPosition(candidate) - apexPosition).Magnitude
             if distance <= (record.ThreatRadius or self.ApexThreatRadius) then
                 affected = affected + 1
                 candidate.LastApexThreat = record.Instance
+                candidate.LastApexThreatDistance = distance
                 if candidate.Instance then
                     candidate.Instance:SetAttribute("LastApexThreat", record.Instance and record.Instance.Name or "Apex")
+                    candidate.Instance:SetAttribute("LastApexThreatDistance", distance)
+                    candidate.Instance:SetAttribute("ApexThreatSourceX", apexPosition.X)
+                    candidate.Instance:SetAttribute("ApexThreatSourceY", apexPosition.Y)
+                    candidate.Instance:SetAttribute("ApexThreatSourceZ", apexPosition.Z)
+                    candidate.Instance:SetAttribute("ApexThreatState", "Warned")
                 end
             end
         end
     end
-    record.LastApexEventAt = os.time()
+    record.LastApexEventAt = now
+    record.LastApexEventAffected = affected
+    record.ApexEventSequence = (record.ApexEventSequence or 0) + 1
     if record.Instance then
         record.Instance:SetAttribute("ApexEventActive", true)
+        record.Instance:SetAttribute("ApexEventState", affected > 0 and "Broadcast" or "BroadcastNoTargets")
+        record.Instance:SetAttribute("ApexEventGateReason", "ready")
         record.Instance:SetAttribute("ApexEventAffected", affected)
         record.Instance:SetAttribute("ApexThreatRadius", record.ThreatRadius or self.ApexThreatRadius)
+        record.Instance:SetAttribute("ApexEventSequence", record.ApexEventSequence)
+        record.Instance:SetAttribute("ApexEventSourceX", apexPosition.X)
+        record.Instance:SetAttribute("ApexEventSourceY", apexPosition.Y)
+        record.Instance:SetAttribute("ApexEventSourceZ", apexPosition.Z)
+        record.Instance:SetAttribute("ApexEventCooldownSeconds", record.ApexEventCooldownSeconds or self.ApexEventCooldownSeconds)
+        record.Instance:SetAttribute("ApexEventCooldownRemaining", 0)
+        record.Instance:SetAttribute("ApexEventLastAt", now)
         record.Instance:SetAttribute("LastBrainAction", "ApexEvent")
     end
     return self:Transition(record, "ApexEvent")

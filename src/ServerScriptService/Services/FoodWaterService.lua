@@ -3,6 +3,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local RemoteValidationService = require(script.Parent.RemoteValidationService)
 local SurvivalService = require(script.Parent.SurvivalService)
+local WaterService = require(script.Parent.WaterService)
 
 local FoodWaterService = { DepletionLoopRunning = false }
 FoodWaterService.EatDistance = 12
@@ -274,7 +275,8 @@ function FoodWaterService:RequestDrink(player, target)
     if not RemoteValidationService:IsAlive(state) or not RemoteValidationService:IsHatched(state) then return false, "not_alive_hatched" end
     local character = player.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not RemoteValidationService:HasTag(target, "WaterSource") then return false, "not_water" end
+    local drinkOk, drinkReason = WaterService:IsValidDrinkableWater(target)
+    if not drinkOk then return false, drinkReason end
     if not RemoteValidationService:IsClose(root, target, self.DrinkDistance) then return false, "too_far" end
     state.Thirst = math.min(100, state.Thirst + 35)
     SurvivalService:AddGrowth(player, self.WaterGrowthGrant)

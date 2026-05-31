@@ -57,15 +57,20 @@ function NestService:RequestHatchFromNest(player)
     if not (nestInstance and nestInstance.Parent) then return false, "no_nest" end
 
     local nest = self.Nests[player]
-    if nest and nest.Instance == nestInstance and (nest.Eggs or 0) > 0 then
-        nest.Eggs = nest.Eggs - 1
-        nest.UpdatedAt = os.time()
+    if not (nest and nest.Instance == nestInstance and (nest.Eggs or 0) > 0) then
+        return false, "no_eggs"
     end
+    nest.Eggs = nest.Eggs - 1
+    nest.UpdatedAt = os.time()
 
     local newState = SurvivalService:Respawn(player)
     newState.HatchlingBuff = (nest and nest.Outcome and nest.Outcome.HatchlingBuff) or "NestRested"
     newState.NestEggCount = nest and nest.Eggs or 0
     return true, newState
+end
+
+function NestService:Clear(player)
+    self.Nests[player] = nil
 end
 
 return NestService
