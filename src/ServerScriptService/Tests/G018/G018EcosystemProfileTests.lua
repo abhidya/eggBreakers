@@ -43,6 +43,12 @@ table.insert(suite.tests, { name = "survival state and stat payload include G018
     Assert.equals(payload.ecosystemProfile.CanGraze, true, "payload carries ecosystem profile")
     Assert.equals(payload.movementModes.Ground, true, "payload carries movement modes")
     Assert.equals(payload.maxOxygen, state.MaxOxygen, "payload carries max oxygen")
+    Assert.equals(payload.ageSeconds, state.AgeSeconds, "payload carries readable age")
+
+    SurvivalService:Kill(player, "ProfileProof")
+    local deathPayload = StatReplicationService:BuildPayload(state)
+    Assert.equals(deathPayload.deathState, "Dying", "payload carries death state")
+    Assert.equals(deathPayload.diedAtAgeSeconds, state.DiedAtAgeSeconds, "payload carries death age")
 end })
 
 table.insert(suite.tests, { name = "swim oxygen recovers and flight stamina is capability gated", run = function()
@@ -70,6 +76,9 @@ table.insert(suite.tests, { name = "remote stat contract advertises G018 profile
     Assert.truthy(seen.creatureCategory, "category in stat payload contract")
     Assert.truthy(seen.movementModes, "movement modes in stat payload contract")
     Assert.truthy(seen.ecosystemProfile, "ecosystem profile in stat payload contract")
+    Assert.truthy(seen.ageSeconds, "age in stat payload contract")
+    Assert.truthy(seen.deathState, "death state in stat payload contract")
+    Assert.truthy(seen.diedAtAgeSeconds, "death age in stat payload contract")
 end })
 
 return TestRunner.registerSuite(suite)

@@ -48,4 +48,22 @@ table.insert(suite.tests, { name = "rest slows needs and restores stamina health
     Assert.truthy(state.Hunger > 75, "rest slows hunger drain")
 end })
 
+table.insert(suite.tests, { name = "retired and unknown species do not silently create default state", run = function()
+    local retiredPlayer = MockPlayer.new(204, "RetiredSpeciesTester")
+    local retiredOk = pcall(function()
+        SurvivalService:CreateState(retiredPlayer, "gallimimus")
+    end)
+    Assert.falsy(retiredOk, "retired prototype species should fail explicit state creation")
+    local selectOk, selectReason = SurvivalService:SelectSpecies(retiredPlayer, "gallimimus")
+    Assert.falsy(selectOk, "retired prototype species cannot be selected")
+    Assert.equals(selectReason, "unknown_species", "retired selection fails explicitly")
+
+    local unknownProfile = SurvivalService:GetSpeciesProfile("missing_species")
+    Assert.equals(unknownProfile, nil, "unknown species profile is not silently defaulted")
+
+    local defaultPlayer = MockPlayer.new(205, "DefaultSpeciesTester")
+    local defaultState = SurvivalService:CreateState(defaultPlayer)
+    Assert.equals(defaultState.SpeciesId, "coelophysis", "nil species still uses configured default")
+end })
+
 return TestRunner.registerSuite(suite)

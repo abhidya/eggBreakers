@@ -23,4 +23,30 @@ table.insert(suite.tests, { name = "default data has required fields", run = fun
     Assert.equals(data.LastPlayedAt, 123)
 end })
 
+table.insert(suite.tests, { name = "load migrates retired species unlocks", run = function()
+    local oldStore = PlayerDataService.Store
+    local player = { UserId = 777, Name = "MigrationTester" }
+    local ok, err = pcall(function()
+        PlayerDataService.Store = {
+            GetAsync = function()
+                return {
+                    UnlockedSpecies = {
+                        gallimimus = true,
+                        triceratops = true,
+                    },
+                }
+            end,
+        }
+
+        local data = PlayerDataService:Load(player)
+        Assert.equals(data.UnlockedSpecies.gallimimus, nil, "gallimimus unlock removed")
+        Assert.equals(data.UnlockedSpecies.triceratops, nil, "triceratops unlock removed")
+        Assert.truthy(data.UnlockedSpecies.coelophysis, "replacement starter unlocked")
+        Assert.truthy(data.UnlockedSpecies.utahraptor, "replacement predator unlocked")
+    end)
+    PlayerDataService.Store = oldStore
+    PlayerDataService:Clear(player)
+    if not ok then error(err) end
+end })
+
 return TestRunner.registerSuite(suite)

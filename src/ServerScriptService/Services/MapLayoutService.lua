@@ -1513,8 +1513,15 @@ function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
 end
 
 function MapLayoutService:GetPlayerSpawnForSpecies(speciesId, preferredBiome, roll)
-    local species = SpeciesConfig[speciesId or ""] or SpeciesConfig.coelophysis
-    local resolvedSpeciesId = species and species.SpeciesId or "coelophysis"
+    local resolvedSpeciesId = speciesId
+    if resolvedSpeciesId == nil or resolvedSpeciesId == "" then
+        resolvedSpeciesId = "coelophysis"
+    end
+    local species = SpeciesConfig[resolvedSpeciesId]
+    if not species then
+        return nil, nil
+    end
+    resolvedSpeciesId = species.SpeciesId
     local folders = self:EnsureMapFolders()
     local spawnFolder = self:EnsurePlayerSpawnMarkers(folders)
     local candidates = {}

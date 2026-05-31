@@ -17,17 +17,19 @@ local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
 end
 
-function SurvivalService:CreateState(player, speciesId)
-    local defaultSpeciesId = Constants.DefaultSpeciesId or "coelophysis"
-    local species = SpeciesConfig[speciesId or defaultSpeciesId] or SpeciesConfig[defaultSpeciesId] or SpeciesConfig.leafling_runner
-    if not species then
-        for _, candidate in pairs(SpeciesConfig) do
-            if type(candidate) == "table" and candidate.BaseStats then
-                species = candidate
-                break
-            end
-        end
+local function resolveSpecies(speciesId)
+    local resolvedId = speciesId
+    if resolvedId == nil or resolvedId == "" then
+        resolvedId = Constants.DefaultSpeciesId
     end
+    if type(resolvedId) ~= "string" then
+        return nil
+    end
+    return SpeciesConfig[resolvedId]
+end
+
+function SurvivalService:CreateState(player, speciesId)
+    local species = resolveSpecies(speciesId)
     assert(species and species.BaseStats, "valid species config required")
     local stage = "Hatchling"
     local stats = species.BaseStats[stage]
@@ -254,8 +256,7 @@ end
 
 function SurvivalService:GetSpeciesProfile(stateOrSpeciesId)
     local speciesId = type(stateOrSpeciesId) == "table" and stateOrSpeciesId.SpeciesId or stateOrSpeciesId
-    local defaultSpeciesId = Constants.DefaultSpeciesId or "coelophysis"
-    local species = SpeciesConfig[speciesId or defaultSpeciesId] or SpeciesConfig[defaultSpeciesId]
+    local species = resolveSpecies(speciesId)
     if not species then return nil end
     return {
         speciesId = species.SpeciesId,

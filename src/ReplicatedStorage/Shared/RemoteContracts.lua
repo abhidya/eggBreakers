@@ -15,7 +15,7 @@ local RemoteContracts = {
     RequestCollectFossil = { Direction = "ClientToServer", Arguments = { fossilInstance = "Instance" }, RateLimitSeconds = 0.75 },
     RequestHatchFromNest = { Direction = "ClientToServer", Arguments = {}, RateLimitSeconds = 1.0 },
     RequestPromoteAlpha = { Direction = "ClientToServer", Arguments = {}, RateLimitSeconds = 2.0 },
-    StatUpdate = { Direction = "ServerToClient", Payload = { "health", "hunger", "thirst", "stamina", "oxygen", "maxOxygen", "growth", "growthStage", "diet", "species", "creatureCategory", "swimming", "flying", "sprinting", "resting", "sleepState", "movementModes", "ecosystemProfile", "statusEffects" } },
+    StatUpdate = { Direction = "ServerToClient", Payload = { "health", "hunger", "thirst", "stamina", "oxygen", "maxOxygen", "growth", "growthStage", "diet", "species", "creatureCategory", "swimming", "flying", "sprinting", "resting", "sleepState", "ageSeconds", "deathState", "diedAtAgeSeconds", "movementModes", "ecosystemProfile", "statusEffects" } },
     ClientNotification = { Direction = "ServerToClient", Payload = { "message", "type", "duration", "icon" } },
     CombatFeedback = { Direction = "ServerToClient", Payload = { "kind", "targetName", "position", "damage", "targetHealth", "targetMaxHealth", "isCrit", "isApex" } },
     CombatTelegraph = { Direction = "ServerToClient", Payload = { "kind", "attackType", "attackerName", "attackerUserId", "position", "targetName", "targetPosition", "windupSeconds" } },

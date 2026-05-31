@@ -3,7 +3,10 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local StarterSpeciesService = require(ServerScriptService.Services.StarterSpeciesService)
+local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
+local NPCService = require(ServerScriptService.Services.NPCService)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
 local suite = { name = "StarterSpeciesSelectionTests", category = "Unit", tests = {} }
 
@@ -50,6 +53,37 @@ table.insert(suite.tests, { name = "random starter avoids repeating previous lif
         Assert.falsy(chosen == "parasaurolophus", "next random starter should not repeat the last life when alternatives exist")
         data.LastStarterSpecies = "parasaurolophus"
     end
+end })
+
+table.insert(suite.tests, { name = "retired prototypes stay out of hatch and NPC routes", run = function()
+    local selectable = StarterSpeciesService:GetSelectableSpecies()
+    local hatchPool = StarterSpeciesService:GetHatchPool()
+    local seenSelectable = {}
+    local seenHatch = {}
+    for _, speciesId in ipairs(selectable) do
+        seenSelectable[speciesId] = true
+    end
+    for _, speciesId in ipairs(hatchPool) do
+        seenHatch[speciesId] = true
+    end
+
+    for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
+        Assert.falsy(seenSelectable[speciesId], speciesId .. " is absent from selectable species")
+        Assert.falsy(seenHatch[speciesId], speciesId .. " is absent from hatch pool")
+    end
+
+    for kind, speciesId in pairs(MapLayoutService.NPCKindSpeciesIds) do
+        Assert.falsy(Constants.RetiredPrototypeSpecies[speciesId], kind .. " does not route to retired species")
+        Assert.notNil(SpeciesConfig[speciesId], kind .. " routes to playable species")
+    end
+
+    for kind, profile in pairs(NPCService.KindProfiles) do
+        Assert.falsy(Constants.RetiredPrototypeSpecies[profile.SpeciesId], kind .. " profile does not use retired species")
+        Assert.notNil(SpeciesConfig[profile.SpeciesId], kind .. " profile uses playable species")
+    end
+
+    local retiredSpawn = MapLayoutService:GetPlayerSpawnForSpecies("gallimimus")
+    Assert.equals(retiredSpawn, nil, "retired species does not silently use default spawn")
 end })
 
 return TestRunner.registerSuite(suite)
