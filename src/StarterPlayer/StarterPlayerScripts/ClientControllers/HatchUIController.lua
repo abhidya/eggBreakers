@@ -63,7 +63,10 @@ function HatchUIController:Show()
     self.Fill.Size = UDim2.fromScale(0, 1)
     self.Fill.BackgroundColor3 = Color3.fromRGB(245, 230, 160)
     self.Fill.Parent = meter
-    gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local localPlayer = Players.LocalPlayer
+    if localPlayer then
+        gui.Parent = localPlayer:WaitForChild("PlayerGui")
+    end
     self.Gui = gui
     return gui
 end
