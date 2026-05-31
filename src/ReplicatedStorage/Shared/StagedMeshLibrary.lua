@@ -1,3 +1,4 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local StagedMeshLibrary = {}
@@ -17,7 +18,16 @@ StagedMeshLibrary.SpeciesMesh = {
 }
 
 function StagedMeshLibrary:StagingRoot()
-    return Workspace:FindFirstChild(self.StagingFolderName)
+    local workspaceRoot = Workspace:FindFirstChild(self.StagingFolderName)
+    if workspaceRoot then
+        return workspaceRoot
+    end
+
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    if not library then
+        return nil
+    end
+    return library:FindFirstChild(self.StagingFolderName) or library:FindFirstChild("G028_RiggedDinosaurModels_AuditCandidate")
 end
 
 function StagedMeshLibrary:ResolveModel(speciesId)

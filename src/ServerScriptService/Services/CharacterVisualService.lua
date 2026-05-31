@@ -9,6 +9,12 @@ CharacterVisualService.EggVisualName = "EggVisual"
 CharacterVisualService.DinosaurVisualName = "DinosaurVisual"
 CharacterVisualService.MinimumDinosaurHeight = 4
 CharacterVisualService.MinimumDinosaurLength = 7
+CharacterVisualService.TargetDinosaurLengthByStage = {
+    Hatchling = 8,
+    Juvenile = 13,
+    SubAdult = 20,
+    Adult = 28,
+}
 CharacterVisualService.DefaultDinosaurForwardCorrection = CFrame.new()
 CharacterVisualService.DinosaurForwardCorrection = CharacterVisualService.DefaultDinosaurForwardCorrection
 CharacterVisualService.DinosaurForwardCorrectionDegrees = 0
@@ -53,6 +59,11 @@ local function hasVisiblePart(instance)
         if descendant:IsA("BasePart") and descendant.Transparency < 1 then return true end
     end
     return false
+end
+
+local function hasAttachablePart(instance)
+    return instance
+        and (instance:IsA("BasePart") or instance:FindFirstChildWhichIsA("BasePart", true) ~= nil)
 end
 
 local function isRigHelperPart(instance)
@@ -240,6 +251,20 @@ function CharacterVisualService:_readableScaleForSize(size)
     return math.max(1, heightScale, lengthScale)
 end
 
+function CharacterVisualService:_targetScaleForSize(size, state)
+    local targetLength = self.TargetDinosaurLengthByStage[(state and state.GrowthStage) or "Hatchling"]
+    local currentLength = axisMax(size)
+    local minimumScale = self:_readableScaleForSize(size)
+    if not targetLength or currentLength <= 0 then
+        return minimumScale
+    end
+    local targetScale = targetLength / currentLength
+    if size.Y > 0 then
+        targetScale = math.max(targetScale, self.MinimumDinosaurHeight / size.Y)
+    end
+    return math.max(targetScale, 0.05)
+end
+
 function CharacterVisualService:GrowthVisualScaleForState(state)
     local growth = state and tonumber(state.Growth) or 0
     growth = math.max(0, math.min(100, growth))
@@ -293,11 +318,11 @@ function CharacterVisualService:_applyGrowthVisualScale(model, state)
     model:SetAttribute("GrowthValue", state and state.Growth or 0)
 end
 
-function CharacterVisualService:_normalizeDinosaurScale(model)
+function CharacterVisualService:_normalizeDinosaurScale(model, state)
     if model:IsA("Model") then
         local _, size = model:GetBoundingBox()
-        local scale = self:_readableScaleForSize(size)
-        if scale > 1 then
+        local scale = self:_targetScaleForSize(size, state)
+        if math.abs(scale - 1) > 0.001 then
             local ok = pcall(function()
                 model:ScaleTo(scale)
             end)
@@ -311,23 +336,27 @@ function CharacterVisualService:_normalizeDinosaurScale(model)
         end
         local _, normalizedSize = model:GetBoundingBox()
         model:SetAttribute("ReadableScaleApplied", scale)
+        model:SetAttribute("TargetGrowthStage", state and state.GrowthStage or "Hatchling")
+        model:SetAttribute("TargetReadableLength", self.TargetDinosaurLengthByStage[(state and state.GrowthStage) or "Hatchling"])
         model:SetAttribute("ReadableHeight", normalizedSize.Y)
         model:SetAttribute("ReadableLength", axisMax(normalizedSize))
         return normalizedSize
     elseif model:IsA("BasePart") then
-        local scale = self:_readableScaleForSize(model.Size)
-        if scale > 1 then
+        local scale = self:_targetScaleForSize(model.Size, state)
+        if math.abs(scale - 1) > 0.001 then
             model.Size = model.Size * scale
         end
         model:SetAttribute("ReadableScaleApplied", scale)
+        model:SetAttribute("TargetGrowthStage", state and state.GrowthStage or "Hatchling")
+        model:SetAttribute("TargetReadableLength", self.TargetDinosaurLengthByStage[(state and state.GrowthStage) or "Hatchling"])
         model:SetAttribute("ReadableHeight", model.Size.Y)
         model:SetAttribute("ReadableLength", axisMax(model.Size))
         return model.Size
     end
     local parts = getVisibleParts(model)
     local center, size = boundsFromParts(parts)
-    local scale = self:_readableScaleForSize(size)
-    if scale > 1 and center then
+    local scale = self:_targetScaleForSize(size, state)
+    if math.abs(scale - 1) > 0.001 and center then
         for _, part in ipairs(parts) do
             part.Size = part.Size * scale
             part.CFrame = CFrame.new(center + (part.Position - center) * scale) * part.CFrame.Rotation
@@ -335,6 +364,8 @@ function CharacterVisualService:_normalizeDinosaurScale(model)
         _, size = boundsFromParts(parts)
     end
     model:SetAttribute("ReadableScaleApplied", scale)
+    model:SetAttribute("TargetGrowthStage", state and state.GrowthStage or "Hatchling")
+    model:SetAttribute("TargetReadableLength", self.TargetDinosaurLengthByStage[(state and state.GrowthStage) or "Hatchling"])
     model:SetAttribute("ReadableHeight", size.Y)
     model:SetAttribute("ReadableLength", axisMax(size))
     return size
@@ -460,10 +491,14 @@ function CharacterVisualService:_resolveStagedModel(speciesId)
         return nil
     end
     local okRequire, library = pcall(require, moduleScript)
-    if not okRequire or type(library) ~= "table" or type(library.ResolveModel) ~= "function" then
+    if not okRequire or type(library) ~= "table" then
         return nil
     end
-    local okResolve, model = pcall(library.ResolveModel, library, speciesId)
+    local resolver = library.ResolveAny or library.ResolveModel
+    if type(resolver) ~= "function" then
+        return nil
+    end
+    local okResolve, model = pcall(resolver, library, speciesId)
     if okResolve and typeof(model) == "Instance" then
         return model
     end
@@ -474,7 +509,7 @@ function CharacterVisualService:_prepareDinosaurClone(model, state)
     local clone = self:_prepareVisualClone(model, self.DinosaurVisualName)
     clone:SetAttribute("VisualKind", "ImportedDinosaur")
     clone:SetAttribute("SpeciesId", state and state.SpeciesId or "unknown")
-    self:_normalizeDinosaurScale(clone)
+    self:_normalizeDinosaurScale(clone, state)
     self:_applyGrowthVisualScale(clone, state)
     return clone
 end
@@ -603,18 +638,45 @@ function CharacterVisualService:_createFallbackDinosaur(character, root, state, 
     return body, "dinosaur_fallback_debug"
 end
 
+function CharacterVisualService:_recordVisualApplyResult(character, root, ok, reason, mode)
+    if not character or not root then return end
+    character:SetAttribute("CharacterVisualApplyFailed", ok ~= true)
+    root:SetAttribute("CharacterVisualApplyFailed", ok ~= true)
+    if ok then
+        character:SetAttribute("CharacterVisualFailureReason", nil)
+        character:SetAttribute("CharacterVisualMode", mode)
+        root:SetAttribute("CharacterVisualFailureReason", nil)
+        root:SetAttribute("CharacterVisualMode", mode)
+    else
+        character:SetAttribute("CharacterVisualFailureReason", reason)
+        root:SetAttribute("CharacterVisualFailureReason", reason)
+    end
+end
+
 function CharacterVisualService:ApplyForState(player, state, options)
     options = options or {}
     local character = player and player.Character
     local root = getRoot(character)
     if not character or not root then return false, "missing_character_root" end
 
-    self:HideDefaultAvatar(character)
-    self:ClearVisual(character)
-
     if not state or state.Hatched ~= true then
-        local egg, reason = self:_createEggVisual(character, root)
-        if egg then return true, reason end
+        local source, reason = self:ResolveImportedEggModel()
+        if not source or not hasAttachablePart(source) then
+            reason = reason or "missing_imported_egg_visual"
+            self:_recordVisualApplyResult(character, root, false, reason)
+            return false, reason
+        end
+        local clone = self:_prepareVisualClone(source, self.EggVisualName)
+        self:HideDefaultAvatar(character)
+        self:ClearVisual(character)
+        local egg = self:_attachModel(character, root, clone)
+        if egg then
+            egg:SetAttribute("VisualKind", "ImportedEgg")
+            self:_recordVisualApplyResult(character, root, true, nil, "imported_egg")
+            return true, "imported_egg"
+        end
+        reason = "invalid_imported_egg_visual"
+        self:_recordVisualApplyResult(character, root, false, reason)
         return false, reason
     end
 
@@ -628,22 +690,39 @@ function CharacterVisualService:ApplyForState(player, state, options)
     -- absent, fall through to the existing SpeciesModelService path unchanged.
     local stagedModel = self:_resolveStagedModel(state.SpeciesId)
     if stagedModel then
-        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(stagedModel, state))
+        local clone = self:_prepareDinosaurClone(stagedModel, state)
+        self:HideDefaultAvatar(character)
+        self:ClearVisual(character)
+        local attached = self:_attachModel(character, root, clone)
         if attached then
+            self:_recordVisualApplyResult(character, root, true, nil, "staged_dinosaur_mesh")
             return true, "staged_dinosaur_mesh"
         end
+        self:_recordVisualApplyResult(character, root, false, "invalid_staged_dinosaur_mesh")
+        return false, "invalid_staged_dinosaur_mesh"
     end
 
     local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "coelophysis", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
     if sourceModel then
-        local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel, state))
+        local clone = self:_prepareDinosaurClone(sourceModel, state)
+        self:HideDefaultAvatar(character)
+        self:ClearVisual(character)
+        local attached = self:_attachModel(character, root, clone)
         if attached then
+            self:_recordVisualApplyResult(character, root, true, nil, "dinosaur_model")
             return true, "dinosaur_model"
         end
+        self:_recordVisualApplyResult(character, root, false, "invalid_dinosaur_model")
+        return false, "invalid_dinosaur_model"
     end
 
     local fallback, reason = self:_createFallbackDinosaur(character, root, state, options)
-    if fallback then return true, reason end
+    if fallback then
+        self:HideDefaultAvatar(character)
+        self:_recordVisualApplyResult(character, root, true, nil, reason)
+        return true, reason
+    end
+    self:_recordVisualApplyResult(character, root, false, reason)
     return false, reason
 end
 

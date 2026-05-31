@@ -4,6 +4,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
 local SurvivalService = require(ServerScriptService.Services.SurvivalService)
 
@@ -327,6 +328,40 @@ table.insert(suite.tests, { name = "growth progress makes dinosaur visual larger
     cleanup(player)
 end })
 
+table.insert(suite.tests, { name = "oversized staged hatchlings are scaled down to hatchling readable size", run = function()
+    local source = Instance.new("Model")
+    source.Name = "OversizedParasaurolophusSource"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "ParasaurolophusBodyMesh"
+    body.Size = Vector3.new(10, 24, 46)
+    body.Parent = source
+    source.PrimaryPart = body
+
+    local hatchling = CharacterVisualService:_prepareDinosaurClone(source, {
+        SpeciesId = "parasaurolophus",
+        GrowthStage = "Hatchling",
+        Growth = 0,
+    })
+    local hatchlingLength = hatchling:GetAttribute("ReadableLength")
+    local hatchlingHeight = hatchling:GetAttribute("ReadableHeight")
+
+    Assert.truthy(hatchlingLength <= CharacterVisualService.TargetDinosaurLengthByStage.Hatchling + 0.25, "hatchling visual is not adult-sized")
+    Assert.truthy(hatchlingHeight >= CharacterVisualService.MinimumDinosaurHeight, "hatchling remains readable after downscale")
+    Assert.truthy((hatchling:GetAttribute("ReadableScaleApplied") or 1) < 1, "oversized staged source was downscaled")
+
+    local adult = CharacterVisualService:_prepareDinosaurClone(source, {
+        SpeciesId = "parasaurolophus",
+        GrowthStage = "Adult",
+        Growth = 0,
+    })
+    Assert.truthy((adult:GetAttribute("ReadableLength") or 0) > hatchlingLength, "adult visual remains larger than hatchling")
+
+    hatchling:Destroy()
+    adult:Destroy()
+    source:Destroy()
+end })
+
 table.insert(suite.tests, { name = "release validation fails when imported visuals are missing", run = function()
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     local originalParent = library and library.Parent
@@ -339,7 +374,7 @@ end })
 
 table.insert(suite.tests, { name = "debug fallback is disabled for release ApplyForState", run = function()
     local player = MockPlayer.new(11003, "NoFallbackTester")
-    local character = makeCharacter()
+    local character, head = makeCharacter()
     player.Character = character
     local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
@@ -349,7 +384,45 @@ table.insert(suite.tests, { name = "debug fallback is disabled for release Apply
 
     Assert.falsy(ok, "release mode rejects generic dinosaur fallback")
     Assert.equals(reason, "fallback_disabled_in_release", "fallback disabled reason")
+    Assert.equals(head.Transparency, 0, "default avatar stays visible when no replacement exists")
+    Assert.equals(character:GetAttribute("CharacterVisualApplyFailed"), true, "visual failure is recorded")
+    Assert.equals(character:GetAttribute("CharacterVisualFailureReason"), "fallback_disabled_in_release", "visual failure reason is recorded")
+    Assert.equals(character:FindFirstChild(CharacterVisualService.VisualFolderName), nil, "failed visual apply does not leave an empty replacement folder")
     cleanup(player)
+end })
+
+table.insert(suite.tests, { name = "staged mesh library resolves imported dinosaur storage fallback", run = function()
+    local workspaceRoot = workspace:FindFirstChild(StagedMeshLibrary.StagingFolderName)
+    local workspaceRootParent = workspaceRoot and workspaceRoot.Parent
+    if workspaceRoot then
+        workspaceRoot.Parent = nil
+    end
+
+    local library = ensureFolder(ReplicatedStorage, "ImportedAssetLibrary")
+    local root = ensureFolder(library, StagedMeshLibrary.StagingFolderName)
+    local carnivores = ensureFolder(root, "Carnivores (land)")
+    local coelophysis = carnivores:FindFirstChild("Coelophysis") or Instance.new("Model")
+    coelophysis.Name = "Coelophysis"
+    coelophysis.Parent = carnivores
+    if not coelophysis:FindFirstChild("CoelophysisBodyMesh") then
+        local body = Instance.new("Part")
+        body.Name = "CoelophysisBodyMesh"
+        body.Size = Vector3.new(2, 3, 8)
+        body.Parent = coelophysis
+        coelophysis.PrimaryPart = body
+    end
+
+    StagedMeshLibrary:RefreshRoster()
+    local resolved, reason = StagedMeshLibrary:ResolveAny("coelophysis")
+
+    Assert.equals(resolved, coelophysis, "staged library resolves ReplicatedStorage imported dinosaur root")
+    Assert.equals(reason, nil, "staged fallback resolves without a failure reason")
+
+    root:Destroy()
+    if workspaceRoot then
+        workspaceRoot.Parent = workspaceRootParent
+    end
+    StagedMeshLibrary:RefreshRoster()
 end })
 
 

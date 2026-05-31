@@ -14,12 +14,40 @@ local function resolvePath(path)
     return current
 end
 
+local function resolveStagedPath(path)
+    local speciesId = string.match(path or "", "^staged://([^/]+)")
+    if not speciesId then
+        return nil, "not_staged_path"
+    end
+    local shared = ReplicatedStorage:FindFirstChild("Shared")
+    local moduleScript = shared and shared:FindFirstChild("StagedMeshLibrary")
+    if not moduleScript or not moduleScript:IsA("ModuleScript") then
+        return nil, "missing_staged_library"
+    end
+    local okRequire, library = pcall(require, moduleScript)
+    if not okRequire or type(library) ~= "table" then
+        return nil, "invalid_staged_library"
+    end
+    local resolver = library.ResolveAny or library.ResolveModel
+    if type(resolver) ~= "function" then
+        return nil, "invalid_staged_resolver"
+    end
+    local okResolve, model, reason = pcall(resolver, library, speciesId)
+    if okResolve and typeof(model) == "Instance" then
+        return model
+    end
+    return nil, reason or "missing_staged_model"
+end
+
 function SpeciesModelService:ResolveModel(speciesId, growthStage, options)
     options = options or {}
     local species = SpeciesConfig[speciesId]
     if not species or not species.ModelPaths then return nil, "missing_species" end
     local configuredPath = species.ModelPaths[growthStage]
     if not configuredPath then return nil, "missing_stage_path" end
+    if string.sub(configuredPath, 1, 9) == "staged://" then
+        return resolveStagedPath(configuredPath)
+    end
     local exact = resolvePath(configuredPath)
     if exact then return exact end
     if options.requireExact then
