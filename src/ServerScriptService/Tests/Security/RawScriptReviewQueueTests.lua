@@ -80,6 +80,19 @@ local function makeVisibleRawQueueRoot(library)
     return root
 end
 
+local function stampReviewedAdaptedSandboxedModule(moduleScript)
+    moduleScript:SetAttribute("ImportedScriptAudited", true)
+    moduleScript:SetAttribute("ImportedScriptAdapted", true)
+    moduleScript:SetAttribute("ScriptAdaptedTo", "eggBreakers imported asset utility")
+    moduleScript:SetAttribute("ImportedScriptStamped", true)
+    moduleScript:SetAttribute("ImportedScriptOwner", "SecurityAuditService")
+    moduleScript:SetAttribute("ScriptAuditPurpose", "adapted imported utility only")
+    moduleScript:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    moduleScript:SetAttribute("ScriptAuditDecision", "keep")
+    moduleScript:SetAttribute("ScriptAuditScope", "G032")
+    moduleScript:SetAttribute("Sandboxed", true)
+end
+
 table.insert(suite.tests, { name = "raw scripted imports stay queued for review instead of quarantined", run = function()
     withIsolatedImportedRoots(function(library)
         local root = makeVisibleRawQueueRoot(library)
@@ -103,6 +116,39 @@ table.insert(suite.tests, { name = "raw scripted imports stay queued for review 
         Assert.truthy(scan.passed, table.concat(scan.failures, "; "))
         Assert.equals(#scan.preservedForReview, 1, "raw queued script is visible to review scan")
         Assert.equals(#scan.quarantineRecommended, 0, "raw queued script avoids false-positive quarantine")
+    end)
+end })
+
+table.insert(suite.tests, { name = "raw ModuleScript does not pass raw queue without review adaptation and sandbox", run = function()
+    withIsolatedImportedRoots(function(library)
+        local root = makeVisibleRawQueueRoot(library)
+
+        local rawModule = Instance.new("ModuleScript")
+        rawModule.Name = "VendorRawUtilitySource"
+        rawModule.Parent = root
+
+        local scan = SecurityAuditService:ScanImportedScripts()
+        Assert.falsy(scan.passed, "raw queued ModuleScript must fail until reviewed, adapted, and sandboxed")
+        Assert.equals(#scan.quarantineRecommended, 1, "raw queued ModuleScript is recommended for quarantine")
+        Assert.equals(#scan.preservedForReview, 0, "raw queued ModuleScript is not preserved by queue stamp alone")
+    end)
+end })
+
+table.insert(suite.tests, { name = "reviewed adapted sandboxed ModuleScript passes imported script scan", run = function()
+    withIsolatedImportedRoots(function(library)
+        local root = makeVisibleRawQueueRoot(library)
+        root:SetAttribute("RawImportedScriptPreserved", nil)
+        root:SetAttribute("ScriptReviewStatus", nil)
+
+        local moduleScript = Instance.new("ModuleScript")
+        moduleScript.Name = "AdaptedImportedUtility"
+        stampReviewedAdaptedSandboxedModule(moduleScript)
+        moduleScript.Parent = root
+
+        local scan = SecurityAuditService:ScanImportedScripts()
+        Assert.truthy(scan.passed, table.concat(scan.failures, "; "))
+        Assert.equals(#scan.preserved, 1, "reviewed adapted sandboxed ModuleScript is preserved")
+        Assert.equals(#scan.quarantineRecommended, 0, "reviewed adapted sandboxed ModuleScript avoids quarantine")
     end)
 end })
 

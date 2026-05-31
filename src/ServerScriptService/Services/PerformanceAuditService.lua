@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local NPCService = require(script.Parent.NPCService)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local PerformanceAuditService = {}
 PerformanceAuditService.MaxNPCs = 30
@@ -29,51 +30,24 @@ function PerformanceAuditService:_isRuntimeScript(instance)
 end
 
 function PerformanceAuditService:_hasStringAttribute(instance, attributeName)
-    local value = instance:GetAttribute(attributeName)
-    return type(value) == "string" and value ~= ""
+    return ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
 end
 
 function PerformanceAuditService:_hasAncestorAttribute(instance, attributeName, expectedValue)
-    local current = instance
-    while current do
-        local value = current:GetAttribute(attributeName)
-        if expectedValue == nil then
-            if value ~= nil then return true end
-        elseif value == expectedValue then
-            return true
-        end
-        current = current.Parent
-    end
-    return false
+    return ImportedScriptPolicy.HasAncestorAttribute(instance, attributeName, expectedValue)
 end
 
 function PerformanceAuditService:_isRawScriptReviewQueue(instance)
-    return self:_hasAncestorAttribute(instance, "RawImportedScriptPreserved", true)
-        or self:_hasAncestorAttribute(instance, "G032RawScriptPreserved", true)
-        or self:_hasAncestorAttribute(instance, "ImportedScriptReviewQueue", true)
-        or self:_hasAncestorAttribute(instance, "ScriptReviewStatus", "raw_preserved_pending_adaptation")
+    return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
 end
 
 function PerformanceAuditService:_isReviewedAdaptedStamped(instance)
-    local reviewed = instance:GetAttribute("ImportedScriptAudited") == true
-        or instance:GetAttribute("ReviewedImportedScript") == true
-    local adapted = instance:GetAttribute("ImportedScriptAdapted") == true
-        or instance:GetAttribute("AdaptedIntoEggBreakers") == true
-        or self:_hasStringAttribute(instance, "ScriptAdaptedTo")
-    local stamped = instance:GetAttribute("ImportedScriptStamped") == true
-        or (
-            self:_hasStringAttribute(instance, "ScriptAuditPurpose")
-            and self:_hasStringAttribute(instance, "ScriptSandboxStatus")
-            and self:_hasStringAttribute(instance, "ImportedScriptOwner")
-        )
-    return reviewed and adapted and stamped
+    return ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
 end
 
 function PerformanceAuditService:_isAllowedImportedRuntimeScript(instance)
-    if self:_isRawScriptReviewQueue(instance) then
-        return instance.Disabled == true
-    end
-    return self:_isReviewedAdaptedStamped(instance)
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance)
+        or ImportedScriptPolicy.IsDisabledRawRuntimeReviewScript(instance)
 end
 
 function PerformanceAuditService:_worldScanRoot()

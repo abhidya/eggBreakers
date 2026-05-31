@@ -12,10 +12,13 @@ local suite = { name = "StoryboardImportedScriptGateTests", category = "Placemen
 local function stampReviewedAdaptedScript(scriptObject)
     scriptObject:SetAttribute("ImportedScriptAudited", true)
     scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ScriptAdaptedTo", "eggBreakers storyboard runtime adapter")
     scriptObject:SetAttribute("ImportedScriptStamped", true)
     scriptObject:SetAttribute("ImportedScriptOwner", "StoryboardAssetGate")
     scriptObject:SetAttribute("ScriptAuditPurpose", "adapted ambient storyboard beat only")
     scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+    scriptObject:SetAttribute("ScriptAuditScope", "G032")
 end
 
 local function makeStoryboardAsset(name)

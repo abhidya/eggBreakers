@@ -12,10 +12,13 @@ local suite = { name = "AssetImportAuditStateTests", category = "Security", test
 local function stampReviewedAdaptedScript(scriptObject)
     scriptObject:SetAttribute("ImportedScriptAudited", true)
     scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ScriptAdaptedTo", "eggBreakers runtime import adapter")
     scriptObject:SetAttribute("ImportedScriptStamped", true)
     scriptObject:SetAttribute("ImportedScriptOwner", "AssetImportAuditService")
     scriptObject:SetAttribute("ScriptAuditPurpose", "adapted imported utility owned by eggBreakers service flow")
     scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+    scriptObject:SetAttribute("ScriptAuditScope", "G032")
 end
 
 local function makeImportedVisual(parent, name, manifestEntry, attributes)

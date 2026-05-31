@@ -130,6 +130,8 @@ table.insert(suite.tests, { name = "G029 imported behavior scripts require expli
             scriptObject:SetAttribute("ScriptAdaptedTo", "G029 reviewed local rustle ambience")
             scriptObject:SetAttribute("ScriptAuditPurpose", "local rustle sound on touched leaves/moss only")
             scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+            scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+            scriptObject:SetAttribute("ScriptAuditScope", "G032")
             scriptObject.Parent = batch
         end
 
@@ -141,6 +143,9 @@ table.insert(suite.tests, { name = "G029 imported behavior scripts require expli
                 Assert.equals(descendant:GetAttribute("ImportedScriptAdapted"), true, descendant.Name .. " adapted flag")
                 Assert.equals(descendant:GetAttribute("ImportedScriptStamped"), true, descendant.Name .. " stamped flag")
                 Assert.equals(descendant:GetAttribute("ImportedScriptOwner"), "G029StoryAssetDrivenBatch", descendant.Name .. " owner")
+                Assert.equals(descendant:GetAttribute("ScriptAdaptedTo"), "G029 reviewed local rustle ambience", descendant.Name .. " adapter target")
+                Assert.equals(descendant:GetAttribute("ScriptAuditDecision"), "keep", descendant.Name .. " audit decision")
+                Assert.equals(descendant:GetAttribute("ScriptAuditScope"), "G032", descendant.Name .. " audit scope")
                 Assert.equals(descendant:GetAttribute("ScriptSandboxStatus"), "reviewed_no_remotes_no_datastore_no_damage", descendant.Name .. " sandbox status")
             end
         end

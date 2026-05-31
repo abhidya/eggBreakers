@@ -10,10 +10,25 @@ local suite = { name = "ImportedScriptPolicyTests.server", category = "Security"
 local function stampReviewedAdaptedScript(scriptObject)
     scriptObject:SetAttribute("ImportedScriptAudited", true)
     scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ScriptAdaptedTo", "eggBreakers runtime import adapter")
     scriptObject:SetAttribute("ImportedScriptStamped", true)
     scriptObject:SetAttribute("ImportedScriptOwner", "SecurityAuditService")
     scriptObject:SetAttribute("ScriptAuditPurpose", "adapted local ambience only")
     scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+    scriptObject:SetAttribute("ScriptAuditScope", "G032")
+end
+
+local function stampG032RuntimeKeepScript(scriptObject)
+    scriptObject:SetAttribute("ImportedScriptAudited", true)
+    scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ScriptAdaptedTo", "eggBreakers runtime import adapter")
+    scriptObject:SetAttribute("ImportedScriptStamped", true)
+    scriptObject:SetAttribute("ImportedScriptOwner", "SecurityAuditService")
+    scriptObject:SetAttribute("ScriptAuditPurpose", "adapted G032 runtime behavior only")
+    scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+    scriptObject:SetAttribute("ScriptAuditScope", "G032")
 end
 
 local function withImportedLibrary(callback)
@@ -104,6 +119,72 @@ table.insert(suite.tests, { name = "reviewed adapted stamped runtime scripts may
         Assert.truthy(result.passed, table.concat(result.failures, "; "))
         Assert.equals(#result.preserved, 1, "reviewed adapted stamped runtime script preserved")
         Assert.equals(#result.quarantineRecommended, 0, "no quarantine for reviewed adapted stamped runtime")
+    end)
+end })
+
+table.insert(suite.tests, { name = "G032 keep runtime scripts with ScriptAdaptedTo may be preserved", run = function()
+    withImportedLibrary(function(library)
+        local scriptAsset = Instance.new("Script")
+        scriptAsset.Name = "ImportedG032RuntimeKeep"
+        scriptAsset:SetAttribute("TestImportedScriptPolicy", true)
+        stampG032RuntimeKeepScript(scriptAsset)
+        scriptAsset.Parent = library
+
+        local result = SecurityAuditService:ScanImportedScripts()
+        Assert.truthy(result.passed, table.concat(result.failures, "; "))
+        Assert.equals(#result.preserved, 1, "G032 keep runtime script with ScriptAdaptedTo preserved")
+        Assert.equals(#result.quarantineRecommended, 0, "G032 keep runtime script avoids quarantine")
+    end)
+end })
+
+table.insert(suite.tests, { name = "runtime scripts without ScriptAdaptedTo require quarantine", run = function()
+    withImportedLibrary(function(library)
+        local scriptAsset = Instance.new("Script")
+        scriptAsset.Name = "ImportedRuntimeMissingAdaptedTo"
+        scriptAsset:SetAttribute("TestImportedScriptPolicy", true)
+        scriptAsset:SetAttribute("ImportedScriptAudited", true)
+        scriptAsset:SetAttribute("ImportedScriptAdapted", true)
+        scriptAsset:SetAttribute("ImportedScriptStamped", true)
+        scriptAsset:SetAttribute("ImportedScriptOwner", "SecurityAuditService")
+        scriptAsset:SetAttribute("ScriptAuditPurpose", "legacy adapted runtime")
+        scriptAsset:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+        scriptAsset:SetAttribute("ScriptAuditDecision", "keep")
+        scriptAsset:SetAttribute("ScriptAuditScope", "G032")
+        scriptAsset.Parent = library
+
+        local result = SecurityAuditService:ScanImportedScripts()
+        Assert.falsy(result.passed, "runtime script must name ScriptAdaptedTo target")
+        Assert.equals(#result.quarantineRecommended, 1, "runtime without ScriptAdaptedTo is recommended for quarantine")
+    end)
+end })
+
+table.insert(suite.tests, { name = "runtime scripts without keep decision require quarantine", run = function()
+    withImportedLibrary(function(library)
+        local scriptAsset = Instance.new("Script")
+        scriptAsset.Name = "ImportedRuntimeMissingKeepDecision"
+        scriptAsset:SetAttribute("TestImportedScriptPolicy", true)
+        stampG032RuntimeKeepScript(scriptAsset)
+        scriptAsset:SetAttribute("ScriptAuditDecision", nil)
+        scriptAsset.Parent = library
+
+        local result = SecurityAuditService:ScanImportedScripts()
+        Assert.falsy(result.passed, "runtime script must declare ScriptAuditDecision=keep")
+        Assert.equals(#result.quarantineRecommended, 1, "runtime without keep decision is recommended for quarantine")
+    end)
+end })
+
+table.insert(suite.tests, { name = "runtime scripts outside G032 audit scope require quarantine", run = function()
+    withImportedLibrary(function(library)
+        local scriptAsset = Instance.new("Script")
+        scriptAsset.Name = "ImportedRuntimeWrongAuditScope"
+        scriptAsset:SetAttribute("TestImportedScriptPolicy", true)
+        stampG032RuntimeKeepScript(scriptAsset)
+        scriptAsset:SetAttribute("ScriptAuditScope", "G031")
+        scriptAsset.Parent = library
+
+        local result = SecurityAuditService:ScanImportedScripts()
+        Assert.falsy(result.passed, "runtime script must declare ScriptAuditScope=G032")
+        Assert.equals(#result.quarantineRecommended, 1, "runtime outside G032 scope is recommended for quarantine")
     end)
 end })
 

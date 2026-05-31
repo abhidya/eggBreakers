@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local AssetImportAuditService = {}
 
@@ -127,69 +128,39 @@ local function containsMeshPart(instance)
 end
 
 local function isScriptInstance(instance)
-    return SCRIPT_CLASS_NAMES[instance.ClassName] == true
+    return ImportedScriptPolicy.IsScriptContainer(instance)
 end
 
 local function isExecutableScript(instance)
-    return EXECUTABLE_CLASS_NAMES[instance.ClassName] == true
+    return ImportedScriptPolicy.IsExecutableScript(instance)
 end
 
 local function hasStringAttribute(instance, attributeName)
-    local value = instance:GetAttribute(attributeName)
-    return type(value) == "string" and value ~= ""
+    return ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
 end
 
 local function isReviewedAdaptedStampedScript(instance)
-    local reviewed = instance:GetAttribute("ImportedScriptAudited") == true
-        or instance:GetAttribute("ReviewedImportedScript") == true
-    local adapted = instance:GetAttribute("ImportedScriptAdapted") == true
-        or instance:GetAttribute("AdaptedIntoEggBreakers") == true
-        or hasStringAttribute(instance, "ScriptAdaptedTo")
-    local stamped = instance:GetAttribute("ImportedScriptStamped") == true
-        or (
-            hasStringAttribute(instance, "ScriptAuditPurpose")
-            and hasStringAttribute(instance, "ScriptSandboxStatus")
-            and hasStringAttribute(instance, "ImportedScriptOwner")
-        )
-    return reviewed and adapted and stamped
+    return ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
 end
 
 local function hasAncestorAttribute(instance, attributeName, expectedValue)
-    local current = instance
-    while current do
-        local value = current:GetAttribute(attributeName)
-        if expectedValue == nil then
-            if value ~= nil then return true end
-        elseif value == expectedValue then
-            return true
-        end
-        current = current.Parent
-    end
-    return false
+    return ImportedScriptPolicy.HasAncestorAttribute(instance, attributeName, expectedValue)
 end
 
 local function isRawScriptReviewQueue(instance)
-    return hasAncestorAttribute(instance, "RawImportedScriptPreserved", true)
-        or hasAncestorAttribute(instance, "G032RawScriptPreserved", true)
-        or hasAncestorAttribute(instance, "ImportedScriptReviewQueue", true)
-        or hasAncestorAttribute(instance, "ScriptReviewStatus", "raw_preserved_pending_adaptation")
+    return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
 end
 
 local function isAuditedSandboxedModuleScript(instance)
-    return instance.ClassName == "ModuleScript"
-        and isReviewedAdaptedStampedScript(instance)
-        and instance:GetAttribute("Sandboxed") == true
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance) and instance.ClassName == "ModuleScript"
 end
 
 local function isReleaseReadyScript(instance)
-    if isExecutableScript(instance) then
-        return isReviewedAdaptedStampedScript(instance)
-    end
-    return isAuditedSandboxedModuleScript(instance)
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance)
 end
 
 local function isEnabledExecutableScript(instance)
-    return isExecutableScript(instance) and instance.Disabled ~= true
+    return ImportedScriptPolicy.IsEnabledExecutableScript(instance)
 end
 
 local function addUnique(set, value)
@@ -443,28 +414,18 @@ function AssetImportAuditService:AuditAndRepair(options)
                 local rawReview = isRawScriptReviewQueue(descendant)
                 local releaseReadyScript = isReleaseReadyScript(descendant)
                 local rawExecutableEnabled = rawReview and isEnabledExecutableScript(descendant)
-                table.insert(scriptRecords, {
-                    path = descendant:GetFullName(),
-                    className = descendant.ClassName,
-                    audited = descendant:GetAttribute("ImportedScriptAudited") == true,
-                    reviewed = descendant:GetAttribute("ImportedScriptAudited") == true
-                        or descendant:GetAttribute("ReviewedImportedScript") == true,
-                    adapted = descendant:GetAttribute("ImportedScriptAdapted") == true
-                        or descendant:GetAttribute("AdaptedIntoEggBreakers") == true
-                        or hasStringAttribute(descendant, "ScriptAdaptedTo"),
-                    stamped = descendant:GetAttribute("ImportedScriptStamped") == true
-                        or (
-                            hasStringAttribute(descendant, "ScriptAuditPurpose")
-                            and hasStringAttribute(descendant, "ScriptSandboxStatus")
-                            and hasStringAttribute(descendant, "ImportedScriptOwner")
-                    ),
-                    sandboxed = descendant:GetAttribute("Sandboxed") == true,
-                    quarantined = descendant:GetAttribute("ImportedScriptQuarantined") == true,
-                    rawReview = rawReview,
-                    rawExecutableEnabled = rawExecutableEnabled,
-                    releaseReadyScript = releaseReadyScript,
-                })
-                if rawReview then
+                table.insert(scriptRecords, ImportedScriptPolicy.BuildRecord(descendant))
+                if releaseReadyScript then
+                    if mutate then
+                        descendant:SetAttribute("ImportedScriptPreserved", true)
+                    end
+                elseif rawReview and descendant:IsA("ModuleScript") then
+                    if mutate and quarantineFolder then
+                        self:_quarantineScript(descendant, quarantineFolder, quarantinedScripts)
+                    else
+                        table.insert(failures, descendant:GetFullName() .. " raw queued ModuleScript must be reviewed, adapted, stamped, and Sandboxed=true before preservation")
+                    end
+                elseif rawReview then
                     if mutate then
                         if isExecutableScript(descendant) then
                             descendant.Disabled = true
@@ -472,10 +433,6 @@ function AssetImportAuditService:AuditAndRepair(options)
                         descendant:SetAttribute("ImportedScriptPreservedForReview", true)
                     elseif rawExecutableEnabled then
                         table.insert(failures, descendant:GetFullName() .. " raw review queued executable script is enabled")
-                    end
-                elseif isExecutableScript(descendant) and releaseReadyScript then
-                    if mutate then
-                        descendant:SetAttribute("ImportedScriptPreserved", true)
                     end
                 elseif isExecutableScript(descendant) and mutate and quarantineFolder then
                     self:_quarantineScript(descendant, quarantineFolder, quarantinedScripts)
