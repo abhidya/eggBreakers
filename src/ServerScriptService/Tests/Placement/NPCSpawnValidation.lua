@@ -5,6 +5,7 @@ local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local NPCService = require(ServerScriptService.Services.NPCService)
 local NPCSpawnService = require(ServerScriptService.Services.NPCSpawnService)
 local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
+local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 
 local suite = { name = "NPCSpawnValidation.server", category = "Placement", tests = {} }
 
@@ -148,6 +149,78 @@ table.insert(suite.tests, { name = "staged NPC helper root remains invisible aft
     prepared:Destroy()
     marker:Destroy()
     source:Destroy()
+end })
+
+table.insert(suite.tests, { name = "NPC spawn resolves staged MeshPart model before fallback", run = function()
+    local oldRecords = NPCService.NPCs
+    local oldStagingFolderName = StagedMeshLibrary.StagingFolderName
+    local oldTyrannosaurusEntry = StagedMeshLibrary.SpeciesMesh.tyrannosaurus
+    NPCService.NPCs = {}
+    StagedMeshLibrary.StagingFolderName = "NPCSpawnValidation_StagedDinosaurs_" .. tostring(math.floor(os.clock() * 1000000))
+    StagedMeshLibrary.SpeciesMesh.tyrannosaurus = {
+        folder = "Carnivores (land)",
+        name = "TyrannosaurusProbe",
+    }
+    local stagingRoot
+    local marker
+    local record
+    local ok, err = pcall(function()
+        local leaked = workspace:FindFirstChild(StagedMeshLibrary.StagingFolderName)
+        if leaked then leaked:Destroy() end
+        stagingRoot = Instance.new("Folder")
+        stagingRoot.Name = StagedMeshLibrary.StagingFolderName
+        stagingRoot.Parent = workspace
+        local carnivores = Instance.new("Folder")
+        carnivores.Name = "Carnivores (land)"
+        carnivores.Parent = stagingRoot
+
+        local source = Instance.new("Model")
+        source.Name = "TyrannosaurusProbe"
+        source:SetAttribute("SourceAssetId", "probe-staged-mesh")
+        local root = Instance.new("Part")
+        root.Name = "RootPart"
+        root.Size = Vector3.new(16, 16, 16)
+        root.Transparency = 1
+        root.Parent = source
+        local body = Instance.new("MeshPart")
+        body.Name = "VisibleApexBody"
+        body.Size = Vector3.new(8, 4, 16)
+        body.Transparency = 0
+        body.Parent = source
+        local animationController = Instance.new("AnimationController")
+        animationController.Parent = source
+        source.PrimaryPart = root
+        source.Parent = carnivores
+
+        marker = Instance.new("Part")
+        marker.Name = "StagedApexSpawnProbe"
+        marker.Position = Vector3.new(0, 18, 0)
+        marker:SetAttribute("NPCKind", "Apex")
+        marker.Parent = workspace
+
+        local resolved = NPCSpawnService:ResolveImportedNPCModel("Apex")
+        Assert.equals(resolved, source, "Apex resolves staged Tyrannosaurus source model")
+        local createOk
+        createOk, record = NPCSpawnService:CreateNPCRecord(marker, "Apex", 9102)
+        Assert.truthy(createOk, "staged apex NPC record creates")
+        Assert.notNil(record and record.Instance, "record has spawned staged instance")
+        Assert.truthy(NPCSpawnService:CountMeshParts(record.Instance) > 0, "spawned staged NPC keeps MeshPart body")
+        local spawnedRoot = record.Instance:FindFirstChild("RootPart", true)
+        local spawnedBody = record.Instance:FindFirstChild("VisibleApexBody", true)
+        Assert.notNil(spawnedRoot, "spawned staged NPC has root helper")
+        Assert.notNil(spawnedBody, "spawned staged NPC has mesh body")
+        Assert.equals(spawnedRoot.Transparency, 1, "spawned staged helper root hidden")
+        Assert.equals(spawnedRoot:GetAttribute("NPCInvisibleRigHelper"), true, "spawned staged helper marked")
+        Assert.truthy(spawnedBody.Transparency < 1, "spawned staged MeshPart remains visible")
+        Assert.equals(record.Instance:GetAttribute("SourceAssetId"), "probe-staged-mesh", "spawned NPC preserves staged source asset id")
+    end)
+    if record and record.Instance then record.Instance:Destroy() end
+    if marker then marker:Destroy() end
+    if stagingRoot then stagingRoot:Destroy() end
+    StagedMeshLibrary.StagingFolderName = oldStagingFolderName
+    StagedMeshLibrary.SpeciesMesh.tyrannosaurus = oldTyrannosaurusEntry
+    NPCService.NPCs = oldRecords
+    if not ok then error(err) end
 end })
 
 table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and predators", run = function()

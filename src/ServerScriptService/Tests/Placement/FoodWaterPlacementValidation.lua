@@ -21,6 +21,31 @@ local function countVisibleFoodAffordances(food)
     return count
 end
 
+local function makeImportedFoodTemplate(name, kind, diet)
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    if not library then
+        library = Instance.new("Folder")
+        library.Name = "ImportedAssetLibrary"
+        library.Parent = ReplicatedStorage
+    end
+    local template = Instance.new("Model")
+    template.Name = name
+    template:SetAttribute("ImportedFoodVisualTemplate", true)
+    template:SetAttribute("FoodKind", kind)
+    template:SetAttribute("Diet", diet)
+    template:SetAttribute("CreatorStoreOnly", true)
+    template:SetAttribute("ImportedVisibleAsset", true)
+    template:SetAttribute("AssetManifestId", "TestImported" .. kind)
+    local part = Instance.new("Part")
+    part.Name = name .. "_ReadablePart"
+    part.Size = Vector3.new(4, 2, 4)
+    part.Transparency = 0.05
+    part.Parent = template
+    template.PrimaryPart = part
+    template.Parent = library
+    return template
+end
+
 table.insert(suite.tests, { name = "nursery food water exists", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     Assert.notNil(folders.Zones:FindFirstChild("NurseryGrove"), "NurseryGrove zone exists")
@@ -49,6 +74,49 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialWater:GetAttribute("InteractionHint"), "Drink water", "water hint is readable")
     Assert.truthy(countVisibleFoodAffordances(tutorialFood) >= 3, "starter plant has a readable foliage cluster")
     Assert.truthy(countVisibleFoodAffordances(tutorialMeat) >= 3, "starter carcass has meat and bone affordances")
+end })
+
+table.insert(suite.tests, { name = "imported food visual templates are preferred and stamped", run = function()
+    local plantTemplate = makeImportedFoodTemplate("TestImportedStarterFernVisual", "StarterPlant", "Herbivore")
+    local carcassTemplate = makeImportedFoodTemplate("TestImportedTutorialCarcassVisual", "TutorialCarcass", "Carnivore")
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+
+    local tutorialFood = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")
+    local tutorialMeat = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryTutorialMeatCache")
+    local importedPlant = tutorialFood and tutorialFood:FindFirstChild(MapLayoutService.ImportedFoodVisualName)
+    local importedCarcass = tutorialMeat and tutorialMeat:FindFirstChild(MapLayoutService.ImportedFoodVisualName)
+
+    Assert.notNil(importedPlant, "starter plant uses imported visual child")
+    Assert.notNil(importedCarcass, "tutorial carcass uses imported visual child")
+    Assert.equals(tutorialFood.Transparency, 1, "starter plant query stays hidden")
+    Assert.equals(tutorialFood:GetAttribute("InvisibleQueryHelper"), true, "starter plant remains hidden query helper")
+    Assert.equals(tutorialFood:GetAttribute("ImportedFoodVisualAttached"), true, "starter plant stamped with imported visual binding")
+    Assert.truthy(string.find(tutorialFood:GetAttribute("ImportedFoodVisualTemplate") or "", plantTemplate.Name, 1, true) ~= nil, "starter plant records imported template source")
+    Assert.equals(importedPlant:GetAttribute("ImportedFoodVisual"), true, "imported plant clone is stamped")
+    Assert.equals(importedPlant:GetAttribute("ImportedVisibleAsset"), true, "imported plant clone remains imported asset")
+    Assert.truthy(countVisibleFoodAffordances(tutorialFood) >= 1, "imported plant visual is readable")
+    Assert.equals(tutorialMeat:GetAttribute("ImportedFoodVisualAttached"), true, "tutorial carcass stamped with imported visual binding")
+    Assert.truthy(string.find(tutorialMeat:GetAttribute("ImportedFoodVisualTemplate") or "", carcassTemplate.Name, 1, true) ~= nil, "tutorial carcass records imported template source")
+    Assert.falsy(tutorialFood:FindFirstChild(MapLayoutService.FoliageVisualName), "procedural foliage is not generated when import exists")
+    Assert.falsy(tutorialMeat:FindFirstChild("CarcassBoneVisual"), "procedural carcass bone is not generated when import exists")
+
+    plantTemplate:Destroy()
+    carcassTemplate:Destroy()
+end })
+
+table.insert(suite.tests, { name = "procedural food visual remains fallback when import absent", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    local source = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")
+    if source then source:Destroy() end
+
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+    local tutorialFood = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")
+    Assert.notNil(tutorialFood, "starter plant recreated")
+    Assert.equals(tutorialFood:GetAttribute("ImportedFoodVisualAttached"), false, "starter plant records missing imported visual")
+    Assert.falsy(tutorialFood:FindFirstChild(MapLayoutService.ImportedFoodVisualName), "no imported visual child without template")
+    Assert.notNil(tutorialFood:FindFirstChild(MapLayoutService.FoliageVisualName), "procedural foliage fallback exists")
+    Assert.truthy(countVisibleFoodAffordances(tutorialFood) >= 3, "procedural foliage fallback remains readable")
 end })
 
 

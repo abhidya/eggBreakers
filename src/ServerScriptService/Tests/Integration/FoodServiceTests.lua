@@ -5,6 +5,7 @@ local SurvivalService = require(game:GetService("ServerScriptService").Services.
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local NPCService = require(game:GetService("ServerScriptService").Services.NPCService)
+local MapLayoutService = require(game:GetService("ServerScriptService").Services.MapLayoutService)
 local suite = { name = "FoodServiceTests.server", category = "Integration", tests = {} }
 
 local function setup(id, diet)
@@ -109,6 +110,46 @@ table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = 
     Assert.equals(food.Transparency, 0, "food visibly restored after cooldown")
     Assert.equals(leaf.Transparency, 0.1, "first affordance restores original transparency")
     Assert.equals(frond.Transparency, 0.25, "second affordance restores original transparency")
+    food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "food service depletes imported food visual affordance", run = function()
+    local library = game:GetService("ReplicatedStorage"):FindFirstChild("ImportedAssetLibrary")
+    if not library then
+        library = Instance.new("Folder")
+        library.Name = "ImportedAssetLibrary"
+        library.Parent = game:GetService("ReplicatedStorage")
+    end
+    local template = Instance.new("Model")
+    template.Name = "TestImportedFoodServiceFern"
+    template:SetAttribute("ImportedFoodVisualTemplate", true)
+    template:SetAttribute("FoodKind", "StarterPlant")
+    template:SetAttribute("Diet", "Herbivore")
+    template:SetAttribute("ImportedVisibleAsset", true)
+    local readablePart = Instance.new("Part")
+    readablePart.Name = "ReadableImportedFern"
+    readablePart.Transparency = 0.15
+    readablePart.Parent = template
+    template.PrimaryPart = readablePart
+    template.Parent = library
+
+    local p, food = setup(32009, "Herbivore")
+    food:SetAttribute("RespawnCooldownSeconds", 1)
+    MapLayoutService:ApplyFoodMetadata(food, { diet = "Herbivore", nutrition = 20, kind = "StarterPlant" })
+    MapLayoutService:ApplyReleaseHiddenQueryPart(food)
+    local visual = MapLayoutService:EnsureVisibleFoliageVisual(food, { diet = "Herbivore", kind = "StarterPlant" })
+    Assert.notNil(visual, "imported visual attaches")
+    Assert.equals(food:GetAttribute("ImportedFoodVisualAttached"), true, "query helper records imported visual")
+    local visualPart = visual:FindFirstChild("ReadableImportedFern", true)
+    Assert.notNil(visualPart, "imported visual exposes readable part")
+
+    Assert.truthy(FoodWaterService:RequestEat(p, food), "eat depletes imported visual food")
+    Assert.equals(visualPart.Transparency, FoodWaterService.DepletedFoliageTransparency, "imported visible part dims")
+    food:SetAttribute("DepletedUntil", os.time() - 1)
+    FoodWaterService:RefreshDepletion(food)
+    Assert.equals(visualPart.Transparency, 0.15, "imported visible part restores")
+
+    template:Destroy()
     food:Destroy()
 end })
 

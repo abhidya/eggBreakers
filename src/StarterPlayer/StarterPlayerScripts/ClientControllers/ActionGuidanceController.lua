@@ -77,6 +77,7 @@ function ActionGuidanceController:Update(gui, context)
         if eatDrink then
             eatDrink.Text = MobileControlsController:BuildFoodWaterLegend(stats)
             eatDrink:SetAttribute("CurrentTargetName", "")
+            eatDrink:SetAttribute("CurrentTargetLabel", "")
             eatDrink:SetAttribute("CurrentTargetType", "None")
             eatDrink:SetAttribute("CurrentTargetDiet", "")
             eatDrink:SetAttribute("CurrentTargetDistanceStuds", 0)

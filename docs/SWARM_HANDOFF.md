@@ -11,7 +11,8 @@ Hard-won rules from a full build session. Obey these to avoid re-losing the same
 
 - **MCP SPLIT IS STRICT**: use **`Roblox_Studio` (proxy -> the `eggBreakers2` Studio)** for ALL live game actions
   (execute_luau, asset-id inserts, terrain, screenshots, inspection). Use **`Roblox_Search` (kevinswint fork -> the
-  `place1` Studio)** for **SEARCH/DISCOVERY ONLY** (`search_assets`/`preview_asset` quality ranking). **BLOCK on search
+  `place1` Studio)** for **SEARCH/DISCOVERY ONLY** (`search_assets`/`preview_asset` quality ranking). The Rust legacy
+  fork is filtered to expose only those two tools. **BLOCK on search
   failure** — if the fork search fails, retry it only after the user toggles the `place1` plugin; do **NOT** fall back to
   proxy search for discovery. The fork cannot insert into eggBreakers2; to actually insert a validated asset, pass the
   accepted numeric asset id to `Roblox_Studio`/eggBreakers2 without using proxy creator-store search.
@@ -64,8 +65,9 @@ Your responsibility, every wave, forever until the slice is done:
   `multi_edit`, `script_read/grep`, `get_console_output`, `start_stop_play`, `generate_mesh/material/procedural_model`,
   `character_navigation`.
 - **"Roblox_Search" MCP** (kevinswint fork): `search_assets` (QUALITY-SCORED: favorites + verified-creator ✓ + recency),
-  `preview_asset` (insert to evaluate), `capture_screenshot`, `run_code`, `write_script`. First call after idle may
-  time out once ("Plugin search failed: Timeout") — retry once.
+  `preview_asset` (insert to evaluate metadata in place1). No `capture_screenshot`, `run_code`, `write_script`, or
+  health-state tools are enabled on this profile. First call after idle may time out once ("Plugin search failed:
+  Timeout") — retry once.
 - **SERIAL CONSTRAINT**: both MCPs share ONE Studio plugin (port 44755). Swarm agents CANNOT drive Studio or search in
   parallel. The LEADER performs all Studio + `search_assets` + `preview_asset` + import + terrain + screenshots + tests,
   one at a time. Subagents fan out only NON-Studio work: code authoring (file-partitioned), web research, ranking, docs.

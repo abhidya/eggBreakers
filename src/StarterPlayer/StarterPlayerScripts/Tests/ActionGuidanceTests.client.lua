@@ -7,14 +7,21 @@ local MobileControlsController = require(script.Parent.Parent.ClientControllers.
 
 local suite = { name = "ActionGuidanceTests.client", category = "Client", tests = {} }
 
+local function createLabel(parent, name, text, position)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.Text = text
+    label.Position = position
+    label.Size = UDim2.fromOffset(240, 42)
+    label.BackgroundTransparency = 1
+    label.Parent = parent
+    return label
+end
+
 local function makeGuidanceGui()
     local gui = UIFactory:CreateRootGui("ActionGuidanceTests")
-    UIFactory:CreateLabel(gui, "NearestActionHintLabel", "◌ 🌿  💧", UDim2.fromOffset(0, 0), {
-        Size = UDim2.fromOffset(240, 42),
-    })
-    UIFactory:CreateLabel(gui, "DialoguePromptLabel", "🌿 + 💧 = ⭐", UDim2.fromOffset(0, 48), {
-        Size = UDim2.fromOffset(240, 42),
-    })
+    createLabel(gui, "NearestActionHintLabel", "◌ 🌿  💧", UDim2.fromOffset(0, 0))
+    createLabel(gui, "DialoguePromptLabel", "🌿 + 💧 = ⭐", UDim2.fromOffset(0, 48))
     UIFactory:CreateButton(gui, "EatDrinkButton", "🍎💧", UDim2.fromOffset(0, 96), {
         Size = UDim2.fromOffset(120, 58),
     })
@@ -82,6 +89,42 @@ table.insert(suite.tests, { name = "near target becomes one tap eat action", run
     Assert.equals(eatDrink:GetAttribute("CurrentTargetName"), "NearFern", "button tracks target")
     Assert.equals(eatDrink.Active, true, "near button is tappable")
     Assert.truthy(string.find(eatDrink.Text, "Snack", 1, true) ~= nil, "button names snack action")
+
+    target:Destroy()
+    gui:Destroy()
+end })
+
+table.insert(suite.tests, { name = "near target label clears when target becomes sensed only", run = function()
+    local gui = makeGuidanceGui()
+    local target = Instance.new("Part")
+    target.Name = "TransitionFern"
+    target:SetAttribute("Diet", "Herbivore")
+    local near = true
+    local context = {
+        LastStats = { diet = "Herbivore", hunger = 20, thirst = 90 },
+        SenseTargetDistance = 80,
+        ActionTargetDistance = 14,
+        FindNearestEatDrinkTarget = function(_, maxDistance)
+            if near or maxDistance >= 80 then
+                return target, "Food", near and 8 or 42
+            end
+            return nil, nil, nil
+        end,
+        DescribeTarget = function(_, instance)
+            return instance.Name, "Herbivore"
+        end,
+    }
+
+    Assert.truthy(ActionGuidanceController:Update(gui, context), "near guidance updates")
+    local eatDrink = gui:FindFirstChild("EatDrinkButton")
+    Assert.equals(eatDrink:GetAttribute("CurrentTargetLabel"), "TransitionFern", "near target label set")
+
+    near = false
+    Assert.truthy(ActionGuidanceController:Update(gui, context), "far guidance updates")
+    Assert.equals(eatDrink:GetAttribute("Context"), "Sensed", "far target becomes sensed")
+    Assert.equals(eatDrink:GetAttribute("CurrentTargetName"), "", "far target name clears")
+    Assert.equals(eatDrink:GetAttribute("CurrentTargetLabel"), "", "far target label clears")
+    Assert.equals(eatDrink.Active, false, "far sensed button is not tappable")
 
     target:Destroy()
     gui:Destroy()

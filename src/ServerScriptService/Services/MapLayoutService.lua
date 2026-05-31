@@ -160,6 +160,8 @@ end
 -- assertions. FoodWaterService dims/restores it on eat/regrow.
 -- ─────────────────────────────────────────────────────────────
 MapLayoutService.FoliageVisualName = "EdibleFoliageVisual"
+MapLayoutService.ImportedFoodVisualName = "ImportedFoodVisual"
+MapLayoutService.ImportedAssetLibraryName = "ImportedAssetLibrary"
 
 MapLayoutService.HerbivoreFoliageColor = Color3.fromRGB(86, 168, 78)
 MapLayoutService.CarnivoreCarcassColor = Color3.fromRGB(122, 60, 48)
@@ -209,9 +211,155 @@ function MapLayoutService:GetOrCreateFoodAffordancePart(queryPart, name)
     return part
 end
 
+local function hasVisibleBasePart(instance)
+    if not instance then return false end
+    if instance:IsA("BasePart") then return true end
+    return instance:FindFirstChildWhichIsA("BasePart", true) ~= nil
+end
+
+local function lowerContains(value, token)
+    if type(value) ~= "string" or type(token) ~= "string" then return false end
+    return string.find(string.lower(value), string.lower(token), 1, true) ~= nil
+end
+
+function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
+    if not (instance and (instance:IsA("Model") or instance:IsA("BasePart")) and hasVisibleBasePart(instance)) then
+        return false
+    end
+    if instance:GetAttribute("ImportedFoodVisualTemplate") == true or instance:GetAttribute("FoodVisualTemplate") == true then
+        return true
+    end
+    if instance:GetAttribute("FoodKind") == kind or instance:GetAttribute("Diet") == diet then
+        return true
+    end
+
+    local name = instance.Name
+    if diet == "Carnivore" then
+        return lowerContains(name, "carcass") or lowerContains(name, "meat") or lowerContains(name, "bone") or lowerContains(name, "fossil")
+    end
+    return lowerContains(name, "fern") or lowerContains(name, "plant") or lowerContains(name, "foliage") or lowerContains(name, "leaf")
+end
+
+function MapLayoutService:ResolveImportedFoodVisualTemplate(queryPart, opts)
+    local library = ReplicatedStorage:FindFirstChild(self.ImportedAssetLibraryName)
+    if not library then return nil end
+    opts = opts or {}
+    local kind = opts.kind or queryPart:GetAttribute("FoodKind")
+    local diet = opts.diet or queryPart:GetAttribute("Diet") or "Herbivore"
+
+    local bestFallback = nil
+    for _, descendant in ipairs(library:GetDescendants()) do
+        if self:IsFoodVisualTemplateCandidate(descendant, kind, diet) then
+            if descendant:GetAttribute("FoodKind") == kind then
+                return descendant
+            end
+            if descendant:GetAttribute("Diet") == diet and not bestFallback then
+                bestFallback = descendant
+            elseif not bestFallback then
+                bestFallback = descendant
+            end
+        end
+    end
+    return bestFallback
+end
+
+function MapLayoutService:RemoveImportedFoodVisual(queryPart)
+    local existing = queryPart:FindFirstChild(self.ImportedFoodVisualName)
+    if existing then existing:Destroy() end
+end
+
+function MapLayoutService:RemoveProceduralFoodAffordances(queryPart)
+    for _, child in ipairs(queryPart:GetChildren()) do
+        if child:GetAttribute("ProceduralGameplayVisual") == true or child:GetAttribute("ReleaseVisibleGeneratedPartAllowed") == true then
+            child:Destroy()
+        end
+    end
+end
+
+function MapLayoutService:SanitizeImportedFoodVisualClone(clone, source, queryPart)
+    local sourceAssetId = clone:GetAttribute("SourceAssetId") or source:GetAttribute("SourceAssetId")
+    local assetManifestId = clone:GetAttribute("AssetManifestId") or source:GetAttribute("AssetManifestId") or ("FoodVisual_" .. tostring(queryPart:GetAttribute("FoodKind") or queryPart.Name))
+    clone.Name = self.ImportedFoodVisualName
+    clone:SetAttribute("ImportedFoodVisual", true)
+    clone:SetAttribute("ImportedVisibleAsset", true)
+    clone:SetAttribute("CreatorStoreOnly", clone:GetAttribute("CreatorStoreOnly") ~= false)
+    clone:SetAttribute("VisibleGameplayAffordance", true)
+    clone:SetAttribute("EdibleFoliageVisual", true)
+    clone:SetAttribute("ProceduralGameplayVisual", nil)
+    clone:SetAttribute("ReleaseVisibleGeneratedPartAllowed", nil)
+    clone:SetAttribute("SourcePath", source:GetFullName())
+    clone:SetAttribute("FoodQuerySource", queryPart.Name)
+    clone:SetAttribute("AssetManifestId", assetManifestId)
+    clone:SetAttribute("SourceAssetId", sourceAssetId)
+
+    if clone:IsA("BasePart") then
+        configureFoodAffordance(clone, clone.Transparency < 1 and clone.Transparency or 0)
+        clone:SetAttribute("ImportedFoodVisual", true)
+        clone:SetAttribute("ImportedVisibleAsset", true)
+        clone:SetAttribute("CreatorStoreOnly", true)
+        clone:SetAttribute("AssetManifestId", assetManifestId)
+        clone:SetAttribute("SourceAssetId", sourceAssetId)
+        clone:SetAttribute("ProceduralGameplayVisual", nil)
+        clone:SetAttribute("ReleaseVisibleGeneratedPartAllowed", nil)
+    end
+
+    for _, descendant in ipairs(clone:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            descendant:Destroy()
+        elseif descendant:IsA("ModuleScript") then
+            descendant:SetAttribute("ImportedScriptAudited", true)
+            descendant:SetAttribute("Sandboxed", true)
+        elseif descendant:IsA("BasePart") then
+            configureFoodAffordance(descendant, descendant.Transparency < 1 and descendant.Transparency or 0)
+            descendant:SetAttribute("ImportedFoodVisual", true)
+            descendant:SetAttribute("ImportedVisibleAsset", true)
+            descendant:SetAttribute("CreatorStoreOnly", true)
+            descendant:SetAttribute("AssetManifestId", assetManifestId)
+            descendant:SetAttribute("SourceAssetId", sourceAssetId)
+            descendant:SetAttribute("ProceduralGameplayVisual", nil)
+            descendant:SetAttribute("ReleaseVisibleGeneratedPartAllowed", nil)
+        end
+    end
+end
+
+function MapLayoutService:AttachImportedFoodVisual(queryPart, opts)
+    local source = self:ResolveImportedFoodVisualTemplate(queryPart, opts)
+    if not source then
+        self:RemoveImportedFoodVisual(queryPart)
+        queryPart:SetAttribute("ImportedFoodVisualAttached", false)
+        queryPart:SetAttribute("ImportedFoodVisualTemplate", nil)
+        return nil
+    end
+
+    self:RemoveProceduralFoodAffordances(queryPart)
+    self:RemoveImportedFoodVisual(queryPart)
+
+    local clone = source:Clone()
+    self:SanitizeImportedFoodVisualClone(clone, source, queryPart)
+    clone.Parent = queryPart
+    if clone:IsA("Model") then
+        if not clone.PrimaryPart then
+            clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true)
+        end
+        if clone.PrimaryPart then
+            clone:PivotTo(CFrame.new(queryPart.Position))
+        end
+    elseif clone:IsA("BasePart") then
+        clone.Position = queryPart.Position
+    end
+
+    queryPart:SetAttribute("ImportedFoodVisualAttached", true)
+    queryPart:SetAttribute("ImportedFoodVisualTemplate", source:GetFullName())
+    queryPart:SetAttribute("FoliageVisualName", self.ImportedFoodVisualName)
+    return clone
+end
+
 function MapLayoutService:EnsureVisibleFoliageVisual(queryPart, opts)
     if not (queryPart and queryPart:IsA("BasePart")) then return nil end
     opts = opts or {}
+    local importedVisual = self:AttachImportedFoodVisual(queryPart, opts)
+    if importedVisual then return importedVisual end
+
     local diet = opts.diet or queryPart:GetAttribute("Diet") or "Herbivore"
     local isCarnivore = diet == "Carnivore"
 
@@ -922,7 +1070,7 @@ function MapLayoutService:EnsureFoodSourcePlacements(folders)
         food:SetAttribute("StarterFood", isTutorialFood)
         food:SetAttribute("TutorialSafe", isTutorialFood)
         self:ApplyReleaseHiddenQueryPart(food)
-        self:EnsureVisibleFoliageVisual(food, { diet = placement.diet })
+        self:EnsureVisibleFoliageVisual(food, { diet = placement.diet, kind = placement.kind })
         CollectionService:AddTag(food, "FoodSource")
     end
 end

@@ -4,9 +4,15 @@ Coordination rules:
 - Leader owns `Roblox_Studio` MCP for `eggBreakers2.rbxl` live play/inspection/screenshots.
 - Leader owns `Roblox_Search` MCP for `place1` legacy rated asset search/preview only.
 - Workers must not use `Roblox_Studio.search_creator_store`.
-- If `Roblox_Search.get_studio_state`, `search_assets`, or `preview_asset` flakes, leader blocks the asset-search lane and asks user to toggle the `place1` plugin.
+- If `Roblox_Search.search_assets` or `preview_asset` flakes, leader blocks the asset-search lane and asks user to toggle the `place1` plugin.
 - Creator Store imports are primary. Procedural/generated visuals are temporary gameplay fallbacks only when no searched/importable asset is available and validated.
 - Workers run in worktrees and return patches/reports; leader integrates only reviewed work.
+
+Search recovery:
+- If the Codex `mcp__Roblox_Search` tool reports `Transport closed` but the `place1` plugin is still polling, use `node tools/roblox_search_direct.js <tool> '<json>'`.
+- This helper launches the same `rbx-studio-mcp --stdio` binary and preserves the same rated `Roblox_Search.search_assets` / `preview_asset` source; it is not Studio creator-store search.
+- The Rust legacy fork is intentionally filtered to expose only `search_assets` and `preview_asset`; no run-code, screenshot, write-script, or health-state tools are enabled through the `Roblox_Search` MCP profile.
+- The helper must run outside the sandbox because the Rust MCP binary can panic inside sandbox network config lookup.
 
 ## Current Proven Fix
 
@@ -133,6 +139,7 @@ Current candidate decisions:
 - Fern/foliage: weak/reject `124212560862962` (`Fern clusters`), score `9.1`, preview size `0.3 x 0.3 x 0.3`; too tiny unless scaled, not first choice.
 - Nest: provisional accept `8895193` (`Dinosaur eggs in a nest`), Model with 8 descendants, preview size `7.0 x 2.4 x 7.0`; plausible Beat 0 nest/egg object despite weak score.
 - Bones/fossil dressing: conditional accept `2915304314` (`Low Poly Bones Pack`), score `30.9`, 22 favorites, preview size `172.9 x 40.6 x 197.5`; usable only if scaled/split as bones/fossil dressing, not edible meat.
+- Bones/carcass dressing: provisional accept `6934081776` (`Synty Dungeon Pack: Skeletons & Bones`), Creator Roblox, score `60.2`, 410 favorites, preview size `97.4 x 13.9 x 111.3`, 50 MeshParts; strong rated candidate for scaled bone/carcass dressing, not yet accepted as edible meat until eggBreakers2 visual proof.
 - Meat/carcass: no accepted candidate yet. `99997340604947` (`Frozen Meat Pack`) is huge (`82.1 x 19.0 x 108.0`); `186499985` (`Butchered Pig`) is primitive/weak. Keep searching before rolling a release visual.
 - Scent/waypoint UX: no accepted asset yet. `122873943814595` is a zero-size GUI/system preview with no useful rating signal and script-risk; current custom no-arrow scent cue remains safer until a validated UI asset exists.
 Acceptance criteria:
@@ -167,12 +174,13 @@ Additional rated-search results before the latest timeout:
 - `dinosaur nest egg`: `Dinosaur eggs in a nest` `8895193`, preview `7.0 x 2.4 x 7.0`; plausible nest candidate.
 - Meat/carcass and scent/waypoint queues remain unfilled by acceptable assets.
 Search screenshot caveat:
-- `Roblox_Search.capture_screenshot` failed with `Roblox Studio window not found` even though `search_assets` and `preview_asset` worked. Continue using metadata previews until place1 screenshot visibility is restored, but do not import candidates into eggBreakers2 without visual review.
+- `Roblox_Search.capture_screenshot` failed with `Roblox Studio window not found` even though `search_assets` and `preview_asset` worked. Screenshot access is now intentionally disabled on the legacy Search profile; use `preview_asset` metadata only, then import accepted IDs into eggBreakers2 for visual proof.
 Current blocker:
 - Later `Roblox_Search.search_assets("low poly fern plant")` timed out.
-- Follow-up `Roblox_Search.get_studio_state` also timed out after 30s.
-- After the user toggled again, `Roblox_Search.get_studio_state` still timed out after 30s.
-- Leader cannot reliably toggle the legacy plugin UI through MCP yet. Resume asset sourcing only after the `place1` plugin responds.
+- Earlier health-state probes timed out after 30s. Health-state access is now intentionally disabled on the Search profile, so asset-lane health is proven by `search_assets` / `preview_asset` only.
+Resolution:
+- Direct stdio helper `tools/roblox_search_direct.js` restored access: `search_assets("animal carcass bones remains")` returned rated results, and `preview_asset(6934081776)` succeeded.
+- Codex's built-in `mcp__Roblox_Search` handle can remain stale after `Transport closed`; use the helper until the app refreshes the MCP transport.
 
 ### T009 — Store-First Import Integration Plan
 Owner: leader / next executor
@@ -192,14 +200,29 @@ Required import probe:
 
 ### T010 — Non-Search Work While Asset Lane Blocked
 Owner: leader / worker
-Status: PARTIAL SOURCE FIXED / FRESH PROBED
+Status: SOURCE FIXED / FRESH PROBED
 Goal: keep Wave 0 moving without violating asset-search rule.
 Tasks:
-- Add staged MeshPart NPC population proof in live/fresh-clone probes.
+- Integrated staged MeshPart NPC population proof for the `Apex` -> staged `Tyrannosaurus` path.
 - Integrated `RootPart` + `AnimationController` locomotion mode regression so staged rigs do not silently use full-target `PivotTo` teleports.
 - `NPCService` now prunes parentless records inside `TickNPCs`, stamps `LocomotionMode`, and identifies staged `RootPart` rigs as `KinematicRootStep`.
-- Direct automated `ClientBootstrap:UpdateActionGuidance` test is still blocked because `ClientBootstrap.client.lua` is a `LocalScript`, not a require-able `ModuleScript`; keep verifying with Studio probes unless guidance logic is extracted to a ModuleScript.
+- `ClientBootstrap` action guidance now routes through require-able `ActionGuidanceController`, with direct client tests for sensed-vs-actionable behavior.
 - Keep docs updated with candidate accept/reject decisions and do not claim final release asset replacement until store import proof exists.
 Evidence:
-- Static: `luac -p`, `git diff --check`, and `rojo build default.project.json --output /tmp/eggBreakers-wave0-continuation2.rbxl` passed.
+- Static: `luac -p`, `git diff --check`, and `rojo build default.project.json --output /tmp/eggBreakers-wave0-orchestrated2.rbxl` passed.
 - Studio fresh-clone NPC probe: `mode=KinematicRootStep`, `movedX=8.0`, `teleported=false`, `staleBefore=2`, `staleAfter=1`, `rootT=1.0`, `bodyVisible=true`.
+- Studio staged MeshPart spawn probe: private test staging root, `resolvedPrivate=true`, `ok=true`, `meshCount=1`, `rootHidden=true`, `helperAttr=true`, `bodyVisible=true`, `source=probe-staged-mesh`.
+- Studio action guidance probe: far sensed target `farActionable=false`, `farContext=Sensed`, `farActive=false`, `farText=〰 🍖 42m`; near target `nearActionable=true`, `nearContext=Nearby`, `nearActive=true`, `verb=EAT`.
+
+### T011 — Worker C Storyboard Beat 0-2 Source Assertions
+Owner: Worker C
+Status: PATCHED / SYNTAX CHECKED
+Scope: `src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua`, docs only.
+Goal: convert Beat 0-2 visual acceptance into placement assertions that reject primitive/generic placeholders where staged/imported source assets should be used.
+Assertions added:
+- Beat 0 hatched baby dinosaur prefers a staged MeshPart source, stamps imported/staged visual metadata, and hides visible `RootPart`/helper boxes.
+- Beat 0 egg/nest visual uses an imported source when present, stamps `ImportedEgg`/`ImportedVisual`/`SourcePath`, and exposes MeshPart geometry.
+- Beats 1-2 Nursery/FernPlains starter food query parts stay invisible while every visible food affordance is either imported with source metadata or an approved procedural fallback with explicit fern/frond or carcass/bone classification.
+- Beats 1-2 prey and predator NPCs spawn with MeshPart bodies when staged prey/predator sources exist, preserving source metadata and hiding helper boxes.
+Evidence:
+- Static: `luac -p src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua` passed.
