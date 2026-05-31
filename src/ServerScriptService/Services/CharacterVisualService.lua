@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 local SpeciesModelService = require(script.Parent.SpeciesModelService)
 
 local CharacterVisualService = {}
@@ -94,10 +95,8 @@ local function setDescendantCollisionSafe(instance)
     end
 end
 
-local function removeExecutableCode(instance)
-    if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
-        instance:Destroy()
-    end
+local function preserveImportedVisualScript(instance, sourceUse, root)
+    ImportedScriptPolicy.PreserveOrQuarantineCloneScript(instance, sourceUse, root)
 end
 
 function CharacterVisualService:HideDefaultAvatar(character)
@@ -396,8 +395,9 @@ function CharacterVisualService:_prepareVisualClone(source, visualName)
     clone:SetAttribute("EggBreakersVisual", true)
     clone:SetAttribute("ImportedVisual", true)
     clone:SetAttribute("SourcePath", source:GetFullName())
+    local scriptSourceUse = "character_visual:" .. tostring(visualName)
     for _, descendant in ipairs(clone:GetDescendants()) do
-        removeExecutableCode(descendant)
+        preserveImportedVisualScript(descendant, scriptSourceUse, clone)
     end
     for _, descendant in ipairs(clone:GetDescendants()) do
         setDescendantCollisionSafe(descendant)
@@ -666,11 +666,11 @@ function CharacterVisualService:ApplyForState(player, state, options)
             self:_recordVisualApplyResult(character, root, false, reason)
             return false, reason
         end
-        local clone = self:_prepareVisualClone(source, self.EggVisualName)
-        self:HideDefaultAvatar(character)
         self:ClearVisual(character)
+        local clone = self:_prepareVisualClone(source, self.EggVisualName)
         local egg = self:_attachModel(character, root, clone)
         if egg then
+            self:HideDefaultAvatar(character)
             egg:SetAttribute("VisualKind", "ImportedEgg")
             self:_recordVisualApplyResult(character, root, true, nil, "imported_egg")
             return true, "imported_egg"
@@ -690,11 +690,11 @@ function CharacterVisualService:ApplyForState(player, state, options)
     -- absent, fall through to the existing SpeciesModelService path unchanged.
     local stagedModel = self:_resolveStagedModel(state.SpeciesId)
     if stagedModel then
-        local clone = self:_prepareDinosaurClone(stagedModel, state)
-        self:HideDefaultAvatar(character)
         self:ClearVisual(character)
+        local clone = self:_prepareDinosaurClone(stagedModel, state)
         local attached = self:_attachModel(character, root, clone)
         if attached then
+            self:HideDefaultAvatar(character)
             self:_recordVisualApplyResult(character, root, true, nil, "staged_dinosaur_mesh")
             return true, "staged_dinosaur_mesh"
         end
@@ -704,11 +704,11 @@ function CharacterVisualService:ApplyForState(player, state, options)
 
     local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "coelophysis", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
     if sourceModel then
-        local clone = self:_prepareDinosaurClone(sourceModel, state)
-        self:HideDefaultAvatar(character)
         self:ClearVisual(character)
+        local clone = self:_prepareDinosaurClone(sourceModel, state)
         local attached = self:_attachModel(character, root, clone)
         if attached then
+            self:HideDefaultAvatar(character)
             self:_recordVisualApplyResult(character, root, true, nil, "dinosaur_model")
             return true, "dinosaur_model"
         end

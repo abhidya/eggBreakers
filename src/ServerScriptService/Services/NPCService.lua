@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 local FoodWaterService = require(script.Parent.FoodWaterService)
 
 local NPCService = { TickLoopStarted = false }
@@ -1258,12 +1259,10 @@ function NPCService:CreateCarcassFoodSource(npcOrRecord, nutrition)
     else
         carcass.Name = (npc.Name or "Prey") .. "_CarcassFoodSource"
     end
+    local scriptSourceUse = "npc_carcass:" .. tostring(record and record.Kind or npc.Name or "unknown")
     for _, descendant in ipairs(carcass:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            descendant:Destroy()
-        elseif descendant:IsA("ModuleScript") then
-            descendant:SetAttribute("ImportedScriptAudited", true)
-            descendant:SetAttribute("Sandboxed", true)
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            ImportedScriptPolicy.PreserveOrQuarantineCloneScript(descendant, scriptSourceUse, carcass)
         elseif descendant:IsA("BasePart") then
             descendant.Anchored = true
             descendant.CanCollide = false
@@ -1324,13 +1323,11 @@ function NPCService:CreatePlayerCarcassFoodSource(deadPlayer, deadState, nutriti
     else
         carcass.Name = baseName
     end
-    -- Strip scripts; anchor geometry.
+    -- Preserve imported script source for adaptation; anchor geometry.
+    local scriptSourceUse = "player_carcass:" .. tostring(deadPlayer.Name or "unknown")
     for _, descendant in ipairs(carcass:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            descendant:Destroy()
-        elseif descendant:IsA("ModuleScript") then
-            descendant:SetAttribute("ImportedScriptAudited", true)
-            descendant:SetAttribute("Sandboxed", true)
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            ImportedScriptPolicy.PreserveOrQuarantineCloneScript(descendant, scriptSourceUse, carcass)
         elseif descendant:IsA("BasePart") then
             descendant.Anchored = true
             descendant.CanCollide = false

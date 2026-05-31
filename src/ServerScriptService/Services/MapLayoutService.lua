@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 local ZoneConfig = require(ReplicatedStorage.Shared.ZoneConfig)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local MapLayoutService = {}
 MapLayoutService.MapFolderName = "Map"
@@ -242,13 +243,8 @@ local function hasAnyToken(name, tokens)
     return false
 end
 
-local function removeExecutableCode(instance)
-    if instance:IsA("Script") or instance:IsA("LocalScript") then
-        instance:Destroy()
-    elseif instance:IsA("ModuleScript") then
-        instance:SetAttribute("ImportedScriptAudited", true)
-        instance:SetAttribute("Sandboxed", true)
-    end
+local function preserveImportedCloneScript(instance, sourceUse, root)
+    ImportedScriptPolicy.PreserveOrQuarantineCloneScript(instance, sourceUse, root)
 end
 
 function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
@@ -366,8 +362,9 @@ function MapLayoutService:SanitizeImportedDressingClone(clone, source, spec, rol
     clone:SetAttribute("AvoidRouteCenters", true)
     clone:SetAttribute("FloatingAllowed", false)
 
+    local scriptSourceUse = "map_dressing:" .. tostring(spec.zone) .. ":" .. tostring(spec.kind)
     for _, descendant in ipairs(clone:GetDescendants()) do
-        removeExecutableCode(descendant)
+        preserveImportedCloneScript(descendant, scriptSourceUse, clone)
     end
     for _, descendant in ipairs(clone:GetDescendants()) do
         if descendant:IsA("BasePart") then
@@ -493,12 +490,10 @@ function MapLayoutService:SanitizeImportedFoodVisualClone(clone, source, queryPa
         clone:SetAttribute("ReleaseVisibleGeneratedPartAllowed", nil)
     end
 
+    local scriptSourceUse = "food_visual:" .. tostring(queryPart:GetAttribute("FoodKind") or queryPart.Name)
     for _, descendant in ipairs(clone:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            descendant:Destroy()
-        elseif descendant:IsA("ModuleScript") then
-            descendant:SetAttribute("ImportedScriptAudited", true)
-            descendant:SetAttribute("Sandboxed", true)
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            preserveImportedCloneScript(descendant, scriptSourceUse, clone)
         elseif descendant:IsA("BasePart") then
             configureFoodAffordance(descendant, descendant.Transparency < 1 and descendant.Transparency or 0)
             descendant:SetAttribute("ImportedFoodVisual", true)

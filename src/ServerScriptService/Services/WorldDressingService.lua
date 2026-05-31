@@ -16,7 +16,9 @@
 --   * Determinism: pass opts.seed to get a repeatable scatter. We use a tiny LCG
 --     instead of math.random at module scope so concurrent callers never share
 --     or mutate global RNG state.
---   * Scripts are stripped from every clone (visual dressing only).
+--   * Imported scripts are preserved for review: runtime scripts are disabled
+--     and queued; raw ModuleScripts are moved to ImportedScriptQuarantine until
+--     adapted into the storyboard/gameplay contract.
 --
 -- API:
 --   WorldDressingService:DressBiome(biomeId, sourceModel, opts) -> {Model}
@@ -26,8 +28,11 @@
 -- ──────────────────────────────────────────────────────────────────────────────
 
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
+
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local WorldDressingService = {}
 
@@ -137,12 +142,11 @@ local function getOrCreateFolder(parent: Instance, name: string): Folder
     return folder
 end
 
--- Removes any Script/LocalScript/ModuleScript descendants from a clone so dressing
--- is purely visual and can never inject behaviour.
-local function stripScripts(model: Instance)
+-- Preserve imported script source for adaptation without running raw vendor code.
+local function preserveImportedScripts(model: Instance, sourceUse: string)
     for _, descendant in ipairs(model:GetDescendants()) do
         if descendant:IsA("LuaSourceContainer") then
-            descendant:Destroy()
+            ImportedScriptPolicy.PreserveOrQuarantineCloneScript(descendant, sourceUse, model)
         end
     end
 end
@@ -212,7 +216,7 @@ local function placeClone(
     local z = center.Z + math.sin(angle) * dist
 
     local clone = sourceModel:Clone()
-    stripScripts(clone)
+    preserveImportedScripts(clone, "world_dressing:" .. biomeId)
 
     -- Resolve ground height, ignoring clone + already-placed dressing so clones
     -- never stack on each other.

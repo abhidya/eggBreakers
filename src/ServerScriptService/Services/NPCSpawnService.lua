@@ -5,6 +5,7 @@ local NPCService = require(script.Parent.NPCService)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local EcosystemRoster = require(ReplicatedStorage.Shared.EcosystemRoster)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
@@ -139,12 +140,10 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
     clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
     clone:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId") or source:GetAttribute("SourceAssetId"))
     clone:SetAttribute("SpawnZone", spawnInstance and spawnInstance.Name or "Generated")
+    local scriptSourceUse = "npc_spawn:" .. tostring(kind)
     for _, descendant in ipairs(clone:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            descendant:Destroy()
-        elseif descendant:IsA("ModuleScript") then
-            descendant:SetAttribute("ImportedScriptAudited", true)
-            descendant:SetAttribute("Sandboxed", true)
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            ImportedScriptPolicy.PreserveOrQuarantineCloneScript(descendant, scriptSourceUse, clone)
         elseif descendant:IsA("BasePart") then
             descendant.Anchored = true
             descendant.CanCollide = false

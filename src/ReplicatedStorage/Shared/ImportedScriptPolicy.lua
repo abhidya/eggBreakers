@@ -1,4 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ImportedScriptPolicy = {}
+
+ImportedScriptPolicy.RawReviewStatus = "raw_preserved_pending_adaptation"
+ImportedScriptPolicy.ModuleQuarantineStatus = "module_preserved_pending_adaptation"
+ImportedScriptPolicy.QuarantineFolderName = "ImportedScriptQuarantine"
 
 function ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
     local value = instance:GetAttribute(attributeName)
@@ -35,7 +41,7 @@ function ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
     return ImportedScriptPolicy.HasAncestorAttribute(instance, "RawImportedScriptPreserved", true)
         or ImportedScriptPolicy.HasAncestorAttribute(instance, "G032RawScriptPreserved", true)
         or ImportedScriptPolicy.HasAncestorAttribute(instance, "ImportedScriptReviewQueue", true)
-        or ImportedScriptPolicy.HasAncestorAttribute(instance, "ScriptReviewStatus", "raw_preserved_pending_adaptation")
+        or ImportedScriptPolicy.HasAncestorAttribute(instance, "ScriptReviewStatus", ImportedScriptPolicy.RawReviewStatus)
 end
 
 function ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
@@ -68,6 +74,79 @@ function ImportedScriptPolicy.IsDisabledRawRuntimeReviewScript(instance)
     return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
         and ImportedScriptPolicy.IsExecutableScript(instance)
         and instance.Disabled == true
+end
+
+function ImportedScriptPolicy.StampRawReviewRoot(instance, sourceUse)
+    if not instance then return end
+    instance:SetAttribute("RawImportedScriptPreserved", true)
+    instance:SetAttribute("G032RawScriptPreserved", true)
+    instance:SetAttribute("ImportedScriptReviewQueue", true)
+    instance:SetAttribute("ImportedScriptPreservedForReview", true)
+    instance:SetAttribute("ScriptReviewStatus", ImportedScriptPolicy.RawReviewStatus)
+    instance:SetAttribute("ScriptAuditScope", "G032")
+    if type(sourceUse) == "string" and sourceUse ~= "" then
+        instance:SetAttribute("ImportedScriptSourceUse", sourceUse)
+    end
+end
+
+function ImportedScriptPolicy.StampRawRuntimeForReview(instance, sourceUse, root)
+    if not ImportedScriptPolicy.IsExecutableScript(instance) then return false end
+    instance.Disabled = true
+    ImportedScriptPolicy.StampRawReviewRoot(root or instance.Parent, sourceUse)
+    instance:SetAttribute("RawImportedScriptPreserved", true)
+    instance:SetAttribute("G032RawScriptPreserved", true)
+    instance:SetAttribute("ImportedScriptReviewQueue", true)
+    instance:SetAttribute("ImportedScriptPreservedForReview", true)
+    instance:SetAttribute("ScriptReviewStatus", ImportedScriptPolicy.RawReviewStatus)
+    instance:SetAttribute("ScriptAuditScope", "G032")
+    if type(sourceUse) == "string" and sourceUse ~= "" then
+        instance:SetAttribute("ImportedScriptSourceUse", sourceUse)
+    end
+    return true
+end
+
+function ImportedScriptPolicy.EnsureQuarantineFolder()
+    local folder = ReplicatedStorage:FindFirstChild(ImportedScriptPolicy.QuarantineFolderName)
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = ImportedScriptPolicy.QuarantineFolderName
+        folder.Parent = ReplicatedStorage
+    end
+    return folder
+end
+
+function ImportedScriptPolicy.QuarantineRawModule(instance, sourceUse)
+    if not instance:IsA("ModuleScript") then return false end
+    if ImportedScriptPolicy.IsReleaseReadyScript(instance) then
+        instance:SetAttribute("ImportedScriptPreserved", true)
+        return true
+    end
+
+    local quarantineFolder = ImportedScriptPolicy.EnsureQuarantineFolder()
+    instance:SetAttribute("ImportedScriptQuarantined", true)
+    instance:SetAttribute("ImportedScriptPreservedForReview", true)
+    instance:SetAttribute("ScriptReviewStatus", ImportedScriptPolicy.ModuleQuarantineStatus)
+    instance:SetAttribute("ScriptAuditScope", "G032")
+    if type(sourceUse) == "string" and sourceUse ~= "" then
+        instance:SetAttribute("ImportedScriptSourceUse", sourceUse)
+    end
+    instance:SetAttribute("QuarantinedFrom", instance:GetFullName())
+    instance.Parent = quarantineFolder
+    return true
+end
+
+function ImportedScriptPolicy.PreserveOrQuarantineCloneScript(instance, sourceUse, root)
+    if not ImportedScriptPolicy.IsScriptContainer(instance) then
+        return false
+    end
+    if ImportedScriptPolicy.IsReleaseReadyScript(instance) then
+        instance:SetAttribute("ImportedScriptPreserved", true)
+        return true
+    end
+    if ImportedScriptPolicy.IsExecutableScript(instance) then
+        return ImportedScriptPolicy.StampRawRuntimeForReview(instance, sourceUse, root)
+    end
+    return ImportedScriptPolicy.QuarantineRawModule(instance, sourceUse)
 end
 
 function ImportedScriptPolicy.BuildRecord(instance)
