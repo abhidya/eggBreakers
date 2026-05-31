@@ -8,7 +8,7 @@ Date verified: 2026-05-31
 
 Use the Studio Creator Store plugin path instead:
 
-1. `Roblox_Search.search_assets` ranks candidates in the separate `place1` search session.
+1. `node tools/roblox_search_direct.js search_assets '{"query":"<query>","max_results":5}'` ranks candidates through the direct one-shot search route.
 2. `Roblox_Studio.search_creator_store` re-resolves the accepted candidate in the live `eggBreakers2`/`eggBreakers3` Studio session.
 3. `Roblox_Studio.insert_from_creator_store` inserts from the returned Studio `searchId`.
 
@@ -29,7 +29,8 @@ These `searchId` values are cache/session artifacts. Re-run `Roblox_Studio.searc
 ## Next Batch Procedure
 
 1. Stop play mode before inserting. Creator Store insertions must happen in edit mode.
-2. Source candidates with `Roblox_Search.search_assets` serially. If the first call after idle times out, retry once after toggling the `place1` plugin.
+2. Source candidates with the direct helper, not the Codex MCP wrapper:
+   `node tools/roblox_search_direct.js search_assets '{"query":"survival ui icon pack","max_results":5}'`.
 3. For each accepted candidate, re-query Studio with the exact string `<asset name> <numeric asset id>`.
 4. Insert through `Roblox_Studio.insert_from_creator_store` using the fresh `searchId`, the narrowest matching `objectTypes`, and a unique `assetName` such as `G018_Imported_BrokenCar_4675550604`.
 5. Snapshot-diff Workspace before and after insertion. If the inserted primary asset is not the accepted candidate or is not design-usable, remove it and do not count it.

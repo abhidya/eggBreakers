@@ -9,13 +9,11 @@ to `origin` github.com/abhidya/eggBreakers).
 ## Session Learnings & Operating Rules (2026-05-30)
 Hard-won rules from a full build session. Obey these to avoid re-losing the same hours.
 
-- **MCP SPLIT IS STRICT**: use **`Roblox_Studio` (proxy -> the `eggBreakers2` Studio)** for ALL live game actions
-  (execute_luau, asset-id inserts, terrain, screenshots, inspection). Use **`Roblox_Search` (kevinswint fork -> the
-  `place1` Studio)** for **SEARCH/DISCOVERY ONLY** (`search_assets`/`preview_asset` quality ranking). The Rust legacy
-  fork is filtered to expose only those two tools. **BLOCK on search
-  failure** — if the fork search fails, retry it only after the user toggles the `place1` plugin; do **NOT** fall back to
-  proxy search for discovery. The fork cannot insert into eggBreakers2; to actually insert a validated asset, pass the
-  accepted numeric asset id to `Roblox_Studio`/eggBreakers2 without using proxy creator-store search.
+- **TOOL SPLIT IS STRICT**: use **`Roblox_Studio` (proxy -> active `eggBreakers3`)** for ALL live game actions
+  (execute_luau, inserts, terrain, screenshots, inspection). Use the repo direct helper for **SEARCH/DISCOVERY ONLY**:
+  `node tools/roblox_search_direct.js search_assets '{"query":"survival ui icon pack","max_results":5}'`
+  and `node tools/roblox_search_direct.js preview_asset '{"asset_id":"<id>"}'`. Do **not** use Codex's
+  `mcp__Roblox_Search.search_assets` wrapper as the default; it can time out while the direct route succeeds.
 - **INSERTS ONLY WORK IN EDIT MODE**: marketplace/creator-store inserts are **silently dropped in play mode** (this was
   the "vanishing assets" bug — assets seemed to insert then disappeared). Always **stop play before inserting**. Pass the
   **`assetName` param and use a snapshot-diff** (tree before/after) to reliably locate the inserted model — the default

@@ -28,8 +28,8 @@ Roblox dinosaur-survival vertical slice. 6 biomes: NurseryGrove → FernPlains �
 - **G028 starter visual fix:** inserted/tagged `18759347676` Rigged Dinosaur Models as `Workspace.dinosaur`; verified no scripts and exact starter models for Coelophysis, Parasaurolophus, Utahraptor, and Citipati. Source now avoids hiding the avatar on visual-resolution failure and scales oversized staged hatchlings down to stage-readable size.
 
 ## 3. World-population pipeline (proven, ready to run)
-- **Source (quality):** `Roblox_Search` fork on `place1` → `search_assets` (favorites-ranked) → `preview_asset`.
-- **Place into game:** `Roblox_Studio` proxy on `eggBreakers2` → `search_creator_store` → `insert_from_creator_store` (verified: inserted a clean 12-MeshPart tree).
+- **Source (quality):** use the direct search helper, not the Codex MCP wrapper: `node tools/roblox_search_direct.js search_assets '{"query":"survival ui icon pack","max_results":5}'`, then `node tools/roblox_search_direct.js preview_asset '{"asset_id":"<id>"}'` when needed.
+- **Place into game:** `Roblox_Studio` proxy on `eggBreakers3` → `search_creator_store` → `insert_from_creator_store` (verified: inserted real Creator Store assets).
 - **Dress:** `WorldDressingService:DressBiome(biomeId, model, opts)` → scatter + ground + tag per biome.
 - **Vetted megapack targets:** Nature `6503281311` · Desert/Canyon `5517265199` · Destroyed buildings `13451762331` · Vines `15618055880` · Lily pad `405880646` · Skyboxes `102765136165948`.
 
@@ -42,7 +42,7 @@ Roblox dinosaur-survival vertical slice. 6 biomes: NurseryGrove → FernPlains �
 - ⚠️ **PERSISTENCE** — the recovered `Workspace.dinosaur` pen + inserted assets, including G027, are **live-only**. **Save the place (⌘S)** or they're lost on restart (no MCP "save place" exists).
 
 ## 5. Tooling / provenance
-- **MCP split:** `Roblox_Studio` (proxy → active `eggBreakers3`, all build/test/play); `Roblox_Search` (kevinswint/abhidya fork → search/preview only). One Studio plugin each; broad parallel search may time out, but exact Studio Creator Store searches were fast for the G027 batch.
+- **Tool split:** `Roblox_Studio` MCP is for active `eggBreakers3` build/test/play/insert. Roblox asset discovery uses `node tools/roblox_search_direct.js ...`; the Codex `Roblox_Search` MCP wrapper is intentionally not configured because it can time out while the direct route succeeds.
 - **Concurrency:** omx/oh-my-codex agents may run detached and write files / leave `.git/index.lock` — see `memory/eggbreakers-concurrent-agents.md`.
 - Design docs: `eggBreakers_Master_Plan.md`, `eggBreakers_World_and_Gameplay_Design.md`, `eggBreakers_Asset_Ledger_and_Build_Sequence.md`, `DESIGN.md`, `docs/StoryModeStoryboard.md`, `docs/SWARM_HANDOFF.md`.
 
