@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local Workspace = game:GetService("Workspace")
 local RemoteValidationService = require(script.Parent.RemoteValidationService)
 local SurvivalService = require(script.Parent.SurvivalService)
 
@@ -145,6 +146,22 @@ local function isFoliageFoodSource(target)
     return diet == "Herbivore" or diet == "Omnivore"
 end
 
+--- Live predicate: is this instance a valid, eatable food source right now?
+--- True when it carries the "FoodSource" CollectionService tag, OR it is an
+--- EdibleVegetation-tagged dressing part (which we promote to FoodSource on the
+--- fly so WorldDressing'd vegetation is eatable even before normalisation runs).
+function FoodWaterService:IsFoodSource(target)
+    if not target then return false end
+    if CollectionService:HasTag(target, "FoodSource") then return true end
+    if target:GetAttribute("EdibleVegetation") == true then
+        -- Promote to a real FoodSource so the eat path / depletion loop pick it up.
+        CollectionService:AddTag(target, "FoodSource")
+        self:NormaliseFoliageMetadata(target)
+        return true
+    end
+    return false
+end
+
 --- Stamp consistent metadata onto a single FoodSource instance.
 --- Only writes attributes that are not already set (additive, safe to call multiple times).
 function FoodWaterService:NormaliseFoliageMetadata(target)
@@ -197,6 +214,24 @@ function FoodWaterService:NormaliseAllFoliageMetadata()
         local ok = self:NormaliseFoliageMetadata(target)
         if ok then count = count + 1 end
     end
+
+    -- Pick up WorldDressingService's edible vegetation living under
+    -- Workspace.Map.BiomeDressing. These are tagged EdibleVegetation; promote any
+    -- that are not yet FoodSource-tagged so the eat path / depletion loop see them.
+    local map = Workspace:FindFirstChild("Map")
+    local dressing = map and map:FindFirstChild("BiomeDressing")
+    if dressing then
+        for _, inst in ipairs(dressing:GetDescendants()) do
+            if inst:GetAttribute("EdibleVegetation") == true then
+                if not CollectionService:HasTag(inst, "FoodSource") then
+                    CollectionService:AddTag(inst, "FoodSource")
+                end
+                local ok = self:NormaliseFoliageMetadata(inst)
+                if ok then count = count + 1 end
+            end
+        end
+    end
+
     -- Also watch for future tagged instances (terrain streaming / placement).
     CollectionService:GetInstanceAddedSignal("FoodSource"):Connect(function(inst)
         -- Yield one frame so the instance's attributes may be set by the placer first.
@@ -211,6 +246,9 @@ end
 -- Core eat / drink (public, stable API — unchanged signatures)
 -- ─────────────────────────────────────────────────────────────
 function FoodWaterService:RequestEat(player, target)
+    -- Promote EdibleVegetation dressing parts to tagged FoodSources (with full
+    -- metadata) so ValidateFoodTarget's FoodSource-tag check passes for them.
+    self:IsFoodSource(target)
     self:RefreshDepletion(target)
     if not RemoteValidationService:CheckRate(player, "RequestEat") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)
