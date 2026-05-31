@@ -16,6 +16,10 @@
 --   MobileControlsController:CreateControls(settings) -> { Gui, Buttons, OptionalButtons, Scale }
 --   MobileControlsController:ShowOptionalButton(gui, name) -- unlock flight/swim at runtime
 --   MobileControlsController:HideOptionalButton(gui, name)
+--   MobileControlsController:SetActionAvailable(gui, name, available) -- progressive disclosure
+--   MobileControlsController:SetButtonContext(button, context) -- contextual one-tap state
+--   MobileControlsController:UpdateWaypoint(gui, targetType, distance) -- diegetic sense cue
+--   MobileControlsController:ShowActionFeedback(gui, message, durationSeconds) -- transient toast
 
 local Players   = game:GetService("Players")
 local UIFactory = require(script.Parent.UIFactory)
@@ -127,6 +131,79 @@ function MobileControlsController:HideOptionalButton(gui, name)
     end
 end
 
+-- ── Progressive disclosure + contextual one-tap state ─────────────────────────
+
+-- Diegetic "dimmed but present" affordance: an action exists for this species
+-- but is not usable right now (e.g. nothing nearby to eat). We keep the button
+-- on-screen (so the thumb learns its position) but subdue it instead of hiding,
+-- which matches DESIGN.md "Disabled: subdued with reason".
+function MobileControlsController:SetActionAvailable(gui, name, available)
+    if not gui then return false end
+    local button = gui:FindFirstChild(name .. "Button")
+    if not button then return false end
+    available = available ~= false
+    button.Active          = available
+    button.AutoButtonColor = available
+    button.TextTransparency       = available and 0    or 0.45
+    button.BackgroundTransparency = available and 0    or 0.35
+    button:SetAttribute("Available", available)
+    button:SetAttribute("Context", available and "Ready" or "Unavailable")
+    return true
+end
+
+-- Contextual one-tap state for a single action button. `context` is a short
+-- diegetic state token ("Ready", "Nearby", "Cooldown", "Unavailable").
+-- Updates the Context attribute (read by ClientBootstrap) and a subtle pulse
+-- so the player can tell at a glance what one tap will do.
+function MobileControlsController:SetButtonContext(button, context)
+    if not button then return false end
+    context = context or "Ready"
+    button:SetAttribute("Context", context)
+    if context == "Nearby" then
+        -- highlight: this action has a valid target within reach right now
+        button.TextTransparency       = 0
+        button.BackgroundTransparency = 0
+        button.Active                 = true
+        button.AutoButtonColor        = true
+    elseif context == "Unavailable" then
+        button.TextTransparency       = 0.45
+        button.BackgroundTransparency = 0.35
+        button.Active                 = false
+        button.AutoButtonColor        = false
+    end
+    return true
+end
+
+-- ── Floating-hint helpers ─────────────────────────────────────────────────────
+
+-- Push a fresh waypoint cue into the NearestActionHintLabel (icon-only, diegetic).
+function MobileControlsController:UpdateWaypoint(gui, targetType, distance)
+    if not gui then return false end
+    local hint = gui:FindFirstChild("NearestActionHintLabel")
+    if not hint then return false end
+    hint.Text = self:BuildWaypointText(targetType, distance)
+    return true
+end
+
+-- Transient, thumb-clear toast for action feedback ("ate fern", "drank", "hid").
+-- Stays icon/verb short; auto-hides so it never covers the controls for long.
+function MobileControlsController:ShowActionFeedback(gui, message, durationSeconds)
+    if not gui then return false end
+    local feedback = gui:FindFirstChild("ActionFeedbackLabel")
+    if not feedback then return false end
+    feedback.Text    = message or ""
+    feedback.Visible = true
+    feedback:SetAttribute("LastFeedback", message or "")
+    local token = (feedback:GetAttribute("FeedbackToken") or 0) + 1
+    feedback:SetAttribute("FeedbackToken", token)
+    task.delay(durationSeconds or 1.4, function()
+        if feedback and feedback.Parent and feedback:GetAttribute("FeedbackToken") == token then
+            feedback.Visible = false
+        end
+    end)
+    return true
+end
+
 -- ── Layout constants ─────────────────────────────────────────────────────────
 
 -- Icon labels for buttons (tests assert exact text values)
@@ -200,6 +277,17 @@ function MobileControlsController:CreateControls(settings)
         button:SetAttribute("MobileReadable",       true)
         button:SetAttribute("IconFirstMinimalLabel", true)
         button:SetAttribute("OptionalAction",       name == "Flight" or name == "Swim")
+        -- Contextual one-tap state, consumed by ClientBootstrap target finding.
+        button:SetAttribute("Context",      "Ready")
+        button:SetAttribute("Available",    true)
+        button:SetAttribute("PressCount",   0)
+        button:SetAttribute("CooldownSeconds", name == "Call" and 0.4 or 0.2)
+        -- Diegetic readability: soft drop-stroke so the glyph stays legible
+        -- against bright jungle/canyon backgrounds (DESIGN.md contrast goal).
+        -- Position/AnchorPoint left untouched so the HUD-clearance invariant
+        -- asserted by MobileControlsTests stays geometrically true.
+        button.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
+        button.TextStrokeTransparency = 0.45
         -- Flight and Swim start hidden until species unlocks them
         if name == "Flight" or name == "Swim" then
             button.Visible         = false
@@ -223,6 +311,8 @@ function MobileControlsController:CreateControls(settings)
     dialogue:SetAttribute("GuidesToActionableAssets",  true)
     dialogue:SetAttribute("IconOnlyTracker",           true)
     dialogue:SetAttribute("ProductionKidGuidance",     true)
+    dialogue.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
+    dialogue.TextStrokeTransparency = 0.5
     UIFactory:RoundCorners(dialogue, 6)
     dialogue.Parent = gui
 
@@ -241,6 +331,8 @@ function MobileControlsController:CreateControls(settings)
     targetHint:SetAttribute("IconOnlyTracker",          true)
     targetHint:SetAttribute("FloatsAboveActionButtons", true)
     targetHint:SetAttribute("WaypointCue",              "large-arrow-nearby-sparkle")
+    targetHint.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
+    targetHint.TextStrokeTransparency = 0.45
     UIFactory:RoundCorners(targetHint, 6)
     targetHint.Parent = gui
 
@@ -256,6 +348,9 @@ function MobileControlsController:CreateControls(settings)
     feedback.Visible               = false
     feedback:SetAttribute("MobileReadable", true)
     feedback:SetAttribute("LastFeedback",   "")
+    feedback:SetAttribute("FeedbackToken",  0)
+    feedback.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
+    feedback.TextStrokeTransparency = 0.45
     UIFactory:RoundCorners(feedback, 6)
     feedback.Parent = gui
 

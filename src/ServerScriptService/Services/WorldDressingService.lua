@@ -47,6 +47,19 @@ WorldDressingService.DressingPlan = {
 local DRESSING_TAG = "BiomeDressing"
 local VISIBLE_TAG = "ImportedVisibleAsset"
 
+-- Edible-vegetation defaults. These mirror FoodWaterService's foliage conventions
+-- (Diet/FoodKind/Nutrition/RespawnCooldownSeconds/EdibleVegetation + the "FoodSource"
+-- CollectionService tag) so a dressed clone tagged here is accepted by
+-- RemoteValidationService:ValidateFoodTarget and consumed by FoodWaterService:RequestEat.
+-- We stamp them explicitly so edible dressing works even when FoodWaterService is
+-- absent (FoodWaterService:NormaliseFoliageMetadata only *fills missing* attributes,
+-- so explicit values here are preserved).
+local FOOD_SOURCE_TAG = "FoodSource"
+local EDIBLE_DEFAULT_DIET = "Herbivore"   -- Herbivore food: eaten by herbivores AND omnivores
+local EDIBLE_DEFAULT_FOODKIND = "Foliage"
+local EDIBLE_DEFAULT_NUTRITION = 20
+local EDIBLE_DEFAULT_RESPAWN = 60
+
 local RAY_UP = 500      -- start the ground ray this far above the sampled point
 local RAY_DOWN = 4000   -- and cast this far down to find ground
 local SCALE_JITTER = 0.15 -- +/- fraction of scale variation

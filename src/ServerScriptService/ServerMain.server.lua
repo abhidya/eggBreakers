@@ -93,6 +93,39 @@ local function sendStats(player)
     if state then StatReplicationService:Send(player, state) end
 end
 
+-- Wave-5 audio/SFX: fire a localized action sound to the acting player.
+-- Server picks a category; the client SfxController resolves + plays it in 3D.
+local function instancePosition(instance)
+    if typeof(instance) ~= "Instance" then return nil end
+    if instance:IsA("BasePart") then return instance.Position end
+    if instance:IsA("Model") then
+        local ok, pivot = pcall(function() return instance:GetPivot().Position end)
+        if ok then return pivot end
+    end
+    return nil
+end
+
+local function actionPosition(player, targetInstance)
+    local position = instancePosition(targetInstance)
+    if position then return position end
+    local character = player and player.Character
+    local root = character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    return root and root.Position or nil
+end
+
+local function fireActionSound(player, category, position, soundId)
+    if type(player) == "table" then
+        -- MockPlayer (tests / world-absent): record intent, never touch remotes.
+        player.LastActionSound = { category = category, position = position, soundId = soundId }
+        return
+    end
+    local event = Remotes:FindFirstChild("PlayActionSound")
+    if not event then return end
+    pcall(function()
+        event:FireClient(player, { category = category, position = position, soundId = soundId })
+    end)
+end
+
 local function applyDeathState(player, state)
     if not state or state.Dead ~= true then return end
     if state.RespawnScheduled == true then return end
@@ -188,6 +221,9 @@ Remotes.RequestEat.OnServerEvent:Connect(function(player, target)
     if ok and result.Growth ~= oldGrowth then
         CharacterVisualService:ApplyForState(player, result)
     end
+    if ok then
+        fireActionSound(player, "EatCrunch", actionPosition(player, target))
+    end
     notifyResult(player, ok, result, "Ate food")
     sendStats(player)
 end)
@@ -202,6 +238,9 @@ Remotes.RequestDrink.OnServerEvent:Connect(function(player, target)
     end
     if ok and result.Growth ~= oldGrowth then
         CharacterVisualService:ApplyForState(player, result)
+    end
+    if ok then
+        fireActionSound(player, "DrinkSlurp", actionPosition(player, target))
     end
     notifyResult(player, ok, result, "Drank water")
     sendStats(player)
@@ -239,6 +278,14 @@ end
 
 Remotes.RequestAttack.OnServerEvent:Connect(function(player, attackType, target)
     local ok, result = CombatService:RequestAttack(player, attackType, target)
+    if ok then
+        -- Always play the bite/lunge; play an extra impact cue when the swing landed.
+        local position = actionPosition(player, target)
+        fireActionSound(player, "AttackBite", position)
+        if type(result) == "table" and (result.Hit == true or result.DidHit == true or result.Damage or result.damage) then
+            fireActionSound(player, "HitImpact", position)
+        end
+    end
     notifyResult(player, ok, result, "Attack attempted")
     sendStats(player)
 end)
