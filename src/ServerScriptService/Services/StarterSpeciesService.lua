@@ -79,9 +79,18 @@ function StarterSpeciesService:GetHatchPool(data, requireUnlock)
     return self:GetSelectableSpecies()
 end
 
-function StarterSpeciesService:ChooseRandomHatchSpecies(data, roll)
+function StarterSpeciesService:ChooseRandomHatchSpecies(data, roll, predicate)
     local candidates = self:GetHatchPool(data, false)
-    if #candidates == 0 then return Constants.DefaultSpeciesId end
+    if type(predicate) == "function" then
+        local filtered = {}
+        for _, speciesId in ipairs(candidates) do
+            if predicate(speciesId) == true then
+                filtered[#filtered + 1] = speciesId
+            end
+        end
+        candidates = filtered
+    end
+    if #candidates == 0 then return nil, "no_renderable_random_species" end
     if type(roll) == "number" then
         local index = math.clamp(math.floor(roll), 1, #candidates)
         return candidates[index]

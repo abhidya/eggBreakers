@@ -6,6 +6,7 @@ Bootstrap.Init()
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 local PlayerDataService = require(script.Parent.Services.PlayerDataService)
 local SurvivalService = require(script.Parent.Services.SurvivalService)
 local FoodWaterService = require(script.Parent.Services.FoodWaterService)
@@ -38,6 +39,14 @@ WeatherBiomeService:StartLoop(90)
 
 local function getStarterSpecies(data)
     return StarterSpeciesService:ChooseStarterSpecies(data)
+end
+
+local function canRenderRandomHatchSpecies(speciesId)
+    return CharacterVisualService:CanRenderSpecies(speciesId, {
+        growthStage = "Hatchling",
+        requireExact = true,
+        allowVisualFallback = false,
+    })
 end
 
 local function preferredSpawnBiome(state)
@@ -197,9 +206,18 @@ Remotes.RequestHatch.OnServerEvent:Connect(function(player, inputType)
         local stats = SpeciesConfig[result.SpeciesId].BaseStats[result.GrowthStage]
         result.CurrentWalkSpeed = stats.WalkSpeed
         MovementLockService:SetHatchedMovement(player, true, result)
-        CharacterVisualService:ApplyForState(player, result)
-        ProgressionService:OnHatched(player)
-        StatReplicationService:Notify(player, "You hatched!", "Success", 3)
+        local visualOk, visualReason = CharacterVisualService:ApplyForState(player, result)
+        if visualOk then
+            ProgressionService:OnHatched(player)
+            StatReplicationService:Notify(player, "You hatched!", "Success", 3)
+        else
+            result.Hatched = false
+            result.HatchProgress = math.min(result.HatchProgress or 100, 80)
+            result.CurrentWalkSpeed = nil
+            MovementLockService:SetHatchedMovement(player, false, result)
+            CharacterVisualService:ApplyForState(player, result)
+            StatReplicationService:Notify(player, "That dinosaur visual is not ready: " .. tostring(visualReason), "Warning", 4)
+        end
     else
         notifyResult(player, ok, result, "Shell cracking")
     end
@@ -213,12 +231,38 @@ if Remotes:FindFirstChild("RequestSelectSpecies") then
             sendStats(player)
             return
         end
+        local selectedRandomFullRoster = speciesId == Constants.RandomStarterSpeciesId
+        if selectedRandomFullRoster then
+            local resolvedSpeciesId, reason = StarterSpeciesService:ChooseRandomHatchSpecies(
+                PlayerDataService:Get(player),
+                nil,
+                canRenderRandomHatchSpecies
+            )
+            if not resolvedSpeciesId then
+                notifyResult(player, false, reason or "no_renderable_random_species", nil)
+                sendStats(player)
+                return
+            end
+            speciesId = resolvedSpeciesId
+        end
+        local previousState = SurvivalService:GetState(player)
         local ok, result = SurvivalService:SelectSpecies(player, speciesId)
         if ok then
+            result.SelectedRandomFullRoster = selectedRandomFullRoster
             routeCharacterToSpeciesSpawn(player, result)
             MovementLockService:SetHatchedMovement(player, false, result)
-            CharacterVisualService:ApplyForState(player, result)
-            StatReplicationService:Notify(player, "Selected " .. tostring(SpeciesConfig[result.SpeciesId].DisplayName or result.SpeciesId), "Info", 2)
+            local visualOk, visualReason = CharacterVisualService:ApplyForState(player, result)
+            if visualOk then
+                StatReplicationService:Notify(player, "Selected " .. tostring(SpeciesConfig[result.SpeciesId].DisplayName or result.SpeciesId), "Info", 2)
+            else
+                SurvivalService:RestoreState(player, previousState)
+                if previousState then
+                    routeCharacterToSpeciesSpawn(player, previousState)
+                    MovementLockService:SetHatchedMovement(player, previousState.Hatched == true, previousState)
+                    CharacterVisualService:ApplyForState(player, previousState)
+                end
+                notifyResult(player, false, visualReason or "visual_apply_failed", nil)
+            end
         else
             notifyResult(player, false, result, nil)
         end

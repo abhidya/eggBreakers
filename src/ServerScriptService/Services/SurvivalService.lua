@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local Constants = require(ReplicatedStorage.Shared.Constants)
-local StarterSpeciesService = require(script.Parent.StarterSpeciesService)
 
 -- SurvivalService tracks per-player survival state and drives the needs loop.
 -- Lane D additions: PlayerKilledByCarnivore hooks for player predation flow.
@@ -65,12 +64,19 @@ function SurvivalService:GetState(player)
     return self.States[player]
 end
 
+function SurvivalService:RestoreState(player, state)
+    if state then
+        self.States[player] = state
+    else
+        self.States[player] = nil
+    end
+    return state
+end
+
 function SurvivalService:SelectSpecies(player, speciesId)
     if type(speciesId) ~= "string" then return false, "bad_species" end
-    local selectedRandomFullRoster = false
     if speciesId == Constants.RandomStarterSpeciesId then
-        speciesId = StarterSpeciesService:ChooseRandomHatchSpecies()
-        selectedRandomFullRoster = true
+        return false, "random_species_requires_visual_gate"
     end
     local species = SpeciesConfig[speciesId]
     if not species or not species.BaseStats then return false, "unknown_species" end
@@ -79,7 +85,6 @@ function SurvivalService:SelectSpecies(player, speciesId)
     if current and current.Dead == true then return false, "invalid_hatch_state" end
     local nextState = self:CreateState(player, speciesId)
     nextState.SelectedBeforeHatch = true
-    nextState.SelectedRandomFullRoster = selectedRandomFullRoster
     return true, nextState
 end
 

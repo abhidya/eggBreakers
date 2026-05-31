@@ -57,10 +57,12 @@ function SpeciesModelService:ResolveModel(speciesId, growthStage, options)
     if exact then return exact end
     local fallbackId = species.VisualFallbackSpeciesId
     if fallbackId then
-        local fallbackSpecies = SpeciesConfig[fallbackId]
-        local fallbackModel = resolveConfiguredPath(fallbackSpecies, growthStage)
-        if fallbackModel then
-            return fallbackModel, "visual_fallback_" .. fallbackId
+        if options.allowVisualFallback ~= false then
+            local fallbackSpecies = SpeciesConfig[fallbackId]
+            local fallbackModel = resolveConfiguredPath(fallbackSpecies, growthStage)
+            if fallbackModel then
+                return fallbackModel, "visual_fallback_" .. fallbackId
+            end
         end
     end
     if options.requireExact then

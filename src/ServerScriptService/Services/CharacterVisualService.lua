@@ -514,6 +514,43 @@ function CharacterVisualService:_prepareDinosaurClone(model, state)
     return clone
 end
 
+function CharacterVisualService:ResolveDinosaurModel(speciesId, growthStage, options)
+    options = options or {}
+    if type(speciesId) ~= "string" or speciesId == "" then
+        return nil, nil, "missing_species"
+    end
+
+    local stagedModel = self:_resolveStagedModel(speciesId)
+    if stagedModel then
+        if hasAttachablePart(stagedModel) and hasVisiblePart(stagedModel) then
+            return stagedModel, "staged_dinosaur_mesh"
+        end
+        return nil, nil, "invalid_staged_dinosaur_mesh"
+    end
+
+    local requireExact = self.ReleaseMode
+    if options.requireExact ~= nil then
+        requireExact = options.requireExact == true
+    end
+    local sourceModel, reason = SpeciesModelService:ResolveModel(speciesId, growthStage or "Hatchling", {
+        requireExact = requireExact,
+        allowVisualFallback = options.allowVisualFallback ~= false,
+    })
+    if sourceModel then
+        if hasAttachablePart(sourceModel) and hasVisiblePart(sourceModel) then
+            return sourceModel, "dinosaur_model", reason
+        end
+        return nil, nil, "invalid_dinosaur_model"
+    end
+    return nil, nil, reason or "missing_dinosaur_model"
+end
+
+function CharacterVisualService:CanRenderSpecies(speciesId, options)
+    options = options or {}
+    local model = self:ResolveDinosaurModel(speciesId, options.growthStage or "Hatchling", options)
+    return model ~= nil
+end
+
 function CharacterVisualService:_inferDinosaurHeading(model)
     local heads, tails, bodies = namedPartGroups(model)
     local headCenter = averagePartPosition(heads)
@@ -684,46 +721,34 @@ function CharacterVisualService:ApplyForState(player, state, options)
         root:SetAttribute("SpeciesId", state.SpeciesId)
     end
 
-    -- Prefer the runtime-staged rigged mesh (Motor6D rig) when available; this
-    -- gives the player their actual species dino instead of a placeholder model.
-    -- Safe + additive: if StagedMeshLibrary or the staging Workspace folder is
-    -- absent, fall through to the existing SpeciesModelService path unchanged.
-    local stagedModel = self:_resolveStagedModel(state.SpeciesId)
-    if stagedModel then
-        self:ClearVisual(character)
-        local clone = self:_prepareDinosaurClone(stagedModel, state)
-        local attached = self:_attachModel(character, root, clone)
-        if attached then
-            self:HideDefaultAvatar(character)
-            self:_recordVisualApplyResult(character, root, true, nil, "staged_dinosaur_mesh")
-            return true, "staged_dinosaur_mesh"
-        end
-        self:_recordVisualApplyResult(character, root, false, "invalid_staged_dinosaur_mesh")
-        return false, "invalid_staged_dinosaur_mesh"
-    end
-
-    local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "coelophysis", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
+    local sourceModel, mode, reason = self:ResolveDinosaurModel(state.SpeciesId or "coelophysis", state.GrowthStage or "Hatchling", {
+        requireExact = self.ReleaseMode,
+        allowVisualFallback = options.allowVisualFallback ~= false,
+    })
     if sourceModel then
         self:ClearVisual(character)
         local clone = self:_prepareDinosaurClone(sourceModel, state)
         local attached = self:_attachModel(character, root, clone)
         if attached then
             self:HideDefaultAvatar(character)
-            self:_recordVisualApplyResult(character, root, true, nil, "dinosaur_model")
-            return true, "dinosaur_model"
+            self:_recordVisualApplyResult(character, root, true, nil, mode)
+            return true, mode
         end
-        self:_recordVisualApplyResult(character, root, false, "invalid_dinosaur_model")
-        return false, "invalid_dinosaur_model"
+        reason = mode == "staged_dinosaur_mesh" and "invalid_staged_dinosaur_mesh" or "invalid_dinosaur_model"
+        self:_recordVisualApplyResult(character, root, false, reason)
+        return false, reason
     end
 
-    local fallback, reason = self:_createFallbackDinosaur(character, root, state, options)
+    local missingReason = reason
+    local fallback, fallbackReason = self:_createFallbackDinosaur(character, root, state, options)
     if fallback then
         self:HideDefaultAvatar(character)
-        self:_recordVisualApplyResult(character, root, true, nil, reason)
-        return true, reason
+        self:_recordVisualApplyResult(character, root, true, nil, fallbackReason)
+        return true, fallbackReason
     end
-    self:_recordVisualApplyResult(character, root, false, reason)
-    return false, reason
+    local failureReason = missingReason or fallbackReason
+    self:_recordVisualApplyResult(character, root, false, failureReason)
+    return false, failureReason
 end
 
 function CharacterVisualService:ValidateReleaseVisualAssets()

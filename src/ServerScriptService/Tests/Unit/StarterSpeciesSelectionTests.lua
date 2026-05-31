@@ -101,4 +101,17 @@ table.insert(suite.tests, { name = "random hatch option rolls from the full play
     Assert.falsy(last == Constants.RandomStarterSpeciesId, "random sentinel is not part of playable species")
 end })
 
+table.insert(suite.tests, { name = "random hatch option can be gated to renderable happy paths", run = function()
+    local chosen = StarterSpeciesService:ChooseRandomHatchSpecies(nil, 1, function(speciesId)
+        return speciesId == "utahraptor"
+    end)
+    Assert.equals(chosen, "utahraptor", "predicate-filtered random pool chooses the renderable candidate")
+
+    local none, reason = StarterSpeciesService:ChooseRandomHatchSpecies(nil, 1, function()
+        return false
+    end)
+    Assert.equals(none, nil, "empty visual-ready pool returns nil instead of a fallback species")
+    Assert.equals(reason, "no_renderable_random_species", "empty visual-ready pool reports the gate failure")
+end })
+
 return TestRunner.registerSuite(suite)
