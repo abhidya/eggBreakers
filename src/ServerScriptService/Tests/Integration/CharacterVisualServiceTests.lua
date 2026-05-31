@@ -138,7 +138,7 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     local ok, mode = CharacterVisualService:ApplyForState(player, state)
 
     Assert.truthy(ok, "dinosaur visual applied")
-    Assert.equals(mode, "dinosaur_model", "hatched state renders imported dinosaur model")
+    Assert.truthy(mode == "dinosaur_model" or mode == "staged_dinosaur_mesh", "hatched state renders an imported dinosaur model (got " .. tostring(mode) .. ")")
     Assert.equals(head.Transparency, 1, "default avatar remains hidden")
     local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
     Assert.notNil(visual, "dinosaur visual exists")

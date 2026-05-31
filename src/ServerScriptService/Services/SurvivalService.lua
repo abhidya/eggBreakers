@@ -121,14 +121,75 @@ function SurvivalService:AddGrowth(player, amount)
     state.Growth = clamp(state.Growth + amount, 0, 100)
     local nextStage = state.Growth >= 75 and "Adult" or state.Growth >= 50 and "SubAdult" or state.Growth >= 25 and "Juvenile" or "Hatchling"
     if nextStage ~= state.GrowthStage then
+        local previousStage = state.GrowthStage
         state.GrowthStage = nextStage
         local stats = SpeciesConfig[state.SpeciesId].BaseStats[nextStage]
         state.Health = stats.MaxHealth
         state.Stamina = stats.MaxStamina
         state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
         state.Oxygen = state.MaxOxygen
+        -- Growth/Alpha lane: mark that the player just matured this tick so callers
+        -- (and the optional Alpha promotion) can react. Reaching Adult at full growth
+        -- makes the player Alpha-eligible; the buff itself is opt-in via PromoteToAlpha.
+        state.JustMaturedTo = nextStage
+        if nextStage == "Adult" and previousStage ~= "Adult" then
+            state.AlphaEligible = true
+        end
+        -- Apply the Alpha buff on top of the fresh Adult base stats if it was already
+        -- granted on a prior life/stage cycle and the species is still Adult.
+        if state.IsAlpha and nextStage == "Adult" then
+            self:_applyAlphaBuff(state, stats)
+        end
     end
     return true, state
+end
+
+-- Growth/Alpha lane: Alpha status is an optional apex buff for fully-grown adults.
+-- It multiplies max health / stamina and grants a visible scale bump. Opt-in so the
+-- base growth stage-up stats stay backward-compatible with existing tests.
+SurvivalService.AlphaHealthMultiplier = 1.25
+SurvivalService.AlphaStaminaMultiplier = 1.15
+SurvivalService.AlphaDamageMultiplier = 1.2
+SurvivalService.AlphaScale = 1.15
+
+function SurvivalService:_applyAlphaBuff(state, stats)
+    stats = stats or (SpeciesConfig[state.SpeciesId] and SpeciesConfig[state.SpeciesId].BaseStats[state.GrowthStage])
+    if not stats then return end
+    local maxHealth = math.floor(stats.MaxHealth * self.AlphaHealthMultiplier)
+    local maxStamina = math.floor(stats.MaxStamina * self.AlphaStaminaMultiplier)
+    state.AlphaMaxHealth = maxHealth
+    state.AlphaMaxStamina = maxStamina
+    state.AlphaDamageMultiplier = self.AlphaDamageMultiplier
+    state.AlphaScale = self.AlphaScale
+    state.Health = maxHealth
+    state.Stamina = maxStamina
+end
+
+-- Promote a fully-grown adult to Alpha (apex) status. Returns false with a reason when
+-- the player is not eligible. Idempotent: re-promoting an Alpha is a no-op success.
+function SurvivalService:PromoteToAlpha(player)
+    local state = self:GetState(player)
+    if not state or state.Dead then return false, "not_alive" end
+    if state.GrowthStage ~= "Adult" then return false, "not_adult" end
+    if state.IsAlpha then return true, state end
+    state.IsAlpha = true
+    state.AlphaEligible = true
+    local stats = SpeciesConfig[state.SpeciesId] and SpeciesConfig[state.SpeciesId].BaseStats[state.GrowthStage]
+    self:_applyAlphaBuff(state, stats)
+    return true, state
+end
+
+-- Effective outgoing damage for the player's current stage, including the Alpha bonus.
+function SurvivalService:GetEffectiveDamage(player)
+    local state = self:GetState(player)
+    if not state then return 0 end
+    local species = SpeciesConfig[state.SpeciesId]
+    local stats = species and species.BaseStats[state.GrowthStage]
+    local base = (stats and stats.Damage) or 0
+    if state.IsAlpha then
+        return base * (state.AlphaDamageMultiplier or self.AlphaDamageMultiplier)
+    end
+    return base
 end
 
 function SurvivalService:ConsumeStamina(player, amount)

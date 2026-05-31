@@ -1343,6 +1343,7 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsurePlayerSpawnMarkers(folders)
 
     self:EnsureTerrainContinuity(folders)
+    self:EnsureBiomeElevation(folders)
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
     self:EnsureBiomeDressing(folders)
@@ -1350,6 +1351,13 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureTutorialCombatTarget(folders)
     self:EnsureCityDiscoveryTriggers(folders)
     self:EnsureFallSafetyVolume(folders)
+    -- Run grounding + world-mood passes LAST so they re-seat the visible
+    -- props produced above onto the freshly sculpted terrain. All of these are
+    -- additive and no-op when terrain / Studio globals are absent (test stubs),
+    -- so they never perturb the guarded placement assertions.
+    self:EnsureGroundedDressing(folders)
+    self:EnsureSkyAtmosphere()
+    self:EnsureDecoratedBoundary(folders)
     return spawn
 end
 
@@ -1418,6 +1426,140 @@ function MapLayoutService:GroundPlace(model, x, z)
         return wb.GroundPlace(model, x, z)
     end
     warn("[MapLayoutService] GroundPlace: WorldBuilderService unavailable")
+    return nil
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- EnsureBiomeElevation(folders)  [ADDITIVE]
+-- Sculpts gentle per-biome Terrain elevation (domes / canyon shelving / basins)
+-- on top of the flat ZoneTerrain fills, plus shorelines around terrain water.
+-- Pure no-op when WorldBuilderService or live Terrain is unavailable, so the
+-- BiomePlacementValidation / CollisionValidation suites (which run without
+-- sculpted terrain) are unaffected. Records a marker attribute for telemetry.
+-- ──────────────────────────────────────────────────────────────────────────────
+function MapLayoutService:EnsureBiomeElevation(folders)
+    folders = folders or self:EnsureMapFolders()
+    local wb = getWorldBuilder()
+    if not wb or type(wb.SculptBiomeMound) ~= "function" then
+        return false
+    end
+
+    local profiles = wb.BiomeElevation and wb.BiomeElevation() or {}
+    local sculpted = 0
+    for zoneId, zone in pairs(self.ZoneTerrain) do
+        local profile = profiles[zoneId]
+        if profile then
+            local top = Vector3.new(zone.center.X, zone.topY, zone.center.Z)
+            wb.SculptBiomeMound(top, zone.size, profile)
+            sculpted = sculpted + 1
+            local zoneFolder = folders.Zones:FindFirstChild(zoneId)
+            if zoneFolder then
+                zoneFolder:SetAttribute("Sculpted", true)
+            end
+        end
+    end
+
+    -- Soft shorelines around each terrain-water body so water meets land
+    -- naturally rather than as a hard square plate.
+    for _, water in ipairs(self.ShallowWater) do
+        local profile = nil
+        for zoneId, zone in pairs(self.ZoneTerrain) do
+            if (Vector3.new(water.center.X, zone.center.Y, water.center.Z) - Vector3.new(zone.center.X, zone.center.Y, zone.center.Z)).Magnitude
+                <= math.max(zone.size.X, zone.size.Z) then
+                profile = profiles[zoneId]
+                break
+            end
+        end
+        local shoreMaterial = (profile and profile.shoreline) or Enum.Material.Sand
+        wb.SculptShoreline(water.center, water.size, shoreMaterial)
+    end
+
+    folders.Map:SetAttribute("BiomeElevationSculpted", sculpted > 0)
+    return sculpted > 0
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- EnsureGroundedDressing(folders)  [ADDITIVE]
+-- Raycast-reseats every visible biome-dressing / scenery / food-visual part onto
+-- the real (sculpted) terrain surface and refreshes its GroundTopY attribute, so
+-- nothing floats after elevation is applied. No-op without live Terrain (so the
+-- floating-asset validation still passes against authored positions in tests).
+-- Tagged invisible gameplay query parts are intentionally skipped — only visible
+-- decorative parts are re-seated; the query volumes keep their authored Y.
+-- ──────────────────────────────────────────────────────────────────────────────
+function MapLayoutService:EnsureGroundedDressing(folders)
+    folders = folders or self:EnsureMapFolders()
+    local wb = getWorldBuilder()
+    if not wb or type(wb.RegroundPart) ~= "function" then
+        return 0
+    end
+    local Workspace = game:GetService("Workspace")
+    if not Workspace:FindFirstChildOfClass("Terrain") then
+        return 0
+    end
+
+    local grounded = 0
+    local roots = { folders.BiomeDressing }
+    for _, root in ipairs(roots) do
+        if root then
+            for _, inst in ipairs(root:GetDescendants()) do
+                if inst:IsA("BasePart")
+                    and inst.Transparency < 1
+                    and inst:GetAttribute("FloatingAllowed") ~= true
+                    and inst:GetAttribute("BiomeDressing") == true then
+                    if wb.RegroundPart(inst) then
+                        grounded = grounded + 1
+                    end
+                end
+            end
+        end
+    end
+
+    folders.Map:SetAttribute("DressingGroundedCount", grounded)
+    return grounded
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- EnsureSkyAtmosphere()  [ADDITIVE]
+-- Delegates to WorldBuilderService.EnsureSkyAndAtmosphere() to replace the
+-- default skybox with a curated Sky + Atmosphere + calm dawn Lighting mood.
+-- No-op-safe in test stubs. Does not touch weather state.
+-- ──────────────────────────────────────────────────────────────────────────────
+function MapLayoutService:EnsureSkyAtmosphere()
+    local wb = getWorldBuilder()
+    if wb and type(wb.EnsureSkyAndAtmosphere) == "function" then
+        local ok = pcall(function()
+            wb.EnsureSkyAndAtmosphere()
+        end)
+        return ok
+    end
+    return false
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- EnsureDecoratedBoundary(folders)  [ADDITIVE]
+-- Builds the boundary ring (thin invisible collision wall + decorative scenery
+-- markers) around the full compact playable footprint so there is no hard
+-- drop-off edge. Radius is derived from the full-map underlay so it encloses
+-- every biome. No-op-safe in test stubs (BuildBoundaryRing only creates parts).
+-- ──────────────────────────────────────────────────────────────────────────────
+function MapLayoutService:EnsureDecoratedBoundary(folders)
+    folders = folders or self:EnsureMapFolders()
+    local wb = getWorldBuilder()
+    if not wb or type(wb.BuildBoundaryRing) ~= "function" then
+        return nil
+    end
+    local underlay = self.FullMapUnderlay
+    local center = Vector3.new(underlay.center.X, underlay.topY or 0, underlay.center.Z)
+    -- Enclose the widest map dimension with a small margin.
+    local radius = math.max(underlay.size.X, underlay.size.Z) / 2 + 60
+    local ok, ring = pcall(function()
+        return wb.BuildBoundaryRing(center, radius, folders.Map)
+    end)
+    if ok and ring then
+        folders.Map:SetAttribute("BoundaryRingRadius", radius)
+        return ring
+    end
     return nil
 end
 

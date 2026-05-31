@@ -335,4 +335,11 @@ if _ok and CombatFeedbackController and CombatFeedbackController.Init then
     CombatFeedbackController:Init()
 end
 
+-- ── NpcHealthThreatController init (self-inits on require; require to load) ───
+
+local _okNpcThreat, NpcHealthThreatController = pcall(require, script.Parent.NpcHealthThreatController)
+if _okNpcThreat and NpcHealthThreatController and NpcHealthThreatController.Init then
+    NpcHealthThreatController:Init()
+end
+
 return HUDController

@@ -254,4 +254,217 @@ function WorldBuilderService.BuildBoundaryRing(center, radius, parent)
     return ringFolder
 end
 
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Per-biome elevation profiles (additive).
+-- Gentle, contiguous height offsets layered ON TOP of the existing flat
+-- ZoneTerrain fills so traversal reads as a sculpted landscape rather than a
+-- plane.  These are intentionally small (a few studs) so they never lift props
+-- past the floating-validation tolerance and never break the documented
+-- GroundTopY contract — visible dressing is re-grounded by RegroundPart().
+-- amplitude  = peak height (studs) added above the biome's flat top.
+-- material   = terrain material used for the sculpted shell.
+-- shoreline  = if set, a softer beach/transition material ringed around water.
+-- ──────────────────────────────────────────────────────────────────────────────
+local BIOME_ELEVATION = {
+    NurseryGrove         = { amplitude = 3,  rings = 2,  material = Enum.Material.Grass },
+    FernPlains           = { amplitude = 5,  rings = 3,  material = Enum.Material.Grass, shoreline = Enum.Material.Sand },
+    JungleBasin          = { amplitude = 7,  rings = 3,  material = Enum.Material.LeafyGrass, basin = true },
+    RedstoneCanyon       = { amplitude = 16, rings = 4,  material = Enum.Material.Sandstone, cliffs = true },
+    SwampDelta           = { amplitude = 3,  rings = 2,  material = Enum.Material.Mud, shoreline = Enum.Material.Sand, basin = true },
+    ApocalypticCity      = { amplitude = 4,  rings = 2,  material = Enum.Material.Asphalt },
+}
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- BiomeElevation()
+-- Returns a shallow copy of the per-biome elevation profile table so callers
+-- (MapLayoutService:EnsureBiomeElevation) can sculpt without reaching into the
+-- private upvalue.  Safe to call from test stubs (pure data, no Studio globals).
+-- ──────────────────────────────────────────────────────────────────────────────
+function WorldBuilderService.BiomeElevation()
+    local result = {}
+    for name, profile in pairs(BIOME_ELEVATION) do
+        local copy = {}
+        for k, v in pairs(profile) do copy[k] = v end
+        result[name] = copy
+    end
+    return result
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- SculptBiomeMound(center, footprint, profile)
+-- Lays concentric, shrinking terrain blocks above a biome's flat top to create a
+-- gentle dome (or, for `basin` profiles, an inverted bowl) plus optional cliff
+-- shelving for the canyon/mountain palette.  Idempotent-friendly: re-filling the
+-- same terrain volume with the same material is a no-op visually.
+-- `center`     Vector3 biome center (post-compact), Y = flat top of biome.
+-- `footprint`  Vector3 biome size (X/Z used; Y ignored).
+-- Returns the peak Y reached (for callers that want to seat horizon scenery).
+-- ──────────────────────────────────────────────────────────────────────────────
+function WorldBuilderService.SculptBiomeMound(center, footprint, profile)
+    local Workspace = game:GetService("Workspace")
+    local terrain = Workspace:FindFirstChildOfClass("Terrain")
+    if not terrain then
+        return center.Y
+    end
+    profile = profile or {}
+    local rings = math.max(1, profile.rings or 2)
+    local amplitude = profile.amplitude or 4
+    local material = profile.material or Enum.Material.Ground
+    local topY = center.Y
+    local baseX = math.max(8, footprint.X)
+    local baseZ = math.max(8, footprint.Z)
+
+    for ring = 1, rings do
+        local t = ring / rings                 -- 0..1 from outer to inner
+        local shrink = profile.basin and t or (1 - t * 0.7)
+        local ringX = math.max(8, baseX * shrink)
+        local ringZ = math.max(8, baseZ * shrink)
+        local layerHeight = math.max(2, amplitude / rings + (profile.cliffs and ring * 2 or 0))
+        local layerCenterY
+        if profile.basin then
+            -- Dig downward to read as a bowl/valley floor.
+            layerCenterY = topY - layerHeight / 2 - (ring - 1)
+        else
+            layerCenterY = topY + (ring - 1) * (amplitude / rings) + layerHeight / 2
+        end
+        terrain:FillBlock(
+            CFrame.new(center.X, layerCenterY, center.Z),
+            Vector3.new(ringX, layerHeight, ringZ),
+            material
+        )
+    end
+
+    return profile.basin and topY or (topY + amplitude)
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- SculptShoreline(waterCenter, waterSize, material)
+-- Rings a terrain-water body with a thin sloped band of beach/bank material so
+-- the water meets land naturally instead of a hard square edge.  No-op without
+-- terrain.  Kept shallow so the water depth contract (<=5 studs) is untouched.
+-- ──────────────────────────────────────────────────────────────────────────────
+function WorldBuilderService.SculptShoreline(waterCenter, waterSize, material)
+    local Workspace = game:GetService("Workspace")
+    local terrain = Workspace:FindFirstChildOfClass("Terrain")
+    if not terrain then
+        return
+    end
+    material = material or Enum.Material.Sand
+    local bandWidth = 10
+    local shoreY = waterCenter.Y - 0.5
+    local halfX = waterSize.X / 2
+    local halfZ = waterSize.Z / 2
+    local offsets = {
+        { CFrame.new(waterCenter.X, shoreY, waterCenter.Z + halfZ + bandWidth / 2), Vector3.new(waterSize.X + bandWidth * 2, 2, bandWidth) },
+        { CFrame.new(waterCenter.X, shoreY, waterCenter.Z - halfZ - bandWidth / 2), Vector3.new(waterSize.X + bandWidth * 2, 2, bandWidth) },
+        { CFrame.new(waterCenter.X + halfX + bandWidth / 2, shoreY, waterCenter.Z), Vector3.new(bandWidth, 2, waterSize.Z) },
+        { CFrame.new(waterCenter.X - halfX - bandWidth / 2, shoreY, waterCenter.Z), Vector3.new(bandWidth, 2, waterSize.Z) },
+    }
+    for _, band in ipairs(offsets) do
+        terrain:FillBlock(band[1], band[2], material)
+    end
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- RegroundPart(part)
+-- Raycast straight down against Terrain and re-seat an already-placed anchored
+-- visible part flush on the real (possibly sculpted) surface, then refresh its
+-- GroundTopY attribute so PlacementValidationService:ValidateNoFloatingVisibleAssets
+-- stays green against the actual terrain height.  No-op when terrain is absent
+-- (test stubs) — the part keeps its authored position and declared GroundTopY.
+-- Returns the surface Y it was seated on, or nil if no terrain hit.
+-- ──────────────────────────────────────────────────────────────────────────────
+function WorldBuilderService.RegroundPart(part)
+    if not (part and part:IsA("BasePart")) then
+        return nil
+    end
+    local Workspace = game:GetService("Workspace")
+    local terrain = Workspace:FindFirstChildOfClass("Terrain")
+    if not terrain then
+        return nil
+    end
+
+    local startY = 800
+    local origin = Vector3.new(part.Position.X, startY, part.Position.Z)
+    local direction = Vector3.new(0, -startY - 400, 0)
+    local rp = RaycastParams.new()
+    rp.FilterType = Enum.RaycastFilterType.Include
+    rp.FilterDescendantsInstances = { terrain }
+
+    local hit = Workspace:Raycast(origin, direction, rp)
+    if not hit then
+        return nil
+    end
+
+    local surfaceY = hit.Position.Y
+    part.Position = Vector3.new(part.Position.X, surfaceY + part.Size.Y / 2, part.Position.Z)
+    part:SetAttribute("GroundTopY", surfaceY)
+    part:SetAttribute("Regrounded", true)
+    return surfaceY
+end
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- EnsureSkyAndAtmosphere()
+-- Replaces the default skybox with a curated Sky + Atmosphere and sets a calm
+-- dawn-ish Lighting mood (per design doc 2.4).  Idempotent: reuses existing
+-- instances.  Does NOT touch Lighting:GetAttribute("CurrentWeather") so the
+-- WeatherBiomeService rain test is unaffected.  No-op-safe in test stubs.
+-- ──────────────────────────────────────────────────────────────────────────────
+local SKYBOX_FACE_IDS = {
+    -- Roblox built-in high-quality day skybox faces (stable catalog asset ids).
+    SkyboxBk = "rbxassetid://150403228",
+    SkyboxDn = "rbxassetid://150403261",
+    SkyboxFt = "rbxassetid://150403241",
+    SkyboxLf = "rbxassetid://150403269",
+    SkyboxRt = "rbxassetid://150403251",
+    SkyboxUp = "rbxassetid://150403279",
+}
+
+function WorldBuilderService.EnsureSkyAndAtmosphere()
+    local okLighting, Lighting = pcall(function()
+        return game:GetService("Lighting")
+    end)
+    if not okLighting or not Lighting then
+        return nil
+    end
+
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        sky = Instance.new("Sky")
+        sky.Name = "EggBreakersSky"
+        sky.Parent = Lighting
+    end
+    for prop, id in pairs(SKYBOX_FACE_IDS) do
+        pcall(function()
+            sky[prop] = id
+        end)
+    end
+    sky.CelestialBodiesShown = true
+    sky.StarCount = 3000
+
+    local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+    if not atmosphere then
+        atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "EggBreakersAtmosphere"
+        atmosphere.Parent = Lighting
+    end
+    atmosphere.Density = 0.32
+    atmosphere.Offset = 0.1
+    atmosphere.Color = Color3.fromRGB(199, 199, 199)
+    atmosphere.Decay = Color3.fromRGB(106, 112, 125)
+    atmosphere.Glare = 0.2
+    atmosphere.Haze = 1.6
+
+    -- Calm dawn mood (does not assert over weather state).
+    Lighting.ClockTime = 7.5
+    Lighting.GeographicLatitude = 12
+    Lighting.Brightness = 2.4
+    Lighting.ExposureCompensation = 0.1
+    Lighting.OutdoorAmbient = Color3.fromRGB(120, 122, 130)
+    Lighting.Ambient = Color3.fromRGB(70, 70, 78)
+    Lighting:SetAttribute("EggBreakersSkyApplied", true)
+
+    return sky
+end
+
 return WorldBuilderService
