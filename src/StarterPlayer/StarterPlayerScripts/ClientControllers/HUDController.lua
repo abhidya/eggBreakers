@@ -9,6 +9,7 @@
 --   HUDController:BuildRoleCard(payload)            -> string
 --   HUDController:BuildDietGuidance(payload)        -> string
 --   HUDController:BuildThreatBadge(payload)         -> string
+--   HUDController:BuildStoryCue(payload)            -> string
 --   HUDController:BuildDeltaText(previous, current) -> string
 --   HUDController:ShouldShowOxygen(payload)         -> bool
 --   HUDController:ApplyStatUpdate(payload)
@@ -37,10 +38,21 @@ local categoryIcons = {
     Flyer = "🪽",
     SemiAquatic = "🌊",
 }
+local biomeIcons = {
+    NurseryGrove = "🐣",
+    FernPlains = "🌿",
+    JungleBasin = "🌴",
+    SwampDelta = "🌊",
+    RedstoneCanyon = "🦴",
+    ApocalypticCity = "🏚",
+    OldEden = "🏚",
+    CoastalCliffs = "🪽",
+    MountainNestingCliffs = "🪺",
+}
 
 -- HUD panel layout
 local PANEL_W    = 338
-local PANEL_H    = 256  -- slightly taller to breathe
+local PANEL_H    = 282  -- slightly taller to breathe
 local PANEL_PAD  = 10
 
 -- Bar row layout (icon | [====bar====] | 75%)
@@ -185,6 +197,108 @@ function HUDController:BuildDietGuidance(payload)
     return string.format("%s + 💧 = %s", foodIcon, moveHint)
 end
 
+local function firstNonEmpty(...)
+    for i = 1, select("#", ...) do
+        local value = select(i, ...)
+        if value ~= nil and tostring(value) ~= "" then
+            return value
+        end
+    end
+    return nil
+end
+
+local function profileBiome(profile)
+    if type(profile) ~= "table" then return nil end
+    if profile.PreferredBiome then return profile.PreferredBiome end
+    local zones = profile.PreferredZones
+    if type(zones) == "table" then
+        return zones[1]
+    end
+    return nil
+end
+
+local function payloadBiome(payload)
+    local status = type(payload.statusEffects) == "table" and payload.statusEffects or {}
+    return firstNonEmpty(
+        payload.biomeId,
+        payload.currentBiome,
+        payload.zoneId,
+        status.BiomeId,
+        status.biomeId,
+        status.CurrentBiome,
+        status.currentBiome,
+        status.ZoneId,
+        status.zoneId,
+        profileBiome(payload.ecosystemProfile)
+    )
+end
+
+local function hasStatus(status, ...)
+    if type(status) ~= "table" then return false end
+    for i = 1, select("#", ...) do
+        local key = select(i, ...)
+        if status[key] == true then
+            return true
+        end
+    end
+    return false
+end
+
+-- Returns a compact story/mechanics state line:
+-- "🌊 SwampDelta  🐟 🫧 ⚠" or "🐣 NurseryGrove  🐣 🍎! 💧!"
+function HUDController:BuildStoryCue(payload)
+    payload = payload or {}
+    local profile = type(payload.ecosystemProfile) == "table" and payload.ecosystemProfile or {}
+    local status = type(payload.statusEffects) == "table" and payload.statusEffects or {}
+    local biome = tostring(payloadBiome(payload) or "Wilds")
+    local parts = { string.format("%s %s", biomeIcons[biome] or "🧭", biome) }
+
+    local stage = tostring(payload.growthStage or "")
+    if stage == "Hatchling" or payload.hatched == false then
+        table.insert(parts, "🐣")
+    elseif stage == "Adult" then
+        table.insert(parts, "★")
+    end
+
+    local diet = tostring(payload.diet or "")
+    local hunger = tonumber(payload.hunger)
+    local thirst = tonumber(payload.thirst)
+    if hunger and hunger < 35 then
+        table.insert(parts, (dietIcons[diet] or "🍽️") .. "!")
+    end
+    if thirst and thirst < 35 then
+        table.insert(parts, "💧!")
+    end
+
+    local semiAquatic = profile.SemiAquatic == true or profile.RiverPredator == true
+    if payload.swimming == true or payload.underwater == true or payload.submerged == true then
+        if semiAquatic or hasStatus(status, "FishNearby", "fishNearby", "FishSchoolNearby", "fishSchoolNearby") then
+            table.insert(parts, "🐟")
+        end
+        local oxygen = tonumber(payload.oxygen)
+        local maxOxygen = tonumber(payload.maxOxygen) or 0
+        if maxOxygen > 0 and oxygen and oxygen < maxOxygen then
+            table.insert(parts, oxygen / maxOxygen < 0.35 and "🫧!" or "🫧")
+        end
+    elseif hasStatus(status, "FishNearby", "fishNearby", "FishSchoolNearby", "fishSchoolNearby") then
+        table.insert(parts, "🐟")
+    end
+
+    local threat = self:BuildThreatBadge(payload)
+    if threat ~= "" then
+        table.insert(parts, threat)
+    end
+
+    local eggCount = tonumber(status.NestEggCount or status.nestEggCount)
+    if eggCount and eggCount > 0 then
+        table.insert(parts, string.format("🪺x%d", eggCount))
+    elseif hasStatus(status, "NestNearby", "nestNearby", "CanNest", "canNest", "NestReady", "nestReady") then
+        table.insert(parts, "🪺")
+    end
+
+    return table.concat(parts, "  ")
+end
+
 function HUDController:ShouldShowOxygen(payload)
     payload = payload or {}
     local maxOxy = tonumber(payload.maxOxygen) or 0
@@ -295,6 +409,21 @@ function HUDController:EnsureGui()
     self.StatusDeltaLabel:SetAttribute("IconOnlyTracker", true)
     self.StatusDeltaLabel.Parent        = root
 
+    self.StoryStateLabel                = Instance.new("TextLabel")
+    self.StoryStateLabel.Name           = "StoryStateLabel"
+    self.StoryStateLabel.Size           = UDim2.fromOffset(PANEL_W - 20, 24)
+    self.StoryStateLabel.Position       = UDim2.fromOffset(10, 246)
+    self.StoryStateLabel.BackgroundTransparency = 0.05
+    self.StoryStateLabel.BackgroundColor3 = Color3.fromRGB(24, 46, 42)
+    self.StoryStateLabel.TextColor3     = Color3.fromRGB(215, 245, 230)
+    self.StoryStateLabel.TextWrapped    = true
+    self.StoryStateLabel.TextScaled     = true
+    self.StoryStateLabel.Text           = "🐣 NurseryGrove  🐣 🍎 💧"
+    self.StoryStateLabel:SetAttribute("IconOnlyTracker", true)
+    self.StoryStateLabel:SetAttribute("MobileReadable", true)
+    UIFactory:RoundCorners(self.StoryStateLabel, 6)
+    self.StoryStateLabel.Parent         = root
+
     -- Thin separator line
     local sep      = Instance.new("Frame")
     sep.Name       = "Separator"
@@ -398,6 +527,8 @@ function HUDController:ApplyStatUpdate(payload)
     self.GuidanceLabel.Text = self:BuildDietGuidance(payload)
     self.StatusDeltaLabel.Text = self:BuildDeltaText(previous, payload)
     self.StatusDeltaLabel:SetAttribute("LastDeltaText", self.StatusDeltaLabel.Text)
+    self.StoryStateLabel.Text = self:BuildStoryCue(payload)
+    self.StoryStateLabel:SetAttribute("StoryCueText", self.StoryStateLabel.Text)
 
     -- Stat bars
     self:SetBar("health",  payload.health)

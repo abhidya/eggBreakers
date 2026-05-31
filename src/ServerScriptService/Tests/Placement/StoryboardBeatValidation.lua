@@ -464,6 +464,52 @@ table.insert(suite.tests, { name = "Beat 7 city discovery triggers are invisible
     Assert.truthy(triggers >= 3, "city approach/core discovery volumes exist")
 end })
 
+table.insert(suite.tests, { name = "Beat 8 nesting herd markers resolve to herd-capable prey spawns", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureNPCSpawnMarkers(folders)
+    local herdMarkersByZone = {}
+    local herdMarkerCount = 0
+
+    for _, spec in ipairs(MapLayoutService.NPCSpawnPlacements) do
+        if spec.nestingHerd == true then
+            herdMarkerCount = herdMarkerCount + 1
+            Assert.equals(spec.kind, "Prey", spec.name .. " nesting herd marker is prey")
+            local speciesId = MapLayoutService.NPCKindSpeciesIds[spec.kind]
+            local species = SpeciesConfig[speciesId]
+            Assert.notNil(species, spec.name .. " resolves to a configured species")
+            Assert.equals(species.EcosystemProfile.Herding, true, spec.name .. " resolves to a herd-capable species")
+            local marker = folders.NPCSpawns:FindFirstChild(spec.name)
+            Assert.notNil(marker, spec.name .. " nesting herd marker is authored")
+            Assert.equals(marker:GetAttribute("NestingHerd"), true, spec.name .. " is stamped as a nesting herd marker")
+            Assert.equals(marker:GetAttribute("SpeciesRelevantSpawn"), true, spec.name .. " remains relevant even outside preferred biome")
+            Assert.equals(marker:GetAttribute("SpeciesId"), speciesId, spec.name .. " spawn marker records herd-capable species")
+
+            local zoneMarkers = herdMarkersByZone[spec.zone]
+            if not zoneMarkers then
+                zoneMarkers = {}
+                herdMarkersByZone[spec.zone] = zoneMarkers
+            end
+            table.insert(zoneMarkers, spec)
+        end
+    end
+
+    local groupedZones = 0
+    for zoneName, zoneMarkers in pairs(herdMarkersByZone) do
+        if #zoneMarkers >= 2 then
+            groupedZones = groupedZones + 1
+            for i = 1, #zoneMarkers do
+                for j = i + 1, #zoneMarkers do
+                    Assert.truthy((zoneMarkers[i].position - zoneMarkers[j].position).Magnitude <= NPCService.HerdRadius * 2,
+                        zoneName .. " nesting herd markers stay near enough to read as one authored group")
+                end
+            end
+        end
+    end
+
+    Assert.truthy(herdMarkerCount >= 4, "Beat 8 has authored nesting herd prey markers")
+    Assert.truthy(groupedZones >= 1, "Beat 8 has at least one multi-marker nesting herd group")
+end })
+
 table.insert(suite.tests, { name = "Beat 8 adult nest action lays egg and records home state", run = function()
     local player = MockPlayer.new(93008, "StoryboardBeat8Adult")
     RateLimitService:ClearPlayer(player)

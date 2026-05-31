@@ -157,6 +157,40 @@ table.insert(suite.tests, { name = "apex threat badge is compact and observable"
     Assert.equals(calm, "", "non-threat profiles stay quiet")
 end })
 
+table.insert(suite.tests, { name = "story cue exposes biome needs threat fish and nest state", run = function()
+    local hatchling = HUDController:BuildStoryCue({
+        species = "gallimimus",
+        diet = "Herbivore",
+        growthStage = "Hatchling",
+        hunger = 22,
+        thirst = 18,
+        ecosystemProfile = { PreferredBiome = "NurseryGrove", SmallPrey = true },
+    })
+    Assert.truthy(string.find(hatchling, "NurseryGrove", 1, true) ~= nil, "biome context appears")
+    Assert.truthy(string.find(hatchling, "🐣", 1, true) ~= nil, "hatchling story state appears")
+    Assert.truthy(string.find(hatchling, "🌿!", 1, true) ~= nil, "food need appears with diet icon")
+    Assert.truthy(string.find(hatchling, "💧!", 1, true) ~= nil, "water need appears")
+
+    local swamp = HUDController:BuildStoryCue({
+        species = "spinosaurus",
+        diet = "Carnivore",
+        growthStage = "Adult",
+        hunger = 88,
+        thirst = 75,
+        swimming = true,
+        oxygen = 28,
+        maxOxygen = 100,
+        creatureCategory = "SemiAquatic",
+        ecosystemProfile = { SemiAquatic = true, RiverPredator = true, ApexEventEligible = true, PreferredBiome = "SwampDelta" },
+        statusEffects = { CurrentBiome = "SwampDelta", FishSchoolNearby = true, ApexThreatNearby = true, NestEggCount = 2 },
+    })
+    Assert.truthy(string.find(swamp, "SwampDelta", 1, true) ~= nil, "current biome overrides profile")
+    Assert.truthy(string.find(swamp, "🐟", 1, true) ~= nil, "fish cue appears for aquatic story beat")
+    Assert.truthy(string.find(swamp, "🫧!", 1, true) ~= nil, "oxygen danger appears")
+    Assert.truthy(string.find(swamp, "⚠", 1, true) ~= nil, "apex warning appears")
+    Assert.truthy(string.find(swamp, "🪺x2", 1, true) ~= nil, "nest egg state appears when replicated")
+end })
+
 table.insert(suite.tests, { name = "hud factory supports compact mobile bars", run = function()
     local root = Instance.new("Frame")
     local fill = UIFactory:CreateBar(root, "Hunger", 20, {

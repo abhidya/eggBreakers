@@ -35,10 +35,10 @@ Executed in the Roblox Creator Store via the Studio MCP Proxy and mapped to rele
 To prevent low-quality CSG primitives, broken collision meshes, or unrated placeholders:
 1. **Mesh checks** — accept only models with rigged `MeshParts` or clean low-poly `.fbx` geometry.
 2. **Rojo alignment** — store all imported visible assets under `ReplicatedStorage.ImportedAssetLibrary` so they stay synced in git.
-3. **Sanitization** — strip embedded scripts, unrated local sounds, and autoplay scripts; the AI brain and game audio stay centralized in server services.
+3. **Script review and adaptation** — executable imports are allowed when reviewed. Keep or rework useful dynamic behavior so it serves the storyboards and eggBreakers authority model; disable only code that stays uncontrolled, unsafe, noisy, or incompatible after review.
 
 ### Non-destructive import pipeline
-`Creator Store search → insert primary result → sanitize (strip scripts & looped audio) → tag (SourceAssetId + AssetManifestId) → move to ReplicatedStorage.ImportedAssetLibrary → run AssetAuditService verification.`
+`Creator Store search → insert primary result → inspect scripts/sounds/animations → rework useful behavior under eggBreakers services/controllers → tag (SourceAssetId + AssetManifestId) → move to ReplicatedStorage.ImportedAssetLibrary → run AssetAuditService verification.`
 
 ---
 
@@ -90,7 +90,7 @@ An ASCII-safe grep was run against the historical 13.0 MB `eggBreakers2_old.rbxl
 
 ### Recommended roadmap (waves)
 - **Wave 1 — Locomotion & nomenclature:** resolve pterodactyl→pteranodon, plumb Spinosaurus (SemiAquatic, SwampDelta), fix NPC locomotion (real Humanoid + MoveTo).
-- **Wave 2 — Animation & asset sourcing:** map Creator-Store dinosaur Walk/Run/Idle/Eat/Drink/Attack animation IDs into `SpeciesConfig.AnimationIds`; replace blocky props with rated environment packs; strip/quarantine ~744 legacy scripts + looped sounds in the raw packs.
+- **Wave 2 — Animation & asset sourcing:** map Creator-Store dinosaur Walk/Run/Idle/Eat/Drink/Attack animation IDs into `SpeciesConfig.AnimationIds`; replace blocky props with rated environment packs; review the ~744 legacy scripts and looped sounds in the raw packs, then adapt useful movement/animation/audio behavior and disable only incompatible leftovers.
 - **Wave 3 — Mechanics expansion:** interactive nesting (physical Nest, Lay Egg prompt, hatch-from-nest respawn); Become Alpha (DNA-sacrifice ascend challenge, 1.2× scale, glow/shader, `AlphaRoar` pack buff); physics combat feedback via native `HumanoidRootPart:ApplyImpulse` + Creator-Store VFX (keep existing 70-line floating-damage readout).
 
 ---

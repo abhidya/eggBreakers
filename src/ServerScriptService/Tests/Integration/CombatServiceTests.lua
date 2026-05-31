@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
 local CollectionService = game:GetService("CollectionService")
 local Bootstrap = require(game:GetService("ServerScriptService").Bootstrap)
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
@@ -120,6 +121,16 @@ table.insert(suite.tests, { name = "telegraph payload and remote are determinist
     local p, target = setup(34004)
     Bootstrap.Init()
 
+    Assert.notNil(RemoteContracts.CombatTelegraph, "telegraph remote has canonical contract")
+    Assert.equals(RemoteContracts.CombatTelegraph.Direction, "ServerToClient", "telegraph direction")
+    local contractPayload = RemoteContracts.CombatTelegraph.Payload
+    Assert.truthy(table.find(contractPayload, "kind") ~= nil, "telegraph contract includes kind")
+    Assert.truthy(table.find(contractPayload, "attackType") ~= nil, "telegraph contract includes attack type")
+    Assert.truthy(table.find(contractPayload, "attackerUserId") ~= nil, "telegraph contract includes attacker id")
+    Assert.truthy(table.find(contractPayload, "targetPosition") ~= nil, "telegraph contract includes target position")
+    Assert.truthy(table.find(contractPayload, "windupSeconds") ~= nil, "telegraph contract includes windup")
+    Assert.truthy(ReplicatedStorage.Remotes:FindFirstChild("CombatTelegraph"):IsA("RemoteEvent"), "bootstrap creates telegraph remote from contract")
+
     local payload = CombatService:BuildAttackTelegraphPayload(p, "HeavyBite", target)
     Assert.equals(payload.kind, "telegraph", "telegraph kind")
     Assert.equals(payload.attackType, "HeavyBite", "telegraph attack type")
@@ -132,7 +143,6 @@ table.insert(suite.tests, { name = "telegraph payload and remote are determinist
     local windup, firedPayload = CombatService:FireAttackTelegraph(p, "HeavyBite", target)
     Assert.equals(windup, CombatService.WindupSeconds.HeavyBite, "fire returns windup")
     Assert.equals(firedPayload.targetName, target.Name, "fire returns payload")
-    Assert.truthy(ReplicatedStorage.Remotes:FindFirstChild("CombatTelegraph"):IsA("RemoteEvent"), "telegraph remote created")
     target:Destroy()
 end })
 

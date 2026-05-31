@@ -193,7 +193,7 @@ Import candidates:
 - `2915304314` for scaled bones/fossil/carrion dressing only, not edible meat until visual proof says it reads as food.
 Required import probe:
 - Insert into `ReplicatedStorage.ImportedAssetLibrary` or a temporary `Workspace.AssetProbe` in `eggBreakers2`.
-- Review scripts/autoplay audio before marking candidate usable; adapt useful dynamic scripts under eggBreakers authority only after source review, owner assignment, sandbox/authority checks, focused tests, and integration proof; quarantine unsafe/unowned behavior.
+- Review scripts/autoplay audio before marking candidate usable; executable imports are acceptable raw material. Adapt useful dynamic scripts under eggBreakers authority after source review, owner assignment, authority checks, focused tests, and integration proof; disable/quarantine only behavior that remains unsafe, unowned, noisy, or story-incompatible after review.
 - Stamp `SourceAssetId`, `CreatorStoreOnly`, and `ImportedVisibleAsset` on accepted roots.
 - Capture eggBreakers2 screenshot from gameplay distance with UI hidden.
 - Only then wire MapLayout/FoodWater/Nest visuals to imported assets; keep procedural clusters as non-release fallback.

@@ -23,3 +23,12 @@ Source checks pass for the worker slice, but G018 final QA remains blocked by li
 | Storyboard source syntax | PASS | `luac -p src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua` exited 0. |
 | Whitespace/diff check | PASS | `git diff --check -- src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua docs/G018/STORY_BEAT_COVERAGE_AUDIT.md docs/G018/ACTIVE_WORK_QUEUE.md docs/G018/WAVE0_SWARM_TASKS.md docs/G018/USER_STORY_COVERAGE_MATRIX.md` exited 0. |
 | Studio/live gates | NOT RUN | Worker was instructed not to run Studio MCP or broad validation; live proof remains blocked. |
+
+## Test/Audit Gap Closure — 2026-05-31
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Beat 8 herding source assertion | ADDED | `StoryboardBeatValidation.server` now asserts authored `nestingHerd` markers resolve to herd-capable prey species, are stamped as `NestingHerd`, and remain `SpeciesRelevantSpawn` outside preferred biome. |
+| Luau syntax | PASS | `luac -p src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua` exited 0. |
+| Diff hygiene | PASS | `git diff --check -- src/ServerScriptService/Tests/Placement/StoryboardBeatValidation.lua docs/G018/TestResults.md` exited 0. |
+| Live/E2E proof | NOT RUN | Source-only lane; no claim of Studio/live E2E pass. Nesting herd coordination still needs live proof. |
