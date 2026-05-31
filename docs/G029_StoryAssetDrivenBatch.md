@@ -67,6 +67,10 @@ The source placement gate now checks both floating and buried visible assets, an
 The two imported scripts in `93304870` only call a local `Rustle:Play()` sound from touched leaves/moss. They were stamped:
 
 - `ReviewedImportedScript=true`
+- `ImportedScriptAdapted=true`
+- `ImportedScriptStamped=true`
+- `ImportedScriptOwner="G029StoryAssetDrivenBatch"`
+- `ScriptAdaptedTo="G029 reviewed local rustle ambience"`
 - `ScriptAuditPurpose="local rustle sound on touched leaves/moss only"`
 - `ScriptSandboxStatus="reviewed_no_remotes_no_datastore_no_damage"`
 

@@ -160,6 +160,37 @@ table.insert(suite.tests, { name = "visible buried assets fail ground gate", run
     buried:Destroy()
 end })
 
+table.insert(suite.tests, { name = "complex imported roots may allow floating children but not buried clipping", run = function()
+    local model = Instance.new("Model")
+    model.Name = "ComplexImportedCityRuin"
+    model:SetAttribute("GroundTopY", 10)
+    model:SetAttribute("FloatingAllowed", true)
+    model.Parent = workspace
+
+    local upperFloor = Instance.new("Part")
+    upperFloor.Name = "UpperFloorStillPartOfRuin"
+    upperFloor.Size = Vector3.new(8, 1, 8)
+    upperFloor.Position = Vector3.new(0, 24, 0)
+    upperFloor.Parent = model
+
+    local buried = Instance.new("Part")
+    buried.Name = "BuriedRuinBase"
+    buried.Size = Vector3.new(4, 4, 4)
+    buried.Position = Vector3.new(0, 10.5, 0)
+    buried.Parent = model
+
+    local result = PlacementValidationService:ValidateNoFloatingVisibleAssets(model)
+    Assert.falsy(result.passed, "root floating exemption must not hide buried clipping")
+    Assert.truthy(string.find(result.failures[1], "clips below ground", 1, true) ~= nil,
+        "buried child remains a clipping failure")
+
+    buried.Position = Vector3.new(0, 12.25, 0)
+    result = PlacementValidationService:ValidateNoFloatingVisibleAssets(model)
+    Assert.truthy(result.passed, table.concat(result.failures, "; "))
+
+    model:Destroy()
+end })
+
 table.insert(suite.tests, { name = "visible asset ground gate inherits zone from model root", run = function()
     local model = Instance.new("Model")
     model.Name = "GroundedStoryAssetModel"

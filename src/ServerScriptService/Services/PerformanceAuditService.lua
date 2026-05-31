@@ -28,6 +28,54 @@ function PerformanceAuditService:_isRuntimeScript(instance)
     return instance:IsA("Script") or instance:IsA("LocalScript")
 end
 
+function PerformanceAuditService:_hasStringAttribute(instance, attributeName)
+    local value = instance:GetAttribute(attributeName)
+    return type(value) == "string" and value ~= ""
+end
+
+function PerformanceAuditService:_hasAncestorAttribute(instance, attributeName, expectedValue)
+    local current = instance
+    while current do
+        local value = current:GetAttribute(attributeName)
+        if expectedValue == nil then
+            if value ~= nil then return true end
+        elseif value == expectedValue then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+function PerformanceAuditService:_isRawScriptReviewQueue(instance)
+    return self:_hasAncestorAttribute(instance, "RawImportedScriptPreserved", true)
+        or self:_hasAncestorAttribute(instance, "G032RawScriptPreserved", true)
+        or self:_hasAncestorAttribute(instance, "ImportedScriptReviewQueue", true)
+        or self:_hasAncestorAttribute(instance, "ScriptReviewStatus", "raw_preserved_pending_adaptation")
+end
+
+function PerformanceAuditService:_isReviewedAdaptedStamped(instance)
+    local reviewed = instance:GetAttribute("ImportedScriptAudited") == true
+        or instance:GetAttribute("ReviewedImportedScript") == true
+    local adapted = instance:GetAttribute("ImportedScriptAdapted") == true
+        or instance:GetAttribute("AdaptedIntoEggBreakers") == true
+        or self:_hasStringAttribute(instance, "ScriptAdaptedTo")
+    local stamped = instance:GetAttribute("ImportedScriptStamped") == true
+        or (
+            self:_hasStringAttribute(instance, "ScriptAuditPurpose")
+            and self:_hasStringAttribute(instance, "ScriptSandboxStatus")
+            and self:_hasStringAttribute(instance, "ImportedScriptOwner")
+        )
+    return reviewed and adapted and stamped
+end
+
+function PerformanceAuditService:_isAllowedImportedRuntimeScript(instance)
+    if self:_isRawScriptReviewQueue(instance) then
+        return instance.Disabled == true
+    end
+    return self:_isReviewedAdaptedStamped(instance)
+end
+
 function PerformanceAuditService:_worldScanRoot()
     return Workspace:FindFirstChild("Map") or Workspace
 end
@@ -61,6 +109,7 @@ function PerformanceAuditService:Scan()
     local decorativeCollidable = 0
     local importedTouchEnabled = 0
     local importedRuntimeScriptCount = 0
+    local allowedImportedRuntimeScriptCount = 0
     if #NPCService.NPCs > self.MaxNPCs then
         table.insert(failures, "NPC count exceeds cap: " .. tostring(#NPCService.NPCs))
     end
@@ -68,8 +117,12 @@ function PerformanceAuditService:Scan()
     for _, scanRoot in ipairs(self:_scriptScanRoots()) do
         for _, instance in ipairs(scanRoot:GetDescendants()) do
             if self:_isRuntimeScript(instance) and self:_isImportedAssetDescendant(instance) then
-                importedRuntimeScriptCount = importedRuntimeScriptCount + 1
-                table.insert(failures, instance:GetFullName() .. " imported runtime script should be removed or quarantined")
+                if self:_isAllowedImportedRuntimeScript(instance) then
+                    allowedImportedRuntimeScriptCount = allowedImportedRuntimeScriptCount + 1
+                else
+                    importedRuntimeScriptCount = importedRuntimeScriptCount + 1
+                    table.insert(failures, instance:GetFullName() .. " imported runtime script must be disabled raw queue or reviewed/adapted/stamped")
+                end
             end
         end
     end
@@ -113,6 +166,7 @@ function PerformanceAuditService:Scan()
         decorativeCollidable = decorativeCollidable,
         importedTouchEnabled = importedTouchEnabled,
         importedRuntimeScriptCount = importedRuntimeScriptCount,
+        allowedImportedRuntimeScriptCount = allowedImportedRuntimeScriptCount,
     }
 end
 

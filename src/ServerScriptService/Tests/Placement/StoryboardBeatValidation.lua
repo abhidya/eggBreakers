@@ -404,6 +404,16 @@ table.insert(suite.tests, { name = "Beat 5 fish schools stay inside valid swim w
         Assert.equals(fish:GetAttribute("FishSchool"), true, "fish source is marked as a school")
         Assert.equals(fish:GetAttribute("WaterSourceName"), validWater.Name, "fish records its water source")
         Assert.equals(WaterService:ContainsPoint(validWater, fish.Position), true, "fish school stays inside water bounds")
+        Assert.truthy(FishService:ApplyBeat5ImportedRandomWalk(fish, validWater, { stepStuds = 80 }),
+            "Beat 5 adapted vendor random-walk layer moves fish safely")
+        Assert.equals(WaterService:ContainsPoint(validWater, fish.Position), true,
+            "Beat 5 adapted random-walk output remains clamped to water bounds")
+        Assert.equals(fish:GetAttribute("ImportedScriptAdapted"), true,
+            "Beat 5 fish movement carries reviewed adapted-script ownership")
+        Assert.equals(fish:GetAttribute("ScriptAdaptedTo"), "FishService.ApplyBeat5ImportedRandomWalk",
+            "Beat 5 fish movement records source-side adaptation target")
+        Assert.truthy(CollectionService:HasTag(fish, FishService.ImportedScriptAdaptedTag),
+            "Beat 5 fish movement carries adapted ownership tag")
 
         local invalidFish, reason = FishService:CreateFishSource(shallowWater, "StoryboardBeat5InvalidFishSchool")
         Assert.equals(invalidFish, nil, "fish school is rejected for drink-only shallow water")

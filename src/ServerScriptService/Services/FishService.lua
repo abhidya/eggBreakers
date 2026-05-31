@@ -5,8 +5,11 @@ local WaterService = require(script.Parent.WaterService)
 local FishService = {}
 FishService.FishTag = "FishSource"
 FishService.FishSchoolTag = "FishSchool"
+FishService.ImportedScriptAdaptedTag = "ImportedScriptAdapted"
+FishService.ImportedBehaviorName = "Beat5VendorFishRandomWalk"
 FishService.DefaultNutrition = 18
 FishService.DefaultRespawnSeconds = 90
+FishService.DefaultRandomWalkStepStuds = 6
 
 function FishService:GetFolder()
     local folder = Workspace:FindFirstChild("FishSources")
@@ -70,6 +73,37 @@ function FishService:MoveWithinWater(fish, water, offset)
     )
     fish.Position = center + clamped
     fish:SetAttribute("LastSwimOffset", string.format("%.1f,%.1f,%.1f", clamped.X, clamped.Y, clamped.Z))
+    return true
+end
+
+function FishService:ApplyBeat5ImportedRandomWalk(fish, water, options)
+    if not fish or not fish:IsA("BasePart") then return false, "missing_fish" end
+    local habitatOk, habitatReason = WaterService:IsValidFishHabitat(water)
+    if not habitatOk then return false, habitatReason end
+    local center, sizeOrReason = WaterService:GetBounds(water)
+    if not center then return false, sizeOrReason end
+
+    local config = options or {}
+    local stepStuds = math.max(0, config.stepStuds or self.DefaultRandomWalkStepStuds)
+    local rng = config.rng or Random.new()
+    local currentOffset = fish.Position - center
+    local walkDelta = Vector3.new(
+        rng:NextNumber(-stepStuds, stepStuds),
+        rng:NextNumber(-stepStuds * 0.25, stepStuds * 0.25),
+        rng:NextNumber(-stepStuds, stepStuds)
+    )
+    local ok, reason = self:MoveWithinWater(fish, water, currentOffset + walkDelta)
+    if not ok then return false, reason end
+
+    fish:SetAttribute("ImportedScriptAdapted", true)
+    fish:SetAttribute("AdaptedIntoEggBreakers", true)
+    fish:SetAttribute("ScriptAdaptedTo", "FishService.ApplyBeat5ImportedRandomWalk")
+    fish:SetAttribute("ImportedBehaviorOwner", self.ImportedBehaviorName)
+    fish:SetAttribute("ImportedSourceBeat", "Beat5")
+    fish:SetAttribute("LastRandomWalkDelta", string.format("%.1f,%.1f,%.1f", walkDelta.X, walkDelta.Y, walkDelta.Z))
+    if not CollectionService:HasTag(fish, self.ImportedScriptAdaptedTag) then
+        CollectionService:AddTag(fish, self.ImportedScriptAdaptedTag)
+    end
     return true
 end
 

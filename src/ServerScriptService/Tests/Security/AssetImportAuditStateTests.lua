@@ -9,6 +9,15 @@ local SecurityAuditService = require(ServerScriptService.Services.SecurityAuditS
 
 local suite = { name = "AssetImportAuditStateTests", category = "Security", tests = {} }
 
+local function stampReviewedAdaptedScript(scriptObject)
+    scriptObject:SetAttribute("ImportedScriptAudited", true)
+    scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ImportedScriptStamped", true)
+    scriptObject:SetAttribute("ImportedScriptOwner", "AssetImportAuditService")
+    scriptObject:SetAttribute("ScriptAuditPurpose", "adapted imported utility owned by eggBreakers service flow")
+    scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+end
+
 local function makeImportedVisual(parent, name, manifestEntry, attributes)
     local fixture = Instance.new("Model")
     fixture.Name = name
@@ -100,6 +109,20 @@ table.insert(suite.tests, { name = "audit separates cataloged imported tagged pl
         Assert.truthy(result.counts.placedVisibleAssets >= 1, "visible fixture counted as placed/visible")
         Assert.truthy(result.counts.releaseReadyVisibleAssets >= 1, "quarantined fixture can be release-ready")
         Assert.equals(result.counts.scriptsQuarantined, 1, "unsafe runtime script quarantined")
+    end)
+end })
+
+table.insert(suite.tests, { name = "reviewed adapted stamped executable scripts are preserved during repair", run = function()
+    withImportedFixture(function(fixture)
+        local runtimeScript = fixture:FindFirstChild("UnsafeImportedRuntime")
+        stampReviewedAdaptedScript(runtimeScript)
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(result.passed, table.concat(result.failures, "; "))
+        Assert.equals(result.counts.scriptsQuarantined, 0, "reviewed adapted stamped runtime script is not quarantined")
+        Assert.equals(runtimeScript.Parent, fixture, "reviewed adapted stamped runtime script remains with imported asset")
+        Assert.equals(runtimeScript:GetAttribute("ImportedScriptPreserved"), true, "preserved runtime script is stamped")
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 1, "reviewed adapted stamped script does not block release-ready count")
     end)
 end })
 

@@ -41,7 +41,7 @@ These `searchId` values are cache/session artifacts. Re-run `Roblox_Studio.searc
    - `CreatorStoreOnly=true`
    - `ImportedVisibleAsset=true`
    - `PlacementRole=<story/gameplay role>`
-8. Review imported executable content before release readiness. Useful scripts, animations, sounds, and modules may be kept only after review and rework into eggBreakers-owned services/controllers. Quarantine or disable code that remains uncontrolled, unsafe, noisy, or incompatible.
+8. Review imported executable content before release readiness. Raw scripted imports may be preserved disabled in a review queue (`RawImportedScriptPreserved=true` or `ScriptReviewStatus="raw_preserved_pending_adaptation"`). Useful scripts, animations, sounds, and modules may run only after review, adaptation into eggBreakers-owned services/controllers, and explicit stamping (`ImportedScriptAudited`, `ImportedScriptAdapted`, `ImportedScriptStamped` or the equivalent detailed audit fields); modules also need `Sandboxed=true`. Quarantine code only when it remains uncontrolled, unsafe, noisy, incompatible, or has no storyboard use after review.
 9. Run `AssetImportAuditService:AuditAndRepair({ mutate = true })`.
 10. Run `AssetImportAuditService:ValidateReleaseCounts(500)` and record the honest count. Duplicates, catalog-only IDs, rejected inserts, hidden/quarantined visuals, and generated stand-ins do not count.
 

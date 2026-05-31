@@ -134,6 +134,64 @@ local function isExecutableScript(instance)
     return EXECUTABLE_CLASS_NAMES[instance.ClassName] == true
 end
 
+local function hasStringAttribute(instance, attributeName)
+    local value = instance:GetAttribute(attributeName)
+    return type(value) == "string" and value ~= ""
+end
+
+local function isReviewedAdaptedStampedScript(instance)
+    local reviewed = instance:GetAttribute("ImportedScriptAudited") == true
+        or instance:GetAttribute("ReviewedImportedScript") == true
+    local adapted = instance:GetAttribute("ImportedScriptAdapted") == true
+        or instance:GetAttribute("AdaptedIntoEggBreakers") == true
+        or hasStringAttribute(instance, "ScriptAdaptedTo")
+    local stamped = instance:GetAttribute("ImportedScriptStamped") == true
+        or (
+            hasStringAttribute(instance, "ScriptAuditPurpose")
+            and hasStringAttribute(instance, "ScriptSandboxStatus")
+            and hasStringAttribute(instance, "ImportedScriptOwner")
+        )
+    return reviewed and adapted and stamped
+end
+
+local function hasAncestorAttribute(instance, attributeName, expectedValue)
+    local current = instance
+    while current do
+        local value = current:GetAttribute(attributeName)
+        if expectedValue == nil then
+            if value ~= nil then return true end
+        elseif value == expectedValue then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+local function isRawScriptReviewQueue(instance)
+    return hasAncestorAttribute(instance, "RawImportedScriptPreserved", true)
+        or hasAncestorAttribute(instance, "G032RawScriptPreserved", true)
+        or hasAncestorAttribute(instance, "ImportedScriptReviewQueue", true)
+        or hasAncestorAttribute(instance, "ScriptReviewStatus", "raw_preserved_pending_adaptation")
+end
+
+local function isAuditedSandboxedModuleScript(instance)
+    return instance.ClassName == "ModuleScript"
+        and isReviewedAdaptedStampedScript(instance)
+        and instance:GetAttribute("Sandboxed") == true
+end
+
+local function isReleaseReadyScript(instance)
+    if isExecutableScript(instance) then
+        return isReviewedAdaptedStampedScript(instance)
+    end
+    return isAuditedSandboxedModuleScript(instance)
+end
+
+local function isEnabledExecutableScript(instance)
+    return isExecutableScript(instance) and instance.Disabled ~= true
+end
+
 local function addUnique(set, value)
     if value == nil or value == "" then return end
     set[tostring(value)] = true
@@ -382,17 +440,47 @@ function AssetImportAuditService:AuditAndRepair(options)
                 table.insert(candidates, descendant)
             end
             if isScriptInstance(descendant) then
+                local rawReview = isRawScriptReviewQueue(descendant)
+                local releaseReadyScript = isReleaseReadyScript(descendant)
+                local rawExecutableEnabled = rawReview and isEnabledExecutableScript(descendant)
                 table.insert(scriptRecords, {
                     path = descendant:GetFullName(),
                     className = descendant.ClassName,
                     audited = descendant:GetAttribute("ImportedScriptAudited") == true,
+                    reviewed = descendant:GetAttribute("ImportedScriptAudited") == true
+                        or descendant:GetAttribute("ReviewedImportedScript") == true,
+                    adapted = descendant:GetAttribute("ImportedScriptAdapted") == true
+                        or descendant:GetAttribute("AdaptedIntoEggBreakers") == true
+                        or hasStringAttribute(descendant, "ScriptAdaptedTo"),
+                    stamped = descendant:GetAttribute("ImportedScriptStamped") == true
+                        or (
+                            hasStringAttribute(descendant, "ScriptAuditPurpose")
+                            and hasStringAttribute(descendant, "ScriptSandboxStatus")
+                            and hasStringAttribute(descendant, "ImportedScriptOwner")
+                    ),
                     sandboxed = descendant:GetAttribute("Sandboxed") == true,
                     quarantined = descendant:GetAttribute("ImportedScriptQuarantined") == true,
+                    rawReview = rawReview,
+                    rawExecutableEnabled = rawExecutableEnabled,
+                    releaseReadyScript = releaseReadyScript,
                 })
-                if isExecutableScript(descendant) and mutate and quarantineFolder then
+                if rawReview then
+                    if mutate then
+                        if isExecutableScript(descendant) then
+                            descendant.Disabled = true
+                        end
+                        descendant:SetAttribute("ImportedScriptPreservedForReview", true)
+                    elseif rawExecutableEnabled then
+                        table.insert(failures, descendant:GetFullName() .. " raw review queued executable script is enabled")
+                    end
+                elseif isExecutableScript(descendant) and releaseReadyScript then
+                    if mutate then
+                        descendant:SetAttribute("ImportedScriptPreserved", true)
+                    end
+                elseif isExecutableScript(descendant) and mutate and quarantineFolder then
                     self:_quarantineScript(descendant, quarantineFolder, quarantinedScripts)
                 elseif isExecutableScript(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
-                    table.insert(failures, descendant:GetFullName() .. " executable imported script is not quarantined")
+                    table.insert(failures, descendant:GetFullName() .. " executable imported script is not reviewed, adapted, stamped, or quarantined")
                 end
             end
         end
@@ -409,10 +497,13 @@ function AssetImportAuditService:AuditAndRepair(options)
                 and instance:GetAttribute("CreatorStoreOnly") == true
             local visible = self:IsVisibleImportedAsset(instance)
             local scriptsPresent = false
+            local rawScriptReviewQueued = false
 			for _, descendant in ipairs(instance:GetDescendants()) do
-				if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
-					scriptsPresent = true
-					break
+                if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
+                    rawScriptReviewQueued = rawScriptReviewQueued or isRawScriptReviewQueue(descendant)
+                    if not isReleaseReadyScript(descendant) then
+                        scriptsPresent = true
+                    end
 				end
 			end
 			if mutate and not scriptsPresent and instance:GetAttribute("ScriptsAudited") ~= true then
@@ -440,7 +531,10 @@ function AssetImportAuditService:AuditAndRepair(options)
 			addUnique(importedSourceIds, sourceAssetId)
 			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
 			if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
-            if instance:GetAttribute("ScriptsAudited") == true or (entry and entry.ScriptsAudited == true and not scriptsPresent) then
+            if instance:GetAttribute("ScriptsAudited") == true
+                or rawScriptReviewQueued
+                or (entry and entry.ScriptsAudited == true and not scriptsPresent)
+            then
                 addUnique(auditedSourceIds, sourceAssetId)
             end
             if tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded then
@@ -455,6 +549,7 @@ function AssetImportAuditService:AuditAndRepair(options)
                 tagged = tagged,
                 placed = visible or rootInfo.placed,
                 scriptsPresent = scriptsPresent,
+                rawScriptReviewQueued = rawScriptReviewQueued,
                 qualityExclusionKind = qualityExclusionKind,
                 releaseReady = tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded,
             })

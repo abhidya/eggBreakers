@@ -25,6 +25,8 @@ AssetManifest.AllowedScriptSandboxStatuses = {
     NoScripts = true,
     ScriptsRemoved = true,
     Sandboxed = true,
+    ReviewedAdapted = true,
+    RawReviewQueued = true,
 }
 local zones = {
     "NurseryGrove",
@@ -721,8 +723,12 @@ function AssetManifest.Validate(options)
         if entry.ReplacementStatus == "Final" then
             finalCount = finalCount + 1
         end
-        if entry.ImportedScriptsPresent then
-            table.insert(failures, prefix .. " still has imported scripts present")
+        if entry.ImportedScriptsPresent
+            and entry.ScriptSandboxStatus ~= "Sandboxed"
+            and entry.ScriptSandboxStatus ~= "ReviewedAdapted"
+            and entry.ScriptSandboxStatus ~= "RawReviewQueued"
+        then
+            table.insert(failures, prefix .. " still has imported scripts present without an allowed script state")
         end
         if entry.ScriptsAudited ~= true then
             table.insert(failures, prefix .. " lacks imported script audit flag")
@@ -732,8 +738,12 @@ function AssetManifest.Validate(options)
         end
         if (entry.SourceScriptCount or 0) > 0 then
             auditedScriptSources = auditedScriptSources + 1
-            if entry.ScriptsRemoved ~= true and entry.ScriptSandboxStatus ~= "Sandboxed" then
-                table.insert(failures, prefix .. " source scripts are neither removed nor sandboxed")
+            if entry.ScriptsRemoved ~= true
+                and entry.ScriptSandboxStatus ~= "Sandboxed"
+                and entry.ScriptSandboxStatus ~= "ReviewedAdapted"
+                and entry.ScriptSandboxStatus ~= "RawReviewQueued"
+            then
+                table.insert(failures, prefix .. " source scripts are neither removed, sandboxed, reviewed/adapted, nor review-queued")
             end
         end
     end

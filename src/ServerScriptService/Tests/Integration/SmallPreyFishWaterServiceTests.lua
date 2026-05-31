@@ -30,6 +30,18 @@ local function markFishWater(water, zoneId)
     return water
 end
 
+local function fixedRng(values)
+    return {
+        Index = 0,
+        Values = values,
+        NextNumber = function(self, minValue, maxValue)
+            self.Index = self.Index + 1
+            local value = self.Values[self.Index] or 0
+            return math.clamp(value, minValue, maxValue)
+        end,
+    }
+end
+
 local function carnivorePlayer(id, position)
     local player = MockPlayer.new(id, "CarnivoreTester")
     RateLimitService:ClearPlayer(player)
@@ -91,6 +103,27 @@ table.insert(suite.tests, { name = "US29 water service classifies depth and mark
     Assert.truthy(WaterService:MarkFishHabitat(deep), "fish habitat marked")
     Assert.truthy(CollectionService:HasTag(deep, "FishHabitat"), "fish habitat tag set")
     shallow:Destroy(); deep:Destroy()
+end })
+
+table.insert(suite.tests, { name = "Beat 5 adapted imported fish random walk stays inside water", run = function()
+    local water = markFishWater(makeWater("Beat5AdaptedFishWater", Vector3.new(20, 4, 20)), "SwampDelta")
+    local fish = FishService:CreateFishSource(water, "Beat5AdaptedFish", Vector3.new(9, 0, 9))
+    Assert.notNil(fish, "fish source created")
+
+    local ok, reason = FishService:ApplyBeat5ImportedRandomWalk(fish, water, {
+        stepStuds = 12,
+        rng = fixedRng({ 12, 6, 12 }),
+    })
+
+    Assert.truthy(ok, reason or "adapted random walk succeeds")
+    Assert.truthy(WaterService:ContainsPoint(water, fish.Position, 0.01), "adapted random walk remains inside water")
+    Assert.equals(fish:GetAttribute("ImportedScriptAdapted"), true, "fish movement is stamped adapted")
+    Assert.equals(fish:GetAttribute("AdaptedIntoEggBreakers"), true, "fish movement records Egg Breakers adaptation")
+    Assert.equals(fish:GetAttribute("ScriptAdaptedTo"), "FishService.ApplyBeat5ImportedRandomWalk", "adapted target recorded")
+    Assert.equals(fish:GetAttribute("ImportedBehaviorOwner"), FishService.ImportedBehaviorName, "adapted behavior owner recorded")
+    Assert.equals(fish:GetAttribute("ImportedSourceBeat"), "Beat5", "source beat recorded")
+    Assert.truthy(CollectionService:HasTag(fish, FishService.ImportedScriptAdaptedTag), "adapted fish tag set")
+    fish:Destroy(); water:Destroy()
 end })
 
 table.insert(suite.tests, { name = "G018-US02 fish schools reject dry or drink-only water", run = function()

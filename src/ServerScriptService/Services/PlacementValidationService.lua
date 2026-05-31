@@ -354,16 +354,17 @@ function PlacementValidationService:ValidateNoFloatingVisibleAssets(root)
         table.insert(instances, descendant)
     end
     for _, instance in ipairs(instances) do
-        if instance:IsA("BasePart") and instance.Transparency < 1 and instance:GetAttribute("FloatingAllowed") ~= true then
+        if instance:IsA("BasePart") and instance.Transparency < 1 then
             checked = checked + 1
             local groundTopY = inheritedAttribute(instance, "GroundTopY")
             local zoneId = inheritedAttribute(instance, "ZoneId")
+            local floatingAllowed = inheritedAttribute(instance, "FloatingAllowed") == true
             if groundTopY == nil and type(zoneId) == "string" and MapLayoutService.ZoneTerrain[zoneId] then
                 groundTopY = MapLayoutService.ZoneTerrain[zoneId].topY
             end
             if type(groundTopY) == "number" then
                 local bottomY = instance.Position.Y - instance.Size.Y / 2
-                if bottomY > groundTopY + 2 then
+                if bottomY > groundTopY + 2 and not floatingAllowed then
                     table.insert(failures, instance:GetFullName() .. " floats above ground by " .. tostring(math.floor((bottomY - groundTopY) * 10 + 0.5) / 10) .. " studs")
                 end
                 if bottomY < groundTopY - 0.25 then

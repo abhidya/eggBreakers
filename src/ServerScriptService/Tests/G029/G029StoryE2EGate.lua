@@ -124,6 +124,10 @@ table.insert(suite.tests, { name = "G029 imported behavior scripts require expli
             local scriptObject = Instance.new("Script")
             scriptObject.Name = "ReviewedRustleScript" .. tostring(index)
             scriptObject:SetAttribute("ReviewedImportedScript", true)
+            scriptObject:SetAttribute("ImportedScriptAdapted", true)
+            scriptObject:SetAttribute("ImportedScriptStamped", true)
+            scriptObject:SetAttribute("ImportedScriptOwner", "G029StoryAssetDrivenBatch")
+            scriptObject:SetAttribute("ScriptAdaptedTo", "G029 reviewed local rustle ambience")
             scriptObject:SetAttribute("ScriptAuditPurpose", "local rustle sound on touched leaves/moss only")
             scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
             scriptObject.Parent = batch
@@ -134,6 +138,9 @@ table.insert(suite.tests, { name = "G029 imported behavior scripts require expli
             if descendant:IsA("Script") then
                 reviewed = reviewed + 1
                 Assert.equals(descendant:GetAttribute("ReviewedImportedScript"), true, descendant.Name .. " reviewed flag")
+                Assert.equals(descendant:GetAttribute("ImportedScriptAdapted"), true, descendant.Name .. " adapted flag")
+                Assert.equals(descendant:GetAttribute("ImportedScriptStamped"), true, descendant.Name .. " stamped flag")
+                Assert.equals(descendant:GetAttribute("ImportedScriptOwner"), "G029StoryAssetDrivenBatch", descendant.Name .. " owner")
                 Assert.equals(descendant:GetAttribute("ScriptSandboxStatus"), "reviewed_no_remotes_no_datastore_no_damage", descendant.Name .. " sandbox status")
             end
         end
