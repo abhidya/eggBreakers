@@ -372,6 +372,167 @@ end
 -- roster is empty and SpawnEcosystem is a no-op returning 0.
 -- =============================================================================
 
+-- Biome centers (Vector3) the ecosystem routes species into. Y is informational only —
+-- the actual ground Y is found per-spawn by raycasting (see GroundModelAt).
+NPCSpawnService.BiomeCenters = {
+    NurseryGrove = Vector3.new(-2000, 0, 0),
+    FernPlains = Vector3.new(-1575, 0, 0),
+    JungleBasin = Vector3.new(-1725, 0, 475),
+    SwampDelta = Vector3.new(-1075, 0, 475),
+    RedstoneCanyon = Vector3.new(-1100, 0, -325),
+    ApocalypticCity = Vector3.new(-650, 0, 0),
+}
+
+-- Scatter radius (studs) around each biome center, and sea level for aquatic species.
+NPCSpawnService.BiomeScatterRadius = 120
+NPCSpawnService.SeaLevelY = 34
+-- Maximum tolerated gap (studs) between a model's lowest point and the ground after
+-- grounding. If the verification re-raycast finds a bigger gap we re-clamp the model down.
+NPCSpawnService.MaxGroundGap = 3
+-- Height we raycast down from when probing for terrain under a spawn XZ.
+NPCSpawnService.GroundProbeHeight = 400
+
+-- Species-name fragments that mark a flyer (routed to cliff/jungle biomes).
+NPCSpawnService.FlyerNameFragments = {
+    "pteranodon", "quetzalcoatlus", "microraptor", "archaeopteryx", "pterosaur",
+}
+
+-- True when a roster entry's species name looks like a flyer.
+function NPCSpawnService:IsFlyerEntry(entry)
+    local name = string.lower(entry.speciesName or "")
+    for _, fragment in ipairs(self.FlyerNameFragments) do
+        if string.find(name, fragment, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Choose the biome name a roster entry belongs to. `rotation` is a per-entry counter used
+-- to spread a category across its candidate biomes deterministically (round-robin).
+function NPCSpawnService:BiomeForEntry(entry, rotation)
+    rotation = rotation or 0
+    local function pick(list)
+        return list[(rotation % #list) + 1]
+    end
+    if entry.aquatic then
+        return "SwampDelta"
+    end
+    if self:IsFlyerEntry(entry) then
+        return pick({ "RedstoneCanyon", "JungleBasin" })
+    end
+    if entry.diet == "Herbivore" then
+        return pick({ "FernPlains", "NurseryGrove", "JungleBasin" })
+    elseif entry.diet == "Carnivore" then
+        return pick({ "JungleBasin", "RedstoneCanyon", "ApocalypticCity", "FernPlains" })
+    elseif entry.diet == "Omnivore" then
+        return pick({ "JungleBasin", "SwampDelta" })
+    end
+    return "FernPlains"
+end
+
+-- Pick a scattered XZ around a biome center. Uses sqrt-weighted radius so points are
+-- spread roughly uniformly across the disc rather than clustering at the center.
+function NPCSpawnService:ScatterAroundBiome(biomeName, rng)
+    local center = self.BiomeCenters[biomeName] or Vector3.new(0, 0, 0)
+    rng = rng or Random.new()
+    local angle = rng:NextNumber(0, math.pi * 2)
+    local radius = self.BiomeScatterRadius * math.sqrt(rng:NextNumber())
+    return Vector3.new(
+        center.X + math.cos(angle) * radius,
+        center.Y,
+        center.Z + math.sin(angle) * radius
+    )
+end
+
+-- Lowest world-Y of a model's (or part's) axis-aligned bounding box.
+local function modelMinY(instance)
+    if instance:IsA("Model") then
+        local cframe, size = instance:GetBoundingBox()
+        return cframe.Position.Y - size.Y * 0.5
+    elseif instance:IsA("BasePart") then
+        return instance.Position.Y - instance.Size.Y * 0.5
+    end
+    return nil
+end
+
+-- Raycast straight down from high above `xz` to find the terrain/world Y under it.
+-- Ignores water (so feet land on land, not the lake surface) and ignores the live NPC
+-- folder + the model being placed so an NPC never grounds on top of another NPC or itself.
+-- Returns the hit Y or nil when nothing was hit.
+function NPCSpawnService:RaycastGroundY(xz, ignoreModel)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.IgnoreWater = true
+    local ignore = {}
+    local npcFolder = Workspace:FindFirstChild("NPCs")
+    if npcFolder then table.insert(ignore, npcFolder) end
+    if ignoreModel then table.insert(ignore, ignoreModel) end
+    params.FilterDescendantsInstances = ignore
+    local origin = Vector3.new(xz.X, self.GroundProbeHeight, xz.Z)
+    local result = Workspace:Raycast(origin, Vector3.new(0, -self.GroundProbeHeight * 2, 0), params)
+    return result and result.Position.Y or nil
+end
+
+-- Ground a prepared model so its LOWEST point rests on the terrain under `spawnXZ`.
+-- Grounding math:
+--   1. Raycast down to find groundY under the XZ.
+--   2. Read the model's current pivotY and its bounding-box minY; the model's "foot
+--      offset" = pivotY - minY (how far the pivot sits ABOVE the lowest point).
+--   3. To make the lowest point sit on groundY, the pivot must move to
+--          targetPivotY = groundY + footOffset
+--      then re-pivot keeping XZ + yaw.
+-- Aquatic species are placed at/just below sea level instead of on the bed.
+-- After placing we re-raycast and, if the foot is still floating beyond MaxGroundGap,
+-- clamp the pivot straight down by the residual gap. Returns the final pivot Vector3.
+function NPCSpawnService:GroundModelAt(model, spawnXZ, isAquatic, yaw)
+    yaw = yaw or 0
+    if not (model:IsA("Model") or model:IsA("BasePart")) then return nil end
+    if model:IsA("Model") and not model.PrimaryPart then
+        model.PrimaryPart = model:FindFirstChildWhichIsA("BasePart", true)
+    end
+
+    local function place(targetFootY)
+        local minY = modelMinY(model)
+        local pivotY = model:GetPivot().Position.Y
+        local footOffset = (minY ~= nil) and (pivotY - minY) or 0
+        local targetPivotY = targetFootY + footOffset
+        local pivot = CFrame.new(spawnXZ.X, targetPivotY, spawnXZ.Z) * CFrame.Angles(0, yaw, 0)
+        model:PivotTo(pivot)
+    end
+
+    if isAquatic then
+        -- Sit at sea level (lowest point just below the surface).
+        place(self.SeaLevelY)
+        return model:GetPivot().Position
+    end
+
+    local groundY = self:RaycastGroundY(spawnXZ, model)
+    if not groundY then
+        -- No terrain hit (world absent / void) — fall back to sea level so it is at least
+        -- not floating in the sky, then bail.
+        place(self.SeaLevelY)
+        return model:GetPivot().Position
+    end
+
+    place(groundY)
+
+    -- Verify: re-raycast and clamp so the foot-to-ground gap stays under MaxGroundGap.
+    local verifyY = self:RaycastGroundY(spawnXZ, model)
+    if verifyY then
+        local footY = modelMinY(model)
+        if footY then
+            local gap = footY - verifyY
+            if gap > self.MaxGroundGap or gap < -self.MaxGroundGap then
+                -- Shift the whole model so its foot sits exactly on the verified ground.
+                local pivot = model:GetPivot()
+                model:PivotTo(pivot - Vector3.new(0, gap, 0))
+            end
+        end
+    end
+    return model:GetPivot().Position
+end
+
 -- Map a roster diet (+ aquatic flag) to the NPCService "kind" whose profile/brain
 -- best matches it. Kinds drive NPCService:Register's stats and the brain; species
 -- identity is preserved separately via SpeciesId/SpeciesName attributes.
@@ -412,15 +573,31 @@ function NPCSpawnService:PrepareEcosystemNPCModel(entry, kind, index, spawnPosit
     end
     clone:SetAttribute("AssetManifestId", "EcosystemNPC_" .. entry.speciesId)
     -- Ground / position the prepared model.
+    --   spawnPosition may be a Vector3 (raw XZ to ground at) or a table
+    --   { xz = Vector3, yaw = number, aquatic = bool } for biome-routed spawns.
+    local spawnXZ, yaw, isAquatic
     if typeof(spawnPosition) == "Vector3" then
+        spawnXZ, yaw, isAquatic = spawnPosition, 0, entry.aquatic == true
+    elseif type(spawnPosition) == "table" and typeof(spawnPosition.xz) == "Vector3" then
+        spawnXZ = spawnPosition.xz
+        yaw = spawnPosition.yaw or 0
+        isAquatic = spawnPosition.aquatic
+        if isAquatic == nil then isAquatic = entry.aquatic == true end
+    end
+    if spawnXZ then
+        -- Seed the pivot at the XZ first so GroundModelAt's foot-offset math reads a sane
+        -- starting pivot, then raycast-ground the lowest point onto the terrain.
         if clone:IsA("Model") then
             if not clone.PrimaryPart then
                 clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true)
             end
-            if clone.PrimaryPart then clone:PivotTo(CFrame.new(spawnPosition)) end
+            if clone.PrimaryPart then
+                clone:PivotTo(CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z))
+            end
         elseif clone:IsA("BasePart") then
-            clone.CFrame = CFrame.new(spawnPosition)
+            clone.CFrame = CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z)
         end
+        self:GroundModelAt(clone, spawnXZ, isAquatic, yaw)
     end
     return clone
 end
@@ -480,6 +657,10 @@ function NPCSpawnService:SpawnEcosystem(opts)
 
     local distinctSpecies = 0
     local index = #NPCService.NPCs
+    -- Per-biome round-robin counters so each category spreads across its candidate biomes
+    -- instead of every member of a category piling into the first listed biome.
+    local biomeRotation = {}
+    local rng = Random.new(opts.seed or os.clock() * 1000)
 
     for _, entry in ipairs(roster) do
         if distinctSpecies >= maxSpecies then break end
@@ -491,11 +672,27 @@ function NPCSpawnService:SpawnEcosystem(opts)
             end
             index = index + 1
             local kind = self:EcosystemKindFor(entry)
-            local positions = self:ResolveEcosystemSpawnPositions(index + 1)
-            local spawnPosition = positions[index] or Vector3.new(0, 12, 0)
+
+            -- Route this spawn into its biome, scatter within the biome, randomize yaw.
+            local categoryKey = entry.aquatic and "aquatic"
+                or (self:IsFlyerEntry(entry) and "flyer")
+                or entry.diet
+                or "Herbivore"
+            local rotation = biomeRotation[categoryKey] or 0
+            biomeRotation[categoryKey] = rotation + 1
+            local biomeName = self:BiomeForEntry(entry, rotation)
+            local spawnXZ = self:ScatterAroundBiome(biomeName, rng)
+            local spawnPosition = {
+                xz = spawnXZ,
+                yaw = rng:NextNumber(0, math.pi * 2),
+                aquatic = entry.aquatic == true,
+                biome = biomeName,
+            }
 
             local ok, reason, record = pcall(function()
                 local model = self:PrepareEcosystemNPCModel(entry, kind, index, spawnPosition)
+                model:SetAttribute("Biome", biomeName)
+                model:SetAttribute("SpawnBiome", biomeName)
                 model.Parent = Workspace:FindFirstChild("NPCs") or Workspace
                 local registered, result = NPCService:Register(model, kind)
                 if not registered then
