@@ -64,6 +64,8 @@ Replace square Part plates with **Terrain water** (rivers, lakes, swamp) or qual
 ### 3.1 Core Loop (unchanged spine, upgraded feel)
 Hatch → sense needs → **find food/water** → grow (4 stages) → **fight/flee** → survive deeper biomes → reach the city. The ecosystem is the only quest-giver.
 
+Current first-session starter roster is **Coelophysis, Parasaurolophus, Utahraptor, and Citipati**. Older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter references are historical unless explicitly marked as non-starter ecosystem fauna or previous planning language.
+
 ### 3.2 Improved Food Finding
 Today NPCs/players eat via raw nearest-tagged scans with placeholder food. Upgrade:
 - **Real foliage food** (ferns/bushes/fruit) for herbivores, **carcasses** for carnivores, scavengeable scraps for omnivores.
@@ -88,8 +90,9 @@ Carnivores can **hunt, kill, and feed on** both AI prey and other players:
 - **UX:** clear "you were hunted by X" / "you fed on X" feedback; carcass clearly readable in-world.
 
 ### 3.5 Movement Modes — Ground, Flight & Swim (all in scope)
-All three traversal modes are **core mechanics**, with species mapped to each:
-- **Ground** (default): gallimimus, triceratops, velociraptor, carnotaurus, tyrannosaurus, oviraptor.
+All three traversal modes remain long-term core mechanics, with first-session proof focused on the current ground starter set:
+- **Starter ground set:** coelophysis, parasaurolophus, utahraptor, citipati.
+- **Broader staged roster / later proof:** other ground, flyer, semi-aquatic, and aquatic species remain in `SpeciesRoster`/`StagedMeshLibrary` but need per-species proof before they become release commitments.
 - **Flight** — add/enable a **flyer** (e.g. pterosaur): `Flight=true`, real airborne movement via BodyVelocity/AlignPosition, stamina-gated takeoff, altitude control. Fix `FlightService` so the unlock is actually granted (today it always returns `flight_locked`). NPC flyers must use the same real physics, not faux-Y float.
 - **Swim** — add/enable an **aquatic/semi-aquatic** species (e.g. spinosaurus): `Swim=true`, swim triggers on real Terrain-water bodies, with the **Oxygen/drowning** loop active. Unify `MaxOxygen` to one constant (currently 60 in config vs 100 in service).
 
@@ -102,7 +105,7 @@ Lift the `Constants.ScopeFreeze` ban on Flyers/Aquatics once these land, and upd
 ### 4.1 First-Session Journey (six beats)
 1. **Hatch** — egg cracks at NurseryGrove dawn, custom sky glowing; camera reveals a small, *animated* dinosaur.
 2. **First needs** — nibble real ferns, drink at a clear terrain pool; diegetic HUD teaches hunger/thirst.
-3. **Cross the threshold** — leave the grove into FernPlains; a herd scatters; the world reacts.
+3. **Cross the threshold** — leave the grove into FernPlains; a Parasaurolophus-led herd or ambient grazer group scatters; the world reacts.
 4. **First hunt/threat** — a predator call; threat indicator pulses; flee, hide, or (as carnivore) chase and feed.
 5. **Growth** — feed enough → visible stage-up, stats rise, ability unlocks; earned power.
 6. **The horizon** — distant ruined-city skyline over the boundary ring; the promise of the endgame. Loop hook.
@@ -140,6 +143,8 @@ Searches run through the Studio MCP. **✅** = strong category matches returned;
 **Search-completeness note:** the catalog is now category-complete across creatures, terrain (canyon/jungle/volcano/meadow/swamp), food (foliage/berries/carcass/egg-nest), city, and VFX — all with confirmed Creator Store matches. **One open item:** dedicated **Audio/SFX** (Creator Store audio is a separate index, run at insert). "Overgrown-moss ruins" returned no distinct type but is covered by the rubble/vehicle/wall results.
 
 **Sourcing rule (locked):** insert → run `AssetImportAuditService:AuditAndRepair({mutate=true})` to inventory bundled scripts/sounds → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly` → keep mesh/rig/VFX/audio and any reviewed dynamic script that can be adapted safely. Behavior must end under eggBreakers service/controller authority, not loose free-model authority. Verify free/commercial license before shipping.
+
+**Biome insertion rule:** searched/cataloged assets are not placed assets. A biome anchor is storyboard-ready only after it is inserted in edit mode, tagged, stripped/reviewed, scattered with `WorldDressingService:DressBiome` or `:DressBiomeVaried`, screenshot-proven in the intended biome, and saved/persisted in the place.
 
 ---
 

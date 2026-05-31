@@ -1,5 +1,7 @@
 # G018 Test Results
 
+Current starter-note correction (2026-05-31): the hatch UI source now defines the first-session starter set as Coelophysis, Parasaurolophus, Utahraptor, and Citipati. Older result rows below that name Gallimimus/Triceratops/Velociraptor/Carnotaurus are preserved as historical test evidence, not the current starter contract.
+
 ## Worker-1 Source Verification — 2026-05-27
 
 | Check | Result | Evidence |

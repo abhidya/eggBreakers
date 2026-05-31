@@ -24,7 +24,7 @@ Unaudited executable imports still fail release readiness. ModuleScripts may rem
 
 | Beat | Story acceptance | Current source coverage | Source status | Live-proof gap |
 | --- | --- | --- | --- | --- |
-| Beat 0 — Egg wakeup | Pre-hatch dinosaur choice leads to the same visible baby dinosaur mesh, nest/egg visual, no default avatar/helper box | `StoryboardBeatValidation.server`: staged hatchling mesh + hidden helpers; imported egg/nest when source exists; `E2E_HatchToFirstFood.server`: selected egg species persists through hatch; client hatch UI has starter selector coverage in source | Partial source coverage | Live proof must show selector choice, selected species id, successful hatch without restart, matching post-hatch dinosaur/species UI, real nest/egg, safe food/water, no default avatar |
+| Beat 0 — Egg wakeup | Pre-hatch choice among Coelophysis/Parasaurolophus/Utahraptor/Citipati leads to the same visible baby dinosaur mesh, nest/egg visual, no default avatar/helper box | `StoryboardBeatValidation.server`: staged hatchling mesh + hidden helpers; imported egg/nest when source exists; `E2E_HatchToFirstFood.server`: selected egg species persists through hatch; client hatch UI has starter selector coverage in source | Partial source coverage | Live proof must show selector choice, selected species id, successful hatch without restart, matching post-hatch dinosaur/species UI, real nest/egg, safe food/water, no default avatar |
 | Beat 1 — First food/water | Food/water read without labels and match diet/action UI | `StoryboardBeatValidation.server`: hidden query parts, visible classified fern/carcass affordances; existing `FoodWaterPlacementValidation`/water tests | Covered in source | Live capture must prove food looks like food, water looks like water, and action affordance is clear |
 | Beat 2 — First predator/prey | Mesh prey/predator silhouettes and combat/threat readability | `StoryboardBeatValidation.server`: staged MeshPart prey/predator NPCs when sources exist; existing NPC spawn/combat tests | Covered in source | Live capture must show readable predator/prey at distance plus impact/health feedback |
 | Beat 3 — Growth moment | Visible scale/stage change and UI stage payload | `StoryboardBeatValidation.server`: growth advances to Adult, exposes larger visual scale, and replicates growth stage payload | Covered in source | Before/after screenshots must prove visual growth and UI state change |
@@ -52,7 +52,7 @@ Unaudited executable imports still fail release readiness. ModuleScripts may rem
 
 ## Remaining Risks
 
-- Beat 0 now has a stricter UX contract than the older hatch-only proof: it must prove selected species continuity from pre-hatch selector through post-hatch visual/UI reveal, not merely that hatching completes.
+- Beat 0 now has a stricter UX contract than the older hatch-only proof: it must prove selected species continuity for the current four starters from pre-hatch selector through post-hatch visual/UI reveal, not merely that hatching completes.
 - Several source tests prove contracts with mock/staged fixtures, not the current live place visuals.
 - Existing security/audit surfaces still contain historical strip/quarantine wording; policy should migrate to reviewed-script metadata before dynamic scripted assets are accepted as release-ready.
 - Store candidates are provisional until Creator Store preview, safe-script review, import proof, and gameplay-distance screenshots are attached.

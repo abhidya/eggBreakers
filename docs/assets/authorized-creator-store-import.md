@@ -59,4 +59,14 @@ return {
 }
 ```
 
-The 2026-05-31 pre-batch reproduction returned `actuallyImportedAssets=24` and `releaseReadyVisibleAssets=24`.
+The 2026-05-31 pre-G027 reproduction returned `actuallyImportedAssets=24` and `releaseReadyVisibleAssets=24`.
+
+The 2026-05-31 G027 batch inserted three Creator Store primaries through the authorized Studio path:
+
+| SourceAssetId | Inserted root | Placement |
+| --- | --- | --- |
+| `8895193` | `G027_DinosaurNestEggs` | `Workspace.Map.ImportedAssets.G027_AssetBackedStoryBatch` |
+| `12630982706` | `G027_PreHistoricPlantPack` | `Workspace.Map.ImportedAssets.G027_AssetBackedStoryBatch` |
+| `110801640375836` | `G027_UIIconPack` | `Workspace.Map.ImportedAssets.G027_AssetBackedStoryBatch` |
+
+After tagging, anchoring, script audit, and the UI icon false-positive rename (`Baseball_Bat` → `Bat_Icon`), live Studio reported `actuallyImportedAssets=26` and `releaseReadyVisibleAssets=26`. The release gate still fails honestly until 500 unique release-ready live assets are imported and proven.

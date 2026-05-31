@@ -73,7 +73,7 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 | Mechanic | Current state | Disposition |
 |----------|--------------|-------------|
 | Hatch → 4-stage growth | Works (engine) | **KEEP**, re-skin with real rigs |
-| Hunger/thirst/stamina | Works | **KEEP** + HUD polish |
+| Hunger/thirst/stamina + age/rest/dying | Works as a server lifecycle spine | **KEEP** + HUD/story proof for movement, eat/drink, rest/sleep, age tick, dying state, death age, respawn |
 | NPC AI brain (sense/flee/hunt/herd/apex) | Works as data; movement broken | **DEVELOP** (Humanoid locomotion + anim) |
 | Movement (locomotion) | Teleport via PivotTo, anchored | **REPLACE** approach (Humanoid:MoveTo + physics) |
 | Animation | None (empty IDs) | **DEVELOP** + asset (animation packs) |
@@ -86,6 +86,8 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 | Weather/rain | Broken; scope-frozen | **CUT** for slice (optional later) |
 | HUD / mobile UI | Functional, plain | **DEVELOP** (design in-house) |
 | Map / biomes | Flat, sparse, far apart | **REBUILD** from storyboards |
+
+Current starter slice: Coelophysis, Parasaurolophus, Utahraptor, and Citipati. Treat older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter notes as historical planning unless a task explicitly promotes them as non-starter fauna.
 
 ---
 
@@ -108,6 +110,8 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 8. Import + wire rigged species (mesh + rig + animation) into `NPCService`/spawns.
 9. Import food foliage + carcasses; fix diet metadata.
 10. ApocalypticCity build-out (ruins/cars/rubble).
+
+For each biome batch, record the asset state explicitly: candidate/search ref, inserted in edit mode, tagged/reviewed, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted. A catalog row alone is not live dressing.
 
 **Wave 3 — Feel**
 11. Locomotion rework (Humanoid:MoveTo, grounding, flight/swim physics).

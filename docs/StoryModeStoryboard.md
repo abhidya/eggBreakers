@@ -1,6 +1,6 @@
 # eggBreakers — Story Mode Storyboard & Asset Value Matrix
 
-**Status:** Draft v0.1
+**Status:** Draft v0.2
 **Last refreshed:** 2026-05-31
 **Scope:** Story, storyboard beats, and asset/UI/UX value only. This is not an implementation plan and does not claim assets are already placed or wired.
 
@@ -11,7 +11,11 @@
 - `eggBreakers_Asset_Ledger_and_Build_Sequence.md` — asset disposition and build sequencing.
 - `docs/AssetSourcing.md` — antigravity/Gemini verified Creator Store search IDs and sourcing quality filter.
 - `src/ReplicatedStorage/Shared/AssetManifest.lua` — 500 cataloged `SourceAssetId` entries with creator/query/script metadata.
-- `src/ReplicatedStorage/Shared/SpeciesConfig.lua` — configured species roles, diets, movement modes, growth stats, abilities, and animation slots.
+- `src/ReplicatedStorage/Shared/SpeciesConfig.lua` and `src/ReplicatedStorage/Shared/SpeciesRoster.lua` — configured species roles, diets, movement modes, growth stats, abilities, and animation slots.
+- `src/ServerScriptService/Services/StarterSpeciesService.lua` and `src/StarterPlayer/StarterPlayerScripts/ClientControllers/HatchUIController.lua` — current curated starter order: `coelophysis`, `parasaurolophus`, `utahraptor`, `citipati`.
+- `src/ReplicatedStorage/Shared/StagedMeshLibrary.lua` — staged mesh mappings for the four curated starters plus the broader staged roster.
+- `src/ServerScriptService/Services/SurvivalService.lua` — hatch progress, movement flags, needs/eating growth, rest/sleep, age, dying, respawn, and Alpha state.
+- `src/ServerScriptService/Services/WorldDressingService.lua` — additive biome dressing insertion/scatter/grounding pipeline; not wired as proof that every biome is already dressed.
 - `src/ServerScriptService/Services/MapLayoutService.lua` — current biome layout, food/water placements, and food metadata.
 - `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*` — current HUD/mobile/waypoint affordance evidence.
 - `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua` — hatch/select/first-food regression coverage for the playable opening loop.
@@ -36,6 +40,19 @@ The story is not quest-dialogue driven. The ecosystem is the quest-giver:
 
 > Hatch alone → read hunger/thirst → learn safe food/water → grow → choose predator/prey behavior → survive living biomes → claim a nest/home → confront apex/city mystery → become a story-producing adult.
 
+## Current starter identity contract
+
+The first-session starter set is **Coelophysis, Parasaurolophus, Utahraptor, and Citipati**. Older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter language is stale unless a doc is explicitly describing historical work.
+
+| Starter | Diet/role read | First-session UX job |
+|---|---|---|
+| Coelophysis | Carnivore, fast small predator/scavenger | Teaches meat/carcass food, sprinting, and threat caution without apex fantasy. |
+| Parasaurolophus | Herbivore, social grazer | Teaches safe foliage/water, herd safety, and readable non-combat survival. |
+| Utahraptor | Carnivore, pack hunter | Teaches stalking, attack timing, stamina pressure, and predator/prey choice. |
+| Citipati | Omnivore, nest-edge forager/scavenger | Teaches flexible food logic, scavenging, and the future nest/egg story vocabulary. |
+
+All starter proof must show pre-hatch selection, post-hatch species continuity, correct diet icon, movement/role badge, and a real staged mesh or documented live-proof gap.
+
 Every scene below must earn four kinds of value:
 
 1. **Visual value:** what the player sees and remembers.
@@ -53,14 +70,14 @@ Every scene below must earn four kinds of value:
 | Layer | Required value | Validated references |
 |---|---|---|
 | Visual | Egg shell, small dino body, warm protected grove, visible nest/home object. | Search refs: `dinosaur egg` → `da5da35b-1cef-496f-a3be-ee2803d568e5`; `dinosaur egg nest` → `df69fe17-9e1c-4e69-bf24-bf7ed3f3c689`. Catalog clean candidates: `150068032` Scrambled Eggs in a Nest; `101855130` Egg Nest; `4630012038` EGG NEST; `151888976` Terrordactyl Egg Nest; `150059455` Nest and Eggs. |
-| Mechanical | Hatch state, pre-hatch species selection, starter safe zone, first growth stage. | `SpeciesConfig.lua` has Hatchling/Juvenile/SubAdult/Adult for each species; `MapLayoutService.lua` has `NurseryGrove` and tutorial-safe food/water placements. |
+| Mechanical | Hatch state, pre-hatch selection among Coelophysis/Parasaurolophus/Utahraptor/Citipati, starter safe zone, first growth stage. | `StarterSpeciesService.StarterOrder` and `HatchUIController.StarterSpecies` both use the current four-starter order; `SpeciesConfig.lua`/`SpeciesRoster.lua` provide Hatchling/Juvenile/SubAdult/Adult; `MapLayoutService.lua` has `NurseryGrove` and tutorial-safe food/water placements. |
 | UI | Pre-hatch species selector, selected species card, diet badge, growth badge, compact hunger/thirst/stamina bars. | `HUDController.lua`; `HatchUIController.lua`; `MobileControlsController.lua`; `UIWireframeChecklist.md`; `HatchUITests.client.lua` covers selector options and selected-state highlight. |
 | UX | Player chooses a dinosaur before cracking the shell, then immediately sees that exact selected hatchling replace the default avatar; player understands “eat/drink/grow” within 10 seconds. | Current gap: pre-hatch selection and post-hatch visual identity must be proven in one live flow, including selected species continuity. |
 
 **Storyboard frames**
 
 1. **Black → choose:** shell view is muffled and calm; player sees starter dinosaur choices before the first crack.
-2. **Select identity:** selected option shows species name, diet, and role cue clearly enough to distinguish herbivore/carnivore before hatching.
+2. **Select identity:** selected option shows species name, diet, and role cue clearly enough to distinguish Parasaurolophus foliage play, Citipati omnivore play, and Coelophysis/Utahraptor carnivore play before hatching.
 3. **Crack:** tap/click/keyboard input cracks the selected egg; selector remains stable and does not obscure the prompt or meter.
 4. **Reveal:** camera pulls back to the selected baby dino beside nest; species name and diet badge fade in and match the pre-hatch choice.
 5. **Need pulse:** hunger/thirst bars gently pulse, not alarm-red.
@@ -80,14 +97,15 @@ Every scene below must earn four kinds of value:
 | Visual | Herbivore food is real fern/bush/fruit; carnivore food is visible carcass/bones; water is terrain water or convincing pond/shoreline. | Search refs: `fern low poly` → `1d710ea1-f95e-4c6d-86d6-3e2674563392`; `animal carcass bones remains` → `98ad66c5-2481-4723-8ee0-85bd64bbf36d`; `dinosaur bone` → `8837548f-f8a2-4e15-ba67-be24558a2903`. Catalog clean fern candidates: `7979002756`, `117873391`, `6829786787`, `434184732`, `111535569365865`, `8773009280`, `14703400302`. Clean bone/fossil candidates include `137420276606883`, `83552391154369`, `14047690299`, `11573236999`. |
 | Mechanical | Diet filtering; eat/drink restores stats and grants growth; invalid food gives readable denial. | `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua` diet target filtering; `MapLayoutService:ApplyFoodMetadata`; Food/Water service tests referenced in docs. |
 | UI | “Snack/Drink” context button, distance text, diet-appropriate icon, depletion/respawn hint. | `MobileControlsController:BuildWaypointText`, `ClientBootstrap:FindNearestEatDrinkTarget`, `EatDrinkButton` behavior. |
-| UX | Player sees the target itself and understands why it is valid. No misleading arrow-only waypoint. | Current gap: docs and user feedback identify bad food/water visuals and misleading waypoint direction. |
+| UX | Player sees the target itself and understands why it is valid. The sense cue is a diet-aware pulse/highlight/distance/icon, not an arrow-only waypoint. | Current gap: live proof still needs visible food/water props plus touch E2E across herbivore, carnivore, and omnivore starters. |
 
 **Storyboard frames**
 
 1. **Herbivore path:** baby Parasaurolophus approaches fern cluster with soft green shimmer.
-2. **Carnivore path:** baby Utahraptor approaches a small safe carcass cache; meat/bone silhouette is unmistakable.
-3. **Water path:** shoreline and reflection make drinkable water obvious before UI appears.
-4. **Feedback:** bite/slurp audio + small growth sparkle + bar fill; no giant text spam.
+2. **Carnivore path:** baby Coelophysis or Utahraptor approaches a small safe carcass cache; meat/bone silhouette is unmistakable.
+3. **Omnivore path:** baby Citipati can read both foliage and safe scraps without weakening diet validation.
+4. **Water path:** shoreline and reflection make drinkable water obvious before UI appears.
+5. **Feedback:** bite/slurp audio + small growth sparkle + bar fill; no giant text spam.
 
 **Acceptance check:** screenshot can be understood without developer labels: food looks like food, water looks like water, and UI confirms action.
 
@@ -101,7 +119,7 @@ Every scene below must earn four kinds of value:
 | Layer | Required value | Validated references |
 |---|---|---|
 | Visual | Open plains, herds, readable predator silhouettes, real dino meshes instead of primitive blobs. | Validated staged assets: live `Workspace.dinosaur` has clean mesh groups for Herbivores/Carnivores/Omnivores/Aquatic. Search ref: `rigged dinosaur` → `ecb52c0b-842b-4101-bd90-246afe79029c`. Manifest clean dinosaur candidates: `18759347676` Rigged Dinosaur Models; `129426942556570` Rigged Dinosaur Models 2; `17490043673` Dinosaur; `5151489661` Dinosaur. |
-| Mechanical | Sneak/flee/sprint/attack decision; stamina matters; pack/herd proximity matters. | `SpeciesConfig.lua`: Coelophysis fast starter, Parasaurolophus social herbivore, Utahraptor pack hunter, Citipati omnivore scavenger. |
+| Mechanical | Sneak/flee/sprint/attack decision; stamina matters; pack/herd proximity matters. | Current starter contract: Coelophysis fast small carnivore, Parasaurolophus social herbivore, Utahraptor pack hunter, Citipati omnivore scavenger. |
 | UI | Threat indicator, stamina warning, target health only after engagement, call button. | Current HUD/mobile controls include Attack, Sprint, Call, RestHide; story docs call for threat UI. |
 | UX | Player learns “not every dino is safe” by sight and sound, not by surprise stat loss. | Needs roar/call audio and telegraphed lunge VFX. |
 
@@ -135,7 +153,7 @@ Every scene below must earn four kinds of value:
 3. **World reaction:** nearby small prey flee or herd call responds.
 4. **Bad ending clarity:** if the player dies, the story cue and server state say "Dying", record final age, and respawn returns to egg without losing account progress.
 
-**Acceptance check:** before/after screenshots prove visual growth and UI state change; source E2E proves rest/sleep recovery, age progression, dying state, death age, and respawn persistence.
+**Acceptance check:** before/after screenshots prove visual growth and UI state change; source E2E proves movement/needs/eating, rest/sleep recovery, age progression, dying state, death age, and respawn persistence.
 
 ---
 
@@ -238,7 +256,7 @@ Every scene below must earn four kinds of value:
 |---|---|---|
 | Visual | Nest object, egg, parent/offspring scale contrast, territory landmark. | Egg/nest search refs and clean catalog candidates above. |
 | Mechanical | Adult-only nesting, respawn/home state, optional alpha challenge. | `NestService`/`SurvivalService` mentioned in status docs; SpeciesConfig adult growth; antigravity roadmap proposes alpha loop. |
-| UI | Nest prompt, home marker, egg status, alpha challenge warning. | Needs a cleaner home/waypoint affordance than current arrow-only hint. |
+| UI | Nest prompt, home marker, egg status, alpha challenge warning. | Needs a diegetic home marker proof distinct from the food/water sense-guide. |
 | UX | Player has a reason to return and defend territory. | Must avoid grief-heavy PvP around hatchlings. |
 
 **Storyboard frames**
@@ -290,7 +308,7 @@ Current local metadata is not enough to claim “high rated.” For each shortli
 
 1. Verify rating/favorites/creator reputation in Studio/Creator Store.
 2. Insert primary result only in edit mode, serially.
-3. Strip scripts and looped/autoplay audio.
+3. Strip uncontrolled scripts and looped/autoplay audio; keep executable imports only after source review, ownership, authority/sandbox proof, and focused tests.
 4. Tag `SourceAssetId`, `AssetManifestId`, `CreatorStoreOnly`, `ImportedVisibleAsset`.
 5. Screenshot in staging and in intended gameplay context.
 6. Only then promote to storyboard “approved visual.”
@@ -299,16 +317,16 @@ Current local metadata is not enough to claim “high rated.” For each shortli
 
 ## Highest-impact next storyboard refinements
 
-1. **Food/water sense UX board** — replace arrow-only waypoint with scent pulse, diet icon, target highlight, and visible food/water props.
-2. **Hatch selection identity board** — every starter option needs a real mesh reference, diet/role cue, movement expectation, selected-state styling, and proof that the post-hatch dinosaur matches the pre-hatch choice.
+1. **Food/water sense UX board** — prove `SenseGuideController` with scent pulse, diet icon, target highlight, and visible food/water props for herbivore, carnivore, and omnivore starters.
+2. **Hatch selection identity board** — Coelophysis, Parasaurolophus, Utahraptor, and Citipati each need a real mesh reference, diet/role cue, movement expectation, selected-state styling, and proof that the post-hatch dinosaur matches the pre-hatch choice.
 3. **Species identity board** — every playable species gets a real mesh reference, role card, movement mode, attack style, food type, and sound palette.
-4. **Biome prop boards** — for each biome, pick 8–12 visual anchors from catalog/search refs and map them to gameplay jobs.
+4. **Asset-backed biome insertion board** — for each biome, pick 8–12 visual anchors from catalog/search refs, then record whether they are only candidates, inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
 5. **City mystery board** — pick ruins/wrecks/fossils and define the environmental story sequence.
 6. **Nest/alpha board** — define adult ownership loop, respawn rules, anti-grief UX, and home marker visuals.
 
 ## Open questions / limits
 
 - Ratings are **not locally available** in the repo evidence. Asset rating must be checked via Creator Store/Studio before claiming an asset is high-rated.
-- Live `Workspace.dinosaur` staging contents are validated visually/structurally, but not all species names/source IDs are persisted in repo.
+- Live `Workspace.dinosaur` staging contents are validated visually/structurally, but not all species names/source IDs are persisted in repo. Starter proof should prioritize the current four curated starters before broad roster polish.
 - Current docs mention some changes as “just-merged/on main,” while the working tree is dirty; treat implementation state as moving because other agents are editing.
 - This document intentionally does not place assets, run imports, or modify gameplay code.

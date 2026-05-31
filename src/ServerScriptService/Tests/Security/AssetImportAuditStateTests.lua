@@ -196,6 +196,31 @@ table.insert(suite.tests, { name = "genuine tagged MeshPart import without exclu
     end)
 end })
 
+table.insert(suite.tests, { name = "ui icon names containing baseball do not trigger glowing ball quarantine", run = function()
+    withImportedFixture(function(_, library)
+        local iconPack = makeImportedVisual(library, "Task27MonochromeUIIconPack", AssetManifest.Entries[2])
+        local baseballIcon = Instance.new("Part")
+        baseballIcon.Name = "Baseball_Bat"
+        baseballIcon.Material = Enum.Material.Neon
+        baseballIcon.Shape = Enum.PartType.Block
+        baseballIcon.Parent = iconPack
+
+        local actualGlowingBall = makeImportedVisual(library, "Task27ActualGlowingBall", AssetManifest.Entries[3])
+        local ball = Instance.new("Part")
+        ball.Name = "Glowing_Ball"
+        ball.Material = Enum.Material.Neon
+        ball.Shape = Enum.PartType.Block
+        ball.Parent = actualGlowingBall
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.equals(result.counts.lowQualityExcludedAssets, 1, "only the real glowing ball token is low-quality")
+        Assert.truthy(iconPack.Parent ~= nil and not iconPack:GetAttribute("AssetQualityQuarantined"),
+            "UI icon pack with Baseball_Bat remains release-eligible")
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 2,
+            "baseline fixture and UI icon pack remain release-ready")
+    end)
+end })
+
 table.insert(suite.tests, { name = "required playable quality exclusions need explicit policy note", run = function()
     withImportedFixture(function(fixture)
         fixture:SetAttribute("RequiredPlayableVisual", true)

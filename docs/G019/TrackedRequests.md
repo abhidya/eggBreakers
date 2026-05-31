@@ -7,11 +7,11 @@ Status: IN PROGRESS — this is a production cleanup tracker, not a release pass
 | ID | Request | Current handling | Status |
 |---|---|---|---|
 | G019-01 | Make map 50% smaller while preserving assets | Live Studio transform applied to `Workspace/Map`; source compact layout now uses exact half-scale `scaleXZ=0.5` with all source placements transformed together; needs Studio persistence/reload proof | IN PROGRESS |
-| G019-02 | Multiple spawn points per dinosaur species by biome | SpeciesConfig now records SpawnBiomes for four starter species; service/test integration in progress | IN PROGRESS |
-| G019-03 | Current dinos list | Starter playable species are Gallimimus, Triceratops, Velociraptor, Carnotaurus | TRACKED |
+| G019-02 | Multiple spawn points per dinosaur species by biome | SpeciesConfig/SpeciesRoster record SpawnBiomes; current first-session starter proof is scoped to Coelophysis, Parasaurolophus, Utahraptor, and Citipati | IN PROGRESS |
+| G019-03 | Current dinos list | Starter playable species are Coelophysis, Parasaurolophus, Utahraptor, and Citipati; older Gallimimus/Triceratops/Velociraptor/Carnotaurus language is historical planning unless reintroduced as non-starter fauna | TRACKED |
 | G019-04 | Carnotaurus upside down | Orientation correction exists but live asset still shows upside down; stronger correction in progress | IN PROGRESS |
 | G019-05 | Mobile UI unfriendly/overlap/debug text | Icon-first mobile control cleanup landed; live device/touch proof still required | IN PROGRESS |
-| G019-06 | Better food/waypoint tracker | Waypoint cue changed to arrow/sparkle food-water visual; needs touch E2E proof | IN PROGRESS |
+| G019-06 | Better food/waypoint tracker | Sense-guide direction now means diet-aware pulse/highlight/distance/icon, not arrow-only waypoint; needs touch E2E proof across herbivore/carnivore/omnivore starters | IN PROGRESS |
 | G019-07 | Food assets/glowing balls are bad | Procedural food/glowing balls remain hidden query helpers and low-quality imported placeholders are auto-excluded/quarantined by source audit | IN PROGRESS |
 | G019-08 | Rectangle+ball trees are bad | Procedural tree blocks are hidden query helpers/browse volumes; low-quality rectangle/ball tree imports are auto-excluded/quarantined by source audit | IN PROGRESS |
 | G019-09 | Vegetation and NPCs should be potential food | Vegetation browse helpers, new placed vegetation imports, and NPC spawn markers are tagged/attributed as food candidates where appropriate | IN PROGRESS |

@@ -57,6 +57,15 @@ local function nameLooksLowQuality(instance)
     return false
 end
 
+local function nameHasStandaloneBallToken(instance)
+    local text = string.lower(instance.Name or "")
+    if text == "ball" then return true end
+    if string.find(text, "^ball[%s_%-_]") then return true end
+    if string.find(text, "[%s_%-_]ball$") then return true end
+    if string.find(text, "[%s_%-_]ball[%s_%-_]") then return true end
+    return false
+end
+
 local function looksLowQualityGeneratedFoodOrVegetation(instance)
     if nameLooksLowQuality(instance) or isGlowingBallPart(instance) or looksLikeRectangleBallTree(instance) then
         return true
@@ -77,7 +86,7 @@ end
 
 isGlowingBallPart = function(instance)
     if not isA(instance, "BasePart") then return false end
-    if not instanceNameContains(instance, "ball") and not isPartShape(instance, Enum.PartType.Ball) then return false end
+    if not nameHasStandaloneBallToken(instance) and not isPartShape(instance, Enum.PartType.Ball) then return false end
     if instance.Material == Enum.Material.Neon then return true end
     if instance.GetDescendants then
         for _, descendant in ipairs(instance:GetDescendants()) do

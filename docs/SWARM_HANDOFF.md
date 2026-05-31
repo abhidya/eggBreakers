@@ -81,7 +81,8 @@ Your responsibility, every wave, forever until the slice is done:
   **GUARD: never introduce NEW logic failures**; the LEADER runs the suite live (agents can't). Re-baseline world-dependent
   reds AFTER the world build — don't chase them mid-build.
 - **SHIPPED (real, validated this session)**: real dino NPCs + dino PLAYER (recovered **56-mesh pen** wired via the new
-  shared **`StagedMeshLibrary`** module); **food / sense-guide (diet-aware pulse) / combat / nest / dying pipeline /
+  shared **`StagedMeshLibrary`** module); **four-starter hatch UX is Coelophysis / Parasaurolophus / Utahraptor /
+  Citipati**; **food / sense-guide (diet-aware pulse) / combat / nest / dying pipeline /
   cleanup-despawn / audio-SFX layer / mobile thumb UX** all shipped.
 - **WORLD ENGINES BUILT (LIVE-ONLY — unsaved, remind user to SAVE)**: ocean-island **boundary**, **trees across all 6
   biomes**, **terrain-paint** engine, and a **varied-dressing** engine. These are live Studio state only; a restart loses
@@ -101,10 +102,11 @@ Your responsibility, every wave, forever until the slice is done:
 - Pipelines to fix: `CharacterVisualService:ApplyForState` -> `SpeciesModelService:ResolveModel` ->
   `SpeciesConfig.ModelPaths`; `NPCSpawnService:ResolveImportedNPCModel` -> `NPCModelCandidatePaths`. Make BOTH prefer
   the staged `Workspace.dinosaur` meshes (a shared `StagedMeshLibrary` module is the clean approach).
-- **ALL 56 dinos are the ECOSYSTEM**, not just 8 playable: 8 playable species + the rest become NPC prey/predator/
-  ambient fauna/aquatic/flyers populating the biomes. Playable -> staged mapping (exact names; substitute where none staged):
-  `gallimimus->Coelophysis, triceratops->Triceratops, velociraptor->Utahraptor, carnotaurus->Carnotaurus,
-  tyrannosaurus->Tyrannosaurus, oviraptor->Citipati (male), pteranodon->Quetzalcoatlus, spinosaurus->Spinosaurus`.
+- **ALL 56 dinos are the ECOSYSTEM**, but first-session UX starts with the current curated starters:
+  `coelophysis->Coelophysis`, `parasaurolophus->Parasaurolophus`, `utahraptor->Utahraptor`,
+  `citipati->Citipati (female)`. The broader hatch/staged roster can become NPC prey/predator/ambient/aquatic/flyer
+  population only after per-species proof rows. Older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter mappings
+  are historical planning language unless a task explicitly reintroduces them as non-starter fauna.
   RISK: weld only a model's **PrimaryPart** to the player HumanoidRootPart (welding every skinned part fights the Motor6D rig).
 
 ## BUILD WORKSTREAMS (parallelizable across waves; each ends at a storyboard acceptance check)
@@ -145,12 +147,16 @@ popups); mobile thumb controls; optional themed cursor.
 **G. QA GATE** — per-beat screenshot proofs (Storyboard acceptance + Gates A-D), test parity, release-count progress,
 fresh-Play-session proofs.
 
-**H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (8 playable + each NPC fauna species), validate
+**Docs/UX guardrail (2026-05-31):** storyboards and status docs must show the lifecycle as movement → eat/drink →
+rest/sleep with age ticking → growth → dying/death age → respawn/nest. For biome work, distinguish candidate/catalog
+assets from assets inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
+
+**H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (current four starters first, then each promoted hatch-pool/NPC fauna species), validate
 individually and record a pass/fail matrix WITH screenshots: spawns; renders as correct mesh; PrimaryPart/collision/
 hitbox sane; scale correct per growth stage; locomotion matches movement mode (ground/air/water) with no teleport or
 floating; animations play (idle/walk/run/eat/attack/hurt/death); eats correct diet; fights (deals + takes damage,
 telegraph reads); grows through 4 stages; dies cleanly (death->ragdoll->carcass->respawn); nests if adult. Add automated
-tests per species where logic allows (extend the suite; keep 176/143/34 parity). No species ships until its row is green.
+tests per species where logic allows (extend the suite; keep current baseline parity). No species ships until its row is green.
 
 ## MOVEMENT-MODE / TYPE-SPECIAL HANDLING (extends B + E + H)
 - **AQUATIC** (Aquatic folder: Megalodon, Liopleurodon, Elasmosaurus, Plesiosaurus, Styxosaurus, Archelon, Atopodentatus
@@ -180,7 +186,7 @@ Minimal, diegetic, easy — a young player understands what to do within seconds
   as water, threat as danger, and the single next action is obvious from one on-screen affordance.
 
 ## ORCHESTRATION LOOP
-- **Wave 0 (now)**: read STATUS + storyboard; set active Studio; run tests to confirm 176/143/34 baseline; create the
+- **Wave 0 (now)**: read STATUS + storyboard; set active Studio; run tests to confirm current baseline; create the
   task backlog (TaskCreate) from the workstreams; pick the wave's target beat(s).
 - **Recommended order**: B (player+NPC visual) -> C+D (world+food/vegetation) -> E+F (combat+UI/guidance) -> H per-species
   matrix folded in continuously -> A sourcing folded in as gaps appear -> G proofs. Do **Beats 0-2 first** (hatch, food/
@@ -199,6 +205,6 @@ Minimal, diegetic, easy — a young player understands what to do within seconds
   and strips ServerScriptService client-side; don't do it mid-inspection.
 - Memory: `~/.claude/projects/.../memory/eggbreakers-concurrent-agents.md`.
 
-**BEGIN**: read `eggBreakers_STATUS.md` + `docs/StoryModeStoryboard.md`, set the active Studio, confirm the 176/143/34
+**BEGIN**: read `eggBreakers_STATUS.md` + `docs/StoryModeStoryboard.md`, set the active Studio, confirm the current
 test baseline, seed the task backlog from the workstreams, then orchestrate Wave 0 toward Beats 0-2 (real dino player +
 real, recognizable food/water visible in a screenshot with the UI hidden).

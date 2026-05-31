@@ -3,9 +3,9 @@
 ## Source of truth
 
 - **Status:** Draft, active for story/UI/UX decisions
-- **Last refreshed:** 2026-05-30
-- **Primary product surfaces:** Roblox in-world survival loop, species selection/player visual, survival HUD, mobile controls, food/water waypoint/sense UX, combat feedback, nesting/home loop, biome discovery.
-- **Evidence reviewed:** `eggBreakers_Master_Plan.md`, `eggBreakers_World_and_Gameplay_Design.md`, `eggBreakers_Asset_Ledger_and_Build_Sequence.md`, `eggBreakers_STATUS.md`, `docs/AssetSourcing.md`, `docs/StoryModeStoryboard.md`, `src/ReplicatedStorage/Shared/SpeciesConfig.lua`, `src/ServerScriptService/Services/MapLayoutService.lua`, `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*`.
+- **Last refreshed:** 2026-05-31
+- **Primary product surfaces:** Roblox in-world survival loop, four-starter hatch selection/player visual, survival HUD, mobile controls, food/water scent-guide UX, combat feedback, rest/age/death lifecycle, nesting/home loop, biome discovery.
+- **Evidence reviewed:** `eggBreakers_Master_Plan.md`, `eggBreakers_World_and_Gameplay_Design.md`, `eggBreakers_Asset_Ledger_and_Build_Sequence.md`, `eggBreakers_STATUS.md`, `docs/AssetSourcing.md`, `docs/StoryModeStoryboard.md`, `src/ReplicatedStorage/Shared/SpeciesConfig.lua`, `src/ReplicatedStorage/Shared/StagedMeshLibrary.lua`, `src/ServerScriptService/Services/StarterSpeciesService.lua`, `src/ServerScriptService/Services/SurvivalService.lua`, `src/ServerScriptService/Services/WorldDressingService.lua`, `src/StarterPlayer/StarterPlayerScripts/ClientControllers/*`.
 
 ## Brand
 
@@ -15,7 +15,7 @@
 
 ## Product goals
 
-- **Goals:** make the player feel like a dinosaur; make food/water/combat/growth readable without developer labels; turn each biome into a story beat backed by visual/mechanical/UI/UX assets.
+- **Goals:** make the player feel like the chosen starter dinosaur; keep Coelophysis, Parasaurolophus, Utahraptor, and Citipati distinct by diet/role from the first hatch screen; make movement, eating/drinking, rest, age, growth, dying, and respawn readable without developer labels; turn each biome into a story beat backed by visual/mechanical/UI/UX assets.
 - **Non-goals:** dialogue-heavy quest mode, shipping unreviewed free-model behavior scripts, counting catalog-only assets as release-ready, replacing every system before story/asset quality is proven.
 - **Success signals:** screenshots clearly show dino identity, real food/water, biome identity, combat feedback, nest/home ownership, and city mystery.
 
@@ -28,7 +28,7 @@
 ## Information architecture
 
 - **Primary navigation:** in-world movement through biomes rather than menus.
-- **Core screens:** Hatch/species reveal, MainHUD, MobileControls, SpeciesInfoPanel, Group/Call feedback, Death/Respawn, CityDiscoveryPopup, Nest/Home prompt.
+- **Core screens:** Hatch/species reveal with four starter choices, MainHUD, MobileControls, SpeciesInfoPanel, Group/Call feedback, Death/Respawn, CityDiscoveryPopup, Nest/Home prompt.
 - **Content hierarchy:** immediate survival needs first; threat/combat second; growth/progression third; world mystery last.
 
 ## Design principles
@@ -49,9 +49,9 @@
 
 ## Components
 
-- **Existing components to reuse:** `HUDController`, `MobileControlsController`, `UIFactory`, `ClientBootstrap` target finding/hints, RemoteEvents in shared contracts.
-- **New/changed components:** story-mode scent/sense indicator; threat/roar directional pulse; nest/home marker; city discovery popup; asset approval screenshot board.
-- **Variants and states:** hunger low, thirst low, invalid food, food nearby, water nearby, threat near, oxygen active, growth ready, nest claimed, home under threat.
+- **Existing components to reuse:** `HUDController`, `MobileControlsController`, `HatchUIController`, `SenseGuideController`, `UIFactory`, `ClientBootstrap` target finding/hints, RemoteEvents in shared contracts.
+- **New/changed components:** starter role cards for Coelophysis/Parasaurolophus/Utahraptor/Citipati; threat/roar directional pulse; nest/home marker; city discovery popup; asset approval screenshot board.
+- **Variants and states:** hunger low, thirst low, invalid food, food nearby, water nearby, sprinting, resting/sleeping, age tick, threat near, oxygen active, growth ready, dying, nest claimed, home under threat.
 - **Token/component ownership:** keep UI in existing client controllers unless a repeated pattern needs extraction.
 
 ## Accessibility
@@ -80,14 +80,14 @@
 ## Content voice
 
 - **Tone:** simple, sensory, survival-focused.
-- **Terminology:** use species names, diet, growth stage, nest/home, scent, threat, Old Eden.
+- **Terminology:** use exact starter species names (`Coelophysis`, `Parasaurolophus`, `Utahraptor`, `Citipati`), diet, movement, growth stage, rest/sleep, age, dying, nest/home, scent, threat, Old Eden.
 - **Microcopy rules:** prefer verbs: “Eat fern,” “Drink,” “Hide,” “Call,” “Claim nest,” “Fossil found.”
 
 ## Implementation constraints
 
 - **Framework/styling system:** Roblox Luau, Rojo-managed source, existing client controllers and services.
 - **Design-token constraints:** existing `UIFactory` colors/buttons unless refreshed deliberately.
-- **Performance constraints:** imported executable scripts may ship only after review, ownership assignment, authority/sandbox checks, and focused tests; strip or rewrite uncontrolled looped/autoplay audio; avoid excessive particles.
+- **Performance constraints:** imported executable scripts may ship only after review, ownership assignment, authority/sandbox checks, and focused tests; strip or rewrite uncontrolled looped/autoplay audio; avoid excessive particles. `WorldDressingService` is an additive asset-backed biome insertion path; biome docs must distinguish "pipeline ready" from "assets placed and saved."
 - **Compatibility constraints:** Creator Store assets must be sanitized, tagged, provenance-tracked, and screenshot-proven.
 - **Test/screenshot expectations:** story-mode acceptance requires screenshots of visual target plus UI affordance, not just passing code tests.
 
@@ -95,5 +95,5 @@
 
 - [ ] Which Creator Store assets are actually high-rated/favorited? Local repo metadata does not include ratings.
 - [ ] Which staged `Workspace.dinosaur` species have source provenance and rig/animation compatibility?
-- [ ] Should “Velociraptor” remain the starter if the staged library lacks a true velociraptor mesh?
+- [ ] Should the full hatch pool remain exposed, or should first-session UX stay locked to the four curated starters until all species have proof rows?
 - [ ] What is the final tone for Old Eden: mysterious, scary, hopeful, or pure survival landmark?

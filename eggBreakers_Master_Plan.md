@@ -31,6 +31,7 @@ These are the non-negotiable qualities every task is measured against.
 4. **Readable, responsive gameplay.** Combat, growth, hunger/thirst, and threat are all visible through a clean survival HUD with feedback (hit, heal, danger, progression).
 5. **Honest, shippable content.** The asset-honesty audit passes legitimately; nothing tagged as imported that isn't; release gates green.
 6. **Scoped & coherent.** A clear slice of species across all three movement modes — ground, **flying, and aquatic** — and 6 biomes. Flight and swim are first-class mechanics to build properly (real physics movement), not faux-Y floats. Cut only true noise, not core traversal.
+7. **Starter identity is current.** First-session UX is scoped to Coelophysis, Parasaurolophus, Utahraptor, and Citipati until broader staged-roster species have their own proof rows.
 
 ---
 
@@ -183,7 +184,7 @@ A six-panel arc the team can illustrate and build toward:
 
 1. **Hatch.** Egg cracks in NurseryGrove dawn light. Camera pulls back to reveal a small dinosaur. UI fades in (hunger/thirst calm).
 2. **First needs.** Player nibbles foliage, drinks at a shallow pool. Tutorial prompts via diegetic HUD, not popups.
-3. **Leaving safety.** Crossing the NurseryGrove boundary into FernPlains; a herd of gallimimus scatters — the world reacts to you.
+3. **Leaving safety.** Crossing the NurseryGrove boundary into FernPlains; a Parasaurolophus-led herd or ambient grazer group scatters — the world reacts to you.
 4. **First threat.** A predator call echoes; threat indicator pulses; player flees or hides. Stamina matters.
 5. **Growth.** After feeding, a visible stage-up: the dinosaur grows, stats rise, new ability unlocks. Earned power.
 6. **The horizon.** Camera lingers on the distant canyon/city skyline — the promise of where survival leads. Loop hook.
@@ -199,6 +200,8 @@ A six-panel arc the team can illustrate and build toward:
 | Combat (bite/claw/headbutt) | Earn your place | Attack anims + impact VFX |
 | Apex events | Endgame pressure | Apex roar SFX + screen UI |
 | Biome traversal | The journey outward | Nature/landmark packs |
+
+**Current starter proof target:** Coelophysis (small carnivore), Parasaurolophus (herbivore grazer), Utahraptor (pack carnivore), and Citipati (omnivore forager/scavenger). Asset-backed biome work must distinguish candidate/catalog assets from inserted, dressed, screenshot-proven, and saved place content.
 
 ---
 
