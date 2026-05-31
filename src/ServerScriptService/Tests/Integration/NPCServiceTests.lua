@@ -202,6 +202,26 @@ table.insert(suite.tests, { name = "movement step is bounded and stamped", run =
     npc:Destroy()
 end })
 
+table.insert(suite.tests, { name = "wander targets are desynchronized per NPC seed", run = function()
+    resetNPCs()
+    local first = makeNPC("WanderSeedA", Vector3.new(0, 3, 0))
+    local second = makeNPC("WanderSeedB", Vector3.new(0, 3, 0))
+    local _, firstRecord = NPCService:Register(first, "Prey")
+    local _, secondRecord = NPCService:Register(second, "Prey")
+    firstRecord.Hatched = true
+    secondRecord.Hatched = true
+
+    local firstTarget = NPCService:ResolveWanderTarget(firstRecord)
+    local secondTarget = NPCService:ResolveWanderTarget(secondRecord)
+
+    Assert.truthy(firstRecord.BehaviorSeed ~= secondRecord.BehaviorSeed, "NPCs get distinct deterministic behavior seeds")
+    Assert.truthy((firstTarget - secondTarget).Magnitude > 1, "same-position NPCs do not pick identical wander targets")
+    Assert.equals(first:GetAttribute("WanderTarget"), NPCService:FormatVector3(firstTarget), "wander target stamped for live proof")
+    Assert.equals(second:GetAttribute("WanderTick"), 1, "wander tick stamped")
+
+    first:Destroy(); second:Destroy()
+end })
+
 table.insert(suite.tests, { name = "ground movement clamps bad vertical target and exposes surface", run = function()
     resetNPCs()
     local npc = makeNPC("GroundClampNPC", Vector3.new(0, 3, 0))
@@ -415,6 +435,42 @@ table.insert(suite.tests, { name = "hungry herbivore eats tree browse food sourc
     npc:Destroy(); browse:Destroy()
 end })
 
+table.insert(suite.tests, { name = "food and fight events stamp nearby NPC reactions", run = function()
+    resetNPCs()
+    local eater = makeNPC("ReactionEatingPreyNPC", Vector3.new(0, 3, 0))
+    local bystander = makeNPC("ReactionBystanderPreyNPC", Vector3.new(12, 3, 0))
+    local food = makeTaggedPart("ReactionFern", "FoodSource", Vector3.new(4, 3, 0))
+    food:SetAttribute("Diet", "Herbivore")
+    food:SetAttribute("Nutrition", 20)
+    local _, eaterRecord = NPCService:Register(eater, "Prey")
+    local _, bystanderRecord = NPCService:Register(bystander, "Prey")
+    eaterRecord.Hatched = true
+    bystanderRecord.Hatched = true
+
+    NPCService:Eat(eaterRecord, food)
+    Assert.equals(bystander:GetAttribute("LastReaction"), "FoodSignal", "nearby NPC notices food event")
+    Assert.equals(bystander:GetAttribute("LastReactionSource"), "ReactionEatingPreyNPC", "food reaction source stamped")
+    Assert.equals(bystander:GetAttribute("NearbyFoodTarget"), "ReactionFern", "food target stamped on bystander")
+    Assert.equals(eater:GetAttribute("FoodSignalReactionAffected"), 1, "food reaction affected count stamped")
+
+    local predator = makeNPC("ReactionPredatorNPC", Vector3.new(3, 3, 0))
+    local prey = makeNPC("ReactionHitPreyNPC", Vector3.new(6, 3, 0))
+    local _, predatorRecord = NPCService:Register(predator, "Predator")
+    local _, preyRecord = NPCService:Register(prey, "Prey")
+    predatorRecord.Hatched = true
+    preyRecord.Hatched = true
+    preyRecord.Health = 80
+
+    NPCService:AttackRecord(predatorRecord, preyRecord)
+    Assert.equals(predator:GetAttribute("FightEventState"), "Attacking", "attacker fight state stamped")
+    Assert.equals(prey:GetAttribute("FightEventState"), "Hit", "target fight state stamped")
+    Assert.equals(bystander:GetAttribute("LastReaction"), "FightSignal", "nearby NPC notices fight event")
+    Assert.equals(bystander:GetAttribute("NearbyFightTarget"), "ReactionHitPreyNPC", "fight target stamped on bystander")
+    Assert.truthy((predator:GetAttribute("FightSignalReactionAffected") or 0) >= 1, "fight affected count stamped")
+
+    eater:Destroy(); bystander:Destroy(); food:Destroy(); predator:Destroy(); prey:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "prey flees then hides when badly hurt", run = function()
     resetNPCs()
@@ -591,9 +647,11 @@ table.insert(suite.tests, { name = "NPC brain tick uses round-robin CPU budget",
     local oldRecords = NPCService.NPCs
     local oldBudget = NPCService.MaxBrainTicksPerCycle
     local oldIndex = NPCService.BrainRoundRobinIndex
+    local oldSequence = NPCService.BrainCycleSequence
     resetNPCs()
     NPCService.MaxBrainTicksPerCycle = 2
     NPCService.BrainRoundRobinIndex = 1
+    NPCService.BrainCycleSequence = 0
 
     local a = makeNPC("BudgetA", Vector3.new(0, 3, 0))
     local b = makeNPC("BudgetB", Vector3.new(10, 3, 0))
@@ -609,14 +667,21 @@ table.insert(suite.tests, { name = "NPC brain tick uses round-robin CPU budget",
     Assert.equals(c:GetAttribute("BrainDeferred"), true, "third NPC deferred")
     Assert.equals(a:GetAttribute("BrainCycleBudget"), 2, "budget stamped")
     Assert.equals(a:GetAttribute("BrainCycleTotal"), 3, "total stamped")
+    Assert.equals(a:GetAttribute("BrainCycleSequence"), 1, "cycle sequence stamped")
+    Assert.equals(a:GetAttribute("BrainCycleIndex"), 1, "cycle index stamped")
+    Assert.truthy((a:GetAttribute("BrainCycleStartedAt") or 0) > 0, "cycle start clock stamped")
+    Assert.truthy((a:GetAttribute("BrainTickedAt") or 0) >= a:GetAttribute("BrainCycleStartedAt"), "brain tick clock stamped")
+    Assert.equals(c:GetAttribute("BrainCycleIndex"), 3, "deferred NPC still receives cycle index")
 
     NPCService:TickNPCs({})
     Assert.equals(c:GetAttribute("BrainDeferred"), false, "deferred NPC gets next cycle")
+    Assert.equals(c:GetAttribute("BrainCycleSequence"), 2, "second cycle sequence stamped")
 
     a:Destroy(); b:Destroy(); c:Destroy()
     NPCService.NPCs = oldRecords
     NPCService.MaxBrainTicksPerCycle = oldBudget
     NPCService.BrainRoundRobinIndex = oldIndex
+    NPCService.BrainCycleSequence = oldSequence
 end })
 
 table.insert(suite.tests, { name = "pack predators regroup before idle wandering", run = function()

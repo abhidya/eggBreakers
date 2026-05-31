@@ -27,6 +27,8 @@ NPCService.BrainRoundRobinIndex = 1
 NPCService.PackRadius = 75
 NPCService.MateRadius = 34
 NPCService.MateCooldownSeconds = 90
+NPCService.FoodReactionRadius = 55
+NPCService.FightReactionRadius = 85
 -- DYING PIPELINE tunables (additive; safe when world absent).
 NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
 NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
@@ -122,6 +124,10 @@ function NPCService:Register(npc, kind)
         MateEligible = true,
         LastMateAt = 0,
     }
+    local seedSource = tostring(npc and npc.Name or kind) .. ":" .. self:FormatVector3(pivotPosition)
+    record.BehaviorSeed = self:MakeBehaviorSeed(seedSource)
+    record.WanderPhase = (record.BehaviorSeed % 360) * math.pi / 180
+    record.WanderRadius = math.min(self.WanderRadius, 12 + (record.BehaviorSeed % 17))
     record.PotentialCarnivoreFood = self:IsPreyKind(kind)
     if npc then
         npc:SetAttribute("ActiveNPCBrain", true)
@@ -153,6 +159,9 @@ function NPCService:Register(npc, kind)
         npc:SetAttribute("Hunger", record.Hunger)
         npc:SetAttribute("Thirst", record.Thirst)
         npc:SetAttribute("Health", record.Health)
+        npc:SetAttribute("BehaviorSeed", record.BehaviorSeed)
+        npc:SetAttribute("WanderPhase", record.WanderPhase)
+        npc:SetAttribute("WanderRadius", record.WanderRadius)
         npc:SetAttribute("NestX", pivotPosition.X)
         npc:SetAttribute("NestY", pivotPosition.Y)
         npc:SetAttribute("NestZ", pivotPosition.Z)
@@ -320,6 +329,61 @@ end
 
 function NPCService:FormatVector3(position)
     return string.format("%.1f,%.1f,%.1f", position.X, position.Y, position.Z)
+end
+
+function NPCService:MakeBehaviorSeed(seedSource)
+    seedSource = tostring(seedSource or "NPC")
+    local hash = 0
+    for index = 1, #seedSource do
+        hash = (hash * 31 + string.byte(seedSource, index)) % 100000
+    end
+    return hash
+end
+
+function NPCService:ResolveWanderTarget(record)
+    local origin = record.SpawnPosition or self:GetRecordPosition(record)
+    record.BrainTick = (record.BrainTick or 0) + 1
+    local phase = record.WanderPhase or 0
+    local radius = record.WanderRadius or self.WanderRadius
+    local angle = phase + (record.BrainTick % 10) * (math.pi * 0.37)
+    local pulse = 0.65 + ((record.BehaviorSeed or 0) % 7) * 0.04
+    local target = origin + Vector3.new(math.cos(angle) * radius * pulse, 0, math.sin(angle) * radius)
+    if record.Instance then
+        record.Instance:SetAttribute("WanderTick", record.BrainTick)
+        record.Instance:SetAttribute("WanderTarget", self:FormatVector3(target))
+    end
+    return target
+end
+
+function NPCService:StampNearbyReaction(sourceRecord, radius, reactionName, attributes)
+    if not sourceRecord then return 0 end
+    local sourcePosition = self:GetRecordPosition(sourceRecord)
+    local affected = 0
+    for _, candidate in ipairs(self.NPCs) do
+        if candidate ~= sourceRecord and candidate.State ~= "Dead" then
+            local distance = (self:GetRecordPosition(candidate) - sourcePosition).Magnitude
+            if distance <= radius then
+                affected = affected + 1
+                candidate.LastReaction = reactionName
+                candidate.LastReactionSource = sourceRecord.Instance
+                candidate.LastReactionDistance = distance
+                if candidate.Instance then
+                    candidate.Instance:SetAttribute("LastReaction", reactionName)
+                    candidate.Instance:SetAttribute("LastReactionSource", sourceRecord.Instance and sourceRecord.Instance.Name or "NPC")
+                    candidate.Instance:SetAttribute("LastReactionDistance", distance)
+                    if attributes then
+                        for key, value in pairs(attributes) do
+                            candidate.Instance:SetAttribute(key, value)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    if sourceRecord.Instance then
+        sourceRecord.Instance:SetAttribute(reactionName .. "ReactionAffected", affected)
+    end
+    return affected
 end
 
 function NPCService:ResolveLocomotionRoot(npc)
@@ -623,6 +687,10 @@ function NPCService:Eat(record, food)
         record.Instance:SetAttribute("EatNutrition", nutrition)
         record.Instance:SetAttribute("FoodSourcesDepleted", depletedCount)
     end
+    self:StampNearbyReaction(record, self.FoodReactionRadius, "FoodSignal", {
+        NearbyFoodTarget = food and food.Name or "",
+        NearbyFoodDiet = food and (food:GetAttribute("Diet") or "") or "",
+    })
     return self:Transition(record, "Eat")
 end
 
@@ -657,7 +725,15 @@ function NPCService:AttackRecord(attacker, target)
     if attacker.Instance then
         attacker.Instance:SetAttribute("LastAction", "Attack")
         attacker.Instance:SetAttribute("AttackTarget", target.Instance and target.Instance.Name or "NPC")
+        attacker.Instance:SetAttribute("FightEventState", "Attacking")
     end
+    if target.Instance then
+        target.Instance:SetAttribute("FightEventState", "Hit")
+        target.Instance:SetAttribute("FightAttacker", attacker.Instance and attacker.Instance.Name or "NPC")
+    end
+    self:StampNearbyReaction(attacker, self.FightReactionRadius, "FightSignal", {
+        NearbyFightTarget = target.Instance and target.Instance.Name or "NPC",
+    })
     self:Transition(attacker, "Attack")
     return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12)
 end
@@ -1026,7 +1102,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
     local mateOk = self:TryMate(record)
     if mateOk then return true end
 
-    local wanderTarget = record.SpawnPosition + Vector3.new(math.sin(os.clock()) * 18, 0, math.cos(os.clock()) * 18)
+    local wanderTarget = self:ResolveWanderTarget(record)
     self:MoveToward(record, wanderTarget, self.MoveStep * 0.5, "Wander")
     return self:Transition(record, "Wander")
 end
@@ -1082,11 +1158,7 @@ function NPCService:FindNearestPlayerRoot(record, players, maxDistance)
 end
 
 function NPCService:Wander(record)
-    record.BrainTick = (record.BrainTick or 0) + 1
-    local angle = (record.BrainTick % 8) * (math.pi / 4)
-    local radius = math.min(self.WanderRadius, 10 + (record.BrainTick % 4) * 4)
-    local origin = record.SpawnPosition or self:GetRecordPosition(record)
-    local target = origin + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+    local target = self:ResolveWanderTarget(record)
     self:Transition(record, "Wander")
     return self:MoveRecordToward(record, target, self.BrainStepStuds, "Wander")
 end
@@ -1349,6 +1421,8 @@ function NPCService:TickNPCs(players)
     if total == 0 then return 0 end
     local budget = math.max(1, math.min(self.MaxBrainTicksPerCycle or self.MaxActive or total, total))
     local startIndex = math.clamp(self.BrainRoundRobinIndex or 1, 1, total)
+    local cycleStartedAt = os.clock()
+    self.BrainCycleSequence = (self.BrainCycleSequence or 0) + 1
     local ticked = {}
     for offset = 0, budget - 1 do
         local index = ((startIndex + offset - 1) % total) + 1
@@ -1360,6 +1434,10 @@ function NPCService:TickNPCs(players)
             record.Instance:SetAttribute("BrainState", record.State)
             record.Instance:SetAttribute("BrainCycleBudget", budget)
             record.Instance:SetAttribute("BrainCycleTotal", total)
+            record.Instance:SetAttribute("BrainCycleSequence", self.BrainCycleSequence)
+            record.Instance:SetAttribute("BrainCycleIndex", index)
+            record.Instance:SetAttribute("BrainCycleStartedAt", cycleStartedAt)
+            record.Instance:SetAttribute("BrainTickedAt", os.clock())
             record.Instance:SetAttribute("BrainDeferred", false)
         end
         if ok then
@@ -1374,6 +1452,9 @@ function NPCService:TickNPCs(players)
                 record.Instance:SetAttribute("BrainDeferred", true)
                 record.Instance:SetAttribute("BrainCycleBudget", budget)
                 record.Instance:SetAttribute("BrainCycleTotal", total)
+                record.Instance:SetAttribute("BrainCycleSequence", self.BrainCycleSequence)
+                record.Instance:SetAttribute("BrainCycleIndex", index)
+                record.Instance:SetAttribute("BrainCycleStartedAt", cycleStartedAt)
             end
         end
     end
