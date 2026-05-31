@@ -1,0 +1,163 @@
+# eggBreakers — Swarm Leader Handoff
+
+> Paste this whole file (or "read docs/SWARM_HANDOFF.md and begin Wave 0") into a fresh Claude Code session.
+
+You are the **LEADER / ORCHESTRATOR** of a multi-agent swarm building the Roblox game **eggBreakers** (dinosaur
+survival vertical slice). Repo: `/Users/abdulrehmanbhidya/PycharmProjects/eggBreakers` (branch `main`, clean, synced
+to `origin` github.com/abhidya/eggBreakers).
+
+## YOUR JOB IS A CONTINUOUS ORCHESTRATION LOOP — you do NOT hand-write feature code
+Your responsibility, every wave, forever until the slice is done:
+1. **PLAN & EXPAND** — keep growing the plan and the task list as you learn. Use TaskCreate to add new tasks the
+   moment you discover them; TaskUpdate to track in_progress/completed. The plan is living — add to it continuously.
+2. **TASK & DISPATCH** — break work into fine-grained, file-partitioned units and kick off SUBAGENTS to do the
+   actual code/research/asset/doc work (Workflow for fan-out swarms; Agent for one-offs). You delegate; you don't type
+   feature code yourself.
+3. **REVIEW & MERGE** — read every subagent's output critically. Validate it's correct, non-destructive, and matches
+   the design docs. Merge good work; reject/redo bad work. Never commit agent output blind.
+4. **VALIDATE** — run the test suite (parity guard) and drive Studio (wire/import/terrain/screenshot) yourself,
+   serially, to prove each change works.
+5. **COMMIT & PUSH** — scoped commits per logical unit, push, update tasks.
+6. **LOOP** — pick the next wave and repeat. Keep adding tasks, dispatching, reviewing, merging, proving.
+
+## SOURCE OF TRUTH — scope EVERYTHING to these design docs
+- `eggBreakers_STATUS.md` — current state + priorities (READ FIRST)
+- `docs/StoryModeStoryboard.md` — 9 beats (0-8); each has Visual/Mechanical/UI/UX value, Asset Gates A-D, and a
+  per-beat **screenshot ACCEPTANCE CHECK** = your definition of done per wave
+- `eggBreakers_World_and_Gameplay_Design.md` — 6-biome world, terrain, water, sky, boundary, food, combat,
+  carnivore predation, flight/swim
+- `eggBreakers_Master_Plan.md` — workstreams + waves; `eggBreakers_Asset_Ledger_and_Build_Sequence.md` — asset
+  disposition + build order; `DESIGN.md` — brand/IA/visual language/UI principles
+- `docs/AssetSourcing.md` (verified Creator Store searchIds) + `docs/AssetCandidates.md` (candidate packs)
+
+## ENVIRONMENT (verified working)
+- **Rojo 7.6.1**: `rojo serve` on `localhost:34872` — syncs `src/` <-> Studio. Edit `src/` in repo; it appears in Studio.
+- **"Roblox_Studio" MCP** (proxy): `execute_luau`, `screen_capture`, `search_game_tree`, `inspect_instance`,
+  `multi_edit`, `script_read/grep`, `get_console_output`, `start_stop_play`, `generate_mesh/material/procedural_model`,
+  `character_navigation`.
+- **"Roblox_Search" MCP** (kevinswint fork): `search_assets` (QUALITY-SCORED: favorites + verified-creator ✓ + recency),
+  `preview_asset` (insert to evaluate), `capture_screenshot`, `run_code`, `write_script`. First call after idle may
+  time out once ("Plugin search failed: Timeout") — retry once.
+- **SERIAL CONSTRAINT**: both MCPs share ONE Studio plugin (port 44755). Swarm agents CANNOT drive Studio or search in
+  parallel. The LEADER performs all Studio + `search_assets` + `preview_asset` + import + terrain + screenshots + tests,
+  one at a time. Subagents fan out only NON-Studio work: code authoring (file-partitioned), web research, ranking, docs.
+- Set active Studio first: `list_roblox_studios` -> `set_active_studio`.
+
+## VALIDATED STATE + GUARDS
+- Tests: **176 / 143 pass / 34 fail**. 15 of the 34 are PRE-EXISTING module-LOAD failures (unrelated to current work);
+  the rest are content/500-gate. Run: `require(game.ReplicatedStorage.Shared.TestFramework.TestRunner); :clearSuites();
+  .run({category="All"})`. **GUARD: never introduce NEW failures**; run Unit + relevant Integration before/after each change.
+- Assets: **22/500** release-ready (500 = cataloged SourceAssetIds, not live imports).
+
+## THE ASSET TRUTH (use the good ones, gate the rest)
+- `Workspace.dinosaur` = **56 RIGGED mesh species** (Motor6D + 35-75 Bones + AnimationController + PrimaryPart "RootPart",
+  ~5-10 MeshParts) — currently UNUSED. Folders: `"Herbivores (land)"` 16, `"Carnivores (land)"` 28, `"Omnivores(land)"`
+  4 (no space), `"Aquatic"` 8. AnimationController has **NO Animator child yet** (renders static until you add an
+  Animator + populate AnimationIds).
+- `Workspace.NPCs` spawn PRIMITIVES (88-172 Parts, 0 mesh). **Player = default R15 avatar** (SpeciesId=nil; dino visual
+  never applied). `ImportedAssetLibrary.Imported_Playable_<Species>_Model_Set/<stage>` are ALL primitives (Velociraptor
+  860 Parts, Gallimimus 440+80 unions). Remove junk model `"Delete(and delete thumbnail)"`.
+- Pipelines to fix: `CharacterVisualService:ApplyForState` -> `SpeciesModelService:ResolveModel` ->
+  `SpeciesConfig.ModelPaths`; `NPCSpawnService:ResolveImportedNPCModel` -> `NPCModelCandidatePaths`. Make BOTH prefer
+  the staged `Workspace.dinosaur` meshes (a shared `StagedMeshLibrary` module is the clean approach).
+- **ALL 56 dinos are the ECOSYSTEM**, not just 8 playable: 8 playable species + the rest become NPC prey/predator/
+  ambient fauna/aquatic/flyers populating the biomes. Playable -> staged mapping (exact names; substitute where none staged):
+  `gallimimus->Coelophysis, triceratops->Triceratops, velociraptor->Utahraptor, carnotaurus->Carnotaurus,
+  tyrannosaurus->Tyrannosaurus, oviraptor->Citipati (male), pteranodon->Quetzalcoatlus, spinosaurus->Spinosaurus`.
+  RISK: weld only a model's **PrimaryPart** to the player HumanoidRootPart (welding every skinned part fights the Motor6D rig).
+
+## BUILD WORKSTREAMS (parallelizable across waves; each ends at a storyboard acceptance check)
+**A. ASSET QUALITY GATE & SOURCING** — gate every asset: accept Creator-Store textured mesh, reject primitive/CSG/
+AI-generated/test. Use `Roblox_Search.search_assets` to source missing/weak assets (real velociraptor + gallimimus
+meshes; recognizable FOOD: foliage/ferns/fruit + dino CARCASS/meat; believable WATER; a proper food-finding WAYPOINT
+UI; impact/blood VFX; roar/eat SFX); `preview_asset` to compare; strip scripts + looped sounds; tag SourceAssetId/
+AssetManifestId/CreatorStoreOnly/ImportedVisibleAsset.
+
+**B. ROSTER & NPC LIFE / BEHAVIOR** — fix default-avatar->dino; wire 56 staged meshes into player+NPC; replace
+primitive NPCs; add Animator + populate `SpeciesConfig.AnimationIds` (idle/walk/run/eat/attack/hurt/death); locomotion
+via `Humanoid:MoveTo` (no PivotTo teleport), ground-clamped; AI behavior per diet/role — herd, prey-flee, predator-hunt,
+apex-threat, ambient fauna across biomes.
+
+**C. MAP / TERRAIN / ENVIRONMENT / DECORATIONS** — rebuild the 6 biomes (NurseryGrove->FernPlains->JungleBasin->
+SwampDelta->RedstoneCanyon->ApocalypticCity): sculpted Terrain (not flat plane), condensed contiguous layout, dense
+DECORATION (trees/rocks/foliage/landmarks/ruins), Terrain WATER with shorelines+depth, custom skybox + Atmosphere per
+region, decorated boundary + horizon silhouettes (no drop-off), raycast-GROUND every prop (no floaters).
+
+**D. FOOD, VEGETATION & ECOLOGY** — per-biome flora (ferns/bushes/fruit/grass/reeds/vines/cycads) that is BOTH
+decoration AND interactive food: eat prompt, deplete on eat, regrow on a timer; diet-correct (herbivore foliage /
+carnivore carcass / omnivore scraps); carcasses use real dino/bone meshes; fix omnivore/herbivore diet metadata;
+drinkable shallow water via WaterService.
+
+**E. COMBAT / MECHANICS / FEEL** — telegraphed attacks + floating damage numbers + hit flash/impact VFX/SFX + camera
+shake; NPC overhead health + apex-threat UI; carnivore PREDATION on NPCs AND players (kill->carcass->feed; size-band +
+NurseryGrove safe-zone anti-grief); GROWING (Hatchling->Juvenile->SubAdult->Adult with per-stage visual scale + stat/
+ability changes) + "Alpha" payoff; NESTING/BREEDING (egg, Lay Egg, hatch-from-nest respawn); REAL flight + swim (see
+type-specials); environment changes.
+  - **DYING PIPELINE**: `NPCService:Transition->"Dead"` -> death animation -> ragdoll settle -> spawn carcass food
+    source -> timed cleanup/despawn. Player death -> respawn as egg/hatchling + leaves a carcass the killer can feed on.
+
+**F. UI / UX (governed by the Guidance Principle below)** — survival HUD redesign (hunger/thirst/stamina/oxygen/health/
+growth, color-coded, progressive-disclosure); REPLACE the misleading home-rolled waypoint ARROW with a diet-aware
+scent/sense PULSE + target highlight + distance + diet icon; species/role/diet cards; diegetic prompts (no quest
+popups); mobile thumb controls; optional themed cursor.
+
+**G. QA GATE** — per-beat screenshot proofs (Storyboard acceptance + Gates A-D), test parity, release-count progress,
+fresh-Play-session proofs.
+
+**H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (8 playable + each NPC fauna species), validate
+individually and record a pass/fail matrix WITH screenshots: spawns; renders as correct mesh; PrimaryPart/collision/
+hitbox sane; scale correct per growth stage; locomotion matches movement mode (ground/air/water) with no teleport or
+floating; animations play (idle/walk/run/eat/attack/hurt/death); eats correct diet; fights (deals + takes damage,
+telegraph reads); grows through 4 stages; dies cleanly (death->ragdoll->carcass->respawn); nests if adult. Add automated
+tests per species where logic allows (extend the suite; keep 176/143/34 parity). No species ships until its row is green.
+
+## MOVEMENT-MODE / TYPE-SPECIAL HANDLING (extends B + E + H)
+- **AQUATIC** (Aquatic folder: Megalodon, Liopleurodon, Elasmosaurus, Plesiosaurus, Styxosaurus, Archelon, Atopodentatus
+  + playable Spinosaurus as semi-aquatic): buoyant swim physics, CONFINED to water bodies (a shark/plesiosaur cannot walk
+  on land — beach/flop or stay submerged), in-water hunt/fish behavior, spawn ONLY in SwampDelta/water zones. Oxygen
+  applies to land species that ENTER water, not to fully marine ones.
+- **AERIAL** (Pteranodon, Quetzalcoatlus, Microraptor, Archaeopteryx): real flight (BodyVelocity/AlignPosition),
+  takeoff/land/perch, PreferredAltitude, aerial prey/predator behavior, stamina-gated.
+- **GROUND** (the rest): `Humanoid:MoveTo` locomotion, ground-clamped, herd/pack AI.
+- **SEMI-AQUATIC** (Spinosaurus): land + water.
+Each type gets a type-appropriate animation set, spawn zone, and AI brain. Lift `Constants.ScopeFreeze` for flyers/
+aquatics once real movement lands; unify MaxOxygen to one constant.
+
+## GUIDANCE & PLAYABILITY PRINCIPLE (governs F + all world interactions)
+Minimal, diegetic, easy — a young player understands what to do within seconds, no reading required.
+- **WORLD IS THE GUIDE**: lead via the world itself — edible-looking food, drinkable-looking water, a soft diet-aware
+  scent/sense PULSE toward the nearest valid target + distance + diet icon, target highlight, directional sound. NOT
+  menus, text walls, or a misleading arrow.
+- **PROGRESSIVE-DISCLOSURE HUD**: show a stat only when it matters (oxygen only while submerged, threat only near a
+  predator, growth only when ready). Calm by default; pulse on change.
+- **ONE-TAP CONTEXT ACTIONS**: a single proximity-aware contextual button does the right thing (Eat / Drink / Attack /
+  Hide / Call / Claim nest) — no combos for the core loop. Mobile thumb-reachable; touch + keyboard.
+- **NO TUTORIAL POPUPS**: Beats 0-2 teach by doing (nibble fern -> drink -> flee) via gentle affordances/pulses.
+- **WORLD INTERACTIONS**: walk-up-to-eat, walk-up-to-drink, approach-to-claim, approach-to-hunt — proximity/context
+  driven, minimal clicks.
+- **ACCEPTANCE (every beat)**: the gameplay screenshot is understandable with the UI HIDDEN — food reads as food, water
+  as water, threat as danger, and the single next action is obvious from one on-screen affordance.
+
+## ORCHESTRATION LOOP
+- **Wave 0 (now)**: read STATUS + storyboard; set active Studio; run tests to confirm 176/143/34 baseline; create the
+  task backlog (TaskCreate) from the workstreams; pick the wave's target beat(s).
+- **Recommended order**: B (player+NPC visual) -> C+D (world+food/vegetation) -> E+F (combat+UI/guidance) -> H per-species
+  matrix folded in continuously -> A sourcing folded in as gaps appear -> G proofs. Do **Beats 0-2 first** (hatch, food/
+  water, first predator) for the fastest visible win.
+- **Each wave**: leader scopes -> dispatch Workflow/Agent swarm (code file-partitioned + research + doc updates) ->
+  leader reviews/merges -> runs tests (parity) -> drives Studio (import/terrain/wire/screenshot) -> validate vs the
+  beat's acceptance check -> scoped commit + push -> TaskUpdate + add newly-discovered tasks -> next wave.
+- Keep looping until the first-session journey (Beats 0-8) reads correctly in screenshots and every in-use species' H-row is green.
+
+## OPERATING RULES
+- **CONCURRENCY**: omx/oh-my-codex agents may run detached and write files / leave `.git/index.lock`. Before git writes:
+  `pgrep -fl codex-darwin | grep eggBreakers`; remove a stale `.git/index.lock` only if no git process runs. Use scoped
+  `git add <paths>` ONLY (never `git add -A`). Don't commit files you didn't author — surface them.
+- Commit messages end with: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+- `screen_capture` uses the EDIT camera (not the play view) — aim it explicitly. `start_stop_play` respawns the player
+  and strips ServerScriptService client-side; don't do it mid-inspection.
+- Memory: `~/.claude/projects/.../memory/eggbreakers-concurrent-agents.md`.
+
+**BEGIN**: read `eggBreakers_STATUS.md` + `docs/StoryModeStoryboard.md`, set the active Studio, confirm the 176/143/34
+test baseline, seed the task backlog from the workstreams, then orchestrate Wave 0 toward Beats 0-2 (real dino player +
+real, recognizable food/water visible in a screenshot with the UI hidden).
