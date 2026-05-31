@@ -92,4 +92,135 @@ table.insert(suite.tests, { name = "ResolveModel rejects unknown and nil species
     Assert.equals(r2, "no_staged_mapping", "unknown species reports no_staged_mapping")
 end })
 
+-- =========================================================================
+-- PER-SPECIES MATRIX: for every playable species, assert that its
+-- SpeciesConfig entry is structurally valid, its StagedMeshLibrary mapping
+-- exists, and exactly one movement mode (ground / flight / swim) is tagged.
+-- Pure logic only — no live Workspace or staging instances are required.
+-- =========================================================================
+
+local VALID_DIETS = {
+    Herbivore = true,
+    Carnivore = true,
+    Omnivore = true,
+}
+
+local KNOWN_STAGES = {
+    Hatchling = true,
+    Juvenile = true,
+    SubAdult = true,
+    Adult = true,
+}
+
+-- Numeric BaseStats fields every stage must define with sane (>=0) values.
+local REQUIRED_STAT_FIELDS = {
+    "MaxHealth",
+    "WalkSpeed",
+    "SprintSpeed",
+    "MaxStamina",
+    "HungerDrain",
+    "ThirstDrain",
+    "Damage",
+}
+
+table.insert(suite.tests, { name = "every playable species declares a valid diet", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        Assert.equals(type(entry.Diet), "string", "Diet is a string for " .. speciesId)
+        Assert.truthy(VALID_DIETS[entry.Diet], "Diet '" .. tostring(entry.Diet) .. "' is recognized for " .. speciesId)
+    end
+end })
+
+table.insert(suite.tests, { name = "every playable species lists valid AllowedGrowthStages", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        local stages = entry.AllowedGrowthStages
+        Assert.equals(type(stages), "table", "AllowedGrowthStages is a table for " .. speciesId)
+        Assert.truthy(#stages > 0, "AllowedGrowthStages is non-empty for " .. speciesId)
+        for _, stage in ipairs(stages) do
+            Assert.equals(type(stage), "string", "growth stage is a string for " .. speciesId)
+            Assert.truthy(KNOWN_STAGES[stage], "growth stage '" .. tostring(stage) .. "' is known for " .. speciesId)
+        end
+    end
+end })
+
+table.insert(suite.tests, { name = "every playable species has ModelPaths for each allowed stage", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        Assert.equals(type(entry.ModelPaths), "table", "ModelPaths is a table for " .. speciesId)
+        for _, stage in ipairs(entry.AllowedGrowthStages) do
+            local path = entry.ModelPaths[stage]
+            Assert.equals(type(path), "string", "ModelPaths has a string path for " .. speciesId .. " stage " .. stage)
+            Assert.truthy(#path > 0, "ModelPaths path is non-empty for " .. speciesId .. " stage " .. stage)
+        end
+    end
+end })
+
+table.insert(suite.tests, { name = "every playable species has valid BaseStats for each allowed stage", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        Assert.equals(type(entry.BaseStats), "table", "BaseStats is a table for " .. speciesId)
+        for _, stage in ipairs(entry.AllowedGrowthStages) do
+            local statBlock = entry.BaseStats[stage]
+            Assert.equals(type(statBlock), "table", "BaseStats block exists for " .. speciesId .. " stage " .. stage)
+            for _, field in ipairs(REQUIRED_STAT_FIELDS) do
+                local value = statBlock[field]
+                Assert.equals(type(value), "number", "BaseStats." .. field .. " is a number for " .. speciesId .. " stage " .. stage)
+                Assert.truthy(value >= 0, "BaseStats." .. field .. " is non-negative for " .. speciesId .. " stage " .. stage)
+            end
+            Assert.truthy(statBlock.MaxHealth > 0, "MaxHealth is positive for " .. speciesId .. " stage " .. stage)
+        end
+    end
+end })
+
+table.insert(suite.tests, { name = "every playable species has a staged mesh mapping (config-driven)", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local mapping = StagedMeshLibrary.SpeciesMesh[speciesId]
+        Assert.notNil(mapping, "StagedMeshLibrary mapping exists for " .. speciesId)
+        Assert.equals(type(mapping.folder), "string", "mapping.folder is a string for " .. speciesId)
+        Assert.equals(type(mapping.name), "string", "mapping.name is a string for " .. speciesId)
+        Assert.truthy(VALID_FOLDERS[mapping.folder], "mapping.folder is a known staging folder for " .. speciesId)
+    end
+end })
+
+table.insert(suite.tests, { name = "every playable species tags exactly one primary movement mode", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        local modes = entry.MovementModes
+        Assert.equals(type(modes), "table", "MovementModes is a table for " .. speciesId)
+        Assert.equals(type(modes.Ground), "boolean", "MovementModes.Ground is a boolean for " .. speciesId)
+        Assert.equals(type(modes.Flight), "boolean", "MovementModes.Flight is a boolean for " .. speciesId)
+        Assert.equals(type(modes.Swim), "boolean", "MovementModes.Swim is a boolean for " .. speciesId)
+
+        -- Derive a single canonical movement tag: flight > swim > ground.
+        local tag
+        if modes.Flight then
+            tag = "flight"
+        elseif modes.Swim then
+            tag = "swim"
+        elseif modes.Ground then
+            tag = "ground"
+        end
+        Assert.notNil(tag, "at least one movement mode (ground/flight/swim) is enabled for " .. speciesId)
+        Assert.truthy(tag == "ground" or tag == "flight" or tag == "swim", "movement tag is canonical for " .. speciesId .. ": " .. tostring(tag))
+    end
+end })
+
+table.insert(suite.tests, { name = "flight and swim specials carry consistent stat drains", run = function()
+    for _, speciesId in ipairs(playableSpeciesIds()) do
+        local entry = SpeciesConfig[speciesId]
+        local modes = entry.MovementModes
+        for _, stage in ipairs(entry.AllowedGrowthStages) do
+            local statBlock = entry.BaseStats[stage]
+            Assert.equals(type(statBlock.MaxOxygen), "number", "MaxOxygen is a number for " .. speciesId .. " stage " .. stage)
+            Assert.equals(type(statBlock.FlightStaminaDrain), "number", "FlightStaminaDrain is a number for " .. speciesId .. " stage " .. stage)
+            if modes.Flight then
+                Assert.truthy(statBlock.FlightStaminaDrain > 0, "flight species drains flight stamina for " .. speciesId .. " stage " .. stage)
+            else
+                Assert.equals(statBlock.FlightStaminaDrain, 0, "non-flight species has zero flight drain for " .. speciesId .. " stage " .. stage)
+            end
+        end
+    end
+end })
+
 return TestRunner.registerSuite(suite)

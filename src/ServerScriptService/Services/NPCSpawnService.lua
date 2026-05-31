@@ -197,8 +197,106 @@ function NPCSpawnService:EnsureNPCFolder()
     return folder
 end
 
+-- A carcass / food source is gameplay-relevant and must never be despawned by NPC cleanup.
+function NPCSpawnService:IsCarcassFoodSource(instance)
+    if not instance then return false end
+    return instance:GetAttribute("CarcassFoodSource") == true
+        or instance:GetAttribute("PlayerCarcass") == true
+end
+
+-- True when the instance looks like a live-NPC model (carries a kind, is not a carcass).
+function NPCSpawnService:IsNPCModel(instance)
+    if not instance then return false end
+    if self:IsCarcassFoodSource(instance) then return false end
+    return instance:GetAttribute("NPCKind") ~= nil
+end
+
+-- Count MeshParts anywhere in the model; 0 means a primitive (Part-only) placeholder body.
+function NPCSpawnService:CountMeshParts(instance)
+    if not instance then return 0 end
+    local count = 0
+    if instance:IsA("MeshPart") then count = count + 1 end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("MeshPart") then count = count + 1 end
+    end
+    return count
+end
+
+-- A staged mesh is available for a kind when StagedMeshLibrary resolves a visible model for its species.
+function NPCSpawnService:HasStagedMeshForKind(kind)
+    if not kind then return false end
+    local profile = NPCService:GetKindProfile(kind)
+    local speciesId = profile and profile.SpeciesId
+    if not speciesId then return false end
+    local staged = StagedMeshLibrary:ResolveModel(speciesId)
+    return staged ~= nil and hasVisiblePart(staged)
+end
+
+-- Remove NPC models from Workspace.NPCs that are stale:
+--   * not registered in NPCService.NPCs, OR
+--   * beyond NPCService.MaxActive (excess), OR
+--   * primitive (0 MeshParts) when a staged mesh is available for that kind.
+-- Carcass/food sources are always preserved. Returns the number removed.
+function NPCSpawnService:CleanupStaleNPCs()
+    local folder = Workspace:FindFirstChild("NPCs")
+    if not folder then return 0 end
+
+    -- Build a fast lookup of currently registered live NPC instances.
+    local registered = {}
+    for _, record in ipairs(NPCService.NPCs) do
+        if record.Instance then registered[record.Instance] = true end
+    end
+
+    local maxActive = NPCService.MaxActive or 30
+    local keptActive = 0
+    local removed = 0
+
+    for _, child in ipairs(folder:GetChildren()) do
+        if self:IsNPCModel(child) then
+            local kind = child:GetAttribute("NPCKind")
+            local isRegistered = registered[child] == true
+            local stale = false
+
+            if not isRegistered then
+                -- Orphaned model from a prior session / direct parenting.
+                stale = true
+            elseif self:HasStagedMeshForKind(kind) and self:CountMeshParts(child) == 0 then
+                -- Registered but a primitive placeholder while a real staged mesh exists.
+                stale = true
+            else
+                keptActive = keptActive + 1
+                if keptActive > maxActive then
+                    -- Beyond the hard active cap — trim the excess.
+                    stale = true
+                end
+            end
+
+            if stale then
+                if isRegistered then
+                    local record = NPCService:FindRecordForInstance(child)
+                    if record then
+                        for index = #NPCService.NPCs, 1, -1 do
+                            if NPCService.NPCs[index] == record then
+                                table.remove(NPCService.NPCs, index)
+                                break
+                            end
+                        end
+                    end
+                end
+                child:Destroy()
+                removed = removed + 1
+            end
+        end
+    end
+
+    return removed
+end
+
 function NPCSpawnService:MaintainMinimumActive()
     self:EnsureNPCFolder()
+    -- Despawn stale/excess/primitive NPC models before topping up so the world
+    -- never accumulates leftover placeholder bodies across sessions.
+    self:CleanupStaleNPCs()
     local active = #NPCService.NPCs
     local spawnFolder = self:GetSpawnFolder()
     local spawns = spawnFolder and spawnFolder:GetChildren() or {}

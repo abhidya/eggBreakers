@@ -273,6 +273,40 @@ Remotes.RequestCollectFossil.OnServerEvent:Connect(function(player, fossilInstan
     sendStats(player)
 end)
 
+if Remotes:FindFirstChild("RequestHatchFromNest") then
+    Remotes.RequestHatchFromNest.OnServerEvent:Connect(function(player)
+        local ok, result = NestService:RequestHatchFromNest(player)
+        if ok then
+            local state = result
+            state.RespawnScheduled = nil
+            routeCharacterToSpeciesSpawn(player, state)
+            MovementLockService:SetHatchedMovement(player, state.Hatched == true, state)
+            CharacterVisualService:ApplyForState(player, state)
+            StatReplicationService:Notify(player, "Hatched from your nest", "Success", 3)
+        else
+            notifyResult(player, false, result, "Hatched from your nest")
+        end
+        sendStats(player)
+    end)
+end
+
+if Remotes:FindFirstChild("RequestPromoteAlpha") then
+    Remotes.RequestPromoteAlpha.OnServerEvent:Connect(function(player)
+        local ok, result = SurvivalService:PromoteToAlpha(player)
+        if ok then
+            CharacterVisualService:ApplyForState(player, result)
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and result.CurrentWalkSpeed then
+                humanoid.WalkSpeed = result.CurrentWalkSpeed
+            end
+            StatReplicationService:Notify(player, "You are now the Alpha", "Success", 3)
+        else
+            notifyResult(player, false, result, "Promoted to Alpha")
+        end
+        sendStats(player)
+    end)
+end
+
 -- Test/trigger helper: server-owned discovery path. Map trigger scripts should call this service, never client currency grants.
 _G.eggBreakersDiscoverZone = function(player, zoneId)
     return CityDiscoveryService:Discover(player, zoneId)
