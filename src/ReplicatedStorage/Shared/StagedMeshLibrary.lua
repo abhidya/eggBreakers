@@ -6,10 +6,10 @@ StagedMeshLibrary.StagingFolderName = "dinosaur"
 
 -- playable speciesId -> { folder=<diet folder>, name=<staged model name> }. Substitutes where no exact mesh staged.
 StagedMeshLibrary.SpeciesMesh = {
-    gallimimus    = { folder = "Carnivores (land)", name = "Coelophysis" },
-    triceratops   = { folder = "Herbivores (land)", name = "Triceratops" },
-    velociraptor  = { folder = "Carnivores (land)", name = "Utahraptor" },
-    carnotaurus   = { folder = "Carnivores (land)", name = "Carnotaurus" },
+    coelophysis   = { folder = "Carnivores (land)", name = "Coelophysis" },
+    parasaurolophus = { folder = "Herbivores (land)", name = "Parasaurolophus" },
+    utahraptor    = { folder = "Carnivores (land)", name = "Utahraptor" },
+    citipati      = { folder = "Omnivores(land)",   name = "Citipati (female)" },
     tyrannosaurus = { folder = "Carnivores (land)", name = "Tyrannosaurus" },
     oviraptor     = { folder = "Omnivores(land)",   name = "Citipati (male)" },
     pteranodon    = { folder = "Carnivores (land)", name = "Quetzalcoatlus" },

@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local FoodWaterService = require(script.Parent.FoodWaterService)
 
 local NPCService = { TickLoopStarted = false }
 NPCService.MinActive = 12
@@ -18,14 +19,17 @@ NPCService.AttackDistance = 10
 NPCService.WanderRadius = 28
 NPCService.HerdRadius = 65
 NPCService.ApexEventCooldownSeconds = 12
+NPCService.StuckDistanceEpsilon = 0.35
+NPCService.StuckRecoveryTicks = 2
+NPCService.StuckRecoveryNudgeStuds = 6
 -- DYING PIPELINE tunables (additive; safe when world absent).
 NPCService.DeathSettleSeconds = 1.5        -- brief "settle/ragdoll" beat before the body reads as a carcass
 NPCService.CarcassDespawnSeconds = 45      -- how long the carcass food source lingers before cleanup
 NPCService.ApexThreatRadius = 140
 NPCService.KindProfiles = {
-    Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "gallimimus" },
-    AerialPrey = { Diet = "Herbivore", Health = 45, Damage = 6, Herding = true, SpeciesId = "gallimimus", FlightCapable = true, PreferredAltitude = 32, AerialPrey = true },
-    Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "carnotaurus" },
+    Prey = { Diet = "Herbivore", Health = 80, Damage = 12, Herding = true, SpeciesId = "parasaurolophus" },
+    AerialPrey = { Diet = "Carnivore", Health = 45, Damage = 6, Herding = true, SpeciesId = "quetzalcoatlus", FlightCapable = true, PreferredAltitude = 32, AerialPrey = true },
+    Predator = { Diet = "Carnivore", Health = 140, Damage = 45, SpeciesId = "utahraptor" },
     AerialPredator = { Diet = "Carnivore", Health = 115, Damage = 35, SpeciesId = "pteranodon", FlightCapable = true, PreferredAltitude = 38, HuntsAerialPrey = true },
     Apex = { Diet = "Carnivore", Health = 260, Damage = 80, Apex = true, SpeciesId = "tyrannosaurus", ThreatRadius = 140 },
     Omnivore = { Diet = "Omnivore", Health = 95, Damage = 18, Herding = true, SpeciesId = "oviraptor" },
@@ -337,6 +341,108 @@ function NPCService:StampLocomotion(record, mode)
     end
 end
 
+function NPCService:GetMovementModes(record)
+    local species = SpeciesConfig[record and record.SpeciesId or ""]
+    return species and species.MovementModes or { Ground = true, Swim = false, Flight = false }
+end
+
+function NPCService:GetMovementSurface(record, actionName, targetInstance)
+    if record and record.FlightCapable == true then
+        return "Flight"
+    end
+    local modes = self:GetMovementModes(record)
+    if modes.Swim == true then
+        if record and record.Kind == "SemiAquatic" then
+            return "Swim"
+        end
+        if targetInstance and targetInstance.GetAttribute and (targetInstance:GetAttribute("WaterSource") == true or CollectionService:HasTag(targetInstance, "WaterSource")) then
+            return "Swim"
+        end
+        if actionName == "SeekWater" or actionName == "Drink" then
+            return "Swim"
+        end
+    end
+    return "Ground"
+end
+
+function NPCService:StampMovementState(record, surface, actionName, targetPosition, clamped)
+    record.MovementSurface = surface
+    record.MovementState = surface .. ":" .. tostring(actionName or "Move")
+    local npc = record.Instance
+    if npc and npc.SetAttribute then
+        npc:SetAttribute("MovementSurface", surface)
+        npc:SetAttribute("MovementState", record.MovementState)
+        npc:SetAttribute("GroundClampApplied", clamped == true)
+        if typeof(targetPosition) == "Vector3" then
+            npc:SetAttribute("ResolvedMoveTarget", self:FormatVector3(targetPosition))
+        end
+    end
+end
+
+function NPCService:ResolveMovementTarget(record, targetPosition, actionName, targetInstance)
+    if typeof(targetPosition) ~= "Vector3" then return targetPosition, "Ground", false end
+    local surface = self:GetMovementSurface(record, actionName, targetInstance)
+    if surface == "Flight" then
+        return self:GetFlightTarget(record, targetPosition, actionName), surface, false
+    end
+    local current = self:GetRecordPosition(record)
+    if surface == "Ground" then
+        return Vector3.new(targetPosition.X, current.Y, targetPosition.Z), surface, math.abs(targetPosition.Y - current.Y) > 0.1
+    end
+    return targetPosition, surface, false
+end
+
+function NPCService:ApplyStuckRecovery(record, targetPosition, actionName)
+    local position = self:GetRecordPosition(record)
+    local lastPosition = record.LastMovementPosition
+    local distanceToTarget = (targetPosition - position).Magnitude
+    if lastPosition and distanceToTarget > self.InteractDistance then
+        local progress = (position - lastPosition).Magnitude
+        if progress <= self.StuckDistanceEpsilon then
+            record.StuckTicks = (record.StuckTicks or 0) + 1
+        else
+            record.StuckTicks = 0
+        end
+    else
+        record.StuckTicks = 0
+    end
+    record.LastMovementPosition = position
+    if (record.StuckTicks or 0) < self.StuckRecoveryTicks then
+        return targetPosition, false
+    end
+    local toTarget = targetPosition - position
+    local lateral = Vector3.new(-toTarget.Z, 0, toTarget.X)
+    if lateral.Magnitude <= 0.05 then lateral = Vector3.new(1, 0, 0) end
+    local recovered = targetPosition + lateral.Unit * self.StuckRecoveryNudgeStuds
+    record.StuckRecoveries = (record.StuckRecoveries or 0) + 1
+    if record.Instance and record.Instance.SetAttribute then
+        record.Instance:SetAttribute("MovementStuckTicks", record.StuckTicks)
+        record.Instance:SetAttribute("MovementRecoveryCount", record.StuckRecoveries)
+        record.Instance:SetAttribute("MovementState", "Recovering:" .. tostring(actionName or "Move"))
+        record.Instance:SetAttribute("StuckRecoveryTarget", self:FormatVector3(recovered))
+    end
+    record.StuckTicks = 0
+    return recovered, true
+end
+
+function NPCService:ConfigureHumanoidMovement(record, humanoid, actionName)
+    if not humanoid then return end
+    local species = SpeciesConfig[record and record.SpeciesId or ""]
+    local stage = (record and record.GrowthStage) or "Adult"
+    local stats = species and species.BaseStats and (species.BaseStats[stage] or species.BaseStats.Adult or species.BaseStats.Hatchling)
+    local walkSpeed = stats and stats.WalkSpeed or humanoid.WalkSpeed
+    local sprintSpeed = stats and stats.SprintSpeed or math.max(walkSpeed, humanoid.WalkSpeed)
+    if actionName == "Chase" or actionName == "Flee" then
+        humanoid.WalkSpeed = sprintSpeed
+    else
+        humanoid.WalkSpeed = walkSpeed
+    end
+    humanoid.AutoRotate = true
+    if record and record.Instance and record.Instance.SetAttribute then
+        record.Instance:SetAttribute("DesiredWalkSpeed", humanoid.WalkSpeed)
+    end
+end
+
 function NPCService:OrientToward(record, targetPosition, actionName)
     if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
     local npc = record.Instance
@@ -374,13 +480,15 @@ end
 function NPCService:MoveToward(record, targetPosition, step, actionName, targetInstance)
     if not record or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
     local npc = record.Instance
+    local surface, clamped
+    targetPosition, surface, clamped = self:ResolveMovementTarget(record, targetPosition, actionName, targetInstance)
+    local recovered
+    targetPosition, recovered = self:ApplyStuckRecovery(record, targetPosition, actionName)
+    if recovered then
+        surface = surface or self:GetMovementSurface(record, actionName, targetInstance)
+    end
     local position = self:GetRecordPosition(record)
     local delta = targetPosition - position
-    if delta.Magnitude <= 0.1 then
-        return self:OrientToward(record, targetPosition, actionName or "Move")
-    end
-    targetPosition = self:GetFlightTarget(record, targetPosition, actionName)
-    delta = targetPosition - position
     if delta.Magnitude <= 0.1 then
         return self:OrientToward(record, targetPosition, actionName or "Move")
     end
@@ -395,6 +503,14 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
     record.LastMoveAt = os.time()
     record.LastBrainAction = brainAction
     if npc then
+        self:StampMovementState(record, surface or "Ground", brainAction, targetPosition, clamped)
+        if recovered then
+            record.MovementState = "Recovering:" .. brainAction
+            npc:SetAttribute("MovementState", record.MovementState)
+            npc:SetAttribute("StuckRecoveryActive", true)
+        else
+            npc:SetAttribute("StuckRecoveryActive", false)
+        end
         local formattedTarget = self:FormatVector3(targetPosition)
         npc:SetAttribute("MoveTargetX", targetPosition.X)
         npc:SetAttribute("MoveTargetY", targetPosition.Y)
@@ -417,6 +533,7 @@ function NPCService:MoveToward(record, targetPosition, step, actionName, targetI
         if humanoid and root and mode == "HumanoidMoveTo" then
             -- Physics-driven locomotion via Humanoid:MoveTo; unanchors root part for smooth motion.
             if root.Anchored then root.Anchored = false end
+            self:ConfigureHumanoidMovement(record, humanoid, brainAction)
             humanoid:MoveTo(targetPosition)
             -- Orient model toward target (non-teleporting; Humanoid handles position)
             local lookCF = CFrame.lookAt(root.Position, lookAt)
@@ -463,14 +580,19 @@ function NPCService:Eat(record, food)
     if foodPosition then
         self:OrientToward(record, foodPosition, "Eat")
     end
-    record.Hunger = math.min(100, (record.Hunger or 0) + (food and food:GetAttribute("Nutrition") or 25))
+    if food then
+        FoodWaterService:NormaliseFoliageMetadata(food)
+    end
+    local nutrition = food and food:GetAttribute("Nutrition") or 25
+    record.Hunger = math.min(100, (record.Hunger or 0) + nutrition)
     local position = self:GetRecordPosition(record)
     local expectedDiet = self:GetRecordDiet(record)
     local depletedCount = 0
     local function deplete(target)
         if target and self:CanEatDiet(expectedDiet, target:GetAttribute("Diet")) and target:GetAttribute("Depleted") ~= true then
-            target:SetAttribute("Depleted", true)
-            target:SetAttribute("LastEatenByNPC", record.Instance and record.Instance.Name or "NPC")
+            local context = FoodWaterService:BuildEatContext(target, record.Instance and record.Instance.Name or "NPC", expectedDiet, target:GetAttribute("Nutrition") or nutrition)
+            FoodWaterService:MarkFoodEaten(target, context)
+            target:SetAttribute("LastEatenByNPC", context.EaterName)
             depletedCount = depletedCount + 1
         end
     end
@@ -485,6 +607,10 @@ function NPCService:Eat(record, food)
         record.Instance:SetAttribute("Hunger", record.Hunger)
         record.Instance:SetAttribute("LastAction", "Eat")
         record.Instance:SetAttribute("LastBrainAction", "Eat")
+        record.Instance:SetAttribute("EatingState", FoodWaterService:GetEatVerb(food, expectedDiet))
+        record.Instance:SetAttribute("EatTarget", food and food.Name or "")
+        record.Instance:SetAttribute("EatTargetKind", food and (food:GetAttribute("FoodKind") or food:GetAttribute("Diet")) or "")
+        record.Instance:SetAttribute("EatNutrition", nutrition)
         record.Instance:SetAttribute("FoodSourcesDepleted", depletedCount)
     end
     return self:Transition(record, "Eat")
@@ -834,42 +960,11 @@ function NPCService:CanChaseIntoZone(zoneId, scriptedTutorialScare)
 end
 
 function NPCService:MoveRecordToward(record, targetPosition, stepStuds, actionName)
-    local npc = record and record.Instance
-    if not npc or typeof(targetPosition) ~= "Vector3" then return false, "missing_target" end
-    local position = self:GetRecordPosition(record)
-    local offset = targetPosition - position
-    if offset.Magnitude <= 0.05 then return false, "already_at_target" end
-    local travel = math.min(stepStuds or self.BrainStepStuds, offset.Magnitude)
-    local nextPosition = position + offset.Unit * travel
-    local lookAt = Vector3.new(targetPosition.X, nextPosition.Y, targetPosition.Z)
-    if (lookAt - nextPosition).Magnitude <= 0.05 then
-        lookAt = nextPosition + Vector3.new(0, 0, -1)
+    local ok, reason = self:MoveToward(record, targetPosition, stepStuds or self.BrainStepStuds, actionName or "Move")
+    if ok and record and record.Instance and record.Instance.SetAttribute then
+        record.Instance:SetAttribute("LastBrainMovedAt", os.time())
     end
-    local root, mode = self:ResolveLocomotionRoot(npc)
-    local humanoid2 = npc:FindFirstChildWhichIsA("Humanoid")
-    self:StampLocomotion(record, mode)
-    if humanoid2 and root and mode == "HumanoidMoveTo" then
-        -- Physics-driven locomotion; unanchors root part for smooth Humanoid motion.
-        if root.Anchored then root.Anchored = false end
-        humanoid2:MoveTo(targetPosition)
-        local lookCF2 = CFrame.lookAt(root.Position, lookAt)
-        root.CFrame = lookCF2
-    elseif npc.PivotTo then
-        -- Humanoid-less staged rigs step only by the bounded nextPosition, never to the full target.
-        npc:PivotTo(CFrame.lookAt(nextPosition, lookAt))
-    elseif npc:IsA("BasePart") then
-        npc.CFrame = CFrame.lookAt(nextPosition, lookAt)
-    end
-    record.LastMoveTarget = targetPosition
-    record.LastBrainAction = actionName or "Move"
-    if npc.SetAttribute then
-        npc:SetAttribute("LastBrainAction", record.LastBrainAction)
-        npc:SetAttribute("BrainTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
-        npc:SetAttribute("LastMoveTarget", string.format("%.1f,%.1f,%.1f", targetPosition.X, targetPosition.Y, targetPosition.Z))
-        npc:SetAttribute("BrainMoveCount", (npc:GetAttribute("BrainMoveCount") or 0) + 1)
-        npc:SetAttribute("LastBrainMovedAt", os.time())
-    end
-    return true
+    return ok, reason
 end
 
 function NPCService:FindNearestPlayerRoot(record, players, maxDistance)

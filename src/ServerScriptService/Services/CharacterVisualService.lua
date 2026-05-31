@@ -634,7 +634,7 @@ function CharacterVisualService:ApplyForState(player, state, options)
         end
     end
 
-    local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "gallimimus", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
+    local sourceModel = SpeciesModelService:ResolveModel(state.SpeciesId or "coelophysis", state.GrowthStage or "Hatchling", { requireExact = self.ReleaseMode })
     if sourceModel then
         local attached = self:_attachModel(character, root, self:_prepareDinosaurClone(sourceModel, state))
         if attached then

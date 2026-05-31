@@ -10,7 +10,7 @@ HatchUIController.PromptSize = UDim2.fromOffset(420, 52)
 HatchUIController.MeterSize = UDim2.fromOffset(360, 18)
 HatchUIController.SelectorPosition = UDim2.new(0.5, -230, 1, -560)
 HatchUIController.SelectorSize = UDim2.fromOffset(460, 72)
-HatchUIController.StarterSpecies = { "gallimimus", "triceratops", "velociraptor", "carnotaurus" }
+HatchUIController.StarterSpecies = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
 
 function HatchUIController:GetSpeciesButtonText(speciesId)
     local species = SpeciesConfig[speciesId]

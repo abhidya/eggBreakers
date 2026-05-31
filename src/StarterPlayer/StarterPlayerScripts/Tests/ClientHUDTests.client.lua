@@ -30,6 +30,8 @@ table.insert(suite.tests, { name = "small screen readability gate", run = functi
     Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate includes creature category")
     Assert.truthy(table.find(payload, "movementModes") ~= nil, "StatUpdate includes movement modes")
     Assert.truthy(table.find(payload, "sprinting") ~= nil, "StatUpdate includes sprinting")
+    Assert.truthy(table.find(payload, "resting") ~= nil, "StatUpdate includes resting")
+    Assert.truthy(table.find(payload, "sleepState") ~= nil, "StatUpdate includes sleep state")
     Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate includes ecosystem profile")
     Assert.truthy(table.find(payload, "growthStage") ~= nil, "StatUpdate includes growth stage")
 end })
@@ -48,7 +50,7 @@ end })
 
 table.insert(suite.tests, { name = "diet guidance is visual for young readers", run = function()
     local herbivore = HUDController:BuildDietGuidance({
-        species = "gallimimus",
+        species = "parasaurolophus",
         diet = "Herbivore",
         growthStage = "Hatchling",
         creatureCategory = "SmallPrey",
@@ -59,7 +61,7 @@ table.insert(suite.tests, { name = "diet guidance is visual for young readers", 
     Assert.truthy(string.find(herbivore, "green plants", 1, true) == nil, "long food copy removed")
 
     local carnivore = HUDController:BuildDietGuidance({
-        species = "velociraptor",
+        species = "utahraptor",
         diet = "Carnivore",
         growthStage = "Hatchling",
     })
@@ -80,8 +82,8 @@ table.insert(suite.tests, { name = "growth badge makes dinosaur leveling clear",
 end })
 
 table.insert(suite.tests, { name = "species role card explains diet role and action", run = function()
-    local card = HUDController:BuildRoleCard({ species = "velociraptor", diet = "Carnivore" })
-    Assert.truthy(string.find(card, "Velociraptor", 1, true) ~= nil, "display name appears")
+    local card = HUDController:BuildRoleCard({ species = "utahraptor", diet = "Carnivore" })
+    Assert.truthy(string.find(card, "Utahraptor", 1, true) ~= nil, "display name appears")
     Assert.truthy(string.find(card, "🍖", 1, true) ~= nil, "diet icon appears")
     Assert.truthy(string.find(card, "👣", 1, true) ~= nil, "movement badge appears")
     Assert.truthy(string.find(card, "⟐", 1, true) ~= nil, "pack/profile badge appears")
@@ -92,13 +94,13 @@ end })
 
 table.insert(suite.tests, { name = "ecosystem profile badges expose species category and movement", run = function()
     local prey = HUDController:BuildRoleCard({
-        species = "gallimimus",
+        species = "parasaurolophus",
         diet = "Herbivore",
         creatureCategory = "SmallPrey",
         movementModes = { Ground = true },
         ecosystemProfile = { SmallPrey = true, Herding = true, CanGraze = true },
     })
-    Assert.truthy(string.find(prey, "Gallimimus", 1, true) ~= nil, "species display name appears")
+    Assert.truthy(string.find(prey, "Parasaurolophus", 1, true) ~= nil, "species display name appears")
     Assert.truthy(string.find(prey, "🌿", 1, true) ~= nil, "diet/profile plant badge appears")
     Assert.truthy(string.find(prey, "🐾", 1, true) ~= nil, "small prey category badge appears")
     Assert.truthy(string.find(prey, "👣", 1, true) ~= nil, "ground movement badge appears")
@@ -159,7 +161,7 @@ end })
 
 table.insert(suite.tests, { name = "story cue exposes biome needs threat fish and nest state", run = function()
     local hatchling = HUDController:BuildStoryCue({
-        species = "gallimimus",
+        species = "parasaurolophus",
         diet = "Herbivore",
         growthStage = "Hatchling",
         hunger = 22,

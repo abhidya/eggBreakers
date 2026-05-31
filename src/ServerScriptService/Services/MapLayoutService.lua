@@ -797,13 +797,13 @@ MapLayoutService.BiomeDressingPlacements = {
 }
 
 MapLayoutService.NPCKindSpeciesIds = {
-    Prey = "gallimimus",
-    AerialPrey = "gallimimus",
-    FlyingPrey = "gallimimus",
-    Predator = "carnotaurus",
-    AerialPredator = "velociraptor",
+    Prey = "parasaurolophus",
+    AerialPrey = "quetzalcoatlus",
+    FlyingPrey = "quetzalcoatlus",
+    Predator = "utahraptor",
+    AerialPredator = "pteranodon",
     Apex = "tyrannosaurus",
-    Omnivore = "oviraptor",
+    Omnivore = "citipati",
 }
 
 MapLayoutService.NPCKindFoodWhenDefeated = {
@@ -841,21 +841,21 @@ MapLayoutService.NPCSpawnPlacements = {
 }
 
 MapLayoutService.PlayerSpawnPlacements = {
-    { name = "GallimimusFernSpawn_01", speciesId = "gallimimus", zone = "FernPlains", position = Vector3.new(-1245, 15, -65), yawDegrees = 92 },
-    { name = "GallimimusFernSpawn_02", speciesId = "gallimimus", zone = "FernPlains", position = Vector3.new(-1125, 15, 135), yawDegrees = -35 },
-    { name = "GallimimusNurserySpawn_01", speciesId = "gallimimus", zone = "NurseryGrove", position = Vector3.new(-1995, 15, 74), yawDegrees = 88 },
+    { name = "CoelophysisRedstoneSpawn_01", speciesId = "coelophysis", zone = "RedstoneCanyon", position = Vector3.new(-1245, 15, -65), yawDegrees = 92 },
+    { name = "CoelophysisJungleSpawn_01", speciesId = "coelophysis", zone = "JungleBasin", position = Vector3.new(-1125, 15, 135), yawDegrees = -35 },
+    { name = "CoelophysisNurserySpawn_01", speciesId = "coelophysis", zone = "NurseryGrove", position = Vector3.new(-1995, 15, 74), yawDegrees = 88 },
 
-    { name = "TriceratopsFernSpawn_01", speciesId = "triceratops", zone = "FernPlains", position = Vector3.new(-1190, 15, -190), yawDegrees = 35 },
-    { name = "TriceratopsJungleSpawn_01", speciesId = "triceratops", zone = "JungleBasin", position = Vector3.new(-1505, 15, 1015), yawDegrees = -10 },
-    { name = "TriceratopsNurserySpawn_01", speciesId = "triceratops", zone = "NurseryGrove", position = Vector3.new(-2050, 15, 38), yawDegrees = 74 },
+    { name = "ParasaurolophusFernSpawn_01", speciesId = "parasaurolophus", zone = "FernPlains", position = Vector3.new(-1190, 15, -190), yawDegrees = 35 },
+    { name = "ParasaurolophusJungleSpawn_01", speciesId = "parasaurolophus", zone = "JungleBasin", position = Vector3.new(-1505, 15, 1015), yawDegrees = -10 },
+    { name = "ParasaurolophusNurserySpawn_01", speciesId = "parasaurolophus", zone = "NurseryGrove", position = Vector3.new(-2050, 15, 38), yawDegrees = 74 },
 
-    { name = "VelociraptorJungleSpawn_01", speciesId = "velociraptor", zone = "JungleBasin", position = Vector3.new(-1415, 15, 1070), yawDegrees = -115 },
-    { name = "VelociraptorFernSpawn_01", speciesId = "velociraptor", zone = "FernPlains", position = Vector3.new(-1015, 15, -210), yawDegrees = 145 },
-    { name = "VelociraptorNurserySpawn_01", speciesId = "velociraptor", zone = "NurseryGrove", position = Vector3.new(-1870, 15, -78), yawDegrees = 118 },
+    { name = "UtahraptorJungleSpawn_01", speciesId = "utahraptor", zone = "JungleBasin", position = Vector3.new(-1415, 15, 1070), yawDegrees = -115 },
+    { name = "UtahraptorRedstoneSpawn_01", speciesId = "utahraptor", zone = "RedstoneCanyon", position = Vector3.new(-1015, 15, -210), yawDegrees = 145 },
+    { name = "UtahraptorNurserySpawn_01", speciesId = "utahraptor", zone = "NurseryGrove", position = Vector3.new(-1870, 15, -78), yawDegrees = 118 },
 
-    { name = "CarnotaurusRedstoneSpawn_01", speciesId = "carnotaurus", zone = "RedstoneCanyon", position = Vector3.new(-260, 17, -720), yawDegrees = 64 },
-    { name = "CarnotaurusCitySpawn_01", speciesId = "carnotaurus", zone = "ApocalypticCity", position = Vector3.new(640, 15, -175), yawDegrees = -92 },
-    { name = "CarnotaurusNurserySpawn_01", speciesId = "carnotaurus", zone = "NurseryGrove", position = Vector3.new(-1832, 15, 20), yawDegrees = 122 },
+    { name = "CitipatiJungleSpawn_01", speciesId = "citipati", zone = "JungleBasin", position = Vector3.new(-260, 17, -720), yawDegrees = 64 },
+    { name = "CitipatiFernSpawn_01", speciesId = "citipati", zone = "FernPlains", position = Vector3.new(640, 15, -175), yawDegrees = -92 },
+    { name = "CitipatiNurserySpawn_01", speciesId = "citipati", zone = "NurseryGrove", position = Vector3.new(-1832, 15, 20), yawDegrees = 122 },
 }
 
 
@@ -1411,7 +1411,7 @@ function MapLayoutService:IsLiveCarnivoreFoodKind(kind)
 end
 
 function MapLayoutService:GetNPCSpawnSpeciesId(spec)
-    return spec.speciesId or self.NPCKindSpeciesIds[spec.kind] or "gallimimus"
+    return spec.speciesId or self.NPCKindSpeciesIds[spec.kind] or "coelophysis"
 end
 
 function MapLayoutService:GetGroundTopYForZone(zoneId)
@@ -1513,8 +1513,8 @@ function MapLayoutService:EnsurePlayerSpawnMarkers(folders)
 end
 
 function MapLayoutService:GetPlayerSpawnForSpecies(speciesId, preferredBiome, roll)
-    local species = SpeciesConfig[speciesId or ""] or SpeciesConfig.gallimimus
-    local resolvedSpeciesId = species and species.SpeciesId or "gallimimus"
+    local species = SpeciesConfig[speciesId or ""] or SpeciesConfig.coelophysis
+    local resolvedSpeciesId = species and species.SpeciesId or "coelophysis"
     local folders = self:EnsureMapFolders()
     local spawnFolder = self:EnsurePlayerSpawnMarkers(folders)
     local candidates = {}

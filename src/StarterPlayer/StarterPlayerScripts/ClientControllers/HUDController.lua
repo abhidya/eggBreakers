@@ -21,6 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIFactory         = require(script.Parent.UIFactory)
 local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
 local SpeciesConfig     = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants         = require(ReplicatedStorage.Shared.Constants)
 
 local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
 
@@ -81,7 +82,7 @@ end
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 function HUDController:GetSpeciesDisplayName(speciesId)
-    local id      = tostring(speciesId or "gallimimus")
+    local id      = tostring(speciesId or Constants.DefaultSpeciesId)
     local species = SpeciesConfig[id] or SpeciesConfig[string.lower(id)]
     return species and species.DisplayName or id
 end
@@ -143,7 +144,7 @@ end
 -- Tests assert: DisplayName, diet icon, no "Carnivore" word, no "Role:" label.
 function HUDController:BuildRoleCard(payload)
     payload = payload or {}
-    local speciesId   = tostring(payload.species or "gallimimus")
+    local speciesId   = tostring(payload.species or Constants.DefaultSpeciesId)
     local species     = SpeciesConfig[speciesId] or SpeciesConfig[string.lower(speciesId)]
     local displayName = species and species.DisplayName or speciesId
     local diet        = tostring(payload.diet or (species and species.Diet) or "Food")

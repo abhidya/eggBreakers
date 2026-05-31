@@ -85,7 +85,7 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
                 return descendant
             end
         end

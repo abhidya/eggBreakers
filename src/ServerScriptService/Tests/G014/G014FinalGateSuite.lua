@@ -35,7 +35,7 @@ end
 local function makePlayer(userId, speciesId, hatched)
     local player = MockPlayer.new(userId, "G014Player" .. tostring(userId))
     player.Character = makeCharacter("G014Character" .. tostring(userId))
-    local state = SurvivalService:CreateState(player, speciesId or "gallimimus")
+    local state = SurvivalService:CreateState(player, speciesId or "parasaurolophus")
     state.Hatched = hatched == true
     return player, state
 end
@@ -76,7 +76,7 @@ table.insert(suite.tests, { name = "client release fallback parts are dev disabl
 end })
 
 table.insert(suite.tests, { name = "hatch, drink, and combat are server authoritative", run = function()
-    local player, state = makePlayer(91401, "velociraptor", false)
+    local player, state = makePlayer(91401, "utahraptor", false)
     local water = Instance.new("Part")
     water.Name = "G014Water"
     water.Position = Vector3.new(1, 5, 0)

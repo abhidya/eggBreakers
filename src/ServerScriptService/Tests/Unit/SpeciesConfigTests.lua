@@ -34,20 +34,24 @@ table.insert(suite.tests, { name = "every species has required fields and stages
         end
     end
     Assert.truthy(count >= Constants.ScopeFreeze.RequiredPlayableSpecies, "vertical slice keeps required starter species")
-    -- The full staged roster is now playable. Workspace.dinosaur holds 56 rigs that
-    -- de-duplicate to 48 distinct staged species; merged with the curated 8 (4 of which
-    -- -- gallimimus, velociraptor, oviraptor, pteranodon -- have no staged-name twin)
-    -- the playable roster is 52. The cap is the full-roster upper bound, not the old
-    -- vertical-slice number; field validation above stays strict.
+    -- The full staged roster is now playable, minus the four retired prototype
+    -- species. Curated imported dinos plus staged replacements keep at least 48
+    -- playable species while excluding the old starter ids from runtime config.
     Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpecies, "playable roster stays within full-roster cap")
     Assert.truthy(count >= 48, "full staged roster (>=48 distinct playable species) is available")
 end })
 
 table.insert(suite.tests, { name = "starter species diet roles stay fixed", run = function()
-    Assert.equals(SpeciesConfig.gallimimus.Diet, "Herbivore")
-    Assert.equals(SpeciesConfig.triceratops.Diet, "Herbivore")
-    Assert.equals(SpeciesConfig.velociraptor.Diet, "Carnivore")
-    Assert.equals(SpeciesConfig.carnotaurus.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.coelophysis.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.parasaurolophus.Diet, "Herbivore")
+    Assert.equals(SpeciesConfig.utahraptor.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.citipati.Diet, "Omnivore")
+end })
+
+table.insert(suite.tests, { name = "retired prototype species are not playable", run = function()
+    for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
+        Assert.equals(SpeciesConfig[speciesId], nil, speciesId .. " is retired from runtime species config")
+    end
 end })
 
 table.insert(suite.tests, { name = "ecosystem expansion profiles cover apex herding and omnivore", run = function()

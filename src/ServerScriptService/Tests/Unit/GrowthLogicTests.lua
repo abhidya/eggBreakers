@@ -7,7 +7,7 @@ local suite = { name = "GrowthLogicTests", category = "Unit", tests = {} }
 
 table.insert(suite.tests, { name = "growth thresholds map to stages and clamp", run = function()
     local player = MockPlayer.new(101, "GrowthTester")
-    SurvivalService:CreateState(player, "gallimimus")
+    SurvivalService:CreateState(player, "parasaurolophus")
     SurvivalService:AddGrowth(player, 25)
     Assert.equals(SurvivalService:GetState(player).GrowthStage, "Juvenile")
     SurvivalService:AddGrowth(player, 25)
@@ -20,7 +20,7 @@ end })
 
 table.insert(suite.tests, { name = "death resets life state but not account service", run = function()
     local player = MockPlayer.new(102, "DeathTester")
-    SurvivalService:CreateState(player, "gallimimus")
+    SurvivalService:CreateState(player, "parasaurolophus")
     Assert.truthy(SurvivalService:Kill(player, "test"))
     Assert.truthy(SurvivalService:GetState(player).Dead)
     local state = SurvivalService:Respawn(player)
@@ -30,7 +30,7 @@ end })
 
 table.insert(suite.tests, { name = "health zero kills humanoid and invokes death callback", run = function()
     local player = MockPlayer.new(103, "ZeroHealthDeathTester")
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
     local humanoid = Instance.new("Humanoid")
     humanoid.Health = 12

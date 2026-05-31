@@ -33,7 +33,7 @@ end
 local function carnivorePlayer(id, position)
     local player = MockPlayer.new(id, "CarnivoreTester")
     RateLimitService:ClearPlayer(player)
-    local state = SurvivalService:CreateState(player, "velociraptor")
+    local state = SurvivalService:CreateState(player, "utahraptor")
     state.Hatched = true
     state.Hunger = 20
     local root = Instance.new("Part")

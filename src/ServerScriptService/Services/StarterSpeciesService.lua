@@ -1,8 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
 local StarterSpeciesService = {}
-StarterSpeciesService.StarterOrder = { "gallimimus", "triceratops", "velociraptor", "carnotaurus" }
+StarterSpeciesService.StarterOrder = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
 
 function StarterSpeciesService:GetUnlockedStarterSpecies(data)
     local unlocked = data and data.UnlockedSpecies or {}
@@ -24,7 +25,7 @@ end
 
 function StarterSpeciesService:ChooseStarterSpecies(data, roll)
     local candidates = self:GetUnlockedStarterSpecies(data)
-    if #candidates == 0 then return "gallimimus" end
+    if #candidates == 0 then return Constants.DefaultSpeciesId end
     if type(roll) == "number" then
         local index = math.clamp(math.floor(roll), 1, #candidates)
         local chosen = candidates[index]
@@ -51,7 +52,7 @@ end
 function StarterSpeciesService:GetSelectableSpecies()
     local ids = {}
     for speciesId, entry in pairs(SpeciesConfig) do
-        if type(entry) == "table" and entry.SpeciesId == speciesId then
+        if type(entry) == "table" and entry.SpeciesId == speciesId and not Constants.RetiredPrototypeSpecies[speciesId] then
             ids[#ids + 1] = speciesId
         end
     end

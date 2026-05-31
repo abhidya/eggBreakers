@@ -13,7 +13,7 @@ end
 
 table.insert(suite.tests, { name = "new player egg state and hatch threshold", run = function()
     local p = player()
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     Assert.equals(state.Hatched, false, "new player starts as egg")
     for _ = 1, 5 do Assert.truthy(SurvivalService:RequestHatch(p, "tap"), "valid hatch input accepted") end
     Assert.equals(SurvivalService:GetState(p).Hatched, true, "hatch completes at threshold")
@@ -49,7 +49,7 @@ end })
 
 table.insert(suite.tests, { name = "rejected hatch taps do not strand egg below threshold", run = function()
     local p = player(31005)
-    SurvivalService:CreateState(p, "gallimimus")
+    SurvivalService:CreateState(p, "parasaurolophus")
     local accepted = 0
     local now = 300
 
@@ -70,30 +70,30 @@ end })
 
 table.insert(suite.tests, { name = "dinosaur/tutorial after hatch", run = function()
     local p = player(31003)
-    local state = SurvivalService:CreateState(p, "triceratops")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     for _ = 1, 5 do SurvivalService:RequestHatch(p, "tap") end
-    Assert.equals(state.SpeciesId, "triceratops", "species assignment retained")
+    Assert.equals(state.SpeciesId, "parasaurolophus", "species assignment retained")
     Assert.equals(state.Diet, "Herbivore", "diet state available for tutorial/HUD")
 end })
 
 table.insert(suite.tests, { name = "select species replaces egg state before hatch", run = function()
     local p = player(31006)
-    SurvivalService:CreateState(p, "gallimimus")
+    SurvivalService:CreateState(p, "parasaurolophus")
 
-    local ok, state = SurvivalService:SelectSpecies(p, "velociraptor")
+    local ok, state = SurvivalService:SelectSpecies(p, "utahraptor")
 
     Assert.truthy(ok, "valid pre-hatch species selection accepted")
-    Assert.equals(state.SpeciesId, "velociraptor", "selected species stored")
+    Assert.equals(state.SpeciesId, "utahraptor", "selected species stored")
     Assert.equals(state.Hatched, false, "selected species remains an egg")
     Assert.equals(state.SelectedBeforeHatch, true, "selection marker is stamped")
 end })
 
 table.insert(suite.tests, { name = "select species rejects already hatched player", run = function()
     local p = player(31007)
-    SurvivalService:CreateState(p, "gallimimus")
+    SurvivalService:CreateState(p, "parasaurolophus")
     for _ = 1, 5 do SurvivalService:RequestHatch(p, "tap") end
 
-    local ok, reason = SurvivalService:SelectSpecies(p, "velociraptor")
+    local ok, reason = SurvivalService:SelectSpecies(p, "utahraptor")
 
     Assert.falsy(ok, "hatched player cannot switch species through egg selector")
     Assert.equals(reason, "already_hatched", "already hatched reason")

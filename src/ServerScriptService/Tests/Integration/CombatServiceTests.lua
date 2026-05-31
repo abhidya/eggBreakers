@@ -44,7 +44,7 @@ end
 
 local function setup(id)
     local p = MockPlayer.new(id, "CombatTester"); RateLimitService:ClearPlayer(p)
-    local state = SurvivalService:CreateState(p, "carnotaurus"); state.Hatched = true
+    local state = SurvivalService:CreateState(p, "utahraptor"); state.Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local target = Instance.new("Part"); target.Name = "DamageTarget"; target.Position = Vector3.new(5, 3, 0); target.Parent = workspace; CollectionService:AddTag(target, "Damageable")
@@ -108,7 +108,7 @@ table.insert(suite.tests, { name = "player attack damages registered dinosaur NP
         Assert.truthy(attackOk, "player attack accepts registered dinosaur NPC target")
         Assert.equals(record.State, "Dead", "NPC record dies from player attack")
         Assert.equals(npc:GetAttribute("Dead"), true, "NPC target marked dead")
-        Assert.equals(npc:GetAttribute("LastServerDamage"), SpeciesConfig.carnotaurus.BaseStats.Hatchling.Damage, "species damage stamped")
+        Assert.equals(npc:GetAttribute("LastServerDamage"), SpeciesConfig.utahraptor.BaseStats.Hatchling.Damage, "species damage stamped")
         Assert.notNil(record.Carcass, "NPC death creates carcass")
         Assert.truthy(CollectionService:HasTag(record.Carcass, "FoodSource"), "created carcass is food")
         Assert.equals(record.Carcass:GetAttribute("Diet"), "Carnivore", "created carcass feeds carnivores")
@@ -168,9 +168,9 @@ table.insert(suite.tests, { name = "predation handler creates edible player carc
     ensureCarcassAsset()
     local killer = MockPlayer.new(34005, "PredatorStoryKiller")
     local victim = MockPlayer.new(34006, "PredationStoryVictim")
-    local killerState = SurvivalService:CreateState(killer, "carnotaurus")
+    local killerState = SurvivalService:CreateState(killer, "utahraptor")
     killerState.Hatched = true
-    local victimState = SurvivalService:CreateState(victim, "gallimimus")
+    local victimState = SurvivalService:CreateState(victim, "parasaurolophus")
     victimState.Hatched = true
 
     local root = Instance.new("Part")

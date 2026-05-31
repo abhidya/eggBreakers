@@ -48,10 +48,10 @@ end })
 
 table.insert(suite.tests, { name = "the eight vertical-slice species are covered", run = function()
     local expected = {
-        "gallimimus",
-        "triceratops",
-        "velociraptor",
-        "carnotaurus",
+        "coelophysis",
+        "parasaurolophus",
+        "utahraptor",
+        "citipati",
         "tyrannosaurus",
         "oviraptor",
         "pteranodon",
@@ -74,7 +74,7 @@ end })
 table.insert(suite.tests, { name = "ResolveModel reports no_staging_root when world is absent", run = function()
     -- Pure-logic guard: with no live Workspace staging, resolution fails gracefully
     -- rather than erroring, for a species that does have a mapping.
-    local model, reason = StagedMeshLibrary:ResolveModel("triceratops")
+    local model, reason = StagedMeshLibrary:ResolveModel("parasaurolophus")
     if model == nil then
         Assert.truthy(reason == "no_staging_root" or reason == "no_diet_folder" or reason == "no_staged_model", "graceful failure reason when staging absent: " .. tostring(reason))
     else

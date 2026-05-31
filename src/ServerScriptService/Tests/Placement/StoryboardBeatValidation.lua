@@ -112,17 +112,17 @@ end
 
 table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hides helper boxes", run = function()
     local oldStagingFolderName = StagedMeshLibrary.StagingFolderName
-    local oldGallimimusEntry = StagedMeshLibrary.SpeciesMesh.gallimimus
+    local oldParasaurolophusEntry = StagedMeshLibrary.SpeciesMesh.parasaurolophus
     StagedMeshLibrary.StagingFolderName = "StoryboardBeatValidation_PlayerMeshes_" .. tostring(math.floor(os.clock() * 1000000))
-    StagedMeshLibrary.SpeciesMesh.gallimimus = {
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = {
         folder = "Herbivores (land)",
-        name = "GallimimusStoryboardProbe",
+        name = "ParasaurolophusStoryboardProbe",
     }
 
     local stagingRoot
     local character
     local ok, err = pcall(function()
-        stagingRoot = select(2, makeStagedDinosaur("Herbivores (land)", "GallimimusStoryboardProbe", "storyboard-player-mesh"))
+        stagingRoot = select(2, makeStagedDinosaur("Herbivores (land)", "ParasaurolophusStoryboardProbe", "storyboard-player-mesh"))
 
         character = Instance.new("Model")
         character.Name = "StoryboardBeat0Character"
@@ -137,7 +137,7 @@ table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hid
         local player = { Character = character }
         local applied, reason = CharacterVisualService:ApplyForState(player, {
             Hatched = true,
-            SpeciesId = "gallimimus",
+            SpeciesId = "parasaurolophus",
             GrowthStage = "Hatchling",
         })
 
@@ -155,7 +155,7 @@ table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hid
 
     if character then character:Destroy() end
     if stagingRoot then stagingRoot:Destroy() end
-    StagedMeshLibrary.SpeciesMesh.gallimimus = oldGallimimusEntry
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = oldParasaurolophusEntry
     StagedMeshLibrary.StagingFolderName = oldStagingFolderName
     if not ok then error(err) end
 end })
@@ -195,7 +195,7 @@ table.insert(suite.tests, { name = "Beat 0 egg/nest visual is imported when sour
 
         local applied, reason = CharacterVisualService:ApplyForState({ Character = character }, {
             Hatched = false,
-            SpeciesId = "gallimimus",
+            SpeciesId = "parasaurolophus",
             GrowthStage = "Hatchling",
         })
         Assert.equals(applied, true, "unhatched Beat 0 egg visual applies")
@@ -282,17 +282,17 @@ end })
 table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshParts when staged sources exist", run = function()
     local oldRecords = NPCService.NPCs
     local oldStagingFolderName = StagedMeshLibrary.StagingFolderName
-    local oldGallimimusEntry = StagedMeshLibrary.SpeciesMesh.gallimimus
-    local oldCarnotaurusEntry = StagedMeshLibrary.SpeciesMesh.carnotaurus
+    local oldParasaurolophusEntry = StagedMeshLibrary.SpeciesMesh.parasaurolophus
+    local oldUtahraptorEntry = StagedMeshLibrary.SpeciesMesh.utahraptor
     NPCService.NPCs = {}
     StagedMeshLibrary.StagingFolderName = "StoryboardBeatValidation_NPCMeshes_" .. tostring(math.floor(os.clock() * 1000000))
-    StagedMeshLibrary.SpeciesMesh.gallimimus = {
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = {
         folder = "Herbivores (land)",
-        name = "GallimimusPreyStoryboardProbe",
+        name = "ParasaurolophusPreyStoryboardProbe",
     }
-    StagedMeshLibrary.SpeciesMesh.carnotaurus = {
+    StagedMeshLibrary.SpeciesMesh.utahraptor = {
         folder = "Carnivores (land)",
-        name = "CarnotaurusPredatorStoryboardProbe",
+        name = "UtahraptorPredatorStoryboardProbe",
     }
 
     local stagingRoot
@@ -301,9 +301,9 @@ table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshPar
     local preyRecord
     local predatorRecord
     local ok, err = pcall(function()
-        local _, firstRoot = makeStagedDinosaur("Herbivores (land)", "GallimimusPreyStoryboardProbe", "storyboard-prey-mesh")
+        local _, firstRoot = makeStagedDinosaur("Herbivores (land)", "ParasaurolophusPreyStoryboardProbe", "storyboard-prey-mesh")
         stagingRoot = firstRoot
-        makeStagedDinosaur("Carnivores (land)", "CarnotaurusPredatorStoryboardProbe", "storyboard-predator-mesh")
+        makeStagedDinosaur("Carnivores (land)", "UtahraptorPredatorStoryboardProbe", "storyboard-predator-mesh")
         preyMarker = makeSpawnMarker("StoryboardPreySpawn", "Prey")
         predatorMarker = makeSpawnMarker("StoryboardPredatorSpawn", "Predator")
 
@@ -331,8 +331,8 @@ table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshPar
     if preyMarker then preyMarker:Destroy() end
     if predatorMarker then predatorMarker:Destroy() end
     if stagingRoot then stagingRoot:Destroy() end
-    StagedMeshLibrary.SpeciesMesh.gallimimus = oldGallimimusEntry
-    StagedMeshLibrary.SpeciesMesh.carnotaurus = oldCarnotaurusEntry
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = oldParasaurolophusEntry
+    StagedMeshLibrary.SpeciesMesh.utahraptor = oldUtahraptorEntry
     StagedMeshLibrary.StagingFolderName = oldStagingFolderName
     NPCService.NPCs = oldRecords
     if not ok then error(err) end
@@ -340,7 +340,7 @@ end })
 
 table.insert(suite.tests, { name = "Beat 3 growth advances stage and exposes larger visual scale", run = function()
     local player = MockPlayer.new(93003, "StoryboardBeat3Growth")
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
 
     local hatchlingScale = CharacterVisualService:GrowthVisualScaleForState(state)
@@ -532,7 +532,7 @@ table.insert(suite.tests, { name = "Beat 8 adult nest action lays egg and record
     CollectionService:AddTag(nest, "NestZone")
 
     local ok, err = pcall(function()
-        local state = SurvivalService:CreateState(player, "gallimimus")
+        local state = SurvivalService:CreateState(player, "parasaurolophus")
         state.Hatched = true
         state.GrowthStage = "Adult"
 

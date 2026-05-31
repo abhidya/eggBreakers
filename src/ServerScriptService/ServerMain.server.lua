@@ -296,6 +296,22 @@ if Remotes:FindFirstChild("RequestSprint") then
     end)
 end
 
+if Remotes:FindFirstChild("RequestRest") then
+    Remotes.RequestRest.OnServerEvent:Connect(function(player, enabled)
+        if not RateLimitService:Check(player, "RequestRest", 0.35) then
+            sendStats(player)
+            return
+        end
+        local ok, result = SurvivalService:SetResting(player, enabled == true)
+        if ok then
+            StatReplicationService:Notify(player, enabled and "Resting" or "Ready", "Info", 1.5)
+        else
+            notifyResult(player, false, result, nil)
+        end
+        sendStats(player)
+    end)
+end
+
 Remotes.RequestAttack.OnServerEvent:Connect(function(player, attackType, target)
     local ok, result = CombatService:RequestAttack(player, attackType, target)
     if ok then

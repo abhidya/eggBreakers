@@ -9,13 +9,17 @@ local Constants = require(ReplicatedStorage.Shared.Constants)
 -- Lane D additions: PlayerKilledByCarnivore hooks for player predation flow.
 local SurvivalService = { States = {}, NeedsLoopConnection = nil, NeedsLoopAccumulator = 0, NeedsTickSeconds = 1, DeathCallbacks = {}, PlayerKilledCallbacks = {} }
 SurvivalService.SprintDrainPerSecond = 7
+SurvivalService.RestNeedDrainMultiplier = 0.35
+SurvivalService.RestStaminaRegenMultiplier = 2
+SurvivalService.RestHealthRegenPerSecond = 2
 
 local function clamp(value, minValue, maxValue)
     return math.max(minValue, math.min(maxValue, value))
 end
 
 function SurvivalService:CreateState(player, speciesId)
-    local species = SpeciesConfig[speciesId or "gallimimus"] or SpeciesConfig.gallimimus or SpeciesConfig.leafling_runner
+    local defaultSpeciesId = Constants.DefaultSpeciesId or "coelophysis"
+    local species = SpeciesConfig[speciesId or defaultSpeciesId] or SpeciesConfig[defaultSpeciesId] or SpeciesConfig.leafling_runner
     if not species then
         for _, candidate in pairs(SpeciesConfig) do
             if type(candidate) == "table" and candidate.BaseStats then
@@ -46,6 +50,9 @@ function SurvivalService:CreateState(player, speciesId)
         EcosystemProfile = species.EcosystemProfile or {},
         Dead = false,
         NestRespawn = nil,
+        Resting = false,
+        SleepState = "Awake",
+        AgeSeconds = 0,
     }
     self.States[player] = state
     return state
@@ -83,15 +90,22 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
     if not state or not state.Hatched or state.Dead then return false end
     local species = SpeciesConfig[state.SpeciesId]
     local stats = species.BaseStats[state.GrowthStage]
-    state.Hunger = clamp(state.Hunger - stats.HungerDrain * deltaSeconds, 0, 100)
-    state.Thirst = clamp(state.Thirst - stats.ThirstDrain * deltaSeconds, 0, 100)
+    state.AgeSeconds = (state.AgeSeconds or 0) + deltaSeconds
+    local resting = state.Resting == true
+    local drainMultiplier = resting and self.RestNeedDrainMultiplier or 1
+    state.Hunger = clamp(state.Hunger - stats.HungerDrain * deltaSeconds * drainMultiplier, 0, 100)
+    state.Thirst = clamp(state.Thirst - stats.ThirstDrain * deltaSeconds * drainMultiplier, 0, 100)
     if state.Sprinting == true then
         state.Stamina = clamp(state.Stamina - self.SprintDrainPerSecond * deltaSeconds, 0, stats.MaxStamina)
         if state.Stamina <= 0 then
             state.Sprinting = false
         end
     else
-        state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * deltaSeconds, 0, stats.MaxStamina)
+        local regenMultiplier = resting and self.RestStaminaRegenMultiplier or 1
+        state.Stamina = clamp(state.Stamina + (stats.StaminaRegen or 8) * regenMultiplier * deltaSeconds, 0, stats.MaxStamina)
+    end
+    if resting and state.Hunger > 15 and state.Thirst > 15 then
+        state.Health = clamp(state.Health + self.RestHealthRegenPerSecond * deltaSeconds, 0, stats.MaxHealth)
     end
     state.MaxOxygen = stats.MaxOxygen or state.MaxOxygen or 100
     if state.Underwater ~= true then
@@ -103,9 +117,32 @@ function SurvivalService:ApplyNeedsTick(player, deltaSeconds)
     return true, state
 end
 
+function SurvivalService:SetResting(player, enabled)
+    local state = self:GetState(player)
+    if not state or state.Dead or state.Hatched ~= true then return false, "not_alive_hatched" end
+    state.Resting = enabled == true
+    state.SleepState = state.Resting and "Resting" or "Awake"
+    state.Sprinting = false
+    state.Hidden = state.Resting
+    local character = player and player.Character
+    if character and character.SetAttribute then
+        character:SetAttribute("Resting", state.Resting)
+        character:SetAttribute("SleepState", state.SleepState)
+        character:SetAttribute("Hidden", state.Hidden)
+    end
+    if player and player.SetAttribute then
+        player:SetAttribute("Resting", state.Resting)
+        player:SetAttribute("Hidden", state.Hidden)
+    end
+    return true, state
+end
+
 function SurvivalService:SetSprinting(player, enabled)
     local state = self:GetState(player)
     if not state or state.Dead or state.Hatched ~= true then return false, "not_alive_hatched" end
+    if enabled == true and state.Resting == true then
+        self:SetResting(player, false)
+    end
     local species = SpeciesConfig[state.SpeciesId]
     local stats = species.BaseStats[state.GrowthStage]
     if enabled == true and (state.Stamina or 0) <= 3 then
@@ -217,7 +254,8 @@ end
 
 function SurvivalService:GetSpeciesProfile(stateOrSpeciesId)
     local speciesId = type(stateOrSpeciesId) == "table" and stateOrSpeciesId.SpeciesId or stateOrSpeciesId
-    local species = SpeciesConfig[speciesId or "gallimimus"] or SpeciesConfig.gallimimus
+    local defaultSpeciesId = Constants.DefaultSpeciesId or "coelophysis"
+    local species = SpeciesConfig[speciesId or defaultSpeciesId] or SpeciesConfig[defaultSpeciesId]
     if not species then return nil end
     return {
         speciesId = species.SpeciesId,
@@ -367,8 +405,19 @@ function SurvivalService:Kill(player, cause)
     state.Health = 0
     state.Dead = true
     state.DeathCause = cause
+    state.Resting = false
+    state.SleepState = "Dead"
+    state.DeathState = "Dying"
+    state.DiedAtAgeSeconds = state.AgeSeconds or 0
     local character = player and player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if character and character.SetAttribute then
+        character:SetAttribute("DeathState", state.DeathState)
+        character:SetAttribute("DeathCause", type(cause) == "string" and cause or "Damage")
+        character:SetAttribute("DiedAtAgeSeconds", state.DiedAtAgeSeconds)
+        character:SetAttribute("Resting", false)
+        character:SetAttribute("SleepState", "Dead")
+    end
     if humanoid and humanoid.Health > 0 then
         humanoid.Health = 0
     end
@@ -390,7 +439,7 @@ end
 
 function SurvivalService:Respawn(player)
     local old = self:GetState(player)
-    local speciesId = old and old.SpeciesId or "gallimimus"
+    local speciesId = old and old.SpeciesId or (Constants.DefaultSpeciesId or "coelophysis")
     local nest = old and old.NestRespawn
     local newState = self:CreateState(player, speciesId)
     if nest and nest.Parent then

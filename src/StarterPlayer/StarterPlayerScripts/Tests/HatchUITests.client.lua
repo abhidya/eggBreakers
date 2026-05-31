@@ -26,16 +26,16 @@ table.insert(suite.tests, { name = "hatch screen exposes starter dinosaur select
     HatchUIController.SelectedSpeciesId = nil
 
     local gui = HatchUIController:Show()
-    HatchUIController:SetSpeciesOptions({ "gallimimus", "velociraptor" }, "velociraptor", function() end)
+    HatchUIController:SetSpeciesOptions({ "parasaurolophus", "utahraptor" }, "utahraptor", function() end)
     local overlay = gui:FindFirstChild("MuffledOverlay")
     local selector = overlay and overlay:FindFirstChild("SpeciesSelector")
     Assert.notNil(selector, "species selector exists")
-    local gallimimus = selector:FindFirstChild("Species_gallimimus")
-    local raptor = selector:FindFirstChild("Species_velociraptor")
-    Assert.notNil(gallimimus, "gallimimus option exists")
-    Assert.notNil(raptor, "velociraptor option exists")
-    Assert.equals(raptor:GetAttribute("SpeciesId"), "velociraptor", "button carries selected species id")
-    Assert.truthy(string.find(gallimimus.Text, "Gallimimus", 1, true) ~= nil, "button names readable dinosaur")
+    local parasaurolophus = selector:FindFirstChild("Species_parasaurolophus")
+    local raptor = selector:FindFirstChild("Species_utahraptor")
+    Assert.notNil(parasaurolophus, "parasaurolophus option exists")
+    Assert.notNil(raptor, "utahraptor option exists")
+    Assert.equals(raptor:GetAttribute("SpeciesId"), "utahraptor", "button carries selected species id")
+    Assert.truthy(string.find(parasaurolophus.Text, "Parasaurolophus", 1, true) ~= nil, "button names readable dinosaur")
 
     gui:Destroy()
     HatchUIController.Gui = oldGui
@@ -55,14 +55,14 @@ table.insert(suite.tests, { name = "selected dinosaur option is highlighted", ru
     HatchUIController.SelectedSpeciesId = nil
 
     local gui = HatchUIController:Show()
-    HatchUIController:SetSpeciesOptions({ "gallimimus", "velociraptor" }, "velociraptor", function() end)
+    HatchUIController:SetSpeciesOptions({ "parasaurolophus", "utahraptor" }, "utahraptor", function() end)
     local selector = gui.MuffledOverlay:FindFirstChild("SpeciesSelector")
-    local gallimimus = selector and selector:FindFirstChild("Species_gallimimus")
-    local raptor = selector and selector:FindFirstChild("Species_velociraptor")
-    Assert.notNil(gallimimus, "unselected option exists")
+    local parasaurolophus = selector and selector:FindFirstChild("Species_parasaurolophus")
+    local raptor = selector and selector:FindFirstChild("Species_utahraptor")
+    Assert.notNil(parasaurolophus, "unselected option exists")
     Assert.notNil(raptor, "selected option exists")
     Assert.equals(raptor.BackgroundColor3, Color3.fromRGB(86, 108, 54), "selected dinosaur uses selected highlight")
-    Assert.equals(gallimimus.BackgroundColor3, Color3.fromRGB(54, 42, 28), "unselected dinosaur uses inactive color")
+    Assert.equals(parasaurolophus.BackgroundColor3, Color3.fromRGB(54, 42, 28), "unselected dinosaur uses inactive color")
 
     gui:Destroy()
     HatchUIController.Gui = oldGui

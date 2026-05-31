@@ -47,6 +47,8 @@ function SwimService:RequestSwim(player, water)
     state.CurrentWaterSource = water.Name
     -- Seed oxygen from species stat so OxygenService clamp uses the right cap.
     OxygenService:EnsureOxygen(state)
+    state.MovementState = "Swimming"
+    state.MovementSurface = "Swim"
     return true, state
 end
 
@@ -55,6 +57,8 @@ function SwimService:StopSwimming(player)
     if not state then return false, "missing_state" end
     state.Swimming = false
     state.CurrentWaterSource = nil
+    state.MovementState = state.Flying and "Flying" or "Grounded"
+    state.MovementSurface = state.Flying and "Flight" or "Ground"
     return true, state
 end
 

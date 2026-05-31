@@ -46,7 +46,7 @@ table.insert(suite.tests, { name = "fresh player egg to death respawn loop is se
     PlayerDataService:Get(player)
     local root = rootFor(player)
 
-    local state = SurvivalService:CreateState(player, "velociraptor")
+    local state = SurvivalService:CreateState(player, "utahraptor")
     local eggFood = Instance.new("Part")
     eggFood.Position = Vector3.new(2, 3, 0)
     eggFood:SetAttribute("Diet", "Carnivore")

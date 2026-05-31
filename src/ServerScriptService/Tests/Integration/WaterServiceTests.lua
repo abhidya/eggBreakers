@@ -9,7 +9,7 @@ local suite = { name = "WaterServiceTests.server", category = "Integration", tes
 
 local function setup(id, dist)
     local p = MockPlayer.new(id, "WaterTester"); RateLimitService:ClearPlayer(p)
-    SurvivalService:CreateState(p, "gallimimus").Hatched = true
+    SurvivalService:CreateState(p, "parasaurolophus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local water = Instance.new("Part"); water.Name = "TestWater"; water.Position = Vector3.new(dist or 3, 3, 0); water.Parent = workspace; CollectionService:AddTag(water, "WaterSource")
@@ -57,7 +57,7 @@ end })
 table.insert(suite.tests, { name = "egg cannot drink before hatch", run = function()
     local p = MockPlayer.new(33004, "WaterEgg")
     RateLimitService:ClearPlayer(p)
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     state.Hatched = false
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
@@ -78,7 +78,7 @@ table.insert(suite.tests, { name = "map tutorial water is tagged drink target", 
     Assert.truthy(CollectionService:HasTag(water, "WaterSource"), "tutorial water tagged")
     local p = MockPlayer.new(33005, "MapWaterTester")
     RateLimitService:ClearPlayer(p)
-    SurvivalService:CreateState(p, "gallimimus").Hatched = true
+    SurvivalService:CreateState(p, "parasaurolophus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = water.Position + Vector3.new(2, 0, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local state = SurvivalService:GetState(p); state.Thirst = 20; state.Growth = 0

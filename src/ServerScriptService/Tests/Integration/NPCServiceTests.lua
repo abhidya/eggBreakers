@@ -41,6 +41,22 @@ local function makeStagedRootRig(name, position)
     return model, root, body
 end
 
+local function makeHumanoidNPC(name, position)
+    local model = Instance.new("Model")
+    model.Name = name
+    local root = Instance.new("Part")
+    root.Name = "HumanoidRootPart"
+    root.Size = Vector3.new(2, 2, 2)
+    root.Position = position or Vector3.new(0, 3, 0)
+    root.Anchored = true
+    root.Parent = model
+    local humanoid = Instance.new("Humanoid")
+    humanoid.Parent = model
+    model.PrimaryPart = root
+    model.Parent = workspace
+    return model, root, humanoid
+end
+
 local function makeTaggedPart(name, tagName, position)
     local part = Instance.new("Part")
     part.Name = name
@@ -182,6 +198,60 @@ table.insert(suite.tests, { name = "movement step is bounded and stamped", run =
     Assert.equals(npc:GetAttribute("LastBrainAction"), "SeekFood", "last brain action stamped")
     Assert.equals(npc:GetAttribute("BrainActionTarget"), "50.0,3.0,0.0", "target position stamped")
     Assert.equals(npc:GetAttribute("LastMoveTarget"), "50.0,3.0,0.0", "last move target stamped")
+
+    npc:Destroy()
+end })
+
+table.insert(suite.tests, { name = "ground movement clamps bad vertical target and exposes surface", run = function()
+    resetNPCs()
+    local npc = makeNPC("GroundClampNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+
+    local target = Vector3.new(50, 80, 0)
+    Assert.truthy(NPCService:MoveToward(record, target, NPCService.MoveStep, "Wander"), "ground move succeeds")
+    local moved = NPCService:GetRecordPosition(record)
+    Assert.truthy(math.abs(moved.Y - 3) < 0.01, "ground NPC stays on its movement plane")
+    Assert.equals(record.MovementSurface, "Ground", "record exposes ground movement surface")
+    Assert.equals(npc:GetAttribute("MovementSurface"), "Ground", "instance exposes ground movement surface")
+    Assert.equals(npc:GetAttribute("GroundClampApplied"), true, "vertical target clamp is visible")
+    Assert.equals(npc:GetAttribute("ResolvedMoveTarget"), "50.0,3.0,0.0", "resolved target is readable")
+
+    npc:Destroy()
+end })
+
+table.insert(suite.tests, { name = "humanoid chase uses MoveTo setup without teleporting", run = function()
+    resetNPCs()
+    local npc, root, humanoid = makeHumanoidNPC("HumanoidChaseNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Predator")
+    record.Hatched = true
+
+    Assert.truthy(NPCService:MoveToward(record, Vector3.new(60, 18, 0), 8, "Chase"), "humanoid move succeeds")
+    Assert.equals(record.LastLocomotionMode, "HumanoidMoveTo", "record stamps humanoid locomotion")
+    Assert.equals(npc:GetAttribute("LocomotionMode"), "HumanoidMoveTo", "instance stamps humanoid locomotion")
+    Assert.equals(npc:GetAttribute("MovementSurface"), "Ground", "ground humanoid movement surface")
+    Assert.equals(npc:GetAttribute("GroundClampApplied"), true, "humanoid target y was ground-clamped")
+    Assert.truthy(root.Anchored == false, "humanoid root is unanchored for physics movement")
+    Assert.truthy(humanoid.WalkSpeed >= 20, "chase uses sprint-speed intent")
+    Assert.truthy((root.Position - Vector3.new(0, 3, 0)).Magnitude < 0.1, "MoveTo path does not PivotTo-teleport humanoid root")
+
+    npc:Destroy()
+end })
+
+table.insert(suite.tests, { name = "stuck movement recovers with lateral nudge and readable state", run = function()
+    resetNPCs()
+    local npc = makeNPC("StuckRecoveryNPC", Vector3.new(0, 3, 0))
+    local _, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+    record.LastMovementPosition = NPCService:GetRecordPosition(record)
+    record.StuckTicks = NPCService.StuckRecoveryTicks - 1
+
+    Assert.truthy(NPCService:MoveToward(record, Vector3.new(60, 3, 0), 8, "Wander"), "recovery move succeeds")
+    Assert.equals(record.MovementState, "Recovering:Wander", "record exposes recovery state")
+    Assert.equals(npc:GetAttribute("MovementState"), "Recovering:Wander", "instance exposes recovery state")
+    Assert.equals(npc:GetAttribute("StuckRecoveryActive"), true, "active recovery flag visible")
+    Assert.equals(npc:GetAttribute("MovementRecoveryCount"), 1, "recovery count visible")
+    Assert.equals(npc:GetAttribute("StuckRecoveryTarget"), "60.0,3.0,6.0", "lateral recovery target stamped")
 
     npc:Destroy()
 end })

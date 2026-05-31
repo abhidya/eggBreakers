@@ -36,6 +36,77 @@ local FOLIAGE_FOOD_KINDS = {
 -- player still sees a "grazed-down" cluster that regrows on the timer.
 FoodWaterService.DepletedFoliageTransparency = 0.75
 
+function FoodWaterService:GetEatVerb(target, eaterDiet)
+    local foodKind = target and target:GetAttribute("FoodKind")
+    local foodDiet = target and target:GetAttribute("Diet")
+    if foodKind == "Fish" or (target and CollectionService:HasTag(target, "FishSource")) then
+        return "SnapFish"
+    end
+    if foodDiet == "Carnivore" or foodKind == "PreyCarcass" or foodKind == "LargeCarcass" or foodKind == "PredatorCarcass" then
+        return eaterDiet == "Omnivore" and "Scavenge" or "BiteCarcass"
+    end
+    if foodKind == "TreeBrowse" or (target and target:GetAttribute("TreeBrowse") == true) then
+        return "Browse"
+    end
+    return "Graze"
+end
+
+function FoodWaterService:BuildEatContext(target, eaterName, eaterDiet, nutrition)
+    local foodKind = target and target:GetAttribute("FoodKind")
+    local foodDiet = target and target:GetAttribute("Diet")
+    return {
+        EaterName = eaterName or "Unknown",
+        EaterDiet = eaterDiet or "Unknown",
+        FoodName = target and target.Name or "",
+        FoodDiet = foodDiet or "Unknown",
+        FoodKind = foodKind or (foodDiet == "Carnivore" and "Carcass" or "Foliage"),
+        Nutrition = nutrition or (target and target:GetAttribute("Nutrition")) or 25,
+        Verb = self:GetEatVerb(target, eaterDiet),
+        At = os.time(),
+    }
+end
+
+function FoodWaterService:StampEaterFeedback(playerOrRecord, state, context)
+    if state then
+        state.LastEatAction = context.Verb
+        state.LastEatTarget = context.FoodName
+        state.LastEatFoodKind = context.FoodKind
+        state.LastEatFoodDiet = context.FoodDiet
+        state.LastEatNutrition = context.Nutrition
+        state.LastAteAt = context.At
+    end
+
+    local character = playerOrRecord and playerOrRecord.Character
+    if character and character.SetAttribute then
+        character:SetAttribute("LastAction", "Eat")
+        character:SetAttribute("EatingState", context.Verb)
+        character:SetAttribute("EatTarget", context.FoodName)
+        character:SetAttribute("EatTargetKind", context.FoodKind)
+        character:SetAttribute("EatNutrition", context.Nutrition)
+    end
+end
+
+function FoodWaterService:MarkFoodEaten(target, context)
+    if not target then return false, "missing_target" end
+    context = context or self:BuildEatContext(target)
+    local biteCount = (target:GetAttribute("BiteCount") or 0) + 1
+    target:SetAttribute("BiteCount", biteCount)
+    target:SetAttribute("LastEatenBy", context.EaterName)
+    target:SetAttribute("LastEatenByDiet", context.EaterDiet)
+    target:SetAttribute("LastEatAction", context.Verb)
+    target:SetAttribute("LastEatNutrition", context.Nutrition)
+    target:SetAttribute("LastFoodState", "Depleted")
+    target:SetAttribute("Depleted", true)
+    target:SetAttribute("DepletedAt", context.At)
+    target:SetAttribute("DepletedReason", context.Verb)
+    self:SetDepletedVisual(target, true)
+    local cooldown = target:GetAttribute("RespawnCooldownSeconds")
+    if cooldown then
+        target:SetAttribute("DepletedUntil", context.At + cooldown)
+    end
+    return true, context
+end
+
 --- Resolve the separate visible foliage child (added by MapLayoutService) so
 --- depletion can dim it and regrowth can restore it. Returns nil when absent
 --- (e.g. plain test parts), keeping all behaviour additive/safe.
@@ -250,6 +321,7 @@ function FoodWaterService:RequestEat(player, target)
     -- Promote EdibleVegetation dressing parts to tagged FoodSources (with full
     -- metadata) so ValidateFoodTarget's FoodSource-tag check passes for them.
     self:IsFoodSource(target)
+    self:NormaliseFoliageMetadata(target)
     self:RefreshDepletion(target)
     if not RemoteValidationService:CheckRate(player, "RequestEat") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)
@@ -258,13 +330,11 @@ function FoodWaterService:RequestEat(player, target)
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local ok, reason = RemoteValidationService:ValidateFoodTarget(root, target, state.Diet, self.EatDistance)
     if not ok then return false, reason end
-    state.Hunger = math.min(100, state.Hunger + (target:GetAttribute("Nutrition") or 25))
-    target:SetAttribute("Depleted", true)
-    self:SetDepletedVisual(target, true)
-    local cooldown = target:GetAttribute("RespawnCooldownSeconds")
-    if cooldown then
-        target:SetAttribute("DepletedUntil", os.time() + cooldown)
-    end
+    local nutrition = target:GetAttribute("Nutrition") or 25
+    state.Hunger = math.min(100, state.Hunger + nutrition)
+    local context = self:BuildEatContext(target, player.Name, state.Diet, nutrition)
+    self:MarkFoodEaten(target, context)
+    self:StampEaterFeedback(player, state, context)
     SurvivalService:AddGrowth(player, self.FoodGrowthGrant)
     return true, state
 end

@@ -52,7 +52,7 @@ end })
 
 table.insert(suite.tests, { name = "growth alpha transition marks maturity without stale markers", run = function()
     local p = MockPlayer.new(38005, "AlphaGrowthTester")
-    local state = SurvivalService:CreateState(p, "carnotaurus")
+    local state = SurvivalService:CreateState(p, "utahraptor")
     state.Hatched = true
 
     Assert.truthy(SurvivalService:AddGrowth(p, 25), "growth to juvenile succeeds")
@@ -74,7 +74,7 @@ end })
 
 table.insert(suite.tests, { name = "needs tick couples hunger damage without refilling underwater oxygen", run = function()
     local p = MockPlayer.new(38006, "SurvivalCouplingTester")
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     state.Hatched = true
     state.Hunger = 0
     state.Thirst = 50

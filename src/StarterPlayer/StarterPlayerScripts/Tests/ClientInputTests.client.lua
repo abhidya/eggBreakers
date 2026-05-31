@@ -10,6 +10,7 @@ local expectedRequests = {
     RequestSelectSpecies = "string",
     RequestEat = "Instance",
     RequestDrink = "Instance",
+    RequestRest = "boolean",
     RequestAttack = "string",
     RequestCall = "string",
     RequestNestAction = "string",
@@ -34,6 +35,10 @@ end })
 
 table.insert(suite.tests, { name = "species selection forwards species id", run = function()
     Assert.equals(RemoteContracts.RequestSelectSpecies.Arguments.speciesId, "string", "species selection forwards species id")
+end })
+
+table.insert(suite.tests, { name = "rest forwards boolean intent", run = function()
+    Assert.equals(RemoteContracts.RequestRest.Arguments.enabled, "boolean", "rest sends enabled flag")
 end })
 
 TestRunner.registerSuite(suite)

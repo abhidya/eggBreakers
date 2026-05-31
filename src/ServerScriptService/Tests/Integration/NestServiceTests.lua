@@ -9,7 +9,7 @@ local suite = { name = "NestServiceTests.server", category = "Integration", test
 local function setup(id, stage)
     local p = MockPlayer.new(id, "NestTester"); RateLimitService:ClearPlayer(p)
     NestService:Clear(p)
-    local state = SurvivalService:CreateState(p, "triceratops"); state.Hatched = true; state.GrowthStage = stage or "Adult"
+    local state = SurvivalService:CreateState(p, "parasaurolophus"); state.Hatched = true; state.GrowthStage = stage or "Adult"
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local nest = Instance.new("Part"); nest.Name = "NestZone"; nest.Position = Vector3.new(4, 3, 0); nest.Parent = workspace; CollectionService:AddTag(nest, "NestZone")

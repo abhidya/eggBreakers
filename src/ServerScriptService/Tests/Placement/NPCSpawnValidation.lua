@@ -277,8 +277,8 @@ table.insert(suite.tests, { name = "authored NPC spawns expose species and defer
         if marker:GetAttribute("FoodWhenDefeated") == true then defeatedFood = defeatedFood + 1 end
     end
 
-    Assert.truthy((bySpecies.gallimimus or 0) >= 6, "gallimimus/prey has multiple relevant spawn points")
-    Assert.truthy((bySpecies.carnotaurus or 0) >= 4, "carnotaurus/predator has multiple relevant spawn points")
+    Assert.truthy((bySpecies.parasaurolophus or 0) >= 6, "parasaurolophus/prey has multiple relevant spawn points")
+    Assert.truthy((bySpecies.utahraptor or 0) >= 4, "utahraptor/predator has multiple relevant spawn points")
     Assert.truthy(liveFood >= 6, "live prey NPCs are potential carnivore food")
     Assert.equals(defeatedFood, #folders.NPCSpawns:GetChildren(), "every authored NPC can produce defeated-food metadata")
 end })

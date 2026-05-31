@@ -12,7 +12,7 @@ local suite = { name = "G018EcosystemProfileTests", category = "Integration", te
 
 local function resetPlayer(id, speciesId)
     local player = MockPlayer.new(id, "G018ProfileTester")
-    local state = SurvivalService:CreateState(player, speciesId or "gallimimus")
+    local state = SurvivalService:CreateState(player, speciesId or "parasaurolophus")
     state.Hatched = true
     return player, state
 end
@@ -32,7 +32,7 @@ table.insert(suite.tests, { name = "species expose ecosystem category movement a
 end })
 
 table.insert(suite.tests, { name = "survival state and stat payload include G018 profile fields", run = function()
-    local player, state = resetPlayer(61801, "gallimimus")
+    local player, state = resetPlayer(61801, "parasaurolophus")
     Assert.equals(state.CreatureCategory, "SmallPrey", "state carries small-prey category")
     Assert.equals(state.EcosystemProfile.CanGraze, true, "state carries grazing profile")
     Assert.equals(state.MovementModes.Ground, true, "state carries movement modes")
@@ -46,7 +46,7 @@ table.insert(suite.tests, { name = "survival state and stat payload include G018
 end })
 
 table.insert(suite.tests, { name = "swim oxygen recovers and flight stamina is capability gated", run = function()
-    local player, state = resetPlayer(61802, "velociraptor")
+    local player, state = resetPlayer(61802, "utahraptor")
     state.Oxygen = state.MaxOxygen
     local ok = SurvivalService:ApplySwimOxygenTick(player, true, 1)
     Assert.truthy(ok, "submerged tick succeeds")

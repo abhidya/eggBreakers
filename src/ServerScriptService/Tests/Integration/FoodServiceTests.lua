@@ -8,10 +8,14 @@ local NPCService = require(game:GetService("ServerScriptService").Services.NPCSe
 local MapLayoutService = require(game:GetService("ServerScriptService").Services.MapLayoutService)
 local suite = { name = "FoodServiceTests.server", category = "Integration", tests = {} }
 
+local function assertNear(actual, expected, epsilon, message)
+    Assert.truthy(math.abs(actual - expected) <= (epsilon or 0.001), (message or "values near") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+end
+
 local function setup(id, diet)
     local p = MockPlayer.new(id, "FoodTester")
     RateLimitService:ClearPlayer(p)
-    SurvivalService:CreateState(p, diet == "Carnivore" and "velociraptor" or "gallimimus").Hatched = true
+    SurvivalService:CreateState(p, diet == "Carnivore" and "utahraptor" or "parasaurolophus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local food = Instance.new("Part"); food.Name = "TestFood"; food.Position = Vector3.new(3, 3, 0); food:SetAttribute("Diet", diet); food:SetAttribute("Nutrition", 20); food.Parent = workspace; CollectionService:AddTag(food, "FoodSource")
@@ -47,7 +51,24 @@ table.insert(suite.tests, { name = "food updates stat state", run = function()
     Assert.truthy(ok, "eat request succeeds")
     Assert.between(state.Hunger, 69, 100, "hunger restored")
     Assert.equals(food:GetAttribute("Depleted"), true, "food depleted server-side")
+    Assert.equals(food:GetAttribute("LastEatAction"), "Graze", "plant bite verb is readable")
+    Assert.equals(food:GetAttribute("LastEatenBy"), "FoodTester", "food records eater")
+    Assert.equals(state.LastEatTarget, "TestFood", "player state records food target")
+    Assert.equals(state.LastEatNutrition, 20, "player state records nutrition")
     Assert.equals(state.Growth, FoodWaterService.FoodGrowthGrant, "growth grant server-side")
+    food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "unlabelled foliage normalizes before eating", run = function()
+    local p, food = setup(32010, "Herbivore")
+    food:SetAttribute("Diet", nil)
+    food:SetAttribute("FoodKind", nil)
+    food:SetAttribute("Nutrition", nil)
+    local ok = FoodWaterService:RequestEat(p, food)
+    Assert.truthy(ok, "unlabelled tagged foliage is edible")
+    Assert.equals(food:GetAttribute("Diet"), "Herbivore", "foliage diet normalized")
+    Assert.equals(food:GetAttribute("FoodKind"), "Foliage", "foliage kind normalized")
+    Assert.equals(food:GetAttribute("LastEatAction"), "Graze", "normalized foliage gets graze verb")
     food:Destroy()
 end })
 
@@ -108,8 +129,8 @@ table.insert(suite.tests, { name = "food depletion cooldown can refresh", run = 
     FoodWaterService:RefreshDepletion(food)
     Assert.equals(food:GetAttribute("Depleted"), false, "food restored after cooldown")
     Assert.equals(food.Transparency, 0, "food visibly restored after cooldown")
-    Assert.equals(leaf.Transparency, 0.1, "first affordance restores original transparency")
-    Assert.equals(frond.Transparency, 0.25, "second affordance restores original transparency")
+    assertNear(leaf.Transparency, 0.1, 0.001, "first affordance restores original transparency")
+    assertNear(frond.Transparency, 0.25, 0.001, "second affordance restores original transparency")
     food:Destroy()
 end })
 
@@ -147,7 +168,7 @@ table.insert(suite.tests, { name = "food service depletes imported food visual a
     Assert.equals(visualPart.Transparency, FoodWaterService.DepletedFoliageTransparency, "imported visible part dims")
     food:SetAttribute("DepletedUntil", os.time() - 1)
     FoodWaterService:RefreshDepletion(food)
-    Assert.equals(visualPart.Transparency, 0.15, "imported visible part restores")
+    assertNear(visualPart.Transparency, 0.15, 0.001, "imported visible part restores")
 
     template:Destroy()
     food:Destroy()
@@ -195,7 +216,40 @@ table.insert(suite.tests, { name = "carnivore player eats NPC-created carcass", 
     Assert.truthy(eatOk, "carnivore player can eat NPC-created carcass")
     Assert.truthy(state.Hunger > 30, "carcass restores hunger")
     Assert.equals(carcass:GetAttribute("Depleted"), true, "carcass depletes after player eat")
+    Assert.equals(carcass:GetAttribute("LastEatAction"), "BiteCarcass", "carcass bite verb is readable")
+    Assert.equals(state.LastEatFoodKind, "PreyCarcass", "state records carcass food kind")
     prey:Destroy(); carcass:Destroy()
+end })
+
+table.insert(suite.tests, { name = "NPC eating uses readable shared food depletion", run = function()
+    local npc = Instance.new("Model")
+    npc.Name = "ReadableEatingNPC"
+    npc.Parent = workspace
+    local ok, record = NPCService:Register(npc, "Prey")
+    Assert.truthy(ok, "NPC registered")
+    record.Hatched = true
+    record.Hunger = 20
+
+    local food = Instance.new("Part")
+    food.Name = "ReadableNPCFern"
+    food.Position = Vector3.new(2, 3, 0)
+    food:SetAttribute("Diet", "Herbivore")
+    food:SetAttribute("FoodKind", "TreeBrowse")
+    food:SetAttribute("Nutrition", 22)
+    food:SetAttribute("RespawnCooldownSeconds", 30)
+    food.Parent = workspace
+    CollectionService:AddTag(food, "FoodSource")
+
+    Assert.truthy(NPCService:Eat(record, food), "NPC eats food")
+    Assert.equals(record.State, "Eat", "NPC enters eat state")
+    Assert.equals(npc:GetAttribute("EatingState"), "Browse", "NPC exposes readable eating verb")
+    Assert.equals(npc:GetAttribute("EatTarget"), "ReadableNPCFern", "NPC exposes eat target")
+    Assert.equals(food:GetAttribute("LastEatAction"), "Browse", "food records browse verb")
+    Assert.equals(food:GetAttribute("LastEatenByNPC"), "ReadableEatingNPC", "food records NPC eater")
+    Assert.equals(food:GetAttribute("BiteCount"), 1, "food records bite count")
+    Assert.notNil(food:GetAttribute("DepletedUntil"), "NPC depletion uses respawn cooldown")
+
+    npc:Destroy(); food:Destroy()
 end })
 
 return suite

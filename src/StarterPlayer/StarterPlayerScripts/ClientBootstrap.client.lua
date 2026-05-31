@@ -114,8 +114,8 @@ function ClientBootstrap:FindNearestTagged(tag, maxDistance)
 end
 
 function ClientBootstrap:GetPrimaryAttack()
-    local speciesId = self.LastStats and self.LastStats.species or "gallimimus"
-    local species = SpeciesConfig[speciesId] or SpeciesConfig.gallimimus
+    local speciesId = self.LastStats and self.LastStats.species or Constants.DefaultSpeciesId
+    local species = SpeciesConfig[speciesId] or SpeciesConfig[Constants.DefaultSpeciesId]
     return (species and species.Abilities and species.Abilities.PrimaryAttack) or "Nibble"
 end
 
@@ -401,6 +401,7 @@ local function wireMobileButtons(result)
         restHide.Activated:Connect(function()
             local isHidden = not player:GetAttribute("Hidden")
             player:SetAttribute("Hidden", isHidden)
+            InputController:RequestRest(isHidden)
             ClientBootstrap:PlayActionMotion("Hide")
             applyHiddenVisual(isHidden)
             restHide.Text = isHidden and "🌿 Cozy" or "🌿 Rest"

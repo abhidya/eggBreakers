@@ -71,7 +71,7 @@ table.insert(suite.tests, { name = "starter species have multiple biome routed p
     local spawnFolder = folders.Map:FindFirstChild("SpawnLocations")
     Assert.notNil(spawnFolder, "SpawnLocations folder exists")
 
-    local starterSpecies = { "gallimimus", "triceratops", "velociraptor", "carnotaurus" }
+    local starterSpecies = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
     for _, speciesId in ipairs(starterSpecies) do
         local species = SpeciesConfig[speciesId]
         local biomes = species.SpawnBiomes
@@ -130,29 +130,29 @@ end })
 
 table.insert(suite.tests, { name = "species spawn resolver returns requested biome when available", run = function()
     MapLayoutService:EnsureSpawnSafety()
-    local spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies("carnotaurus", "RedstoneCanyon", 1)
-    Assert.notNil(spawn, "carnotaurus spawn resolves")
-    Assert.equals(spawn:GetAttribute("SpeciesId"), "carnotaurus", "spawn is for requested species")
+    local spawn, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies("utahraptor", "RedstoneCanyon", 1)
+    Assert.notNil(spawn, "utahraptor spawn resolves")
+    Assert.equals(spawn:GetAttribute("SpeciesId"), "utahraptor", "spawn is for requested species")
     Assert.equals(spawn:GetAttribute("ZoneId"), "RedstoneCanyon", "resolver honors preferred biome")
     Assert.notNil(spawnCFrame, "spawn cframe returned")
 end })
 
-table.insert(suite.tests, { name = "carnotaurus player spawns are upright source expectations", run = function()
+table.insert(suite.tests, { name = "utahraptor player spawns are upright source expectations", run = function()
     MapLayoutService:EnsureSpawnSafety()
     local folders = MapLayoutService:EnsureMapFolders()
     local spawnFolder = folders.Map:FindFirstChild("SpawnLocations")
     local count = 0
     for _, spawn in ipairs(spawnFolder:GetChildren()) do
-        if spawn:GetAttribute("PlayerSpawn") == true and spawn:GetAttribute("SpeciesId") == "carnotaurus" then
+        if spawn:GetAttribute("PlayerSpawn") == true and spawn:GetAttribute("SpeciesId") == "utahraptor" then
             count = count + 1
             Assert.equals(spawn:GetAttribute("SourceExpectedUpright"), true, spawn.Name .. " source expectation is upright")
             Assert.equals(spawn:GetAttribute("PitchDegrees"), 0, spawn.Name .. " has no upside-down pitch")
             Assert.equals(spawn:GetAttribute("RollDegrees"), 0, spawn.Name .. " has no upside-down roll")
-            local _, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies("carnotaurus", spawn:GetAttribute("ZoneId"), count)
+            local _, spawnCFrame = MapLayoutService:GetPlayerSpawnForSpecies("utahraptor", spawn:GetAttribute("ZoneId"), count)
             Assert.truthy(spawnCFrame.UpVector:Dot(Vector3.new(0, 1, 0)) >= 0.99, spawn.Name .. " resolved CFrame remains upright")
         end
     end
-    Assert.truthy(count >= 3, "carnotaurus retains multiple upright spawn configs")
+    Assert.truthy(count >= 3, "utahraptor retains multiple upright spawn configs")
 end })
 
 TestRunner.registerSuite(suite)
