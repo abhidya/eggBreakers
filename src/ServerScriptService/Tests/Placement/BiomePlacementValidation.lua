@@ -308,6 +308,8 @@ table.insert(suite.tests, { name = "full map terrain underlay is single and comp
     MapLayoutService:EnsureTerrainContinuity(folders)
     Assert.equals(folders.Map:GetAttribute("ProceduralTerrainCleared"), true, "stale procedural terrain is cleared before rebuild")
     Assert.truthy(folders.Map:GetAttribute("FullMapTerrainUnderlay"), "full map underlay marker set")
+    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlayMaterial"), "Enum.Material.Water", "full map underlay is ocean basin, not a visible ground slab")
+    Assert.equals(folders.Map:GetAttribute("OceanBackdropMargin"), 3000, "ocean backdrop extends past playable bounds so the map edge is not camera-visible")
     Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2350,12,2200", "50% compact full map underlay covers all biomes and routes")
 end })
 

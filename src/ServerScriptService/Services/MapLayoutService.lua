@@ -65,10 +65,11 @@ MapLayoutService.ZoneTerrain = {
 
 MapLayoutService.FullMapTerrainUnderlay = {
     name = "FullMapTerrainUnderlay",
-    center = Vector3.new(-450, -10, -250),
+    center = Vector3.new(-450, -14, -250),
     size = Vector3.new(4700, 12, 4400),
-    material = Enum.Material.Ground,
+    material = Enum.Material.Water,
 }
+MapLayoutService.OceanBackdropMargin = 3000
 
 MapLayoutService.RouteTerrain = {
     { name = "NurseryToFernBabySafe", center = Vector3.new(-1575, 0, 0), size = Vector3.new(900, 18, 180), material = Enum.Material.Grass, babySafe = true },
@@ -1603,9 +1604,16 @@ function MapLayoutService:EnsureTerrainContinuity(folders)
     local terrain = Workspace.Terrain
 
     self:ClearProceduralTerrain(terrain)
-    self:FillTerrainBlock(terrain, self.FullMapTerrainUnderlay.center, self.FullMapTerrainUnderlay.size, self.FullMapTerrainUnderlay.material)
+    local oceanBackdropSize = Vector3.new(
+        self.FullMapTerrainUnderlay.size.X + self.OceanBackdropMargin,
+        self.FullMapTerrainUnderlay.size.Y,
+        self.FullMapTerrainUnderlay.size.Z + self.OceanBackdropMargin
+    )
+    self:FillTerrainBlock(terrain, self.FullMapTerrainUnderlay.center, oceanBackdropSize, self.FullMapTerrainUnderlay.material)
     folders.Map:SetAttribute("FullMapTerrainUnderlay", true)
+    folders.Map:SetAttribute("OceanBackdropMargin", self.OceanBackdropMargin)
     folders.Map:SetAttribute("ProceduralTerrainCleared", true)
+    folders.Map:SetAttribute("FullMapTerrainUnderlayMaterial", tostring(self.FullMapTerrainUnderlay.material))
     folders.Map:SetAttribute("FullMapTerrainUnderlaySize", string.format("%d,%d,%d", self.FullMapTerrainUnderlay.size.X, self.FullMapTerrainUnderlay.size.Y, self.FullMapTerrainUnderlay.size.Z))
     local underlay = folders.InvisibleGameplayVolumes:FindFirstChild("_INVISIBLE_" .. self.FullMapUnderlay.name)
     if not underlay then
