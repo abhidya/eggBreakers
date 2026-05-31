@@ -223,6 +223,48 @@ table.insert(suite.tests, { name = "NPC spawn resolves staged MeshPart model bef
     if not ok then error(err) end
 end })
 
+table.insert(suite.tests, { name = "NPC resolver rejects legacy primitive fallback candidates", run = function()
+    local oldPaths = NPCSpawnService.NPCModelCandidatePaths.Prey
+    local oldResolveAny = StagedMeshLibrary.ResolveAny
+    local oldResolveModel = StagedMeshLibrary.ResolveModel
+    local oldRecords = NPCService.NPCs
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
+    library.Name = "ImportedAssetLibrary"
+    library.Parent = ReplicatedStorage
+    local primitiveRoot = Instance.new("Folder")
+    primitiveRoot.Name = "PrimitiveNPCFallbackProbe"
+    primitiveRoot.Parent = library
+    local hatchling = Instance.new("Model")
+    hatchling.Name = "Hatchling"
+    hatchling.Parent = primitiveRoot
+    local block = Instance.new("Part")
+    block.Name = "ThreePartBlockBody"
+    block.Size = Vector3.new(2, 2, 4)
+    block.Parent = hatchling
+    hatchling.PrimaryPart = block
+
+    NPCService.NPCs = {}
+    StagedMeshLibrary.ResolveAny = function()
+        return nil, "test_no_staged_mesh"
+    end
+    StagedMeshLibrary.ResolveModel = function()
+        return nil, "test_no_staged_mesh"
+    end
+    NPCSpawnService.NPCModelCandidatePaths.Prey = {
+        "ReplicatedStorage/ImportedAssetLibrary/PrimitiveNPCFallbackProbe/Hatchling",
+    }
+
+    local resolved = NPCSpawnService:ResolveImportedNPCModel("Prey")
+
+    Assert.equals(resolved, nil, "primitive NPC fallback is rejected instead of spawning blocky dinos")
+
+    NPCSpawnService.NPCModelCandidatePaths.Prey = oldPaths
+    StagedMeshLibrary.ResolveAny = oldResolveAny
+    StagedMeshLibrary.ResolveModel = oldResolveModel
+    NPCService.NPCs = oldRecords
+    primitiveRoot:Destroy()
+end })
+
 table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and predators", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     MapLayoutService:EnsureNPCSpawnMarkers(folders)

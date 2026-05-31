@@ -55,6 +55,17 @@ local function hasVisiblePart(instance)
     return false
 end
 
+local function countMeshParts(instance)
+    if not instance then return 0 end
+    local count = instance:IsA("MeshPart") and 1 or 0
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("MeshPart") then
+            count += 1
+        end
+    end
+    return count
+end
+
 local function isHelperVisualPart(part)
     local name = string.lower(part.Name)
     return name == "rootpart"
@@ -71,18 +82,19 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
     if speciesId then
-        local staged = StagedMeshLibrary:ResolveModel(speciesId)
+        local resolver = StagedMeshLibrary.ResolveAny or StagedMeshLibrary.ResolveModel
+        local staged = resolver and resolver(StagedMeshLibrary, speciesId)
         if staged and hasVisiblePart(staged) then return staged end
     end
     for _, path in ipairs(self.NPCModelCandidatePaths[kind] or {}) do
         local candidate = resolvePath(path)
-        if candidate and hasVisiblePart(candidate) then return candidate end
+        if candidate and hasVisiblePart(candidate) and countMeshParts(candidate) > 0 then return candidate end
     end
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) and countMeshParts(descendant) > 0 then
                 return descendant
             end
         end
@@ -229,13 +241,7 @@ end
 
 -- Count MeshParts anywhere in the model; 0 means a primitive (Part-only) placeholder body.
 function NPCSpawnService:CountMeshParts(instance)
-    if not instance then return 0 end
-    local count = 0
-    if instance:IsA("MeshPart") then count = count + 1 end
-    for _, descendant in ipairs(instance:GetDescendants()) do
-        if descendant:IsA("MeshPart") then count = count + 1 end
-    end
-    return count
+    return countMeshParts(instance)
 end
 
 -- A staged mesh is available for a kind when StagedMeshLibrary resolves a visible model for its species.
@@ -244,7 +250,8 @@ function NPCSpawnService:HasStagedMeshForKind(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
     if not speciesId then return false end
-    local staged = StagedMeshLibrary:ResolveModel(speciesId)
+    local resolver = StagedMeshLibrary.ResolveAny or StagedMeshLibrary.ResolveModel
+    local staged = resolver and resolver(StagedMeshLibrary, speciesId)
     return staged ~= nil and hasVisiblePart(staged)
 end
 
