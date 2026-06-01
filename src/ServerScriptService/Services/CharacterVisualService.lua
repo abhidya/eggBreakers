@@ -152,11 +152,11 @@ end
 
 local function getVisibleParts(instance)
     local parts = {}
-    if instance:IsA("BasePart") then
+    if instance:IsA("BasePart") and instance.Transparency < 1 and not isRigHelperPart(instance) then
         table.insert(parts, instance)
     end
     for _, descendant in ipairs(instance:GetDescendants()) do
-        if descendant:IsA("BasePart") then
+        if descendant:IsA("BasePart") and descendant.Transparency < 1 and not isRigHelperPart(descendant) then
             table.insert(parts, descendant)
         end
     end
@@ -443,6 +443,33 @@ local function averageUpDot(parts, targetUp)
     return total / #parts
 end
 
+local UPRIGHT_CANDIDATES = {
+    { name = "identity", transform = CFrame.new() },
+    { name = "pitch_90", transform = CFrame.Angles(math.rad(90), 0, 0) },
+    { name = "pitch_-90", transform = CFrame.Angles(math.rad(-90), 0, 0) },
+    { name = "pitch_180", transform = CFrame.Angles(math.rad(180), 0, 0) },
+    { name = "roll_90", transform = CFrame.Angles(0, 0, math.rad(90)) },
+    { name = "roll_-90", transform = CFrame.Angles(0, 0, math.rad(-90)) },
+    { name = "roll_180", transform = CFrame.Angles(0, 0, math.rad(180)) },
+}
+
+local function visualPivot(instance, fallback)
+    if instance:IsA("Model") then
+        return instance:GetPivot()
+    elseif instance:IsA("BasePart") then
+        return instance.CFrame
+    end
+    return fallback or CFrame.new()
+end
+
+local function setVisualPivot(instance, pivot)
+    if instance:IsA("Model") then
+        instance:PivotTo(pivot)
+    elseif instance:IsA("BasePart") then
+        instance.CFrame = pivot
+    end
+end
+
 function CharacterVisualService:_applyOrientationTransform(model, transform, pivotCFrame)
     if model:IsA("Model") then
         model:PivotTo(model:GetPivot() * transform)
@@ -481,6 +508,63 @@ function CharacterVisualService:_applySpeciesOrientationCorrection(model, specie
     model:SetAttribute("UprightDotAfterCorrection", afterDot)
     model:SetAttribute("UprightVerified", afterDot >= 0.92)
     return changed
+end
+
+function CharacterVisualService:_autoUprightDinosaur(model, root)
+    if not (model:IsA("Model") or model:IsA("BasePart")) then
+        model:SetAttribute("AutoUprightApplied", false)
+        return false
+    end
+
+    local targetUp = root and root.CFrame.UpVector or Vector3.yAxis
+    local beforeDot = averageUpDot(getVisibleParts(model), targetUp)
+    if beforeDot >= 0.82 then
+        model:SetAttribute("AutoUprightApplied", false)
+        model:SetAttribute("AutoUprightCorrection", "identity")
+        model:SetAttribute("AutoUprightDotBefore", beforeDot)
+        model:SetAttribute("AutoUprightDotAfter", beforeDot)
+        model:SetAttribute("UprightVerified", beforeDot >= 0.82)
+        return false
+    end
+
+    local originalPivot = visualPivot(model, root and root.CFrame)
+    local best = UPRIGHT_CANDIDATES[1]
+    local bestDot = beforeDot
+    local bestScore = beforeDot * 100
+
+    for _, candidate in ipairs(UPRIGHT_CANDIDATES) do
+        setVisualPivot(model, originalPivot * candidate.transform)
+        local dot = averageUpDot(getVisibleParts(model), targetUp)
+        local _, size = nil, nil
+        if model:IsA("Model") then
+            _, size = model:GetBoundingBox()
+        elseif model:IsA("BasePart") then
+            size = model.Size
+        end
+        local horizontal = size and math.max(size.X, size.Z) or 0
+        local score = dot * 100 + horizontal
+        if score > bestScore then
+            best = candidate
+            bestDot = dot
+            bestScore = score
+        end
+    end
+
+    local applied = best.name ~= "identity" and bestDot > beforeDot + 0.2
+    if applied then
+        setVisualPivot(model, originalPivot * best.transform)
+    else
+        setVisualPivot(model, originalPivot)
+        best = UPRIGHT_CANDIDATES[1]
+        bestDot = beforeDot
+    end
+
+    model:SetAttribute("AutoUprightApplied", applied)
+    model:SetAttribute("AutoUprightCorrection", best.name)
+    model:SetAttribute("AutoUprightDotBefore", beforeDot)
+    model:SetAttribute("AutoUprightDotAfter", bestDot)
+    model:SetAttribute("UprightVerified", bestDot >= 0.82)
+    return applied
 end
 
 function CharacterVisualService:_resolveStagedModel(speciesId)
@@ -605,6 +689,18 @@ function CharacterVisualService:_orientDinosaurForward(model, root)
     return degrees, dot, source
 end
 
+function CharacterVisualService:NormalizeDinosaurOrientation(model, rootOrCFrame, speciesId)
+    if not model then return false end
+    local root = rootOrCFrame
+    if typeof(rootOrCFrame) == "CFrame" then
+        root = { CFrame = rootOrCFrame }
+    end
+    self:_applySpeciesOrientationCorrection(model, speciesId or model:GetAttribute("SpeciesId"), root)
+    self:_autoUprightDinosaur(model, root)
+    self:_orientDinosaurForward(model, root)
+    return true
+end
+
 function CharacterVisualService:_attachModel(character, root, model)
     local primary = model:IsA("Model") and (model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)) or (model:IsA("BasePart") and model or model:FindFirstChildWhichIsA("BasePart", true))
     if not primary then
@@ -634,8 +730,7 @@ function CharacterVisualService:_attachModel(character, root, model)
         end
     end
     if model:GetAttribute("VisualKind") == "ImportedDinosaur" then
-        self:_applySpeciesOrientationCorrection(model, model:GetAttribute("SpeciesId"), root)
-        self:_orientDinosaurForward(model, root)
+        self:NormalizeDinosaurOrientation(model, root, model:GetAttribute("SpeciesId"))
     end
     -- Rigged staged meshes carry a Motor6D/AnimationController rig: welding every
     -- BasePart to the root fights the rig. For such models weld ONLY the

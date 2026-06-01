@@ -41,6 +41,31 @@ local function isOversizedBlockFallbackCanopy(instance)
     return math.max(instance.Size.X, instance.Size.Y, instance.Size.Z) > MAX_FALLBACK_CANOPY_SIZE
 end
 
+local function worldBounds(instance)
+    local minV = Vector3.new(math.huge, math.huge, math.huge)
+    local maxV = Vector3.new(-math.huge, -math.huge, -math.huge)
+    local found = false
+    local function scan(part)
+        local half = part.Size * 0.5
+        for _, sx in ipairs({ -1, 1 }) do
+            for _, sy in ipairs({ -1, 1 }) do
+                for _, sz in ipairs({ -1, 1 }) do
+                    local point = part.CFrame:PointToWorldSpace(Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+                    minV = Vector3.new(math.min(minV.X, point.X), math.min(minV.Y, point.Y), math.min(minV.Z, point.Z))
+                    maxV = Vector3.new(math.max(maxV.X, point.X), math.max(maxV.Y, point.Y), math.max(maxV.Z, point.Z))
+                    found = true
+                end
+            end
+        end
+    end
+    if instance:IsA("BasePart") then scan(instance) end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") then scan(descendant) end
+    end
+    if not found then return nil, nil, Vector3.new(0, 0, 0) end
+    return minV, maxV, maxV - minV
+end
+
 table.insert(suite.tests, { name = "required biome folders exist", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     for zoneId in pairs(ZoneConfig) do
@@ -114,7 +139,7 @@ table.insert(suite.tests, { name = "imported biome dressing hides block anchors"
 
     local library = ensureFolder(ReplicatedStorage, MapLayoutService.ImportedAssetLibraryName)
     local template = Instance.new("Model")
-    template.Name = "Jungle Plant Dressing Test"
+    template.Name = "Jungle Plant Dressing Asset"
     template:SetAttribute("ImportedVisibleAsset", true)
     template:SetAttribute("CreatorStoreOnly", true)
     template:SetAttribute("SourceAssetId", "78440826469281")
@@ -150,6 +175,58 @@ table.insert(suite.tests, { name = "imported biome dressing hides block anchors"
         Assert.truthy(hiddenAnchors >= 1, "at least one procedural block anchor was hidden")
     end)
 
+    library:Destroy()
+    if existingLibrary then existingLibrary.Name = MapLayoutService.ImportedAssetLibraryName end
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "imported tree dressing is stood upright and bottom-aligned", run = function()
+    local existingLibrary = ReplicatedStorage:FindFirstChild(MapLayoutService.ImportedAssetLibraryName)
+    local stashName = "_BiomePlacementValidationUprightImportedAssetLibrary"
+    local stashedLibrary = ReplicatedStorage:FindFirstChild(stashName)
+    if stashedLibrary then stashedLibrary:Destroy() end
+    if existingLibrary then existingLibrary.Name = stashName end
+
+    local library = ensureFolder(ReplicatedStorage, MapLayoutService.ImportedAssetLibraryName)
+    local template = Instance.new("Model")
+    template.Name = "Jungle Tree Upright Asset"
+    template:SetAttribute("ImportedVisibleAsset", true)
+    template:SetAttribute("CreatorStoreOnly", true)
+    template:SetAttribute("SourceAssetId", "upright-tree-probe")
+    template.Parent = library
+
+    local sidewaysTrunk = Instance.new("Part")
+    sidewaysTrunk.Name = "SidewaysTreeMeshProxy"
+    sidewaysTrunk.Size = Vector3.new(28, 4, 4)
+    sidewaysTrunk.Transparency = 0
+    sidewaysTrunk.Parent = template
+    template.PrimaryPart = sidewaysTrunk
+
+    local anchor = Instance.new("Part")
+    anchor.Name = "ImportedTreeAnchorProbe"
+    anchor.Position = Vector3.new(0, 24, 0)
+    anchor.Size = Vector3.new(5, 20, 5)
+    anchor:SetAttribute("GroundTopY", 9)
+    anchor:SetAttribute("PlacementSurfaceSource", "test_ground")
+    anchor.Parent = workspace
+
+    local ok, err = pcall(function()
+        local clone = MapLayoutService:AttachImportedDressingVisual(anchor, {
+            name = "TreeUprightProbe",
+            kind = "Tree",
+            zone = "JungleBasin",
+            size = Vector3.new(10, 18, 10),
+            canopySize = Vector3.new(10, 18, 10),
+        }, "ImportedTreeDressing")
+        Assert.notNil(clone, "imported tree dressing attached")
+        local minV, _, size = worldBounds(clone)
+        Assert.truthy(size.Y >= math.max(size.X, size.Z) * 1.2, "sideways tree proxy is rotated vertical")
+        Assert.truthy(math.abs(minV.Y - 9) <= 0.05, "imported tree bottom sits on authored ground")
+        Assert.equals(clone:GetAttribute("PlacementOrientationNormalized"), true, "orientation correction is recorded")
+        Assert.equals(clone:GetAttribute("GroundBottomAligned"), true, "ground alignment is recorded")
+    end)
+
+    anchor:Destroy()
     library:Destroy()
     if existingLibrary then existingLibrary.Name = MapLayoutService.ImportedAssetLibraryName end
     if not ok then error(err) end

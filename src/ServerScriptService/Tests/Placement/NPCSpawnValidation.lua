@@ -172,6 +172,53 @@ table.insert(suite.tests, { name = "staged NPC helper root remains invisible aft
     source:Destroy()
 end })
 
+table.insert(suite.tests, { name = "prepared NPC dinosaur meshes are auto-uprighted and forward-normalized", run = function()
+    local source = Instance.new("Model")
+    source.Name = "RolledNPCDinosaurProbe"
+    local root = Instance.new("Part")
+    root.Name = "RootPart"
+    root.Size = Vector3.new(10, 10, 10)
+    root.Transparency = 1
+    root.Parent = source
+    source.PrimaryPart = root
+    local roll = CFrame.Angles(0, 0, math.rad(90))
+    local body = Instance.new("MeshPart")
+    body.Name = "VisibleBody"
+    body.Size = Vector3.new(5, 3, 12)
+    body.CFrame = CFrame.new(0, 0, 0) * roll
+    body.Transparency = 0
+    body.Parent = source
+    local head = Instance.new("Part")
+    head.Name = "Head"
+    head.Size = Vector3.new(2, 2, 2)
+    head.CFrame = CFrame.new(0, 0, -7) * roll
+    head.Transparency = 0
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "Tail"
+    tail.Size = Vector3.new(2, 2, 3)
+    tail.CFrame = CFrame.new(0, 0, 7) * roll
+    tail.Transparency = 0
+    tail.Parent = source
+
+    local marker = Instance.new("Part")
+    marker.Name = "NPCOrientationProbeSpawn"
+    marker.Position = Vector3.new(0, 14, 0)
+
+    local prepared = NPCSpawnService:PrepareNPCModel(source, "Prey", 9002, marker)
+    local preparedBody = prepared:FindFirstChild("VisibleBody", true)
+
+    Assert.notNil(preparedBody, "prepared NPC keeps body")
+    Assert.equals(prepared:GetAttribute("NPCOrientationNormalized"), true, "NPC orientation normalization ran")
+    Assert.equals(prepared:GetAttribute("AutoUprightApplied"), true, "rolled NPC mesh was corrected upright")
+    Assert.truthy(preparedBody.CFrame.UpVector:Dot(Vector3.yAxis) >= 0.82, "NPC body is upright")
+    Assert.truthy((prepared:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "NPC faces its target forward")
+
+    prepared:Destroy()
+    marker:Destroy()
+    source:Destroy()
+end })
+
 table.insert(suite.tests, { name = "NPC spawn resolves staged MeshPart model before fallback", run = function()
     local oldRecords = NPCService.NPCs
     local oldStagingFolderName = StagedMeshLibrary.StagingFolderName

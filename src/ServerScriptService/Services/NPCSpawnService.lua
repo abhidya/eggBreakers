@@ -6,6 +6,7 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local EcosystemRoster = require(ReplicatedStorage.Shared.EcosystemRoster)
 local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
+local CharacterVisualService = require(script.Parent.CharacterVisualService)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
@@ -134,6 +135,20 @@ local function isHelperVisualPart(part)
         or string.find(name, "helper", 1, true) ~= nil
 end
 
+function NPCSpawnService:NormalizeNPCModelOrientation(model, speciesId, targetCFrame)
+    if not (model and (model:IsA("Model") or model:IsA("BasePart"))) then
+        return false
+    end
+    local ok, err = pcall(function()
+        CharacterVisualService:NormalizeDinosaurOrientation(model, targetCFrame, speciesId)
+    end)
+    model:SetAttribute("NPCOrientationNormalized", ok)
+    if not ok then
+        model:SetAttribute("NPCOrientationNormalizeError", tostring(err))
+    end
+    return ok
+end
+
 function NPCSpawnService:ResolveImportedNPCModel(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
@@ -213,9 +228,16 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         end
     end
     local spawnPosition = spawnInstance and spawnInstance:IsA("BasePart") and spawnInstance.Position or Vector3.new(0, 12, 0)
+    local spawnYaw = spawnInstance and tonumber(spawnInstance:GetAttribute("YawRadians") or spawnInstance:GetAttribute("Yaw")) or nil
+    if not spawnYaw and spawnInstance then
+        local degrees = tonumber(spawnInstance:GetAttribute("YawDegrees"))
+        if degrees then spawnYaw = math.rad(degrees) end
+    end
+    spawnYaw = spawnYaw or 0
+    local targetCFrame = CFrame.new(spawnPosition) * CFrame.Angles(0, spawnYaw, 0)
     if clone:IsA("Model") then
         if not clone.PrimaryPart then clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true) end
-        if clone.PrimaryPart then clone:PivotTo(CFrame.new(spawnPosition)) end
+        if clone.PrimaryPart then clone:PivotTo(targetCFrame) end
     elseif clone:IsA("BasePart") then
         local wrapper = Instance.new("Model")
         wrapper.Name = clone.Name
@@ -239,10 +261,11 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         wrapper:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
         wrapper:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId"))
         clone.Parent = wrapper
-        clone.CFrame = CFrame.new(spawnPosition)
+        clone.CFrame = targetCFrame
         wrapper.PrimaryPart = clone
         clone = wrapper
     end
+    self:NormalizeNPCModelOrientation(clone, profile.SpeciesId, targetCFrame)
     return clone
 end
 
@@ -505,13 +528,33 @@ end
 
 -- Lowest world-Y of a model's (or part's) axis-aligned bounding box.
 local function modelMinY(instance)
-    if instance:IsA("Model") then
-        local cframe, size = instance:GetBoundingBox()
-        return cframe.Position.Y - size.Y * 0.5
-    elseif instance:IsA("BasePart") then
-        return instance.Position.Y - instance.Size.Y * 0.5
+    local minY = math.huge
+    local found = false
+    local scan = {}
+    if instance:IsA("BasePart") then
+        table.insert(scan, instance)
+    elseif instance:IsA("Model") then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(scan, descendant)
+            end
+        end
+    else
+        return nil
     end
-    return nil
+    for _, part in ipairs(scan) do
+        local half = part.Size * 0.5
+        for _, sx in ipairs({ -1, 1 }) do
+            for _, sy in ipairs({ -1, 1 }) do
+                for _, sz in ipairs({ -1, 1 }) do
+                    local point = part.CFrame:PointToWorldSpace(Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+                    minY = math.min(minY, point.Y)
+                    found = true
+                end
+            end
+        end
+    end
+    return found and minY or nil
 end
 
 -- Raycast straight down from high above `xz` to find the terrain/world Y under it.
@@ -655,6 +698,11 @@ function NPCSpawnService:PrepareEcosystemNPCModel(entry, kind, index, spawnPosit
         elseif clone:IsA("BasePart") then
             clone.CFrame = CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z)
         end
+        self:NormalizeNPCModelOrientation(
+            clone,
+            entry.speciesId,
+            CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z) * CFrame.Angles(0, yaw or 0, 0)
+        )
         self:GroundModelAt(clone, spawnXZ, isAquatic, yaw)
     end
     return clone

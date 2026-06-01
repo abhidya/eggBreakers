@@ -248,6 +248,13 @@ local function placeClone(
     end
 
     setPivot(clone, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0))
+    local mapLayout = tryRequireMapLayout()
+    if mapLayout then
+        pcall(function()
+            mapLayout:NormalizeImportedDressingOrientation(clone, nil, sourceModel)
+            mapLayout:AlignInstanceBottomToGround(clone, y, "world_dressing_raycast", 0)
+        end)
+    end
 
     clone:SetAttribute("BiomeId", biomeId)
     CollectionService:AddTag(clone, DRESSING_TAG)

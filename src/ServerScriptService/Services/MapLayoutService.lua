@@ -203,6 +203,213 @@ local function getReadableFallbackCanopySize(spec)
     )
 end
 
+local UPRIGHT_DRESSING_KINDS = {
+    Tree = true,
+    ForestStand = true,
+    FlowerCluster = true,
+    DryScrub = true,
+}
+
+local UPRIGHT_DRESSING_TOKENS = {
+    "tree",
+    "palm",
+    "plant",
+    "bush",
+    "fern",
+    "cycad",
+    "reed",
+    "grass",
+    "vine",
+    "foliage",
+    "flower",
+}
+
+local HORIZONTAL_DRESSING_TOKENS = {
+    "log",
+    "stump",
+    "fallen",
+    "rubble",
+    "rock",
+    "boulder",
+    "cliff",
+    "fossil",
+    "bone",
+}
+
+local function containsAnyToken(name, tokens)
+    for _, token in ipairs(tokens) do
+        if type(name) == "string"
+            and type(token) == "string"
+            and string.find(string.lower(name), string.lower(token), 1, true) ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
+local UPRIGHT_CANDIDATES = {
+    { name = "identity", transform = CFrame.new() },
+    { name = "pitch_90", transform = CFrame.Angles(math.rad(90), 0, 0) },
+    { name = "pitch_-90", transform = CFrame.Angles(math.rad(-90), 0, 0) },
+    { name = "pitch_180", transform = CFrame.Angles(math.rad(180), 0, 0) },
+    { name = "roll_90", transform = CFrame.Angles(0, 0, math.rad(90)) },
+    { name = "roll_-90", transform = CFrame.Angles(0, 0, math.rad(-90)) },
+    { name = "roll_180", transform = CFrame.Angles(0, 0, math.rad(180)) },
+}
+
+local function getInstanceParts(instance)
+    local parts = {}
+    if instance and instance:IsA("BasePart") then
+        table.insert(parts, instance)
+    end
+    if instance then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(parts, descendant)
+            end
+        end
+    end
+    return parts
+end
+
+local function instanceWorldBounds(instance)
+    local minV = Vector3.new(math.huge, math.huge, math.huge)
+    local maxV = Vector3.new(-math.huge, -math.huge, -math.huge)
+    local found = false
+    for _, part in ipairs(getInstanceParts(instance)) do
+        local half = part.Size * 0.5
+        for _, sx in ipairs({ -1, 1 }) do
+            for _, sy in ipairs({ -1, 1 }) do
+                for _, sz in ipairs({ -1, 1 }) do
+                    local point = part.CFrame:PointToWorldSpace(Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+                    minV = Vector3.new(math.min(minV.X, point.X), math.min(minV.Y, point.Y), math.min(minV.Z, point.Z))
+                    maxV = Vector3.new(math.max(maxV.X, point.X), math.max(maxV.Y, point.Y), math.max(maxV.Z, point.Z))
+                    found = true
+                end
+            end
+        end
+    end
+    if not found then
+        return nil, nil, Vector3.new(0, 0, 0)
+    end
+    return minV, maxV, maxV - minV
+end
+
+local function instancePivot(instance)
+    if instance:IsA("Model") then
+        return instance:GetPivot()
+    elseif instance:IsA("BasePart") then
+        return instance.CFrame
+    end
+    return CFrame.new()
+end
+
+local function setInstancePivot(instance, pivot)
+    if instance:IsA("Model") then
+        instance:PivotTo(pivot)
+    elseif instance:IsA("BasePart") then
+        instance.CFrame = pivot
+    end
+end
+
+local function averageInstanceUpDot(instance)
+    local parts = getInstanceParts(instance)
+    if #parts == 0 then return 1 end
+    local total = 0
+    for _, part in ipairs(parts) do
+        total = total + part.CFrame.UpVector:Dot(Vector3.yAxis)
+    end
+    return total / #parts
+end
+
+local function shouldStandDressingUpright(spec, source)
+    local kind = spec and spec.kind
+    local sourceName = string.lower((source and source.Name) or "")
+    local sourceLineage = string.lower(source and source:GetFullName() or sourceName)
+    if containsAnyToken(sourceLineage, HORIZONTAL_DRESSING_TOKENS) then
+        return false
+    end
+    if UPRIGHT_DRESSING_KINDS[kind] then
+        return true
+    end
+    return containsAnyToken(sourceName, UPRIGHT_DRESSING_TOKENS)
+end
+
+function MapLayoutService:NormalizeImportedDressingOrientation(instance, spec, source)
+    if not (instance and (instance:IsA("Model") or instance:IsA("BasePart"))) then
+        return false
+    end
+    if not shouldStandDressingUpright(spec, source or instance) then
+        instance:SetAttribute("PlacementOrientationNormalized", false)
+        return false
+    end
+
+    local originalPivot = instancePivot(instance)
+    local _, _, beforeSize = instanceWorldBounds(instance)
+    local beforeUp = averageInstanceUpDot(instance)
+    local beforeHorizontal = math.max(beforeSize.X, beforeSize.Z)
+    local identityScore = beforeSize.Y * 2 + math.max(0, beforeUp) * 6
+    local best = UPRIGHT_CANDIDATES[1]
+    local bestScore = identityScore
+    local bestSize = beforeSize
+    local bestUp = beforeUp
+
+    for _, candidate in ipairs(UPRIGHT_CANDIDATES) do
+        setInstancePivot(instance, originalPivot * candidate.transform)
+        local _, _, size = instanceWorldBounds(instance)
+        local upDot = averageInstanceUpDot(instance)
+        local horizontal = math.max(size.X, size.Z)
+        local verticalBonus = size.Y >= horizontal * 0.65 and 8 or 0
+        local score = size.Y * 2 + math.max(0, upDot) * 6 + verticalBonus
+        if score > bestScore then
+            best = candidate
+            bestScore = score
+            bestSize = size
+            bestUp = upDot
+        end
+    end
+
+    setInstancePivot(instance, originalPivot * best.transform)
+    local afterHorizontal = math.max(bestSize.X, bestSize.Z)
+    local improvedHeight = bestSize.Y > beforeSize.Y + 0.5 and bestSize.Y >= beforeHorizontal * 0.55
+    local improvedUpright = bestUp > beforeUp + 0.25
+    local applied = best.name ~= "identity" and (improvedHeight or improvedUpright or bestSize.Y >= afterHorizontal * 0.65)
+    if not applied then
+        setInstancePivot(instance, originalPivot)
+        best = UPRIGHT_CANDIDATES[1]
+        bestSize = beforeSize
+        bestUp = beforeUp
+    end
+
+    instance:SetAttribute("PlacementOrientationNormalized", applied)
+    instance:SetAttribute("PlacementOrientationCorrection", best.name)
+    instance:SetAttribute("PlacementHeightBefore", beforeSize.Y)
+    instance:SetAttribute("PlacementHeightAfter", bestSize.Y)
+    instance:SetAttribute("PlacementUprightDotBefore", beforeUp)
+    instance:SetAttribute("PlacementUprightDotAfter", bestUp)
+    instance:SetAttribute("PlacementVerticalVerified", bestSize.Y >= math.max(bestSize.X, bestSize.Z) * 0.55 or bestUp >= 0.85)
+    return applied
+end
+
+function MapLayoutService:AlignInstanceBottomToGround(instance, groundTopY, surfaceSource, clearance)
+    if not instance or type(groundTopY) ~= "number" then
+        return false
+    end
+    local minimumBottomY = groundTopY + (clearance or 0)
+    local minV = instanceWorldBounds(instance)
+    if not minV then return false end
+    local deltaY = minimumBottomY - minV.Y
+    local aligned = math.abs(deltaY) > 0.01
+    if aligned then
+        setInstancePivot(instance, instancePivot(instance) + Vector3.new(0, deltaY, 0))
+    end
+    instance:SetAttribute("GroundTopY", groundTopY)
+    instance:SetAttribute("PlacementSurfaceSource", surfaceSource)
+    instance:SetAttribute("GroundBottomAligned", true)
+    instance:SetAttribute("GroundBottomDelta", deltaY)
+    return aligned
+end
+
 function MapLayoutService:GetOrCreateFoodAffordancePart(queryPart, name)
     local part = queryPart:FindFirstChild(name)
     if not part then
@@ -440,7 +647,8 @@ function MapLayoutService:AttachImportedDressingVisual(anchor, spec, role)
         end
         clone.Position = anchor.Position
     end
-    self:ClampInstanceAboveGround(clone, anchor:GetAttribute("GroundTopY"), anchor:GetAttribute("PlacementSurfaceSource"), 0)
+    self:NormalizeImportedDressingOrientation(clone, spec, source)
+    self:AlignInstanceBottomToGround(clone, anchor:GetAttribute("GroundTopY"), anchor:GetAttribute("PlacementSurfaceSource"), 0)
 
     anchor.Transparency = 1
     anchor:SetAttribute("ReleaseHiddenProceduralVisual", true)
@@ -533,7 +741,11 @@ function MapLayoutService:AttachImportedFoodVisual(queryPart, opts)
     elseif clone:IsA("BasePart") then
         clone.Position = queryPart.Position
     end
-    self:ClampInstanceAboveGround(clone, queryPart:GetAttribute("GroundTopY"), queryPart:GetAttribute("PlacementSurfaceSource"), 0)
+    self:NormalizeImportedDressingOrientation(clone, {
+        kind = queryPart:GetAttribute("FoodKind") or queryPart.Name,
+        zone = queryPart:GetAttribute("ZoneId"),
+    }, source)
+    self:AlignInstanceBottomToGround(clone, queryPart:GetAttribute("GroundTopY"), queryPart:GetAttribute("PlacementSurfaceSource"), 0)
 
     queryPart:SetAttribute("ImportedFoodVisualAttached", true)
     queryPart:SetAttribute("ImportedFoodVisualTemplate", source:GetFullName())
@@ -1457,15 +1669,14 @@ function MapLayoutService:ClampInstanceAboveGround(instance, groundTopY, surface
     end
 
     local minimumBottomY = groundTopY + (clearance or 0)
-    local bottomY = nil
-    if instance:IsA("BasePart") then
-        bottomY = instance.Position.Y - instance.Size.Y / 2
-    elseif instance:IsA("Model") then
-        local boxCFrame, boxSize = instance:GetBoundingBox()
-        bottomY = boxCFrame.Position.Y - boxSize.Y / 2
+    local minV = nil
+    if instance:IsA("BasePart") or instance:IsA("Model") then
+        minV = instanceWorldBounds(instance)
     else
         return false
     end
+    if not minV then return false end
+    local bottomY = minV.Y
 
     local clamped = false
     if bottomY < minimumBottomY then

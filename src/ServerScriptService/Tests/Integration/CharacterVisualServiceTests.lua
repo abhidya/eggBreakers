@@ -239,12 +239,63 @@ table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs ar
     cleanup(player)
 end })
 
+table.insert(suite.tests, { name = "face-down imported dinosaurs are auto-uprighted before forward correction", run = function()
+    local player = MockPlayer.new(11016, "DinosaurAutoUprightProbe")
+    local character = makeCharacter()
+    player.Character = character
+    character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+
+    local source = Instance.new("Model")
+    source.Name = "RolledUnknownDinosaur"
+    source.Parent = ReplicatedStorage
+    local roll = CFrame.Angles(0, 0, math.rad(90))
+    local rootPart = Instance.new("Part")
+    rootPart.Name = "RootPart"
+    rootPart.Size = Vector3.new(1, 1, 1)
+    rootPart.Transparency = 1
+    rootPart.Parent = source
+    source.PrimaryPart = rootPart
+    local body = Instance.new("Part")
+    body.Name = "RolledBody"
+    body.Size = Vector3.new(2, 2, 4)
+    body.CFrame = CFrame.new(0, 0, 0) * roll
+    body.Parent = source
+    local head = Instance.new("Part")
+    head.Name = "RolledHead"
+    head.Size = Vector3.new(1, 1, 1)
+    head.CFrame = CFrame.new(0, 0, -4) * roll
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "RolledTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(0, 0, 4) * roll
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "unknown", Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+    local attachedBody = attached and attached:FindFirstChild("RolledBody", true)
+
+    Assert.notNil(attached, "rolled dinosaur visual attaches")
+    Assert.equals(attached:GetAttribute("AutoUprightApplied"), true, "generic auto-upright correction applied")
+    Assert.truthy(attached:GetAttribute("UprightVerified"), "auto-upright verification attr set")
+    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.82, "rolled body is upright")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "auto-uprighted dinosaur still faces forward")
+
+    source:Destroy()
+    cleanup(player)
+end })
+
 
 table.insert(suite.tests, { name = "utahraptor imported visual is corrected upright and forward", run = function()
     local player = MockPlayer.new(11007, "UtahraptorUprightProbe")
     local character = makeCharacter()
     player.Character = character
     character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+    local oldUtahraptor = SpeciesConfig.utahraptor
+    SpeciesConfig.utahraptor = {
+        SpeciesId = "utahraptor",
+        VisualOrientationCorrection = { PitchDegrees = 180, ForceUpright = true, Reason = "test_imported_pack_axis" },
+    }
 
     local source = Instance.new("Model")
     source.Name = "UpsideDownUtahraptor"
@@ -271,12 +322,12 @@ table.insert(suite.tests, { name = "utahraptor imported visual is corrected upri
     local attachedBody = attached and attached:FindFirstChild("UtahraptorBody", true)
 
     Assert.notNil(attached, "utahraptor visual attaches")
-    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "utahraptor species correction applied")
-    Assert.equals(attached:GetAttribute("OrientationCorrectionPitchDegrees"), 180, "utahraptor pitch correction recorded")
+    Assert.truthy(attached:GetAttribute("SpeciesOrientationCorrected") == true or attached:GetAttribute("AutoUprightApplied") == true, "utahraptor upright correction applied")
     Assert.truthy(attached:GetAttribute("UprightVerified"), "utahraptor upright verification attr set")
     Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "utahraptor body is upright after correction")
     Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "utahraptor still faces player forward")
     Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward-facing proof remains verified")
+    SpeciesConfig.utahraptor = oldUtahraptor
     source:Destroy()
     cleanup(player)
 end })
@@ -287,6 +338,11 @@ table.insert(suite.tests, { name = "utahraptor force-upright recovers when stati
     local character = makeCharacter()
     player.Character = character
     character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+    local oldUtahraptor = SpeciesConfig.utahraptor
+    SpeciesConfig.utahraptor = {
+        SpeciesId = "utahraptor",
+        VisualOrientationCorrection = { PitchDegrees = 180, ForceUpright = true, Reason = "test_imported_pack_axis" },
+    }
 
     local source = Instance.new("Model")
     source.Name = "AlreadyUprightUtahraptor"
@@ -313,11 +369,12 @@ table.insert(suite.tests, { name = "utahraptor force-upright recovers when stati
     local attachedBody = attached and attached:FindFirstChild("UtahraptorBody", true)
 
     Assert.notNil(attached, "upright utahraptor visual attaches")
-    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "utahraptor correction path applied")
-    Assert.truthy((attached:GetAttribute("UprightDotBeforeCorrection") or 1) < 0, "static pitch over-rotation was detected")
+    Assert.truthy(attached:GetAttribute("SpeciesOrientationCorrected") == true or attached:GetAttribute("AutoUprightApplied") == true, "utahraptor correction path applied")
+    Assert.truthy((attached:GetAttribute("UprightDotBeforeCorrection") or attached:GetAttribute("AutoUprightDotBefore") or 1) < 0.82, "static over-rotation was detected")
     Assert.truthy(attached:GetAttribute("UprightVerified"), "force-upright restored visual orientation")
     Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "body remains upright after force-upright")
     Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "forward correction still succeeds after force-upright")
+    SpeciesConfig.utahraptor = oldUtahraptor
     source:Destroy()
     cleanup(player)
 end })
