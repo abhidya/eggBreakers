@@ -45,6 +45,21 @@ Use these labels consistently:
 - Predator social proof now needs a pack/regroup beat before idle wandering; prey social proof still needs herd cohesion; omnivore proof needs plant plus carcass paths; future nest story proof needs a real mating/nesting beat, not only spawned props.
 - Asset search candidates remain references until previewed and inserted with reviewed scripts. Low-favorite foliage/nest results may be useful as kitbash material, but placeholder plates/blocks still fail this storyboard.
 
+## Asset-first import queue -- 2026-05-31
+
+Direct helper used: `node tools/roblox_search_direct.js search_assets '{"query":"...", "max_results":5}'`, followed by `preview_asset` on shortlisted IDs. Scripted assets are allowed and should be quarantined, read, and adapted to the story systems before being wired.
+
+| Priority | SourceAssetId | Candidate | Storyboard job | Script review stance |
+|---|---:|---|---|---|
+| 1 | `9784445039` | `Dinosaur npc pack` | First-pass 50+ species/NPC population so gameplay spawns stop falling back to block bodies. | Medium risk; preview showed many descendants, inspect nested scripts/constraints before insertion. |
+| 2 | `131340001261404` | `Hydration GUI Script Thirst Water Drinkable UI` | Make drinkable-water interaction visible and teach thirst clearly on mobile. | High risk; import to quarantine, read `Script`/`LocalScript`, keep only reviewed logic/visuals that fit `WaterService`/HUD contracts. |
+| 3 | `110801640375836` | `Monochrome White UI Icon Pack` | Replace emoji-heavy survival HUD/context affordances with readable mobile icons. | Low risk; visual pack, no direct script surfaced. |
+| 4 | `110936612901267` | `meat model raw beef steak butcher shop food` | Give carnivore food and carcass remains a non-placeholder readable meat affordance. | Low risk; mesh food prop. |
+| 5 | `95482576700075` | `Food Boxes Variety Pack Grocery Fruits Veggies` | Add visible food variety for omnivore/herbivore forage gates and dressing density. | Low risk; asset pack, adapt only fitting fruit/veg/seed models. |
+| 6 | `5643011147` | `Animal Flock` | Source herd/flocking movement ideas for prey/background life. | Low-medium risk; inspect nested descendants and adapt behavior into CPU-budgeted `NPCService`. |
+| 7 | `82206441829203` | `Pathfinding AI Chase Script Player NPC Follow` | Predator chase/aggro reference for fight-back and pursuit behavior. | High risk; never raw-wire, read script and port only safe pathfinding patterns. |
+| 8 | `106101798032080` | `Dead Skeleton Corpse Bones Npc Decor` | Bone-remains set dressing and post-eaten carcass visual reference. | Low risk; decor prop. |
+
 ## Story/user-story gate audit — 2026-05-31
 
 | Requested gate | Current source coverage | Remaining acceptance gap |

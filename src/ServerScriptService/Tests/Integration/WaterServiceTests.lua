@@ -40,6 +40,29 @@ table.insert(suite.tests, { name = "thirst updates", run = function()
     water:Destroy()
 end })
 
+table.insert(suite.tests, { name = "drinkable tag alone is accepted as water source", run = function()
+    local p = MockPlayer.new(33007, "DrinkableTagTester")
+    RateLimitService:ClearPlayer(p)
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
+    state.Hatched = true
+    state.Thirst = 25
+    local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
+    local char = Instance.new("Model"); root.Parent = char; p.Character = char
+    local water = Instance.new("Part")
+    water.Name = "DrinkableTaggedOnly"
+    water.Size = Vector3.new(12, 3, 12)
+    water.Position = Vector3.new(2, 3, 0)
+    water:SetAttribute("ShallowDrinkable", true)
+    water.Parent = workspace
+    CollectionService:AddTag(water, "DrinkableWater")
+
+    Assert.truthy(WaterService:IsWaterSource(water), "drinkable water tag counts as water source")
+    Assert.truthy(FoodWaterService:RequestDrink(p, water), "drinkable-tagged water can be consumed")
+    Assert.truthy(state.Thirst > 25, "drinkable-tagged water restores thirst")
+
+    water:Destroy(); char:Destroy()
+end })
+
 table.insert(suite.tests, { name = "swim water is not a drink target", run = function()
     local p, water = setup(33006, 3)
     water.Name = "SwimOnlyWater"

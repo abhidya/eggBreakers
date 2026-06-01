@@ -11,7 +11,12 @@ WaterService.SafeDepthStuds  = 6                  -- max Y-size for shallow/drin
 -- Existing public API (stable, unchanged signatures)
 -- ─────────────────────────────────────────────────────────────
 function WaterService:IsWaterSource(instance)
-    return instance ~= nil and (CollectionService:HasTag(instance, self.WaterTag) or instance:GetAttribute("WaterSource") == true)
+    return instance ~= nil and (
+        CollectionService:HasTag(instance, self.WaterTag)
+        or CollectionService:HasTag(instance, self.DrinkableTag)
+        or instance:GetAttribute("WaterSource") == true
+        or instance:GetAttribute("ShallowDrinkable") == true
+    )
 end
 
 function WaterService:GetBounds(water)

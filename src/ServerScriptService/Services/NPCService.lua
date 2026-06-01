@@ -852,11 +852,16 @@ function NPCService:MarkAggro(record, attacker, reason)
     return true
 end
 
-function NPCService:DamageRecord(record, amount, attacker, suppressFightSignal)
+function NPCService:DamageRecord(record, amount, attacker, suppressFightSignal, fightEventState)
     if not record or record.State == "Dead" then return false, "not_active" end
     self:MarkAggro(record, attacker, "Damaged")
     record.Health = math.max(0, (record.Health or record.MaxHealth or 80) - (amount or 10))
-    if record.Instance then record.Instance:SetAttribute("Health", record.Health) end
+    if record.Instance then
+        record.Instance:SetAttribute("Health", record.Health)
+        if fightEventState then
+            record.Instance:SetAttribute("FightEventState", fightEventState)
+        end
+    end
     if suppressFightSignal ~= true then
         self:StampNearbyReaction(record, self.FightReactionRadius, "FightSignal", {
             NearbyFightTarget = record.Instance and record.Instance.Name or "NPC",
@@ -871,7 +876,7 @@ function NPCService:DamageRecord(record, amount, attacker, suppressFightSignal)
     return true
 end
 
-function NPCService:AttackRecord(attacker, target)
+function NPCService:AttackRecord(attacker, target, attackerFightEventState)
     if not attacker or not target or target.State == "Dead" then return false, "bad_target" end
     self:OrientToward(attacker, self:GetRecordPosition(target), "Attack")
     attacker.AttackTarget = target.Instance
@@ -879,7 +884,7 @@ function NPCService:AttackRecord(attacker, target)
     if attacker.Instance then
         attacker.Instance:SetAttribute("LastAction", "Attack")
         attacker.Instance:SetAttribute("AttackTarget", target.Instance and target.Instance.Name or "NPC")
-        attacker.Instance:SetAttribute("FightEventState", "Attacking")
+        attacker.Instance:SetAttribute("FightEventState", attackerFightEventState or "Attacking")
     end
     if target.Instance then
         target.Instance:SetAttribute("FightEventState", "Hit")
@@ -892,7 +897,7 @@ function NPCService:AttackRecord(attacker, target)
         TargetRecord = target,
     })
     self:Transition(attacker, "Attack")
-    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12, attacker, true)
+    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12, attacker, true, "Hit")
 end
 
 function NPCService:FindNearestRecord(record, kind, maxDistance)
@@ -1248,7 +1253,7 @@ function NPCService:HandleFightBack(record, players)
     end
     if distance and distance <= self.AttackDistance then
         if targetRecord then
-            return self:AttackRecord(record, targetRecord)
+            return self:AttackRecord(record, targetRecord, "Counterattacking")
         end
         if targetPlayer then
             local retaliationDamage = math.max(1, math.floor((record.Damage or self:GetKindProfile(record.Kind).Damage or 10) * 0.5))

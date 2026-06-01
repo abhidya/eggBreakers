@@ -72,6 +72,9 @@ function FoodWaterService:GetEatVerb(target, eaterDiet)
     if foodDiet == "Carnivore" or foodKind == "PreyCarcass" or foodKind == "LargeCarcass" or foodKind == "PredatorCarcass" then
         return eaterDiet == "Omnivore" and "Scavenge" or "BiteCarcass"
     end
+    if foodDiet == "Omnivore" then
+        return "Forage"
+    end
     if foodKind == "TreeBrowse" or (target and target:GetAttribute("TreeBrowse") == true) then
         return "Browse"
     end
@@ -152,7 +155,95 @@ function FoodWaterService:NotifyCarcassConsumed(target, eater, state, context)
         end
     end
     target:SetAttribute("CarcassConsumeCallbacks", notified)
+    if target:GetAttribute("CarcassConsumed") ~= true then
+        self:ReplaceConsumedCarcassWithBones(target, eater, context)
+    end
     return true, notified
+end
+
+function FoodWaterService:GetInstancePosition(instance)
+    if not instance then return nil end
+    if instance:IsA("BasePart") then return instance.Position end
+    if instance.GetPivot then
+        local ok, pivot = pcall(function() return instance:GetPivot() end)
+        if ok then return pivot.Position end
+    end
+    return nil
+end
+
+function FoodWaterService:CreateProceduralBonesReplacement(sourceCarcass, eater, context)
+    local position = self:GetInstancePosition(sourceCarcass) or Vector3.new(0, 3, 0)
+    local bones = Instance.new("Model")
+    bones.Name = (sourceCarcass and sourceCarcass.Name or "Carcass") .. "_Bones"
+
+    local function makeBone(name, size, offset, rotation)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Shape = Enum.PartType.Cylinder
+        part.Size = size
+        part.Material = Enum.Material.SmoothPlastic
+        part.Color = Color3.fromRGB(228, 218, 184)
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = true
+        part.CFrame = CFrame.new(position + offset) * rotation
+        part.Parent = bones
+        return part
+    end
+
+    bones.PrimaryPart = makeBone("SpineBone", Vector3.new(0.45, 5.5, 0.45), Vector3.new(0, 0.35, 0), CFrame.Angles(0, 0, math.rad(90)))
+    makeBone("RibBoneA", Vector3.new(0.35, 3.2, 0.35), Vector3.new(-0.8, 0.55, 0.35), CFrame.Angles(math.rad(70), 0, math.rad(90)))
+    makeBone("RibBoneB", Vector3.new(0.35, 3.2, 0.35), Vector3.new(0.8, 0.55, -0.35), CFrame.Angles(math.rad(-70), 0, math.rad(90)))
+
+    local skull = Instance.new("Part")
+    skull.Name = "SkullBone"
+    skull.Shape = Enum.PartType.Ball
+    skull.Size = Vector3.new(1.35, 0.9, 1.05)
+    skull.Material = Enum.Material.SmoothPlastic
+    skull.Color = Color3.fromRGB(232, 223, 190)
+    skull.Anchored = true
+    skull.CanCollide = false
+    skull.CanTouch = false
+    skull.CanQuery = true
+    skull.CFrame = CFrame.new(position + Vector3.new(2.9, 0.55, 0))
+    skull.Parent = bones
+
+    bones:SetAttribute("Diet", "")
+    bones:SetAttribute("Nutrition", 0)
+    bones:SetAttribute("FoodKind", "DepletedCarcassBones")
+    bones:SetAttribute("Depleted", true)
+    bones:SetAttribute("CarcassBones", true)
+    bones:SetAttribute("CarcassConsumed", true)
+    bones:SetAttribute("ProceduralBonesVisual", true)
+    bones:SetAttribute("SourceCarcass", sourceCarcass and sourceCarcass.Name or "")
+    bones:SetAttribute("EatenBy", (context and context.EaterName) or (eater and eater.Name) or "")
+    bones:SetAttribute("GameplayQuery", true)
+    bones.Parent = Workspace:FindFirstChild("NPCs") or Workspace
+    return bones
+end
+
+function FoodWaterService:ReplaceConsumedCarcassWithBones(carcass, eater, context)
+    if not carcass or carcass:GetAttribute("CarcassFoodSource") ~= true then return false, "not_carcass" end
+    carcass:SetAttribute("Depleted", true)
+    carcass:SetAttribute("Nutrition", 0)
+    carcass:SetAttribute("PotentialCarnivoreFood", false)
+    carcass:SetAttribute("CarnivoreFoodCandidate", false)
+    carcass:SetAttribute("CarcassConsumed", true)
+    carcass:SetAttribute("CarcassVisualState", "Bones")
+    if CollectionService:HasTag(carcass, "CarnivoreFoodCandidate") then
+        CollectionService:RemoveTag(carcass, "CarnivoreFoodCandidate")
+    end
+    if CollectionService:HasTag(carcass, "FoodSource") then
+        CollectionService:RemoveTag(carcass, "FoodSource")
+    end
+
+    local bones = self:CreateProceduralBonesReplacement(carcass, eater, context)
+    carcass:SetAttribute("BonesReplacement", bones and bones.Name or "")
+    if bones and carcass.Parent then
+        carcass.Parent = nil
+    end
+    return bones ~= nil, bones
 end
 
 --- Resolve the separate visible foliage child (added by MapLayoutService) so
@@ -263,8 +354,8 @@ local function isFoliageFoodSource(target)
     if diet == "Carnivore" then return false end
     -- Unlabelled FoodSource parts default to foliage.
     if not diet then return true end
-    -- Herbivore/Omnivore tagged parts are foliage.
-    return diet == "Herbivore" or diet == "Omnivore"
+    -- Explicit omnivore forage keeps its own diet so NPC/player food variety remains visible.
+    return diet == "Herbivore"
 end
 
 local function inferDietFromFoodKind(target)
@@ -303,7 +394,7 @@ function FoodWaterService:IsFoodSource(target)
     if target:GetAttribute("EdibleVegetation") == true then
         -- Promote to a real FoodSource so the eat path / depletion loop pick it up.
         CollectionService:AddTag(target, "FoodSource")
-        self:NormaliseFoliageMetadata(target)
+        self:NormaliseFoodMetadata(target)
         return true
     end
     return false
@@ -311,28 +402,18 @@ end
 
 --- Stamp consistent metadata onto a single FoodSource instance.
 --- Only writes attributes that are not already set (additive, safe to call multiple times).
-function FoodWaterService:NormaliseFoliageMetadata(target)
+function FoodWaterService:NormaliseFoodMetadata(target)
     if not target then return false, "nil_target" end
     if not CollectionService:HasTag(target, "FoodSource") then return false, "not_food_source" end
-    if not isFoliageFoodSource(target) then return false, "not_foliage" end
 
-    -- Diet: must be "Herbivore" so omnivores (pass via ValidateFoodTarget's omnivore branch)
-    -- and herbivores both accept it, while carnivores are correctly rejected.
+    local inferredDiet = inferDietFromFoodKind(target)
     if not target:GetAttribute("Diet") then
-        target:SetAttribute("Diet", self.FoliageDefaultDiet)
-    elseif target:GetAttribute("Diet") == "Omnivore" then
-        -- Re-tag to Herbivore so the food itself is consistently labelled;
-        -- omnivore players/NPCs still eat it because ValidateFoodTarget treats
-        -- a Herbivore-labelled food as edible by omnivores (targetDiet ~= diet
-        -- only blocks non-omnivore players from wrong-diet food; omnivore
-        -- players skip that branch entirely).
-        target:SetAttribute("Diet", "Herbivore")
+        target:SetAttribute("Diet", inferredDiet)
     end
 
     if not target:GetAttribute("FoodKind") then
-        -- Infer from collection tags or default
-        local fk = self.FoliageDefaultFoodKind
-        if CollectionService:HasTag(target, "TreeProp") then fk = "TreeBrowse" end
+        local fk = defaultFoodKindForDiet(inferredDiet)
+        if inferredDiet == "Herbivore" and CollectionService:HasTag(target, "TreeProp") then fk = "TreeBrowse" end
         target:SetAttribute("FoodKind", fk)
     end
 
@@ -344,12 +425,16 @@ function FoodWaterService:NormaliseFoliageMetadata(target)
         target:SetAttribute("RespawnCooldownSeconds", self.FoliageDefaultRespawnCooldownSeconds)
     end
 
-    -- Mark as EdibleVegetation so NPCService brain can also detect it.
-    if not target:GetAttribute("EdibleVegetation") then
+    -- Mark only plant browse as EdibleVegetation so meat/fish/omnivore foods stay distinct.
+    if isFoliageFoodSource(target) and not target:GetAttribute("EdibleVegetation") then
         target:SetAttribute("EdibleVegetation", true)
     end
 
     return true
+end
+
+function FoodWaterService:NormaliseFoliageMetadata(target)
+    return self:NormaliseFoodMetadata(target)
 end
 
 --- Scan all currently tagged FoodSource instances and normalise foliage ones.
@@ -373,7 +458,7 @@ function FoodWaterService:NormaliseAllFoliageMetadata()
                 if not CollectionService:HasTag(inst, "FoodSource") then
                     CollectionService:AddTag(inst, "FoodSource")
                 end
-                local ok = self:NormaliseFoliageMetadata(inst)
+                local ok = self:NormaliseFoodMetadata(inst)
                 if ok then count = count + 1 end
             end
         end
@@ -383,7 +468,7 @@ function FoodWaterService:NormaliseAllFoliageMetadata()
     CollectionService:GetInstanceAddedSignal("FoodSource"):Connect(function(inst)
         -- Yield one frame so the instance's attributes may be set by the placer first.
         task.defer(function()
-            self:NormaliseFoliageMetadata(inst)
+            self:NormaliseFoodMetadata(inst)
         end)
     end)
     return count
@@ -396,7 +481,7 @@ function FoodWaterService:RequestEat(player, target)
     -- Promote EdibleVegetation dressing parts to tagged FoodSources (with full
     -- metadata) so ValidateFoodTarget's FoodSource-tag check passes for them.
     self:IsFoodSource(target)
-    self:NormaliseFoliageMetadata(target)
+    self:NormaliseFoodMetadata(target)
     self:RefreshDepletion(target)
     if not RemoteValidationService:CheckRate(player, "RequestEat") then return false, "rate_limited" end
     local state = SurvivalService:GetState(player)

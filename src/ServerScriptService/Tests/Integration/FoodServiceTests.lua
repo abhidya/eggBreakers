@@ -72,6 +72,43 @@ table.insert(suite.tests, { name = "unlabelled foliage normalizes before eating"
     food:Destroy()
 end })
 
+table.insert(suite.tests, { name = "omnivore and fish food metadata keep their diet variety", run = function()
+    local omnivoreFood = Instance.new("Part")
+    omnivoreFood.Name = "OmnivoreSeedPod"
+    omnivoreFood.Position = Vector3.new(3, 3, 0)
+    omnivoreFood:SetAttribute("FoodKind", "SeedPod")
+    omnivoreFood:SetAttribute("Nutrition", 18)
+    omnivoreFood.Parent = workspace
+    CollectionService:AddTag(omnivoreFood, "FoodSource")
+    Assert.truthy(FoodWaterService:NormaliseFoodMetadata(omnivoreFood), "omnivore food normalizes")
+    Assert.equals(omnivoreFood:GetAttribute("Diet"), "Omnivore", "omnivore food kind infers omnivore diet")
+    Assert.falsy(omnivoreFood:GetAttribute("EdibleVegetation"), "omnivore forage is not flattened into foliage")
+
+    local fish = Instance.new("Part")
+    fish.Name = "UnlabelledFishFood"
+    fish.Position = Vector3.new(3, 3, 0)
+    fish:SetAttribute("FoodKind", "Fish")
+    fish:SetAttribute("Nutrition", 18)
+    fish.Parent = workspace
+    CollectionService:AddTag(fish, "FoodSource")
+    CollectionService:AddTag(fish, "FishSource")
+    Assert.truthy(FoodWaterService:NormaliseFoodMetadata(fish), "fish food normalizes")
+    Assert.equals(fish:GetAttribute("Diet"), "Carnivore", "fish food kind infers carnivore diet")
+
+    local p = MockPlayer.new(32011, "OmnivoreFoodTester")
+    RateLimitService:ClearPlayer(p)
+    SurvivalService:CreateState(p, "citipati").Hatched = true
+    local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
+    local char = Instance.new("Model"); root.Parent = char; p.Character = char
+    local state = SurvivalService:GetState(p); state.Hunger = 40
+    Assert.truthy(FoodWaterService:RequestEat(p, omnivoreFood), "player eats omnivore forage")
+    Assert.equals(omnivoreFood:GetAttribute("Diet"), "Omnivore", "eat path preserves omnivore diet")
+    Assert.equals(omnivoreFood:GetAttribute("LastEatAction"), "Forage", "omnivore food uses readable forage verb")
+    Assert.equals(state.LastEatFoodDiet, "Omnivore", "player state records omnivore food diet")
+
+    omnivoreFood:Destroy(); fish:Destroy(); char:Destroy()
+end })
+
 table.insert(suite.tests, { name = "water updates thirst and growth state", run = function()
     local p, food, root = setup(32007, "Herbivore")
     local water = Instance.new("Part")
@@ -90,12 +127,13 @@ end })
 table.insert(suite.tests, { name = "sprint toggles and drains stamina progression", run = function()
     local p, food = setup(32008, "Herbivore")
     local state = SurvivalService:GetState(p)
-    state.Stamina = 80
+    state.Stamina = math.min(50, math.max(10, state.Stamina - 4))
+    local sprintStartStamina = state.Stamina
     local ok = SurvivalService:SetSprinting(p, true)
     Assert.truthy(ok, "sprint enables for hatched player")
     Assert.equals(state.Sprinting, true, "sprinting state replicated")
     SurvivalService:ApplyNeedsTick(p, 2)
-    Assert.truthy(state.Stamina < 80, "sprinting drains stamina over time")
+    Assert.truthy(state.Stamina < sprintStartStamina, "sprinting drains stamina over time")
     ok = SurvivalService:SetSprinting(p, false)
     Assert.truthy(ok, "sprint disables")
     local afterDrain = state.Stamina
@@ -219,6 +257,87 @@ table.insert(suite.tests, { name = "carnivore player eats NPC-created carcass", 
     Assert.equals(carcass:GetAttribute("LastEatAction"), "BiteCarcass", "carcass bite verb is readable")
     Assert.equals(state.LastEatFoodKind, "PreyCarcass", "state records carcass food kind")
     prey:Destroy(); carcass:Destroy()
+end })
+
+table.insert(suite.tests, { name = "player-eaten carcass has procedural bone fallback without callback", run = function()
+    local p, setupFood, root = setup(32012, "Carnivore")
+    local previousCallbacks = FoodWaterService.CarcassConsumedCallbacks
+    FoodWaterService.CarcassConsumedCallbacks = {}
+
+    local carcass = Instance.new("Part")
+    carcass.Name = "CallbacklessCarcass"
+    carcass.Position = Vector3.new(3, 3, 0)
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("FoodKind", "PreyCarcass")
+    carcass:SetAttribute("Nutrition", 30)
+    carcass:SetAttribute("CarcassFoodSource", true)
+    carcass:SetAttribute("CarcassConsumed", false)
+    carcass.Parent = workspace
+    CollectionService:AddTag(carcass, "FoodSource")
+    CollectionService:AddTag(carcass, "CarnivoreFoodCandidate")
+
+    root.Position = carcass.Position + Vector3.new(0, 0, -3)
+    RateLimitService:ClearPlayer(p)
+    local callOk, ok, resultOrReason = pcall(function()
+        return FoodWaterService:RequestEat(p, carcass)
+    end)
+    FoodWaterService.CarcassConsumedCallbacks = previousCallbacks
+
+    Assert.truthy(callOk, tostring(ok))
+    Assert.truthy(ok, tostring(resultOrReason))
+    Assert.equals(carcass:GetAttribute("CarcassConsumed"), true, "carcass enters consumed state")
+    Assert.falsy(CollectionService:HasTag(carcass, "FoodSource"), "consumed carcass is no longer edible")
+    local bonesName = carcass:GetAttribute("BonesReplacement")
+    Assert.truthy((bonesName or "") ~= "", "bones replacement recorded")
+    local bones = workspace:FindFirstChild(bonesName, true)
+    Assert.notNil(bones, "bones replacement exists")
+    Assert.equals(bones:GetAttribute("ProceduralBonesVisual"), true, "fallback is bone-shaped procedural remains")
+    Assert.notNil(bones:FindFirstChild("SpineBone", true), "fallback includes named bone geometry")
+
+    setupFood:Destroy()
+    carcass:Destroy()
+    if bones then bones:Destroy() end
+end })
+
+table.insert(suite.tests, { name = "no-op carcass callback still falls back to bones", run = function()
+    local p, setupFood, root = setup(32013, "Carnivore")
+    local previousCallbacks = FoodWaterService.CarcassConsumedCallbacks
+    FoodWaterService.CarcassConsumedCallbacks = {
+        function()
+            return true
+        end,
+    }
+
+    local carcass = Instance.new("Part")
+    carcass.Name = "NoopCallbackCarcass"
+    carcass.Position = Vector3.new(3, 3, 0)
+    carcass:SetAttribute("Diet", "Carnivore")
+    carcass:SetAttribute("FoodKind", "PreyCarcass")
+    carcass:SetAttribute("Nutrition", 30)
+    carcass:SetAttribute("CarcassFoodSource", true)
+    carcass:SetAttribute("CarcassConsumed", false)
+    carcass.Parent = workspace
+    CollectionService:AddTag(carcass, "FoodSource")
+    CollectionService:AddTag(carcass, "CarnivoreFoodCandidate")
+
+    root.Position = carcass.Position + Vector3.new(0, 0, -3)
+    RateLimitService:ClearPlayer(p)
+    local callOk, ok, resultOrReason = pcall(function()
+        return FoodWaterService:RequestEat(p, carcass)
+    end)
+    FoodWaterService.CarcassConsumedCallbacks = previousCallbacks
+
+    Assert.truthy(callOk, tostring(ok))
+    Assert.truthy(ok, tostring(resultOrReason))
+    Assert.equals(carcass:GetAttribute("CarcassConsumeCallbacks"), 1, "callback was attempted")
+    Assert.equals(carcass:GetAttribute("CarcassConsumed"), true, "fallback consumes carcass when callback leaves it active")
+    local bonesName = carcass:GetAttribute("BonesReplacement")
+    local bones = workspace:FindFirstChild(bonesName or "", true)
+    Assert.notNil(bones, "fallback bones exist after no-op callback")
+
+    setupFood:Destroy()
+    carcass:Destroy()
+    if bones then bones:Destroy() end
 end })
 
 table.insert(suite.tests, { name = "NPC eating uses readable shared food depletion", run = function()
