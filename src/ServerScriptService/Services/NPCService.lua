@@ -32,6 +32,7 @@ NPCService.MateCooldownSeconds = 90
 NPCService.FoodReactionRadius = 55
 NPCService.FightReactionRadius = 85
 NPCService.MateReactionRadius = 60
+NPCService.DeathReactionRadius = 85
 NPCService.ReactionMemorySeconds = 8
 NPCService.ReactionMoveStep = 5
 NPCService.FightBackSeconds = 10
@@ -305,6 +306,14 @@ function NPCService:Transition(record, nextState)
         -- finally schedule a despawn timeout. All steps are additive + world-absent safe.
         self:PlayDeathSettle(record)
         record.Carcass = self:CreateCarcassFoodSource(record)
+        self:StampNearbyReaction(record, self.DeathReactionRadius or self.FightReactionRadius, "DeathSignal", {
+            NearbyDeathTarget = record.Instance and record.Instance.Name or "NPC",
+            NearbyCarcassTarget = record.Carcass and record.Carcass.Name or "",
+            NearbyCarcassDiet = record.Carcass and (record.Carcass:GetAttribute("Diet") or "") or "",
+        }, {
+            TargetInstance = record.Carcass,
+            TargetRecord = record,
+        })
         self:ScheduleCarcassDespawn(record, record.Carcass)
     end
     return true
@@ -404,6 +413,16 @@ function NPCService:InferReactionIntent(candidate, sourceRecord, reactionName, c
             return "SocialMate"
         end
         return "NoticeMate"
+    elseif reactionName == "DeathSignal" then
+        local target = context and context.TargetInstance
+        local targetDiet = target and target:GetAttribute("Diet")
+        if targetDiet and self:CanEatDiet(self:GetRecordDiet(candidate), targetDiet) and (candidate.Hunger or 100) < 85 then
+            return "SeekCarcass"
+        end
+        if self:IsPreyKind(candidate.Kind) or candidate.Kind == "Omnivore" then
+            return "FleeDeath"
+        end
+        return "NoticeDeath"
     end
     return reactionName
 end
@@ -412,6 +431,9 @@ function NPCService:QueueReaction(candidate, sourceRecord, reactionName, context
     if not candidate then return nil end
     local intent = self:InferReactionIntent(candidate, sourceRecord, reactionName, context)
     candidate.ReactionSequence = (candidate.ReactionSequence or 0) + 1
+    candidate.ReactionCount = (candidate.ReactionCount or 0) + 1
+    candidate.ReactionTypeCounts = candidate.ReactionTypeCounts or {}
+    candidate.ReactionTypeCounts[reactionName] = (candidate.ReactionTypeCounts[reactionName] or 0) + 1
     candidate.ReactionIntent = intent
     candidate.ReactionAt = os.clock()
     candidate.ReactionSourceRecord = sourceRecord
@@ -420,6 +442,8 @@ function NPCService:QueueReaction(candidate, sourceRecord, reactionName, context
     candidate.ReactionTargetRecord = context and context.TargetRecord or nil
     if candidate.Instance then
         candidate.Instance:SetAttribute("ReactionSequence", candidate.ReactionSequence)
+        candidate.Instance:SetAttribute("NPCReactionCount", candidate.ReactionCount)
+        candidate.Instance:SetAttribute(reactionName .. "ReactionCount", candidate.ReactionTypeCounts[reactionName])
         candidate.Instance:SetAttribute("ReactionIntent", intent)
         candidate.Instance:SetAttribute("ReactionAgeSeconds", 0)
         candidate.Instance:SetAttribute("ReactionTarget", candidate.ReactionTargetInstance and candidate.ReactionTargetInstance.Name or "")
@@ -457,6 +481,9 @@ function NPCService:StampNearbyReaction(sourceRecord, radius, reactionName, attr
     end
     if sourceRecord.Instance then
         sourceRecord.Instance:SetAttribute(reactionName .. "ReactionAffected", affected)
+        sourceRecord.ReactionBroadcastCount = (sourceRecord.ReactionBroadcastCount or 0) + 1
+        sourceRecord.Instance:SetAttribute("NPCReactionBroadcastCount", sourceRecord.ReactionBroadcastCount)
+        sourceRecord.Instance:SetAttribute("LastReactionBroadcast", reactionName)
     end
     return affected
 end
@@ -1401,6 +1428,28 @@ function NPCService:HandleReactionIntent(record)
         if distance <= self.InteractDistance then return self:Eat(record, food) end
         self:MoveToward(record, foodPosition, self.ReactionMoveStep or self.MoveStep, "SeekFood", food)
         return self:Transition(record, "SeekFood")
+    elseif record.ReactionIntent == "SeekCarcass" then
+        local carcass = record.ReactionTargetInstance
+        if not carcass or not carcass.Parent or carcass:GetAttribute("Depleted") == true or not self:CanEatDiet(self:GetRecordDiet(record), carcass:GetAttribute("Diet")) then
+            self:ClearReactionIntent(record, "missing_carcass")
+            return false, "missing_carcass"
+        end
+        local carcassPosition = self:GetInstancePosition(carcass)
+        if not carcassPosition then
+            self:ClearReactionIntent(record, "missing_carcass_position")
+            return false, "missing_carcass_position"
+        end
+        record.FoodTarget = carcass
+        if record.Instance then
+            record.Instance:SetAttribute("FoodTarget", carcass.Name)
+            record.Instance:SetAttribute("FoodTargetDiet", self:GetRecordDiet(record))
+            record.Instance:SetAttribute("ReactionConsumed", "DeathFood")
+            record.Instance:SetAttribute("DeathReactionState", "SeekingCarcass")
+        end
+        local distance = (carcassPosition - self:GetRecordPosition(record)).Magnitude
+        if distance <= self.InteractDistance then return self:Eat(record, carcass) end
+        self:MoveToward(record, carcassPosition, self.ReactionMoveStep or self.MoveStep, "SeekFood", carcass)
+        return self:Transition(record, "SeekFood")
     elseif record.ReactionIntent == "FleeFight" then
         local sourcePosition = record.ReactionSourcePosition
         if not sourcePosition and record.ReactionSourceRecord then
@@ -1414,6 +1463,22 @@ function NPCService:HandleReactionIntent(record)
         if record.Instance then
             record.Instance:SetAttribute("ReactionConsumed", "Fight")
             record.Instance:SetAttribute("FightEventState", "FleeingFight")
+        end
+        self:MoveToward(record, position + away.Unit * self.MoveStep, self.MoveStep, "Flee")
+        return self:Transition(record, "Flee")
+    elseif record.ReactionIntent == "FleeDeath" then
+        local sourcePosition = record.ReactionSourcePosition
+        if not sourcePosition and record.ReactionSourceRecord then
+            sourcePosition = self:GetRecordPosition(record.ReactionSourceRecord)
+        end
+        if not sourcePosition then return false, "missing_death_source" end
+        local position = self:GetRecordPosition(record)
+        local away = position - sourcePosition
+        if away.Magnitude < 0.1 then away = Vector3.new(1, 0, 0) end
+        record.FleeFrom = sourcePosition
+        if record.Instance then
+            record.Instance:SetAttribute("ReactionConsumed", "Death")
+            record.Instance:SetAttribute("DeathReactionState", "FleeingDeath")
         end
         self:MoveToward(record, position + away.Unit * self.MoveStep, self.MoveStep, "Flee")
         return self:Transition(record, "Flee")

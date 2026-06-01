@@ -164,6 +164,41 @@ table.insert(suite.tests, { name = "nearby same-species NPCs react to mating eve
     resetNPCs()
 end })
 
+table.insert(suite.tests, { name = "nearby NPCs react to death events in playable loop", run = function()
+    resetNPCs()
+    ensureCarcassAsset()
+    local victim = makeNPC("LoopDeathVictimPreyNPC", Vector3.new(0, 3, 0))
+    local preyBystander = makeNPC("LoopDeathBystanderPreyNPC", Vector3.new(12, 3, 0))
+    local predatorBystander = makeNPC("LoopDeathScavengerPredatorNPC", Vector3.new(24, 3, 0))
+
+    local _, victimRecord = NPCService:Register(victim, "Prey")
+    local _, preyRecord = NPCService:Register(preyBystander, "Prey")
+    local _, predatorRecord = NPCService:Register(predatorBystander, "Predator")
+    victimRecord.Hatched = true
+    preyRecord.Hatched = true
+    predatorRecord.Hatched = true
+    predatorRecord.Hunger = 30
+    victimRecord.Health = 5
+
+    NPCService:DamageRecord(victimRecord, 10)
+    Assert.equals(victimRecord.State, "Dead", "victim death state is reached")
+    Assert.equals(victim:GetAttribute("LastReactionBroadcast"), "DeathSignal", "death source broadcasts a distinct signal")
+    Assert.equals(preyBystander:GetAttribute("ReactionIntent"), "FleeDeath", "nearby prey chooses death flee intent")
+    Assert.equals(predatorBystander:GetAttribute("ReactionIntent"), "SeekCarcass", "hungry predator chooses carcass scavenge intent")
+
+    NPCService:TickBrain(preyRecord, {}, 1)
+    Assert.equals(preyRecord.State, "Flee", "prey consumes death signal by fleeing")
+    Assert.equals(preyBystander:GetAttribute("DeathReactionState"), "FleeingDeath", "prey death reaction is visible")
+
+    NPCService:TickBrain(predatorRecord, {}, 1)
+    Assert.equals(predatorRecord.State, "SeekFood", "predator moves toward the carcass")
+    Assert.equals(predatorBystander:GetAttribute("DeathReactionState"), "SeekingCarcass", "predator death reaction is visible")
+    Assert.equals(predatorBystander:GetAttribute("BrainTargetName"), "LoopDeathVictimPreyNPC", "predator targets the defeated carcass")
+
+    victim:Destroy(); preyBystander:Destroy(); predatorBystander:Destroy()
+    resetNPCs()
+end })
+
 table.insert(suite.tests, { name = "validated shallow water is drinkable while deep water is not", run = function()
     local player = MockPlayer.new(49003, "LoopWater")
     RateLimitService:ClearPlayer(player)

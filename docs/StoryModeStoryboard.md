@@ -1,6 +1,6 @@
 # eggBreakers — Story Mode Storyboard & Asset Value Matrix
 
-**Status:** Draft v0.2
+**Status:** Draft v0.3
 **Last refreshed:** 2026-05-31
 **Scope:** Story, storyboard beats, and asset/UI/UX value only. This is not an implementation plan and does not claim assets are already placed or wired.
 
@@ -51,14 +51,19 @@ Direct helper used: `node tools/roblox_search_direct.js search_assets '{"query":
 
 | Priority | SourceAssetId | Candidate | Storyboard job | Script review stance |
 |---|---:|---|---|---|
-| 1 | `9784445039` | `Dinosaur npc pack` | First-pass 50+ species/NPC population so gameplay spawns stop falling back to block bodies. | Medium risk; preview showed many descendants, inspect nested scripts/constraints before insertion. |
-| 2 | `131340001261404` | `Hydration GUI Script Thirst Water Drinkable UI` | Make drinkable-water interaction visible and teach thirst clearly on mobile. | High risk; import to quarantine, read `Script`/`LocalScript`, keep only reviewed logic/visuals that fit `WaterService`/HUD contracts. |
-| 3 | `110801640375836` | `Monochrome White UI Icon Pack` | Replace emoji-heavy survival HUD/context affordances with readable mobile icons. | Low risk; visual pack, no direct script surfaced. |
-| 4 | `110936612901267` | `meat model raw beef steak butcher shop food` | Give carnivore food and carcass remains a non-placeholder readable meat affordance. | Low risk; mesh food prop. |
-| 5 | `95482576700075` | `Food Boxes Variety Pack Grocery Fruits Veggies` | Add visible food variety for omnivore/herbivore forage gates and dressing density. | Low risk; asset pack, adapt only fitting fruit/veg/seed models. |
-| 6 | `5643011147` | `Animal Flock` | Source herd/flocking movement ideas for prey/background life. | Low-medium risk; inspect nested descendants and adapt behavior into CPU-budgeted `NPCService`. |
-| 7 | `82206441829203` | `Pathfinding AI Chase Script Player NPC Follow` | Predator chase/aggro reference for fight-back and pursuit behavior. | High risk; never raw-wire, read script and port only safe pathfinding patterns. |
-| 8 | `106101798032080` | `Dead Skeleton Corpse Bones Npc Decor` | Bone-remains set dressing and post-eaten carcass visual reference. | Low risk; decor prop. |
+| 1 | `10301700052` | `Dinosaur NPCS Pack REMASTERED` | Strongest current 50+ dinosaur roster lead for player/NPC mesh-backed bodies. | High risk; huge model, import to quarantine first, audit rig/scripts/collisions before gameplay wiring. |
+| 2 | `9784445039` | `Dinosaur npc pack` | Backup 50+ dinosaur roster if the remaster pack is too noisy or brittle. | High risk; large alternate pack, inspect nested scripts/constraints before insertion. |
+| 3 | `95133385212578` | `Pathfinding npcs AI Follow Navigate Enemy Script` | Behavior reference for predator chase, prey pathing, ambush, and apex threat. | High risk; read scripts and port cadence/aggro ideas into owned `NPCService`, do not raw-wire. |
+| 4 | `5643011147` | `Animal Flock` | Herd/flocking reference for prey/background life. | Medium-high risk; inspect descendants and adapt only CPU-budgeted behavior. |
+| 5 | `136851548154128` | `Attacking NPC Punch Faceless Robot Android` | Combat behavior reference for attack cooldowns, hit reaction, and aggro response. | High risk; behavior reference only until scripts are reviewed and rewritten to the dino story contract. |
+| 6 | `95482576700075` | `Food Boxes Variety Pack Grocery Fruits Veggies` | Food variety for herbivore/omnivore forage gates and dressing density. | Medium risk; inspect pickup/eat scripts if present and adapt only fitting food prompt logic. |
+| 7 | `2915526744` | `Low Poly Plant Pack` | Vegetation density candidate for nursery, jungle, swamp, and nest/home beats. | Medium-low risk; visual-first, still inspect collision and hidden scripts. |
+| 8 | `82422796413615` | `Pond Pond Lily Rocks Reflection Peaceful Water Koi` | Drinkable-water visual candidate with pond/lily/shoreline read. | Medium-low risk; wire drinkability through owned `WaterService` volumes. |
+| 9 | `131340001261404` | `Hydration GUI Script Thirst Water Drinkable UI` | Make drinkable-water interaction visible and teach thirst clearly on mobile. | High risk; import to quarantine, read `Script`/`LocalScript`, keep only reviewed logic/visuals that fit `WaterService`/HUD contracts. |
+| 10 | `110801640375836` | `Monochrome White UI Icon Pack` | Replace emoji-heavy survival HUD/context affordances with readable mobile icons. | Low risk; visual pack, no direct script surfaced. |
+| 11 | `128301661731715` | `Simple Health Bar GUI Display Vitality Meter Statu` | Compact HUD reference for health/growth/needs readability. | Low-medium risk; adapt visual patterns into owned HUD controllers. |
+| 12 | `123830443378354` | `Dead Bacon Pork Meat Food Props 3D Model` | Meat/carcass prop reference for carnivore readability. | Low-medium risk; verify it reads as food/carcass, not novelty filler. |
+| 13 | `5663348866` | `Visitor Center Fossils` | Bones/fossils/canyon dressing and post-eaten remains reference. | Medium risk; large decor pack, inspect collisions and hidden scripts. |
 
 ## Story/user-story gate audit — 2026-05-31
 
@@ -66,10 +71,22 @@ Direct helper used: `node tools/roblox_search_direct.js search_assets '{"query":
 |---|---|---|
 | 50+ random dino option | `StarterSpeciesSelectionTests.lua` asserts the random hatch pool stays at 50+ playable species; `HatchUITests.client.lua` renders four curated starters plus the random full-roster option and highlights the server-rolled species. | Needs live hatch proof that a random-roll species uses a renderable mesh path before exposing it in a release session. |
 | Mesh-backed dino visuals, not Lego blocks | `StoryboardBeatValidation.lua`, `CharacterVisualServiceTests.lua`, and `StagedMeshMatrixTests.lua` assert staged/imported MeshPart visuals, invisible helper roots, asset-pack mesh resolution, and rejection of part-only mappings. | Live `Workspace.NPCs` still need screenshot/save proof that gameplay spawns are using those mesh-backed paths, not primitive placeholder bodies. |
-| NPCs react to food/fights/mating/death | `E2E_PlayableLoopClosure.lua` covers food and fight reactions, and now covers same-species mating reaction consumption. `NPCServiceTests.lua` covers food/fight/mating social intent, pack regroup, herd behavior, fight-back, death settle, carcass creation, carcass eating, and bones state. | Death has carcass/settle/remains coverage, but there is no distinct nearby `DeathSignal`/mourning/scavenge/flee reaction gate. Add that only when design decides what death should cause nearby NPCs to do. |
+| NPCs react to food/fights/mating/death | `E2E_PlayableLoopClosure.lua` covers food, fight, mating, and death reactions. `NPCServiceTests.lua` covers food/fight/mating social intent, pack regroup, herd behavior, fight-back, `DeathSignal`, prey fleeing death, hungry predators seeking carcasses, death settle, carcass creation, carcass eating, and bones state. | Live proof still needs visible NPCs reacting around a real mesh-backed death/carcass beat instead of static block stand-ins. |
 | Drinkable water | `E2E_PlayableLoopClosure.lua` asserts shallow tagged water becomes drinkable and deep swim water is rejected as a drink target; Beat 5 placement/source tests keep fish inside valid swim water. | Live proof still needs terrain/quality mesh water with visible shoreline/depth, not just Part-based source tests. |
 | Carcasses fall/remain/eaten to bones | `NPCServiceTests.lua` covers death settling/unanchoring, prey carcass creation, edible carcass tags, predator/player eating, consumed state, food tag removal, and bones replacement. `E2E_PlayableLoopClosure.lua` covers player-killed NPC carcass eating and readable bone remains. | Needs live capture of the fall/settle beat and the same carcass remaining long enough to be eaten in normal play. |
 | Mobile UI portrait/landscape | `HatchUITests.client.lua`, `ClientHUDTests.client.lua`, and `MobileControlsTests.client.lua` cover compact scaling and basic phone layout; controls currently have a landscape phone geometry gate and hatch covers both orientations. | Still missing a combined portrait + landscape live proof where hatch cards, HUD, context action, and controls all coexist without blocking the dinosaur, food/water, threat, or traversal path. |
+
+### Concrete remaining test gates — 2026-05-31
+
+These are the missing gates after the current source-test audit. They should be added as behavior tests only when the underlying behavior is present, or as live-proof/storyboard gates when the blocker is visual acceptance.
+
+| Gap | Required gate | Current stop condition |
+|---|---|---|
+| Death reaction live proof | Nearby mesh-backed NPCs visibly receive `DeathSignal`; prey flee and hungry carnivores scavenge the carcass in normal play. | Source E2E and integration gates now cover the behavior; live visual proof remains required. |
+| Random 50+ hatch visual readiness | Server random-roll path proves the rolled species has a renderable mesh/staged asset before hatching in a release session. | Source tests prove the 50+ pool and predicate gate; live/staged proof must close the visual claim. |
+| Mobile combined playability | One phone portrait and one phone landscape proof frame show hatch selector/HUD/action controls leaving the dinosaur, food/water target, threat cue, and traversal path visible and tappable. | Client geometry tests are necessary but not sufficient; live screenshots remain the release gate. |
+| Asset-first NPC population | `Workspace.NPCs` live proof shows gameplay-spawned NPCs using reviewed mesh-backed dinosaur assets with CPU-bounded brain attributes. | Existing source gates reject block-only mappings; live spawn screenshots and save/reopen proof are still required. |
+| Carcass fall/settle persistence | Normal combat capture shows the same defeated NPC falling/settling, remaining edible, then switching to bones after consumption. | Source tests cover settle/carcass/eat/bones state; visual timing persistence needs live capture. |
 
 ## Playable-loop E2E story gate
 
@@ -83,7 +100,7 @@ Direct helper used: `node tools/roblox_search_direct.js search_assets '{"query":
 | Sleep/rest | Resting sets a readable sleep state, advances age, restores stamina, and can return to awake. |
 | Age/growth | Needs ticks advance `AgeSeconds`; growth reaches the next stage. |
 | Death/respawn | Death records `DeathState="Dying"` and final age; respawn returns to an unhatched egg while preserving saved rewards. |
-| NPC reactions | Prey flees the player; nearby NPCs stamp food/fight reaction attributes; hostile NPCs fight back when the player is in range; player-killed NPCs leave edible carcasses that deplete to readable bone/carcass remains. |
+| NPC reactions | Prey flees the player; nearby NPCs stamp food/fight/mating/death reaction attributes; hostile NPCs fight back when the player is in range; hungry predators seek carcasses from death signals; player-killed NPCs leave edible carcasses that deplete to readable bone/carcass remains. |
 
 Storyboard proof still needs screenshots, iPhone portrait/landscape playability captures, and saved-place persistence. The E2E gate is a behavior guard, not a substitute for visual acceptance.
 

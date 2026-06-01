@@ -654,6 +654,42 @@ table.insert(suite.tests, { name = "direct damage broadcasts fight reaction and 
     attacker:Destroy(); defender:Destroy(); bystander:Destroy()
 end })
 
+table.insert(suite.tests, { name = "death signal sends prey fleeing and hungry predator to carcass", run = function()
+    resetNPCs()
+    ensureCarcassAsset()
+    local victim = makeNPC("DeathSignalVictimNPC", Vector3.new(0, 3, 0))
+    local preyBystander = makeNPC("DeathSignalPreyBystanderNPC", Vector3.new(12, 3, 0))
+    local predatorBystander = makeNPC("DeathSignalPredatorBystanderNPC", Vector3.new(24, 3, 0))
+    local _, victimRecord = NPCService:Register(victim, "Prey")
+    local _, preyRecord = NPCService:Register(preyBystander, "Prey")
+    local _, predatorRecord = NPCService:Register(predatorBystander, "Predator")
+    victimRecord.Hatched = true
+    preyRecord.Hatched = true
+    predatorRecord.Hatched = true
+    victimRecord.Health = 10
+    predatorRecord.Hunger = 30
+
+    NPCService:DamageRecord(victimRecord, 20)
+    Assert.equals(victimRecord.State, "Dead", "victim death state is reached")
+    Assert.equals(victim:GetAttribute("LastReactionBroadcast"), "DeathSignal", "death source records latest broadcast")
+    Assert.equals(victim:GetAttribute("DeathSignalReactionAffected"), 2, "death source records affected NPC count")
+    Assert.equals(preyBystander:GetAttribute("ReactionIntent"), "FleeDeath", "prey bystander receives death flee intent")
+    Assert.equals(predatorBystander:GetAttribute("ReactionIntent"), "SeekCarcass", "hungry predator receives carcass seek intent")
+    Assert.equals(predatorBystander:GetAttribute("DeathSignalReactionCount"), 1, "predator reaction counter records death signal")
+    Assert.equals(preyBystander:GetAttribute("NPCReactionCount"), 2, "prey records fight and death reaction counters")
+
+    NPCService:TickBrain(preyRecord, {}, 1)
+    Assert.equals(preyRecord.State, "Flee", "prey consumes death signal by fleeing")
+    Assert.equals(preyBystander:GetAttribute("ReactionConsumed"), "Death", "prey death reaction consumption visible")
+
+    NPCService:TickBrain(predatorRecord, {}, 1)
+    Assert.equals(predatorRecord.State, "SeekFood", "hungry predator moves toward death carcass")
+    Assert.equals(predatorBystander:GetAttribute("ReactionConsumed"), "DeathFood", "predator death-food reaction consumption visible")
+    Assert.equals(predatorBystander:GetAttribute("BrainTargetName"), "DeathSignalVictimNPC", "predator targets the defeated carcass")
+
+    victim:Destroy(); preyBystander:Destroy(); predatorBystander:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "prey flees then hides when badly hurt", run = function()
     resetNPCs()
