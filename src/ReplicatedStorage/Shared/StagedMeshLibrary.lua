@@ -17,6 +17,40 @@ StagedMeshLibrary.SpeciesMesh = {
     spinosaurus   = { folder = "Carnivores (land)", name = "Spinosaurus" },
 }
 
+-- source-pack mappings are direct imported asset roots, kept separate from
+-- SpeciesMesh so the logic-only matrix can still describe gameplay diet folders.
+StagedMeshLibrary.AssetPackSpecies = {}
+
+local function normalizeName(name)
+    if type(name) ~= "string" then
+        return ""
+    end
+    local s = string.lower(name)
+    s = string.gsub(s, "%(.-%)", "") -- drop "(male)" / "(female)" / "(Baby)" qualifiers
+    s = string.gsub(s, "[^%a%d]", "")
+    return s
+end
+StagedMeshLibrary.normalizeName = normalizeName
+
+local function countMeshParts(instance)
+    if not instance then
+        return 0
+    end
+    local count = instance:IsA("MeshPart") and 1 or 0
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("MeshPart") then
+            count += 1
+        end
+    end
+    return count
+end
+
+local function isAssetPackVisualCandidate(instance)
+    return instance ~= nil
+        and (instance:IsA("Model") or instance:IsA("BasePart"))
+        and countMeshParts(instance) > 0
+end
+
 function StagedMeshLibrary:StagingRoot()
     local workspaceRoot = Workspace:FindFirstChild(self.StagingFolderName)
     if workspaceRoot then
@@ -30,9 +64,81 @@ function StagedMeshLibrary:StagingRoot()
     return library:FindFirstChild(self.StagingFolderName) or library:FindFirstChild("G028_RiggedDinosaurModels_AuditCandidate")
 end
 
+function StagedMeshLibrary:FindImportedRoot(rootName)
+    if type(rootName) ~= "string" or rootName == "" then
+        return nil
+    end
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    if library then
+        local direct = library:FindFirstChild(rootName)
+        if direct then
+            return direct
+        end
+        local staging = library:FindFirstChild(self.StagingFolderName)
+        local nested = staging and staging:FindFirstChild(rootName)
+        if nested then
+            return nested
+        end
+    end
+    return Workspace:FindFirstChild(rootName)
+end
+
+function StagedMeshLibrary:_resolveAssetPackEntry(entry)
+    if type(entry) ~= "table" then
+        return nil, "no_asset_pack_entry"
+    end
+    local root = self:FindImportedRoot(entry.sourceFolder or entry.folder)
+    if not root then
+        return nil, "no_asset_pack_root"
+    end
+    local sourceName = entry.sourceName or entry.name
+    if type(sourceName) ~= "string" or sourceName == "" then
+        return nil, "no_asset_pack_source_name"
+    end
+    local exact = root:FindFirstChild(sourceName)
+    if isAssetPackVisualCandidate(exact) then
+        return exact
+    end
+    local deep = root:FindFirstChild(sourceName, true)
+    if isAssetPackVisualCandidate(deep) then
+        return deep
+    end
+    local target = normalizeName(sourceName)
+    for _, child in ipairs(root:GetDescendants()) do
+        if normalizeName(child.Name) == target and isAssetPackVisualCandidate(child) then
+            return child
+        end
+    end
+    return nil, "no_mesh_backed_asset_pack_model"
+end
+
+function StagedMeshLibrary:ResolveAssetPackModel(speciesId)
+    if speciesId == nil then
+        return nil, "no_species_id"
+    end
+    local entry = self.AssetPackSpecies[speciesId]
+    local target = normalizeName(speciesId)
+    if not entry then
+        for key, candidate in pairs(self.AssetPackSpecies) do
+            if normalizeName(key) == target then
+                entry = candidate
+                break
+            end
+        end
+    end
+    if not entry then
+        return nil, "no_asset_pack_mapping"
+    end
+    return self:_resolveAssetPackEntry(entry)
+end
+
 function StagedMeshLibrary:ResolveModel(speciesId)
     if not speciesId then
         return nil, "no_species_id"
+    end
+    local assetPackModel = self:ResolveAssetPackModel(speciesId)
+    if assetPackModel then
+        return assetPackModel
     end
     local entry = self.SpeciesMesh[speciesId]
     if not entry then
@@ -72,17 +178,6 @@ StagedMeshLibrary.DietFolders = {
     "Omnivores(land)",
     "Aquatic",
 }
-
-local function normalizeName(name)
-    if type(name) ~= "string" then
-        return ""
-    end
-    local s = string.lower(name)
-    s = string.gsub(s, "%(.-%)", "") -- drop "(male)" / "(female)" / "(Baby)" qualifiers
-    s = string.gsub(s, "[^%a%d]", "")
-    return s
-end
-StagedMeshLibrary.normalizeName = normalizeName
 
 local function dietForFolder(folderName)
     if folderName == "Herbivores (land)" then
@@ -148,7 +243,14 @@ function StagedMeshLibrary:ResolveAny(speciesId)
         return nil, "no_species_id"
     end
 
-    -- 1) curated mapping (exact, then normalized).
+    -- 1) imported Creator Store pack mapping. This is the happy path for the
+    -- 50+ random hatch roster when the reviewed mesh pack is present.
+    local assetPackModel = self:ResolveAssetPackModel(speciesId)
+    if assetPackModel then
+        return assetPackModel, "asset_pack_dinosaur_mesh"
+    end
+
+    -- 2) curated mapping (exact, then normalized).
     if self.SpeciesMesh[speciesId] then
         return self:ResolveModel(speciesId)
     end
@@ -159,7 +261,7 @@ function StagedMeshLibrary:ResolveAny(speciesId)
         end
     end
 
-    -- 2) live staged roster.
+    -- 3) live staged roster.
     local root = self:StagingRoot()
     if not root then
         return nil, "no_staging_root"
@@ -202,6 +304,12 @@ end
 -- load if SpeciesRoster is missing.
 -- ---------------------------------------------------------------------------
 do
+    local retiredPrototypeSpecies = {
+        gallimimus = true,
+        triceratops = true,
+        velociraptor = true,
+        carnotaurus = true,
+    }
     local ok, roster = pcall(function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local shared = ReplicatedStorage:FindFirstChild("Shared")
@@ -217,11 +325,29 @@ do
     if ok and roster and roster.StagedSpecies then
         for _, rec in ipairs(roster.StagedSpecies) do
             local id = normalizeName(rec.name)
-            if id ~= "" and StagedMeshLibrary.SpeciesMesh[id] == nil then
+            if id ~= "" and StagedMeshLibrary.SpeciesMesh[id] == nil and not retiredPrototypeSpecies[id] then
                 StagedMeshLibrary.SpeciesMesh[id] = {
                     folder = rec.folder,
                     name = rec.name,
                 }
+            end
+        end
+        for _, rec in ipairs(roster.SupplementalAssetSpecies or {}) do
+            local id = normalizeName(rec.name)
+            if id ~= "" and not retiredPrototypeSpecies[id] then
+                StagedMeshLibrary.AssetPackSpecies[id] = {
+                    folder = rec.folder,
+                    name = rec.name,
+                    sourceFolder = rec.sourceFolder,
+                    sourceName = rec.sourceName or rec.name,
+                    sourceAssetId = rec.sourceAssetId,
+                }
+                if StagedMeshLibrary.SpeciesMesh[id] == nil then
+                    StagedMeshLibrary.SpeciesMesh[id] = {
+                        folder = rec.folder,
+                        name = rec.name,
+                    }
+                end
             end
         end
     end

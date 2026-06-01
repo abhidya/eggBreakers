@@ -17,6 +17,27 @@ local function hasVisiblePart(instance)
     return false
 end
 
+local function withIsolatedImportedLibrary(callback)
+    local original = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    local savedName
+    if original then
+        savedName = "ImportedAssetLibrary_SavedForNPCSpawnValidation_" .. tostring(math.floor(os.clock() * 1000000))
+        original.Name = savedName
+    end
+    local library = Instance.new("Folder")
+    library.Name = "ImportedAssetLibrary"
+    library.Parent = ReplicatedStorage
+    local ok, result = pcall(callback, library)
+    library:Destroy()
+    if original then
+        original.Name = "ImportedAssetLibrary"
+    end
+    if not ok then
+        error(result, 2)
+    end
+    return result
+end
+
 table.insert(suite.tests, { name = "NPC spawn zones valid", run = function()
     local spawn = Instance.new("Part")
     spawn.Name = "FernPlainsSpawn"
@@ -228,41 +249,112 @@ table.insert(suite.tests, { name = "NPC resolver rejects legacy primitive fallba
     local oldResolveAny = StagedMeshLibrary.ResolveAny
     local oldResolveModel = StagedMeshLibrary.ResolveModel
     local oldRecords = NPCService.NPCs
-    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
-    library.Name = "ImportedAssetLibrary"
-    library.Parent = ReplicatedStorage
-    local primitiveRoot = Instance.new("Folder")
-    primitiveRoot.Name = "PrimitiveNPCFallbackProbe"
-    primitiveRoot.Parent = library
-    local hatchling = Instance.new("Model")
-    hatchling.Name = "Hatchling"
-    hatchling.Parent = primitiveRoot
-    local block = Instance.new("Part")
-    block.Name = "ThreePartBlockBody"
-    block.Size = Vector3.new(2, 2, 4)
-    block.Parent = hatchling
-    hatchling.PrimaryPart = block
+    local ok, err = pcall(function()
+        withIsolatedImportedLibrary(function(library)
+            local primitiveRoot = Instance.new("Folder")
+            primitiveRoot.Name = "PrimitiveNPCFallbackProbe"
+            primitiveRoot.Parent = library
+            local hatchling = Instance.new("Model")
+            hatchling.Name = "Hatchling"
+            hatchling.Parent = primitiveRoot
+            local block = Instance.new("Part")
+            block.Name = "ThreePartBlockBody"
+            block.Size = Vector3.new(2, 2, 4)
+            block.Parent = hatchling
+            hatchling.PrimaryPart = block
 
-    NPCService.NPCs = {}
-    StagedMeshLibrary.ResolveAny = function()
-        return nil, "test_no_staged_mesh"
-    end
-    StagedMeshLibrary.ResolveModel = function()
-        return nil, "test_no_staged_mesh"
-    end
-    NPCSpawnService.NPCModelCandidatePaths.Prey = {
-        "ReplicatedStorage/ImportedAssetLibrary/PrimitiveNPCFallbackProbe/Hatchling",
-    }
+            NPCService.NPCs = {}
+            StagedMeshLibrary.ResolveAny = function()
+                return nil, "test_no_staged_mesh"
+            end
+            StagedMeshLibrary.ResolveModel = function()
+                return nil, "test_no_staged_mesh"
+            end
+            NPCSpawnService.NPCModelCandidatePaths.Prey = {
+                "ReplicatedStorage/ImportedAssetLibrary/PrimitiveNPCFallbackProbe/Hatchling",
+            }
 
-    local resolved = NPCSpawnService:ResolveImportedNPCModel("Prey")
-
-    Assert.equals(resolved, nil, "primitive NPC fallback is rejected instead of spawning blocky dinos")
-
+            local resolved = NPCSpawnService:ResolveImportedNPCModel("Prey")
+            Assert.equals(resolved, nil, "primitive NPC fallback is rejected instead of spawning blocky dinos")
+        end)
+    end)
     NPCSpawnService.NPCModelCandidatePaths.Prey = oldPaths
     StagedMeshLibrary.ResolveAny = oldResolveAny
     StagedMeshLibrary.ResolveModel = oldResolveModel
     NPCService.NPCs = oldRecords
-    primitiveRoot:Destroy()
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "NPC resolver uses mesh child from 50 plus pack, not the whole pack root", run = function()
+    local oldPaths = NPCSpawnService.NPCModelCandidatePaths.Predator
+    local oldResolveAny = StagedMeshLibrary.ResolveAny
+    local oldResolveModel = StagedMeshLibrary.ResolveModel
+    local ok, err = pcall(function()
+        withIsolatedImportedLibrary(function(library)
+            local pack = Instance.new("Folder")
+            pack.Name = "NPCSpawnValidation_AssetPackFixture"
+            pack:SetAttribute("DinosaurRosterPack", true)
+            pack:SetAttribute("UseAsDinoVisualHappyPath", true)
+            pack.Parent = library
+            local mesh = Instance.new("MeshPart")
+            mesh.Name = "Velociraptor Mongoliensis"
+            mesh.Size = Vector3.new(2, 4, 9)
+            mesh.Parent = pack
+
+            StagedMeshLibrary.ResolveAny = function()
+                return nil, "test_no_staged_mesh"
+            end
+            StagedMeshLibrary.ResolveModel = function()
+                return nil, "test_no_staged_mesh"
+            end
+            NPCSpawnService.NPCModelCandidatePaths.Predator = {}
+
+            local resolved = NPCSpawnService:ResolveImportedNPCModel("Predator")
+            Assert.equals(resolved, mesh, "fallback scan picks a mesh dino child, not the container pack")
+        end)
+    end)
+    NPCSpawnService.NPCModelCandidatePaths.Predator = oldPaths
+    StagedMeshLibrary.ResolveAny = oldResolveAny
+    StagedMeshLibrary.ResolveModel = oldResolveModel
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "NPC resolver never uses bones or fossils as live dino fallback", run = function()
+    local oldPaths = NPCSpawnService.NPCModelCandidatePaths.Predator
+    local oldResolveAny = StagedMeshLibrary.ResolveAny
+    local oldResolveModel = StagedMeshLibrary.ResolveModel
+    local ok, err = pcall(function()
+        withIsolatedImportedLibrary(function(library)
+            local boneDisplay = Instance.new("Model")
+            boneDisplay.Name = "Rex Skeleton Display"
+            boneDisplay:SetAttribute("FossilDecoration", true)
+            boneDisplay.Parent = library
+            local boneMesh = Instance.new("MeshPart")
+            boneMesh.Name = "RexSkeletonMesh"
+            boneMesh.Size = Vector3.new(5, 3, 9)
+            boneMesh.Parent = boneDisplay
+
+            local liveMesh = Instance.new("MeshPart")
+            liveMesh.Name = "Utahraptor Imported Mesh"
+            liveMesh.Size = Vector3.new(3, 4, 10)
+            liveMesh.Parent = library
+
+            StagedMeshLibrary.ResolveAny = function()
+                return nil, "test_no_staged_mesh"
+            end
+            StagedMeshLibrary.ResolveModel = function()
+                return nil, "test_no_staged_mesh"
+            end
+            NPCSpawnService.NPCModelCandidatePaths.Predator = {}
+
+            local resolved = NPCSpawnService:ResolveImportedNPCModel("Predator")
+            Assert.equals(resolved, liveMesh, "bone/fossil meshes are skipped as live NPC bodies")
+        end)
+    end)
+    NPCSpawnService.NPCModelCandidatePaths.Predator = oldPaths
+    StagedMeshLibrary.ResolveAny = oldResolveAny
+    StagedMeshLibrary.ResolveModel = oldResolveModel
+    if not ok then error(err) end
 end })
 
 table.insert(suite.tests, { name = "authored NPC spawn markers cover prey and predators", run = function()

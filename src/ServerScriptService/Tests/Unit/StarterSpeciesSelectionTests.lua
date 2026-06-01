@@ -88,7 +88,7 @@ end })
 
 table.insert(suite.tests, { name = "random hatch option rolls from the full playable roster", run = function()
     local hatchPool = StarterSpeciesService:GetHatchPool()
-    Assert.truthy(#hatchPool >= 48, "random option has the full 50-ish staged roster available")
+    Assert.truthy(#hatchPool >= 50, "random option has the full 50+ dinosaur roster available")
     local first = StarterSpeciesService:ChooseRandomHatchSpecies(nil, 1)
     local last = StarterSpeciesService:ChooseRandomHatchSpecies(nil, #hatchPool)
     Assert.equals(first, hatchPool[1], "deterministic low roll chooses first full-roster species")

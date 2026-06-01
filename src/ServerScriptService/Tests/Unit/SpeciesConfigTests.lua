@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local SpeciesRoster = require(ReplicatedStorage.Shared.SpeciesRoster)
 local Constants = require(ReplicatedStorage.Shared.Constants)
 local requiredStages = { "Hatchling", "Juvenile", "SubAdult", "Adult" }
 local suite = { name = "SpeciesConfigTests", category = "Unit", tests = {} }
@@ -34,11 +35,11 @@ table.insert(suite.tests, { name = "every species has required fields and stages
         end
     end
     Assert.truthy(count >= Constants.ScopeFreeze.RequiredPlayableSpecies, "vertical slice keeps required starter species")
-    -- The full staged roster is now playable, minus the four retired prototype
-    -- species. Curated imported dinos plus staged replacements keep at least 48
-    -- playable species while excluding the old starter ids from runtime config.
+    -- The full staged roster plus reviewed Creator Store mesh-pack entries keeps
+    -- the random hatch option genuinely above 50 species while excluding old
+    -- primitive prototype ids from runtime config.
     Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpecies, "playable roster stays within full-roster cap")
-    Assert.truthy(count >= 48, "full staged roster (>=48 distinct playable species) is available")
+    Assert.truthy(count >= 50, "full dinosaur roster (>=50 distinct playable species) is available")
 end })
 
 table.insert(suite.tests, { name = "starter species diet roles stay fixed", run = function()
@@ -51,6 +52,28 @@ end })
 table.insert(suite.tests, { name = "retired prototype species are not playable", run = function()
     for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
         Assert.equals(SpeciesConfig[speciesId], nil, speciesId .. " is retired from runtime species config")
+    end
+end })
+
+table.insert(suite.tests, { name = "part-only NPC pack species use mesh-pack visual proxies", run = function()
+    local mustUseMeshPack = {
+        compies = true,
+        saurophaganax = true,
+        shantungosaurus = true,
+        citipati = true,
+        oviraptor = true,
+    }
+    local found = {}
+    for _, rec in ipairs(SpeciesRoster.SupplementalAssetSpecies) do
+        local id = SpeciesRoster.toSpeciesId(rec.name)
+        if mustUseMeshPack[id] then
+            Assert.equals(rec.sourceFolder, SpeciesRoster.AssetPackFolders.G033DinosaurMeshes, rec.name .. " avoids part-only NPC pack visual")
+            Assert.equals(rec.sourceAssetId, "8289268262", rec.name .. " resolves through the mesh-backed pack")
+            found[id] = true
+        end
+    end
+    for id in pairs(mustUseMeshPack) do
+        Assert.equals(found[id], true, id .. " has an explicit mesh-pack proxy")
     end
 end })
 

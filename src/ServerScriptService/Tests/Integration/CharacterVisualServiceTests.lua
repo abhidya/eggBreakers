@@ -444,6 +444,53 @@ table.insert(suite.tests, { name = "staged mesh library resolves imported dinosa
     StagedMeshLibrary:RefreshRoster()
 end })
 
+table.insert(suite.tests, { name = "50 plus asset pack species hatches into mesh visual", run = function()
+    setupImportedVisuals()
+    local library = ensureFolder(ReplicatedStorage, "ImportedAssetLibrary")
+    local oldAllosaurus = StagedMeshLibrary.AssetPackSpecies.allosaurus
+
+    local pack = Instance.new("Folder")
+    pack.Name = "CharacterVisual_AssetPackFixture"
+    pack.Parent = library
+    local allosaurus = Instance.new("MeshPart")
+    allosaurus.Name = "Allosaurus"
+    allosaurus.Size = Vector3.new(5, 9, 18)
+    allosaurus:SetAttribute("SourceAssetId", "8289268262")
+    allosaurus.Parent = pack
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = {
+        folder = "Carnivores (land)",
+        name = "Allosaurus",
+        sourceFolder = pack.Name,
+        sourceName = "Allosaurus",
+        sourceAssetId = "8289268262",
+    }
+
+    local player = MockPlayer.new(11023, "AllosaurusVisualTester")
+    local character, head = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "allosaurus")
+    state.Hatched = true
+    state.GrowthStage = "Hatchling"
+
+    local testOk, err = pcall(function()
+        local ok, mode = CharacterVisualService:ApplyForState(player, state)
+        local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+
+        Assert.truthy(ok, "asset-pack mesh species visual applied")
+        Assert.equals(mode, "staged_dinosaur_mesh", "asset-pack mesh follows staged dinosaur path")
+        Assert.equals(head.Transparency, 1, "default avatar is hidden only after mesh replacement exists")
+        Assert.notNil(visual, "asset-pack dinosaur visual exists")
+        Assert.truthy(visual:IsA("MeshPart"), "asset-pack visual remains a MeshPart, not a Lego block model")
+        Assert.equals(visual:GetAttribute("VisualKind"), "ImportedDinosaur", "mesh visual is stamped as imported dinosaur")
+        Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible mesh replacement exists")
+    end)
+
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = oldAllosaurus
+    pack:Destroy()
+    cleanup(player)
+    if not testOk then error(err) end
+end })
+
 
 table.insert(suite.tests, { name = "avatar hide preserves existing imported dinosaur visual", run = function()
     local character, head = makeCharacter()

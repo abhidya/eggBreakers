@@ -30,6 +30,89 @@ table.insert(suite.tests, { name = "every playable species has a staged mesh map
     end
 end })
 
+table.insert(suite.tests, { name = "asset pack mappings keep 50 plus roster renderable without primitive fallbacks", run = function()
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
+    library.Name = "ImportedAssetLibrary"
+    library.Parent = ReplicatedStorage
+    local oldAllosaurus = StagedMeshLibrary.AssetPackSpecies.allosaurus
+    local oldSpinosaurus = StagedMeshLibrary.AssetPackSpecies.spinosaurus
+
+    local pack = Instance.new("Folder")
+    pack.Name = "StagedMeshMatrix_AssetPackFixture"
+    pack.Parent = library
+    local allosaurus = Instance.new("MeshPart")
+    allosaurus.Name = "Allosaurus"
+    allosaurus.Size = Vector3.new(5, 9, 18)
+    allosaurus.Parent = pack
+    local spinosaurus = Instance.new("MeshPart")
+    spinosaurus.Name = "Spinosaurus"
+    spinosaurus.Size = Vector3.new(7, 10, 24)
+    spinosaurus.Parent = pack
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = {
+        folder = "Carnivores (land)",
+        name = "Allosaurus",
+        sourceFolder = pack.Name,
+        sourceName = "Allosaurus",
+    }
+    StagedMeshLibrary.AssetPackSpecies.spinosaurus = {
+        folder = "Carnivores (land)",
+        name = "Spinosaurus",
+        sourceFolder = pack.Name,
+        sourceName = "Spinosaurus",
+    }
+
+    local ok, err = pcall(function()
+        local resolvedAllo, alloReason = StagedMeshLibrary:ResolveAny("allosaurus")
+        local resolvedSpino, spinoReason = StagedMeshLibrary:ResolveAny("spinosaurus")
+
+        Assert.equals(resolvedAllo, allosaurus, "supplemental allosaurus resolves from imported mesh pack")
+        Assert.equals(alloReason, "asset_pack_dinosaur_mesh", "allosaurus uses asset-pack happy path")
+        Assert.equals(resolvedSpino, spinosaurus, "curated duplicate species can prefer imported mesh pack")
+        Assert.equals(spinoReason, "asset_pack_dinosaur_mesh", "duplicate species uses asset-pack happy path")
+        Assert.notNil(SpeciesConfig.allosaurus, "supplemental pack species is playable")
+        Assert.truthy(#playableSpeciesIds() >= 50, "full random roster stays above 50 species")
+    end)
+
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = oldAllosaurus
+    StagedMeshLibrary.AssetPackSpecies.spinosaurus = oldSpinosaurus
+    pack:Destroy()
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "asset pack resolver rejects part-only visual mappings", run = function()
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary") or Instance.new("Folder")
+    library.Name = "ImportedAssetLibrary"
+    library.Parent = ReplicatedStorage
+    local oldBlockysaurus = StagedMeshLibrary.AssetPackSpecies.blockysaurus
+
+    local pack = Instance.new("Folder")
+    pack.Name = "StagedMeshMatrix_PartOnlyPackFixture"
+    pack.Parent = library
+    local blockModel = Instance.new("Model")
+    blockModel.Name = "Blockysaurus"
+    blockModel.Parent = pack
+    local part = Instance.new("Part")
+    part.Name = "BlockBody"
+    part.Size = Vector3.new(4, 4, 10)
+    part.Parent = blockModel
+    StagedMeshLibrary.AssetPackSpecies.blockysaurus = {
+        folder = "Carnivores (land)",
+        name = "Blockysaurus",
+        sourceFolder = pack.Name,
+        sourceName = "Blockysaurus",
+    }
+
+    local ok, err = pcall(function()
+        local resolved, reason = StagedMeshLibrary:ResolveAssetPackModel("blockysaurus")
+        Assert.equals(resolved, nil, "part-only asset-pack body is not a renderable dino visual")
+        Assert.equals(reason, "no_mesh_backed_asset_pack_model", "part-only asset-pack body reports mesh-backed failure")
+    end)
+
+    StagedMeshLibrary.AssetPackSpecies.blockysaurus = oldBlockysaurus
+    pack:Destroy()
+    if not ok then error(err) end
+end })
+
 table.insert(suite.tests, { name = "each mapping entry has folder and name strings", run = function()
     for speciesId, entry in pairs(StagedMeshLibrary.SpeciesMesh) do
         Assert.equals(type(entry), "table", "entry is a table for " .. tostring(speciesId))

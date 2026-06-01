@@ -67,6 +67,61 @@ local function countMeshParts(instance)
     return count
 end
 
+local function isPackContainer(instance)
+    return instance:GetAttribute("DinosaurRosterPack") == true
+        or instance:GetAttribute("PrimitivePartOnlyPack") == true
+        or instance:GetAttribute("UseAsDinoVisualHappyPath") ~= nil
+end
+
+local REJECTED_LIVE_DINO_VISUAL_MARKERS = {
+    "bone",
+    "carcass",
+    "corpse",
+    "fossil",
+    "jaw",
+    "nest",
+    "rib",
+    "skeleton",
+    "skull",
+}
+
+local function hasRejectedLiveDinoVisualName(name)
+    if type(name) ~= "string" then return false end
+    local lowered = string.lower(name)
+    for _, marker in ipairs(REJECTED_LIVE_DINO_VISUAL_MARKERS) do
+        if string.find(lowered, marker, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function hasRejectedLiveDinoVisualLineage(instance)
+    local current = instance
+    while current and current ~= ReplicatedStorage and current ~= Workspace do
+        if hasRejectedLiveDinoVisualName(current.Name) then
+            return true
+        end
+        if current:GetAttribute("CarcassFoodSource") == true
+            or current:GetAttribute("PlayerCarcass") == true
+            or current:GetAttribute("BoneDecoration") == true
+            or current:GetAttribute("FossilDecoration") == true
+            or current:GetAttribute("NestDecoration") == true
+        then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+local function isUsableDinosaurVisualCandidate(instance)
+    if not instance or isPackContainer(instance) then return false end
+    if not (instance:IsA("Model") or instance:IsA("BasePart")) then return false end
+    if hasRejectedLiveDinoVisualLineage(instance) then return false end
+    return hasVisiblePart(instance) and countMeshParts(instance) > 0
+end
+
 local function isHelperVisualPart(part)
     local name = string.lower(part.Name)
     return name == "rootpart"
@@ -95,7 +150,7 @@ function NPCSpawnService:ResolveImportedNPCModel(kind)
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) and countMeshParts(descendant) > 0 then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "saurus", 1, true) or string.find(name, "rex", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and isUsableDinosaurVisualCandidate(descendant) then
                 return descendant
             end
         end

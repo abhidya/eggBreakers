@@ -65,6 +65,13 @@ local H = SpeciesRoster.DietFolders.Herbivore
 local C = SpeciesRoster.DietFolders.Carnivore
 local O = SpeciesRoster.DietFolders.Omnivore
 local A = SpeciesRoster.DietFolders.Aquatic
+local G033_MESH_PACK = "G033_DinosaurMeshes_8289268262"
+local G033_SCRIPTED_NPC_PACK = "G033_DinosaurNPCPack_50PlusCandidate"
+
+SpeciesRoster.AssetPackFolders = {
+	G033DinosaurMeshes = G033_MESH_PACK,
+	G033ScriptedNPCPack = G033_SCRIPTED_NPC_PACK,
+}
 
 SpeciesRoster.StagedSpecies = {
 	-- Herbivores (land) -- 12 distinct (raw 16; Antarctosaurus/Maiasaura dupes collapse)
@@ -122,6 +129,58 @@ SpeciesRoster.StagedSpecies = {
 	{ name = "Megalodon", folder = A },
 	{ name = "Plesiosaurus", folder = A },
 	{ name = "Styxosaurus", folder = A },
+}
+
+-- Creator Store mesh/NPC pack supplements. `folder` remains the gameplay diet
+-- folder used for SpeciesConfig generation; `sourceFolder` points at the imported
+-- asset pack root that StagedMeshLibrary can resolve directly when present.
+-- The exact `9726610246` NPC pack is script-review material, but its part-only
+-- bodies are intentionally not used as visual happy paths.
+SpeciesRoster.SupplementalAssetSpecies = {
+	-- Script-free mesh pack, asset 8289268262.
+	{ name = "Acrocanthosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Albertosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Allosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Ankylosaurus", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Brachiosaurus", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Camarasaurus", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Carcharodontosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Ceratosaurus", sourceName = "Ceratosaurus (JPOG)", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Corythosaurus", sourceName = "Corythosaurus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Dryosaurus", sourceName = "Dryosaurus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Edmontosaurus", sourceName = "Edmontosarus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Homalocephale", sourceName = "Homalocephale (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Kentrosaurus", sourceName = "Kentrosaurus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Ouranosaurus", sourceName = "Ouranosaurus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Pachycephalosaurus", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Parasaurolophus", sourceName = "Parasaurolophus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Spinosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Styracosaurus", sourceName = "Styracosarus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Torosaurus", sourceName = "Torosaurus (JPOG)", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Tyrannosaurus", sourceName = "Tyrannosaurus Rex", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Velociraptor Mongoliensis", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Dilophosaurus", sourceName = "dilo", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Tricey", sourceName = "tricey", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+
+	-- Vertical-slice aliases into the reviewed mesh pack. These keep starters and
+	-- NPC kind profiles renderable even when the older Workspace.dinosaur staging
+	-- folder is absent from a Studio session.
+	{ name = "Coelophysis", sourceName = "dilo", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Utahraptor", sourceName = "Velociraptor Mongoliensis", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Quetzalcoatlus", sourceName = "Velociraptor Mongoliensis", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Pteranodon", sourceName = "Velociraptor Mongoliensis", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+
+	-- Mesh/script NPC behavior pack, asset 10737775518; runtime scripts remain
+	-- disabled/preserved for review. Only mesh-backed children are used directly
+	-- as visuals; part-only NPC-pack species are kept as logical species but
+	-- pointed at the script-free mesh pack so random hatch/NPC bodies stay mesh.
+	{ name = "Baryonyx", folder = C, sourceFolder = G033_SCRIPTED_NPC_PACK, sourceAssetId = "10737775518" },
+	{ name = "Majungasaurus", folder = C, sourceFolder = G033_SCRIPTED_NPC_PACK, sourceAssetId = "10737775518" },
+	{ name = "Compies", sourceName = "dilo", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Saurophaganax", sourceName = "Allosaurus", folder = C, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Shantungosaurus", sourceName = "Brachiosaurus", folder = H, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Citipati", sourceName = "dilo", folder = O, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
+	{ name = "Oviraptor", sourceName = "dilo", folder = O, sourceFolder = G033_MESH_PACK, sourceAssetId = "8289268262" },
 }
 
 -- Normalize a name to a stable lookup key: lowercase, drop parenthetical qualifiers,
@@ -373,6 +432,18 @@ local function ensureBuilt()
 			out[id] = buildEntry(rec.name, rec.folder)
 		end
 	end
+	for _, rec in ipairs(SpeciesRoster.SupplementalAssetSpecies) do
+		local id = toSpeciesId(rec.name)
+		if id ~= "" and out[id] == nil then
+			local entry = buildEntry(rec.name, rec.folder)
+			entry.SourceAssetId = rec.sourceAssetId
+			entry.StagedFolder = rec.folder
+			entry.StagedSourceFolder = rec.sourceFolder
+			entry.StagedName = rec.sourceName or rec.name
+			entry.GeneratedFromAssetPack = true
+			out[id] = entry
+		end
+	end
 	generated = out
 	return out
 end
@@ -443,6 +514,18 @@ function SpeciesRoster:BuildFromWorkspace()
 						out[id] = buildEntry(model.Name, folderName)
 					end
 				end
+			end
+		end
+		for _, rec in ipairs(SpeciesRoster.SupplementalAssetSpecies) do
+			local id = toSpeciesId(rec.name)
+			if id ~= "" and out[id] == nil then
+				local entry = buildEntry(rec.name, rec.folder)
+				entry.SourceAssetId = rec.sourceAssetId
+				entry.StagedFolder = rec.folder
+				entry.StagedSourceFolder = rec.sourceFolder
+				entry.StagedName = rec.sourceName or rec.name
+				entry.GeneratedFromAssetPack = true
+				out[id] = entry
 			end
 		end
 		return out

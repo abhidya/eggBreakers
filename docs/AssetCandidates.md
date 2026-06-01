@@ -73,6 +73,20 @@
 
 Source: direct `Roblox_Search.search_assets` runs through `tools/roblox_search_direct.js` and MCP `Roblox_Search.search_assets`. These are sourcing candidates only; no asset was previewed, inserted, or kept. Per `docs/G018/ACTIVE_WORK_QUEUE.md`, executable imports must be source-reviewed, sandboxed, stripped or adapted, and regression-tested before release readiness. Creator Store URLs use `https://create.roblox.com/store/asset/<assetId>`.
 
+## G033 direct dinosaur NPC/mesh import decision
+
+User directive: use the 50+ NPC dinosaur pack path, preserve imported scripts for review/adaptation, and stop shipping primitive/blocky dinos as the happy path.
+
+Inserted/audited in Studio:
+
+| Asset | Studio root | Result |
+| --- | --- | --- |
+| `8289268262` `dinosaur meshes` | `ReplicatedStorage.ImportedAssetLibrary.G033_DinosaurMeshes_8289268262` | Accepted as the renderable 50+ roster mesh source. It has named MeshPart dinos and no scripts, so `StagedMeshLibrary.AssetPackSpecies` now resolves random-hatch/player/NPC visuals from it first. |
+| `10737775518` `My Good NPCs So Far` | `ReplicatedStorage.ImportedAssetLibrary.G033_DinosaurNPCPack_50PlusCandidate` | Preserved as a mesh/script NPC behavior reference. Runtime scripts are disabled and stamped for review; only mesh-backed children such as Baryonyx/Majungasaurus are eligible for direct visuals. Part-only children like Compies/Shantungosaurus/Saurophaganax stay review/reference material and use `8289268262` mesh proxies in gameplay. |
+| `9726610246` `Dinosaur npc pack` | `ReplicatedStorage.ImportedAssetLibrary.G033_DinosaurNPCPack_9726610246` | Preserved for raw script review only. It is part-only (`0` MeshParts) and must not be the visual happy path. |
+
+Code gates added: the full hatch roster now stays above 50 species, `ResolveAny` prefers reviewed asset-pack meshes when present, and NPC fallback scanning rejects pack containers, primitive packs, bones, fossils, carcasses, nests, and skeletons so a whole catalog root or decor prop cannot spawn as one blocky live NPC. `DinosaurAssetPackService` also materializes the approved gameplay roots (`8289268262` and `10737775518`) into `ReplicatedStorage.ImportedAssetLibrary` when a clean source build is missing the Studio-inserted roots; imported scripts are disabled and stamped for review instead of discarded. The exact `9726610246` part-only pack remains manual review material, not an automatic gameplay load.
+
 | Candidate asset | Category / type signal | Why useful | Safety / review notes | Consuming system |
 |---|---|---|---|---|
 | [cool dino](https://create.roblox.com/store/asset/9961766535) (`9961766535`) | Model, `3d__characters`; 14 MeshParts, 26 animations, 1 script | Best direct rig/mechanics lead found for an animated dino candidate; useful for replacing blocky prey/predator silhouettes if the rig is adaptable. | `SCRIPT_REVIEW_REQUIRED`; strip/review script before use; verify animation ownership, rig shape, collision, scale, and SpeciesConfig mapping. | `NPCSpawnService`, `CharacterVisualService`, species visual/animation pipeline |
