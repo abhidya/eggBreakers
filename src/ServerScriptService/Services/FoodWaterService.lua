@@ -22,10 +22,37 @@ FoodWaterService.FoliageDefaultRespawnCooldownSeconds = 60
 local FOLIAGE_FOOD_KINDS = {
     Foliage    = true,
     Fern       = true,
+    StarterPlant = true,
+    PlantPatch = true,
+    SparsePlant = true,
+    MarshPlant = true,
+    HighRiskPlant = true,
     TreeBrowse = true,
     Shrub      = true,
     Grass      = true,
     Berry      = true,
+}
+
+local OMNIVORE_FOOD_KINDS = {
+    SeedPod = true,
+    FallenFruit = true,
+    Mushroom = true,
+    CactusFruit = true,
+    NestScraps = true,
+    EggScraps = true,
+}
+
+local CARNIVORE_FOOD_KINDS = {
+    Fish = true,
+    TutorialCarcass = true,
+    SmallCarcassCache = true,
+    PreyCarcass = true,
+    SmallPreyCarcass = true,
+    AerialPreyCarcass = true,
+    LargeCarcass = true,
+    PredatorCarcass = true,
+    HighRiskCarcass = true,
+    PlayerCarcass = true,
 }
 
 -- ─────────────────────────────────────────────────────────────
@@ -230,6 +257,7 @@ end
 local function isFoliageFoodSource(target)
     local foodKind = target:GetAttribute("FoodKind")
     if foodKind and FOLIAGE_FOOD_KINDS[foodKind] then return true end
+    if foodKind and (OMNIVORE_FOOD_KINDS[foodKind] or CARNIVORE_FOOD_KINDS[foodKind]) then return false end
     local diet = target:GetAttribute("Diet")
     -- If it explicitly says Carnivore it is a carcass, not foliage.
     if diet == "Carnivore" then return false end
@@ -237,6 +265,32 @@ local function isFoliageFoodSource(target)
     if not diet then return true end
     -- Herbivore/Omnivore tagged parts are foliage.
     return diet == "Herbivore" or diet == "Omnivore"
+end
+
+local function inferDietFromFoodKind(target)
+    if not target then return nil end
+    local diet = target:GetAttribute("Diet")
+    if diet == "Herbivore" or diet == "Carnivore" or diet == "Omnivore" then
+        return diet
+    end
+    local foodKind = target:GetAttribute("FoodKind")
+    if target:GetAttribute("CarcassFoodSource") == true
+        or target:GetAttribute("PlayerCarcass") == true
+        or CollectionService:HasTag(target, "FishSource")
+        or (foodKind and CARNIVORE_FOOD_KINDS[foodKind])
+    then
+        return "Carnivore"
+    end
+    if foodKind and OMNIVORE_FOOD_KINDS[foodKind] then
+        return "Omnivore"
+    end
+    return "Herbivore"
+end
+
+local function defaultFoodKindForDiet(diet)
+    if diet == "Carnivore" then return "PreyCarcass" end
+    if diet == "Omnivore" then return "SeedPod" end
+    return FoodWaterService.FoliageDefaultFoodKind
 end
 
 --- Live predicate: is this instance a valid, eatable food source right now?

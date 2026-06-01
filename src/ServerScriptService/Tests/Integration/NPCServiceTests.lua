@@ -595,6 +595,65 @@ table.insert(suite.tests, { name = "food signal pulls moderately hungry bystande
     eater:Destroy(); bystander:Destroy(); eatenFood:Destroy(); spareFood:Destroy()
 end })
 
+table.insert(suite.tests, { name = "ambient scan marks nearby food and water intent before critical needs", run = function()
+    resetNPCs()
+    local npc = makeNPC("AmbientIntentPreyNPC", Vector3.new(0, 3, 0))
+    local water = makeTaggedPart("AmbientIntentWater", "WaterSource", Vector3.new(16, 3, 0))
+    local food = makeTaggedPart("AmbientIntentFern", "FoodSource", Vector3.new(12, 3, 0))
+    food:SetAttribute("Diet", "Herbivore")
+    food:SetAttribute("Nutrition", 20)
+    local _, record = NPCService:Register(npc, "Prey")
+    record.Hatched = true
+    record.Thirst = 72
+    record.Hunger = 90
+
+    NPCService:TickBrain(record, {}, 1)
+    Assert.equals(record.Intent, "SeekWater", "thirsty-but-not-critical NPC chooses water intent")
+    Assert.equals(record.WaterTarget, water, "record tracks concrete water target")
+    Assert.equals(npc:GetAttribute("NPCIntent"), "SeekWater", "water intent visible on NPC")
+    Assert.equals(npc:GetAttribute("NPCIntentTarget"), "AmbientIntentWater", "water intent target visible")
+    Assert.equals(npc:GetAttribute("NPCIntentReason"), "NearbyWater", "water intent reason visible")
+    Assert.equals(npc:GetAttribute("WaterTarget"), "AmbientIntentWater", "water target stamped")
+    Assert.equals(record.State, "Wander", "ambient water intent does not override non-critical brain state")
+
+    record.Thirst = 90
+    record.Hunger = 71
+    NPCService:TickBrain(record, {}, 1)
+    Assert.equals(record.Intent, "SeekFood", "hungry-but-not-critical NPC chooses food intent")
+    Assert.equals(record.FoodTarget, food, "record tracks concrete food target")
+    Assert.equals(npc:GetAttribute("NPCIntentTarget"), "AmbientIntentFern", "food intent target visible")
+    Assert.equals(npc:GetAttribute("FoodTarget"), "AmbientIntentFern", "food target stamped")
+
+    npc:Destroy(); water:Destroy(); food:Destroy()
+end })
+
+table.insert(suite.tests, { name = "direct damage broadcasts fight reaction and marks fight-back intent", run = function()
+    resetNPCs()
+    local attacker = makeNPC("AmbientDamageAttackerNPC", Vector3.new(20, 3, 0))
+    local defender = makeNPC("AmbientDamageDefenderNPC", Vector3.new(0, 3, 0))
+    local bystander = makeNPC("AmbientDamageBystanderNPC", Vector3.new(12, 3, 0))
+    local _, attackerRecord = NPCService:Register(attacker, "Predator")
+    local _, defenderRecord = NPCService:Register(defender, "Prey")
+    local _, bystanderRecord = NPCService:Register(bystander, "Prey")
+    attackerRecord.Hatched = true
+    defenderRecord.Hatched = true
+    bystanderRecord.Hatched = true
+    defenderRecord.Health = 80
+
+    NPCService:DamageRecord(defenderRecord, 5, attackerRecord)
+    Assert.equals(bystander:GetAttribute("LastReaction"), "FightSignal", "direct damage alerts nearby bystander")
+    Assert.equals(bystander:GetAttribute("ReactionIntent"), "FleeFight", "prey bystander reacts by fleeing fight")
+    Assert.equals(bystander:GetAttribute("NearbyFightTarget"), "AmbientDamageDefenderNPC", "fight target names damaged NPC")
+
+    NPCService:TickBrain(defenderRecord, {}, 1)
+    Assert.equals(defender:GetAttribute("NPCIntent"), "FightBack", "damaged NPC exposes fight-back intent")
+    Assert.equals(defender:GetAttribute("NPCIntentReason"), "Damaged", "fight-back intent reason visible")
+    Assert.equals(defenderRecord.State, "Chase", "damaged NPC starts moving toward attacker")
+    Assert.equals(defender:GetAttribute("FightBackState"), "ChasingAttacker", "fight-back chase state visible")
+
+    attacker:Destroy(); defender:Destroy(); bystander:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "prey flees then hides when badly hurt", run = function()
     resetNPCs()

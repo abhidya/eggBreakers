@@ -45,6 +45,17 @@ Use these labels consistently:
 - Predator social proof now needs a pack/regroup beat before idle wandering; prey social proof still needs herd cohesion; omnivore proof needs plant plus carcass paths; future nest story proof needs a real mating/nesting beat, not only spawned props.
 - Asset search candidates remain references until previewed and inserted with reviewed scripts. Low-favorite foliage/nest results may be useful as kitbash material, but placeholder plates/blocks still fail this storyboard.
 
+## Story/user-story gate audit — 2026-05-31
+
+| Requested gate | Current source coverage | Remaining acceptance gap |
+|---|---|---|
+| 50+ random dino option | `StarterSpeciesSelectionTests.lua` asserts the random hatch pool stays at 50+ playable species; `HatchUITests.client.lua` renders four curated starters plus the random full-roster option and highlights the server-rolled species. | Needs live hatch proof that a random-roll species uses a renderable mesh path before exposing it in a release session. |
+| Mesh-backed dino visuals, not Lego blocks | `StoryboardBeatValidation.lua`, `CharacterVisualServiceTests.lua`, and `StagedMeshMatrixTests.lua` assert staged/imported MeshPart visuals, invisible helper roots, asset-pack mesh resolution, and rejection of part-only mappings. | Live `Workspace.NPCs` still need screenshot/save proof that gameplay spawns are using those mesh-backed paths, not primitive placeholder bodies. |
+| NPCs react to food/fights/mating/death | `E2E_PlayableLoopClosure.lua` covers food and fight reactions, and now covers same-species mating reaction consumption. `NPCServiceTests.lua` covers food/fight/mating social intent, pack regroup, herd behavior, fight-back, death settle, carcass creation, carcass eating, and bones state. | Death has carcass/settle/remains coverage, but there is no distinct nearby `DeathSignal`/mourning/scavenge/flee reaction gate. Add that only when design decides what death should cause nearby NPCs to do. |
+| Drinkable water | `E2E_PlayableLoopClosure.lua` asserts shallow tagged water becomes drinkable and deep swim water is rejected as a drink target; Beat 5 placement/source tests keep fish inside valid swim water. | Live proof still needs terrain/quality mesh water with visible shoreline/depth, not just Part-based source tests. |
+| Carcasses fall/remain/eaten to bones | `NPCServiceTests.lua` covers death settling/unanchoring, prey carcass creation, edible carcass tags, predator/player eating, consumed state, food tag removal, and bones replacement. `E2E_PlayableLoopClosure.lua` covers player-killed NPC carcass eating and readable bone remains. | Needs live capture of the fall/settle beat and the same carcass remaining long enough to be eaten in normal play. |
+| Mobile UI portrait/landscape | `HatchUITests.client.lua`, `ClientHUDTests.client.lua`, and `MobileControlsTests.client.lua` cover compact scaling and basic phone layout; controls currently have a landscape phone geometry gate and hatch covers both orientations. | Still missing a combined portrait + landscape live proof where hatch cards, HUD, context action, and controls all coexist without blocking the dinosaur, food/water, threat, or traversal path. |
+
 ## Playable-loop E2E story gate
 
 `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` is the source E2E gate for the first-session survival spine. It must stay aligned with this storyboard and prove these behaviors without relying on client-only labels:

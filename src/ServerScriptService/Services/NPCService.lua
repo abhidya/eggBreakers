@@ -852,11 +852,19 @@ function NPCService:MarkAggro(record, attacker, reason)
     return true
 end
 
-function NPCService:DamageRecord(record, amount, attacker)
+function NPCService:DamageRecord(record, amount, attacker, suppressFightSignal)
     if not record or record.State == "Dead" then return false, "not_active" end
     self:MarkAggro(record, attacker, "Damaged")
     record.Health = math.max(0, (record.Health or record.MaxHealth or 80) - (amount or 10))
     if record.Instance then record.Instance:SetAttribute("Health", record.Health) end
+    if suppressFightSignal ~= true then
+        self:StampNearbyReaction(record, self.FightReactionRadius, "FightSignal", {
+            NearbyFightTarget = record.Instance and record.Instance.Name or "NPC",
+        }, {
+            TargetInstance = record.Instance,
+            TargetRecord = record,
+        })
+    end
     if record.Health <= 0 then
         return self:Transition(record, "Dead")
     end
@@ -884,7 +892,7 @@ function NPCService:AttackRecord(attacker, target)
         TargetRecord = target,
     })
     self:Transition(attacker, "Attack")
-    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12, attacker)
+    return self:DamageRecord(target, attacker.Damage or self:GetKindProfile(attacker.Kind).Damage or 12, attacker, true)
 end
 
 function NPCService:FindNearestRecord(record, kind, maxDistance)
@@ -1276,11 +1284,85 @@ function NPCService:ClearReactionIntent(record, reason)
     end
 end
 
+function NPCService:StampAmbientIntent(record, intent, target, distance, reason)
+    if not record then return false, "missing_record" end
+    record.Intent = intent
+    record.IntentTarget = target
+    record.IntentDistance = distance
+    record.IntentReason = reason
+    record.IntentStampedAt = os.clock()
+    if record.Instance then
+        record.Instance:SetAttribute("NPCIntent", intent or "")
+        record.Instance:SetAttribute("NPCIntentTarget", target and target.Name or "")
+        record.Instance:SetAttribute("NPCIntentDistance", distance or 0)
+        record.Instance:SetAttribute("NPCIntentReason", reason or "")
+        record.Instance:SetAttribute("NPCIntentStampedAt", record.IntentStampedAt)
+    end
+    return true
+end
+
 function NPCService:FindNearestEdibleFood(record, maxDistance)
     local diet = self:GetRecordDiet(record)
     return self:FindNearestTagged(record, "FoodSource", maxDistance or self.SenseDistance, function(candidate)
         return candidate:GetAttribute("Depleted") ~= true and self:CanEatDiet(diet, candidate:GetAttribute("Diet"))
     end)
+end
+
+function NPCService:FindNearestWater(record, maxDistance)
+    return self:FindNearestTagged(record, "WaterSource", maxDistance or self.SenseDistance)
+end
+
+function NPCService:MarkNearbyWaterIntent(record, maxDistance)
+    local water, distance = self:FindNearestWater(record, maxDistance or self.SenseDistance)
+    if not water then return false, "missing_water" end
+    record.WaterTarget = water
+    if record.Instance then
+        record.Instance:SetAttribute("WaterTarget", water.Name)
+        record.Instance:SetAttribute("WaterDistance", distance or 0)
+    end
+    local intent = (record.Thirst or 100) < 70 and "SeekWater" or "NoticeWater"
+    return self:StampAmbientIntent(record, intent, water, distance, "NearbyWater")
+end
+
+function NPCService:MarkNearbyFoodIntent(record, maxDistance)
+    local food, distance = self:FindNearestEdibleFood(record, maxDistance or self.SenseDistance)
+    if not food then return false, "missing_food" end
+    record.FoodTarget = food
+    if record.Instance then
+        record.Instance:SetAttribute("FoodTarget", food.Name)
+        record.Instance:SetAttribute("FoodTargetDiet", self:GetRecordDiet(record))
+        record.Instance:SetAttribute("FoodDistance", distance or 0)
+    end
+    local intent = (record.Hunger or 100) < 70 and "SeekFood" or "NoticeFood"
+    return self:StampAmbientIntent(record, intent, food, distance, "NearbyFood")
+end
+
+function NPCService:MarkNearbyMateIntent(record, maxDistance)
+    local mate, distance = self:FindNearestSocialMate(record, maxDistance or self.MateReactionRadius)
+    if not mate then return false, "missing_mate" end
+    record.MateTarget = mate.Instance
+    if record.Instance then
+        record.Instance:SetAttribute("MateTarget", mate.Instance and mate.Instance.Name or "")
+        record.Instance:SetAttribute("MateDistance", distance or 0)
+    end
+    return self:StampAmbientIntent(record, "SocialMate", mate.Instance, distance, "CompatibleMateNearby")
+end
+
+function NPCService:MarkFightIntent(record)
+    if not record or not record.AggroUntil or os.clock() > record.AggroUntil then return false, "no_aggro" end
+    local target = record.AggroTargetInstance or (record.AggroTargetRecord and record.AggroTargetRecord.Instance)
+    return self:StampAmbientIntent(record, "FightBack", target, nil, record.AggroReason or "RecentDamage")
+end
+
+function NPCService:AssessAmbientIntent(record)
+    if not record or record.State == "Dead" then return false, "not_active" end
+    if self:MarkFightIntent(record) then return true end
+    if (record.Thirst or 100) < 75 and self:MarkNearbyWaterIntent(record, self.SenseDistance) then return true end
+    if (record.Hunger or 100) < 75 and self:MarkNearbyFoodIntent(record, self.SenseDistance) then return true end
+    if self:MarkNearbyMateIntent(record, self.MateReactionRadius) then return true end
+    if self:MarkNearbyWaterIntent(record, self.InteractDistance * 2) then return true end
+    if self:MarkNearbyFoodIntent(record, self.InteractDistance * 2) then return true end
+    return false, "no_interest"
 end
 
 function NPCService:HandleReactionIntent(record)
@@ -1380,6 +1462,7 @@ function NPCService:TickBrain(record, players, deltaSeconds)
         self:Transition(record, "Wander")
     end
     self:ApplyNeeds(record, deltaSeconds)
+    self:AssessAmbientIntent(record)
 
     local fightBackOk = self:HandleFightBack(record, players)
     if fightBackOk then return true end

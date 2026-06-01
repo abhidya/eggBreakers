@@ -128,6 +128,42 @@ table.insert(suite.tests, { name = "nearby NPCs react to fight events in playabl
     resetNPCs()
 end })
 
+table.insert(suite.tests, { name = "nearby same-species NPCs react to mating events in playable loop", run = function()
+    resetNPCs()
+    local first = makeNPC("LoopMateFirstOviraptorNPC", Vector3.new(0, 3, 0))
+    local second = makeNPC("LoopMateSecondOviraptorNPC", Vector3.new(12, 3, 0))
+    local bystander = makeNPC("LoopMateBystanderOviraptorNPC", Vector3.new(50, 3, 0))
+
+    local _, firstRecord = NPCService:Register(first, "Omnivore")
+    local _, secondRecord = NPCService:Register(second, "Omnivore")
+    local _, bystanderRecord = NPCService:Register(bystander, "Omnivore")
+    firstRecord.Hatched = true
+    secondRecord.Hatched = true
+    bystanderRecord.Hatched = true
+    firstRecord.Hunger = 90
+    firstRecord.Thirst = 90
+    secondRecord.Hunger = 90
+    secondRecord.Thirst = 90
+    bystanderRecord.Hunger = 90
+    bystanderRecord.Thirst = 90
+    firstRecord.Herding = false
+    secondRecord.Herding = false
+    bystanderRecord.Herding = false
+
+    NPCService:TickBrain(firstRecord, {}, 1)
+    Assert.equals(firstRecord.State, "Mate", "healthy matching NPC enters mating beat")
+    Assert.equals(first:GetAttribute("MateTarget"), "LoopMateSecondOviraptorNPC", "mating target is stamped")
+    Assert.equals(bystander:GetAttribute("LastReaction"), "MateSignal", "nearby same-species NPC notices mating event")
+    Assert.equals(bystander:GetAttribute("ReactionIntent"), "SocialMate", "mating reaction records social intent")
+
+    NPCService:TickBrain(bystanderRecord, {}, 1)
+    Assert.equals(bystanderRecord.State, "Mate", "mating signal pulls bystander into social beat")
+    Assert.equals(bystander:GetAttribute("ReactionConsumed"), "Mate", "mating reaction is consumed by movement")
+
+    first:Destroy(); second:Destroy(); bystander:Destroy()
+    resetNPCs()
+end })
+
 table.insert(suite.tests, { name = "validated shallow water is drinkable while deep water is not", run = function()
     local player = MockPlayer.new(49003, "LoopWater")
     RateLimitService:ClearPlayer(player)
