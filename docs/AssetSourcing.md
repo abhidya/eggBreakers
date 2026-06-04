@@ -40,6 +40,17 @@ To prevent low-quality CSG primitives, broken collision meshes, or unrated place
 ### Non-destructive import pipeline
 `Creator Store search → insert primary result → sanitize (strip scripts & looped audio) → tag (SourceAssetId + AssetManifestId) → move to ReplicatedStorage.ImportedAssetLibrary → run AssetAuditService verification.`
 
+### Current sourcing rule
+Use the custom `asset-search` MCP for all Creator Store discovery, curation,
+claim/reject memory, and palette decisions. Do not use Studio search as the
+search surface. StudioMCP is reserved for inserting, measuring, grounding,
+sanitizing, and screenshot-reviewing assets that were already selected through
+the custom search MCP.
+
+After placement, run player-angle screenshot review. Assets that fail from the
+player path must be rejected or replaced, even when catalog metadata, import
+success, and bounding boxes passed.
+
 ---
 
 ## 2. Place-File Diagnostic & Species-Nomenclature Findings (from walkthrough)
