@@ -30,6 +30,7 @@ function FishService:CreateFishSource(water, name, offset)
     fish.CanTouch = false
     fish.CanQuery = true
     fish.Color = Color3.fromRGB(70, 130, 180)
+    fish.Material = Enum.Material.SmoothPlastic
     local localOffset = offset or Vector3.new(0, 0, 0)
     fish.Position = center + Vector3.new(
         math.clamp(localOffset.X, -size.X / 2, size.X / 2),
@@ -42,6 +43,11 @@ function FishService:CreateFishSource(water, name, offset)
     fish:SetAttribute("RespawnCooldownSeconds", self.DefaultRespawnSeconds)
     fish:SetAttribute("WaterSource", water.Name)
     fish:SetAttribute("Depleted", false)
+    fish:SetAttribute("ProceduralGameplayVisual", true)
+    fish:SetAttribute("VisibleGameplayAffordance", true)
+    fish:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    fish:SetAttribute("ReleaseVisibleGeneratedPartReason", "Server-authored fish food affordance; source asset id can be attached by story/palette builders.")
+    fish:SetAttribute("FloatingAllowed", true)
     fish.Parent = self:GetFolder()
     CollectionService:AddTag(fish, "FoodSource")
     CollectionService:AddTag(fish, self.FishTag)

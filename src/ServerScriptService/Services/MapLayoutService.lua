@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 local ZoneConfig = require(ReplicatedStorage.Shared.ZoneConfig)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local SwampDeltaStoryboard = require(ReplicatedStorage.Shared.SwampDeltaStoryboard)
 
 local MapLayoutService = {}
 MapLayoutService.MapFolderName = "Map"
@@ -162,10 +163,13 @@ end
 MapLayoutService.FoliageVisualName = "EdibleFoliageVisual"
 MapLayoutService.ImportedFoodVisualName = "ImportedFoodVisual"
 MapLayoutService.ImportedAssetLibraryName = "ImportedAssetLibrary"
+MapLayoutService.ShallowWaterMarkerTransparency = 0.78
 
 MapLayoutService.HerbivoreFoliageColor = Color3.fromRGB(86, 168, 78)
 MapLayoutService.CarnivoreCarcassColor = Color3.fromRGB(122, 60, 48)
 MapLayoutService.CarcassBoneColor = Color3.fromRGB(218, 205, 174)
+MapLayoutService.ImportedFoodVisualMaxFlatPanelExtent = 18
+MapLayoutService.ImportedFoodVisualThinPanelExtent = 0.35
 
 local function configureFoodAffordance(part, restoreTransparency)
     part.Anchored = true
@@ -217,6 +221,30 @@ local function hasVisibleBasePart(instance)
     return instance:FindFirstChildWhichIsA("BasePart", true) ~= nil
 end
 
+local function isOversizedThinPanel(part, maxLargeExtent, thinExtent)
+    if not part:IsA("BasePart") then return false end
+    local size = part.Size
+    local maxExtent = math.max(size.X, size.Y, size.Z)
+    local minExtent = math.min(size.X, size.Y, size.Z)
+    local midExtent = size.X + size.Y + size.Z - maxExtent - minExtent
+    return minExtent <= thinExtent and maxExtent >= maxLargeExtent and midExtent >= 8
+end
+
+function MapLayoutService:HasOversizedFlatPanelFoodVisual(instance)
+    if not instance then return false end
+    if instance:IsA("BasePart")
+        and isOversizedThinPanel(instance, self.ImportedFoodVisualMaxFlatPanelExtent, self.ImportedFoodVisualThinPanelExtent) then
+        return true
+    end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart")
+            and isOversizedThinPanel(descendant, self.ImportedFoodVisualMaxFlatPanelExtent, self.ImportedFoodVisualThinPanelExtent) then
+            return true
+        end
+    end
+    return false
+end
+
 local function lowerContains(value, token)
     if type(value) ~= "string" or type(token) ~= "string" then return false end
     return string.find(string.lower(value), string.lower(token), 1, true) ~= nil
@@ -224,6 +252,9 @@ end
 
 function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
     if not (instance and (instance:IsA("Model") or instance:IsA("BasePart")) and hasVisibleBasePart(instance)) then
+        return false
+    end
+    if self:HasOversizedFlatPanelFoodVisual(instance) then
         return false
     end
     if instance:GetAttribute("ImportedFoodVisualTemplate") == true or instance:GetAttribute("FoodVisualTemplate") == true then
@@ -336,6 +367,14 @@ function MapLayoutService:AttachImportedFoodVisual(queryPart, opts)
 
     local clone = source:Clone()
     self:SanitizeImportedFoodVisualClone(clone, source, queryPart)
+    if self:HasOversizedFlatPanelFoodVisual(clone) then
+        clone:Destroy()
+        queryPart:SetAttribute("ImportedFoodVisualAttached", false)
+        queryPart:SetAttribute("ImportedFoodVisualTemplate", nil)
+        queryPart:SetAttribute("ImportedFoodVisualRejected", true)
+        queryPart:SetAttribute("ImportedFoodVisualRejectReason", "oversized_flat_panel_food_visual")
+        return nil
+    end
     clone.Parent = queryPart
     if clone:IsA("Model") then
         if not clone.PrimaryPart then
@@ -1006,11 +1045,12 @@ function MapLayoutService:EnsureShallowWaterMarker(folders, water)
         marker.CanCollide = false
         marker.CanTouch = true
         marker.CanQuery = true
-        marker.Material = Enum.Material.Glass
-        marker.Color = Color3.fromRGB(58, 137, 184)
-        marker.Transparency = 0.35
         marker.Parent = folders.WaterSources
     end
+    marker.Material = Enum.Material.Glass
+    marker.Color = Color3.fromRGB(58, 137, 184)
+    marker.Transparency = self.ShallowWaterMarkerTransparency
+    marker.CastShadow = false
     marker.Position = water.center
     marker.Size = water.size
     marker:SetAttribute("ShallowWater", true)
@@ -1352,6 +1392,152 @@ function MapLayoutService:EnsureBiomeDressing(folders)
     return folders.BiomeDressing
 end
 
+local function tryRequireFishService()
+    local services = game:GetService("ServerScriptService"):FindFirstChild("Services")
+    local module = services and services:FindFirstChild("FishService")
+    if not module then return nil end
+    local ok, service = pcall(require, module)
+    if ok then return service end
+    return nil
+end
+
+function MapLayoutService:ApplyStoryboardAssetAttributes(instance, slotName, asset)
+    instance:SetAttribute("StoryBeatId", SwampDeltaStoryboard.BeatId)
+    instance:SetAttribute("StoryboardSlot", slotName)
+    instance:SetAttribute("StoryboardSourceAssetId", asset.sourceAssetId)
+    instance:SetAttribute("StoryboardAssetName", asset.name)
+    instance:SetAttribute("StoryboardAssetQuery", asset.query)
+    instance:SetAttribute("StoryboardAssetSource", asset.source)
+    instance:SetAttribute("StoryboardScriptRisk", asset.scriptRisk)
+    instance:SetAttribute("StoryAssetValidationState", SwampDeltaStoryboard.ValidationState)
+    instance:SetAttribute("AssetBackedStoryboardProxy", true)
+    instance:SetAttribute("NeedsStudioAssetInspection", true)
+    instance:SetAttribute("NeedsPlayerAngleScreenshot", true)
+    instance:SetAttribute("CreatorStoreOnly", nil)
+    instance:SetAttribute("ImportedVisibleAsset", nil)
+    instance:SetAttribute("SourceAssetId", nil)
+    instance:SetAttribute("AssetManifestId", nil)
+end
+
+function MapLayoutService:ApplyVisibleStoryboardProxy(part, releaseReason)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part:SetAttribute("ProceduralGameplayVisual", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartReason", releaseReason)
+    part:SetAttribute("VisibleGameplayAffordance", true)
+    part:SetAttribute("Decorative", true)
+    part:SetAttribute("FloatingAllowed", true)
+    part:SetAttribute("GroundTopY", self.ZoneTerrain.SwampDelta.topY)
+end
+
+function MapLayoutService:EnsureSwampDeltaStoryboard(folders)
+    folders = folders or self:EnsureMapFolders()
+
+    local storyboardRoot = self:GetOrCreateFolder(self:GetOrCreateFolder(folders.Map, "Storyboards"), "SwampDeltaOxygenFish")
+    storyboardRoot:SetAttribute("StoryBeatId", SwampDeltaStoryboard.BeatId)
+    storyboardRoot:SetAttribute("DisplayName", SwampDeltaStoryboard.DisplayName)
+    storyboardRoot:SetAttribute("SourceDocument", SwampDeltaStoryboard.SourceDocument)
+    storyboardRoot:SetAttribute("CacheManifest", SwampDeltaStoryboard.CacheManifest)
+    storyboardRoot:SetAttribute("SearchPolicy", "custom_asset_search_mcp_only")
+    storyboardRoot:SetAttribute("ValidationState", SwampDeltaStoryboard.ValidationState)
+    storyboardRoot:SetAttribute("NeedsPlayerAngleScreenshot", true)
+    storyboardRoot:SetAttribute("RequiredVerdict", SwampDeltaStoryboard.PlayerAngleReview.requiredVerdict)
+
+    local deferredFolder = self:GetOrCreateFolder(storyboardRoot, "RejectedOrDeferredCandidates")
+    for _, item in ipairs(SwampDeltaStoryboard.RejectedOrDeferred) do
+        local marker = deferredFolder:FindFirstChild("Asset_" .. item.sourceAssetId)
+        if not marker then
+            marker = Instance.new("Folder")
+            marker.Name = "Asset_" .. item.sourceAssetId
+            marker.Parent = deferredFolder
+        end
+        marker:SetAttribute("SourceAssetId", item.sourceAssetId)
+        marker:SetAttribute("AssetName", item.name)
+        marker:SetAttribute("RejectOrDeferReason", item.reason)
+    end
+
+    local safeFolder = self:GetOrCreateFolder(storyboardRoot, "OxygenSafeNodes")
+    local lilyAsset = SwampDeltaStoryboard.Assets.LilyPad
+    for _, node in ipairs(SwampDeltaStoryboard.SafeNodes) do
+        local pad = safeFolder:FindFirstChild(node.name)
+        if not pad then
+            pad = Instance.new("Part")
+            pad.Name = node.name
+            pad.Parent = safeFolder
+        end
+        local radius = node.radius * self.CompactLayout.scaleXZ
+        pad.Shape = Enum.PartType.Cylinder
+        pad.Size = Vector3.new(radius * 2, 0.35, radius * 2)
+        pad.Position = self:CompactPosition(node.position)
+        pad.Color = Color3.fromRGB(82, 144, 76)
+        pad.Material = Enum.Material.Grass
+        pad.Transparency = 0.08
+        pad:SetAttribute("SwampOxygenSafeNode", true)
+        pad:SetAttribute("OxygenReliefPerSecond", node.oxygenRelief)
+        pad:SetAttribute("ZoneId", "SwampDelta")
+        self:ApplyVisibleStoryboardProxy(pad, "Cache-backed water-lily safe node proxy awaiting Creator Store asset insertion and player-angle review.")
+        self:ApplyStoryboardAssetAttributes(pad, "beat5.swamp_delta.lilypad", lilyAsset)
+    end
+
+    local apexAsset = SwampDeltaStoryboard.Assets.SpinosaurusSilhouette
+    local apex = storyboardRoot:FindFirstChild(SwampDeltaStoryboard.ApexWarning.name)
+    if not apex then
+        apex = Instance.new("Part")
+        apex.Name = SwampDeltaStoryboard.ApexWarning.name
+        apex.Parent = storyboardRoot
+    end
+    local apexPosition = self:CompactPosition(SwampDeltaStoryboard.ApexWarning.position)
+    local apexSize = SwampDeltaStoryboard.ApexWarning.size
+    apex.Shape = Enum.PartType.Block
+    apex.Size = Vector3.new(apexSize.X * self.CompactLayout.scaleXZ, apexSize.Y, apexSize.Z * self.CompactLayout.scaleXZ)
+    apex.CFrame = CFrame.new(apexPosition) * CFrame.Angles(0, math.rad(SwampDeltaStoryboard.ApexWarning.yawDegrees or 0), 0)
+    apex.Color = Color3.fromRGB(54, 72, 62)
+    apex.Material = Enum.Material.Slate
+    apex.Transparency = 0.18
+    apex:SetAttribute("ApexWarning", true)
+    apex:SetAttribute("ZoneId", "SwampDelta")
+    apex:SetAttribute("InteractionHint", "A heavy wake cuts across the reeds")
+    self:ApplyVisibleStoryboardProxy(apex, "Cache-backed Spinosaurus silhouette proxy; final NPC/model asset must pass script audit and player-angle screenshots.")
+    self:ApplyStoryboardAssetAttributes(apex, "beat5.swamp_delta.spinosaurus", apexAsset)
+
+    local fishService = tryRequireFishService()
+    local fishAsset = SwampDeltaStoryboard.Assets.Fish
+    local fishFolder = fishService and fishService:GetFolder()
+    for _, fishSpec in ipairs(SwampDeltaStoryboard.FishSources) do
+        local water = folders.WaterSources:FindFirstChild(fishSpec.waterName)
+        local fish = fishFolder and fishFolder:FindFirstChild(fishSpec.name)
+        if fishService and water then
+            local offset = Vector3.new(
+                fishSpec.offset.X * self.CompactLayout.scaleXZ,
+                fishSpec.offset.Y,
+                fishSpec.offset.Z * self.CompactLayout.scaleXZ
+            )
+            if fish then
+                fishService:MoveWithinWater(fish, water, offset)
+            else
+                fish = fishService:CreateFishSource(water, fishSpec.name, offset)
+            end
+            if fish then
+                fish:SetAttribute("ZoneId", "SwampDelta")
+                fish:SetAttribute("StoryboardWaterName", fishSpec.waterName)
+                fish:SetAttribute("SwampDeltaStoryboardFish", true)
+                self:ApplyStoryboardAssetAttributes(fish, "beat5.swamp_delta.fish", fishAsset)
+            end
+        end
+    end
+
+    local review = SwampDeltaStoryboard.PlayerAngleReview
+    storyboardRoot:SetAttribute("ReviewSpaceId", review.spaceId)
+    storyboardRoot:SetAttribute("ReviewEntry", tostring(self:CompactPosition(review.entry)))
+    storyboardRoot:SetAttribute("ReviewCenter", tostring(self:CompactPosition(review.center)))
+    storyboardRoot:SetAttribute("ReviewLookAt", tostring(self:CompactPosition(review.lookAt)))
+    storyboardRoot:SetAttribute("ReviewQuadrants", table.concat(review.quadrants, ","))
+    return storyboardRoot
+end
+
 function MapLayoutService:IsLiveCarnivoreFoodKind(kind)
     return kind == "Prey" or kind == "AerialPrey" or kind == "FlyingPrey"
 end
@@ -1549,6 +1735,7 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureFoodSourcePlacements(folders)
     self:EnsureFoodSources()
     self:EnsureBiomeDressing(folders)
+    self:EnsureSwampDeltaStoryboard(folders)
     self:EnsureNPCSpawnMarkers(folders)
     self:EnsureTutorialCombatTarget(folders)
     self:EnsureCityDiscoveryTriggers(folders)
