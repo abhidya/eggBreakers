@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 90831730084593,
+  "shard": "908",
+  "name": "🗑️ Rubble City Ruins Dumpster Debris Destroyed",
+  "category": "Model",
+  "creator": "XZ_LionO7Cryptz7Shad",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 1,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat7.city.ruins",
+  "beat": null,
+  "role": null,
+  "query": "city ruins",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

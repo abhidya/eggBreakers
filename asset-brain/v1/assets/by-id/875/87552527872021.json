@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 87552527872021,
+  "shard": "875",
+  "name": "🚦 Squid Game Red Light Green Light Map RP",
+  "category": "Model",
+  "creator": "Naamogg0811",
+  "score": 86.29344562222101,
+  "hasScripts": true,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": null,
+  "beat": null,
+  "role": null,
+  "query": null,
+  "queryKey": "q=nursery grove character morph|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

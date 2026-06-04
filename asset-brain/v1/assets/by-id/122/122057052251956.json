@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 122057052251956,
+  "shard": "122",
+  "name": "Studded Rock Decor Cliff Nature Outdoor",
+  "category": "Model",
+  "creator": "AmeliaRider2421",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 1,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat6.redstone_canyon.rocks",
+  "beat": null,
+  "role": null,
+  "query": "cliff",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

@@ -1,0 +1,1 @@
+{"schema":"roblox-asset-enrichment/v1","assetId":12630982706,"sourceLayers":["live_mcp_curate_assets"],"storyboardSlot":"beat1.food.plant_pack","beat":"Beat 1","role":"forage scatter pack","query":"low poly plant","visual":{"screenshotVerdict":"not_reviewed","visualRiskScore":null,"visualRisks":[]},"validationState":"needs_studio_geometry_script_audit_and_player_angle_review"}

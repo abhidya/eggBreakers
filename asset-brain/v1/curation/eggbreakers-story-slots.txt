@@ -1,0 +1,192 @@
+## slot 'beat0.egg_wakeup.nest'  query='dinosaur egg'
+1. Dinosaur Egg of Extinct (ID: 240666886)
+   category=Model creator=willojira score=75 votes=0 tris=2160
+2. Egg For dinosaur simulator (ID: 708850786)
+   category=Model creator=Carcasao score=75 votes=0 tris=1520
+3. Auquatic Creature Eggs for Dinosaur Simulator (ID: 423991750)
+   category=Model creator=okayrocki score=75 votes=0 tris=46542
+
+## slot 'beat0.egg_wakeup.nest_detail'  query='egg nest'
+1. New Eggs of the Nest (ID: 104497410410577)
+   category=Model creator=lotakune score=75 votes=0 tris=2432
+2. Theropod Nest + Theropod eggs (ID: 463710364)
+   category=Model creator=Dogetta score=75 votes=0 tris=1006
+3. Sauropod Nest + Sauropod eggs (ID: 463709089)
+   category=Model creator=Dogetta score=75 votes=0 tris=954
+
+## slot 'beat0.egg_wakeup.hatchling_mesh'  query='baby dinosaur'
+1. Blue (ID: 2167783289)
+   category=Model creator=captain_ducktape score=75 votes=0 tris=15455
+2. Baby Carnotaurus (ID: 6185104172)
+   category=Model creator=dimdarkness0 score=75 votes=0 tris=20794
+3. Patrickasaurus (ID: 5443261863)
+   category=MeshPart creator=bubblegal112 score=75 votes=0
+
+## slot 'beat1.food.herbivore_fern'  query='fern'
+1. Fern Bush (ID: 7979002756)
+   category=Model creator=TheLegoGuy137 score=109.1 votes=60 tris=118
+2. Realisitc Fern (ID: 434184732)
+   category=Model creator=Mistertitanic44 score=104.6 votes=40 tris=0
+3. Patente na cabeca para nossa eb :) fernandinhobr (ID: 12173453659)
+   category=Model creator=fernandinhobr01 score=86.1 votes=30 tris=0 SCRIPT_REVIEW
+
+## slot 'beat1.food.plant_pack'  query='low poly plant'
+1. Low-Poly Plants Pack (ID: 12630982706)
+   category=Model creator=DOSTO777 score=109.6 votes=40 tris=33425
+2. Low Poly Plant Pack (ID: 2915526744)
+   category=Model creator=BL00MIE score=97.3 votes=20 tris=28457
+3. low poly potted plant (ID: 9253654788)
+   category=Model creator=ATOMICRAVI0LI score=75 votes=0 tris=5154
+
+## slot 'beat1.food.carnivore_carcass'  query='animal carcass'
+1. Dead rat (ID: 3414358748)
+   category=Model creator=YellowCoolPokemonMan score=76.9 votes=80 tris=332
+2. Honestly (ID: 3943514194)
+   category=Model creator=iamcool214re score=75 votes=0 tris=332
+3. Gaster Blaster Closed Tough (ID: 119531396484206)
+   category=MeshPart creator=wqeWARESF score=75 votes=0
+
+## slot 'beat1.food.bone_fallback'  query='bone'
+1. Synty Dungeon Pack: Skeletons & Bones (ID: 6934081776)
+   category=Model creator=Roblox score=134 votes=400 tris=72801
+2. Dog Bone (ID: 1894867381)
+   category=Model creator=JapchaeSeonsaengnim score=102.8 votes=40 tris=1824
+3. rigged crocodile with bone system (ID: 6806168763)
+   category=Model creator=908KS_RKO score=98.2 votes=20 tris=21000
+
+## slot 'beat1.food.drinkable_water'  query='water pond'
+1. Luigi's Mansion (ID: 10045874583)
+   category=MeshPart creator=COLTON_CJF score=75 votes=0
+2. old background screen (ID: 18638079602)
+   category=MeshPart creator=drmanni score=70 votes=0
+3. Tornado customizable (ID: 6880772899)
+   category=MeshPart creator=iPulsefiiire score=70 votes=0
+
+## slot 'beat2.fern_plains.herd'  query='rigged dinosaur models'
+1. Rigged Dinosaur Models (ID: 18759347676)
+   category=Model creator=happydinos115 score=124.4 votes=200 tris=1680433
+2. DINOSAUR PACK! (ID: 430905421)
+   category=Model creator=ExecutiveKrab score=98 votes=50 tris=9956 SCRIPT_REVIEW
+3. Rigged Dinosaur Models 2 (ID: 129426942556570)
+   category=Model creator=happydinos115 score=96.9 votes=20 tris=1373735
+
+## slot 'beat2.fern_plains.predator'  query='velociraptor'
+1. Jurassic World - Ridable Velociraptor (ID: 248223518)
+   category=Model creator=Roblox score=98 votes=50 tris=2560 SCRIPT_REVIEW
+2. Velociraptor (ID: 281912567)
+   category=Model creator=Hakusuro score=85.5 votes=10 tris=27300 SCRIPT_REVIEW
+3. Jurassic Park Male Velociraptor NPC (ID: 1320554267)
+   category=Model creator=GlacialOwl score=77.4 votes=10 tris=2164 SCRIPT_REVIEW
+
+## slot 'beat3.growth.role_reveal_vfx'  query='sparkle aura'
+1. Ice spikes (ID: 967645239)
+   category=MeshPart creator=Cobleth score=75 votes=0
+2. particle magic glow sparkle aura blast effect (ID: 119164855832816)
+   category=Model creator=DarkRiftLucky2012 score=70 votes=0
+3. FX Pack Effects Sparkle Glow Magic Blast Aura (ID: 80757861006305)
+   category=Model creator=FlashEcho61912 score=70 votes=0
+
+## slot 'beat4.jungle_basin.vines'  query='jungle vine'
+1. Realistic Tree Tropical Jungle Oak with Vines (ID: 122280174982594)
+   category=Model creator=Letaij score=98 votes=10 tris=226560
+2. Another average plant (ID: 965844264)
+   category=MeshPart creator=Cobleth score=75 votes=0
+3. Average plant (ID: 965843717)
+   category=MeshPart creator=Cobleth score=75 votes=0
+
+## slot 'beat4.jungle_basin.sound_cue'  query='dinosaur roar'
+1. Jurassic Park Tyrannosaurus CSG model (ID: 344514273)
+   category=Model creator=Deadeyeguy_45 score=94 votes=10 tris=16050
+2. Giganotosaurus -dinosaur (ID: 855368632)
+   category=Model creator=Reset3183980 score=75 votes=0 tris=642620
+3. Proceratosaurus (Jurassic Park & World) (ID: 984698485)
+   category=MeshPart creator=OrangestFox score=75 votes=0
+
+## slot 'beat5.swamp_delta.reeds_lilypad'  query='swamp tree'
+1. Dead Swamp Tree (ID: 543827347)
+   category=Model creator=AstralCore score=89.5 votes=10 tris=9312
+2. Swamp Trees (ID: 18986634714)
+   category=Model creator=Greentender_bacon08 score=75 votes=0 tris=15930
+3. Swamp Trees (ID: 432559636)
+   category=Model creator=BUGG456 score=75 votes=0 tris=15930
+
+## slot 'beat5.swamp_delta.lilypad'  query='water lily'
+1. Bridge over a Pond of Water Lilies by Claude Monet (ID: 75850368020021)
+   category=Model creator=Claudaire score=75 votes=0 tris=106
+2. Venusaur Doll (ID: 458900702)
+   category=MeshPart creator=Bubby_Blocker score=75 votes=0
+3. Water Lily (ID: 708797531)
+   category=Model creator=Gargeodd score=70 votes=0 tris=23576
+
+## slot 'beat5.swamp_delta.fish'  query='fish'
+1. Fish (ID: 1725227984)
+   category=Model creator=username723844789 score=119.8 votes=200 tris=672
+2. Swimming Fish (ID: 12261121165)
+   category=Model creator=ComicalBedBug score=117.7 votes=200 tris=6480 SCRIPT_REVIEW
+3. [RECTANGLE] FISH TANK (ID: 1864520521)
+   category=Model creator=grrrays score=115.2 votes=80 tris=87670
+
+## slot 'beat5.swamp_delta.spinosaurus'  query='spinosaurus'
+1. Spinosaurus ( OLD ) (ID: 5434115710)
+   category=Model creator=Anarchy_Temper score=98 votes=10 tris=415614
+2. Spinosaurus NPC (WORKS ON BOTH R6 & R15) (ID: 8920161016)
+   category=Model creator=steve13908 score=92 votes=20 tris=22384 SCRIPT_REVIEW
+3. Spinosaurus npc (ID: 2989814926)
+   category=Model creator=jordanisgreat5 score=82.3 votes=10 tris=309906 SCRIPT_REVIEW
+
+## slot 'beat6.redstone_canyon.rocks'  query='red canyon'
+1. Red Desert Hills Skybox (ID: 228255587)
+   category=Model creator=TheSkyboxMaker score=75 votes=0 tris=0
+2. 3cp_powerhouse TC2 (ID: 95247408994117)
+   category=Model creator=RabblinRouser score=75 votes=0
+3. {Skybox} Painted Dust skybox (Canyon) Original (ID: 164561025)
+   category=Model creator=karatebrandon44 score=70 votes=0 tris=0
+
+## slot 'beat6.redstone_canyon.fossils'  query='dinosaur fossil'
+1. Dinosaur Fossil (ID: 577078767)
+   category=Model creator=ByMind score=94.4 votes=10 tris=10756
+2. Velociraptor female (Jurassic Park & World) (ID: 981164890)
+   category=MeshPart creator=OrangestFox score=75 votes=0
+3. dinosaur skeleton fossil bones museum rp (ID: 137420276606883)
+   category=Model creator=FlashZapGamer2010 score=70 votes=0
+
+## slot 'beat7.city.ruins'  query='city ruins'
+1. City 17 Ruins Skybox (ID: 408225227)
+   category=Model creator=TheSkyboxMaker score=99.3 votes=40 tris=0
+2. Spacecraft Engine Idle Constant Mild Roar 2 (SFX) (ID: 9119386571)
+   category=Audio creator=ProSoundEffects score=75 votes=0
+3. Industrial Presence 2 (SFX) (ID: 9112797280)
+   category=Audio creator=ProSoundEffects score=75 votes=0
+
+## slot 'beat7.city.wrecked_cars'  query='wrecked car'
+1. PBR Wrecked Car (ID: 8027653806)
+   category=Model creator=eatnoodls score=100.5 votes=20 tris=9998
+2. Car (ID: 16121800852)
+   category=MeshPart creator=Gamlans score=86.7 votes=10
+3. Wrecked Car 1 (ID: 9213436305)
+   category=Model creator=lamborghinifan11111 score=75 votes=0 tris=2390
+
+## slot 'system.ui.food_waypoint'  query='compass gui'
+1. Compass Gui (ID: 1653779126)
+   category=Model creator=Pipopapo023 score=91.2 votes=40 tris=0 SCRIPT_REVIEW
+2. Compass gui - xDragan! (ID: 11967723143)
+   category=Model creator=Sergeupro score=90.6 votes=30 tris=0 SCRIPT_REVIEW
+3. Compass GUI (ID: 1808937909)
+   category=Model creator=Vandicoup score=76 votes=10 tris=0 SCRIPT_REVIEW
+
+## slot 'system.lobby.guide_npc'  query='friendly npc'
+1. Friendly soldier NPC (ID: 9514179046)
+   category=Model creator=Aldar_Shonoev score=117.7 votes=200 tris=22705 SCRIPT_REVIEW
+2. Friendly Soldier NPC (ID: 13708942684)
+   category=Model creator=Daviidius score=107.2 votes=100 tris=116712 SCRIPT_REVIEW
+3. Friendly Soldier NPC (ID: 8669998570)
+   category=Model creator=LouBrawlerStars score=105.6 votes=90 tris=22705 SCRIPT_REVIEW
+
+## slot 'system.portal.biome_gate'  query='portal'
+1. Portal Gun (ID: 488366960)
+   category=Model creator=MuYhEt score=123.3 votes=500 tris=3992 SCRIPT_REVIEW
+2. Portal Gun Spawner (ID: 4779485676)
+   category=Model creator=alczvv score=120.6 votes=500 tris=4134 SCRIPT_REVIEW
+3. Minecraft Portal [WORKING] (ID: 6991952630)
+   category=Model creator=Tem4ik_Mem4ik score=118.2 votes=300 tris=1280 SCRIPT_REVIEW
+

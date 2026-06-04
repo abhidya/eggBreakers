@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 1894867381,
+  "shard": "189",
+  "name": "Dog Bone",
+  "category": "Model",
+  "creator": "JapchaeSeonsaengnim",
+  "score": 102.8,
+  "votes": 40,
+  "triangles": 1824,
+  "hasScripts": false,
+  "storyboardSlot": "beat1.food.bone_fallback",
+  "beat": "Beat 1",
+  "role": "safe carnivore food fallback",
+  "query": "bone",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

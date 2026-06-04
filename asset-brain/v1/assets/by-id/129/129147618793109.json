@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 129147618793109,
+  "shard": "129",
+  "name": "Pond Decor Garden Lily Water Fish Peaceful Koi FPS",
+  "category": "Model",
+  "creator": "WarpFCSparki177710",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 6,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat5.swamp_delta.reeds_lilypad",
+  "beat": null,
+  "role": null,
+  "query": "water lily",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

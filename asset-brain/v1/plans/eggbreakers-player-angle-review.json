@@ -1,0 +1,707 @@
+{
+  "project": "eggbreakers",
+  "review_mode": "player_angle",
+  "spaces": [
+    {
+      "id": "nursery_grove",
+      "name": "nursery_grove",
+      "type": "playable_space",
+      "center": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 0,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "egg_nest",
+        "first_food",
+        "first_water",
+        "safe_exit"
+      ],
+      "ui_states": []
+    },
+    {
+      "id": "fern_plains",
+      "name": "fern_plains",
+      "type": "playable_space",
+      "center": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 80,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "herd_view",
+        "predator_edge",
+        "cover_route",
+        "growth_rest"
+      ],
+      "ui_states": []
+    },
+    {
+      "id": "jungle_basin",
+      "name": "jungle_basin",
+      "type": "playable_space",
+      "center": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 160,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "vine_entry",
+        "call_cue",
+        "ambush_cover",
+        "food_shadow"
+      ],
+      "ui_states": []
+    },
+    {
+      "id": "swamp_delta",
+      "name": "swamp_delta",
+      "type": "playable_space",
+      "center": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 240,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "shoreline",
+        "lilypad",
+        "fish_channel",
+        "spino_exit"
+      ],
+      "ui_states": []
+    },
+    {
+      "id": "redstone_canyon",
+      "name": "redstone_canyon",
+      "type": "playable_space",
+      "center": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 320,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "fossil_bed",
+        "cliff_gate",
+        "apex_patrol",
+        "escape_route"
+      ],
+      "ui_states": []
+    },
+    {
+      "id": "apocalyptic_city",
+      "name": "apocalyptic_city",
+      "type": "playable_space",
+      "center": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "size": {
+        "x": 60,
+        "y": 20,
+        "z": 60
+      },
+      "entry": {
+        "x": 400,
+        "y": 7,
+        "z": -44
+      },
+      "look_at": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "quadrants": [
+        "street_entry",
+        "wreck_lane",
+        "ruin_landmark",
+        "old_eden_hint"
+      ],
+      "ui_states": []
+    }
+  ],
+  "rubric": [
+    "theme_accuracy",
+    "asset_density",
+    "orientation",
+    "scale",
+    "navigation",
+    "collision_playability",
+    "hide_and_seek_quality",
+    "multiplayer_flow",
+    "ui_ux",
+    "performance_safety",
+    "legacy_asset_pollution"
+  ],
+  "captures": [
+    {
+      "capture_id": "eggbreakers_nursery_grove_egg_nest_player",
+      "space_id": "nursery_grove",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "egg_nest"
+    },
+    {
+      "capture_id": "eggbreakers_nursery_grove_first_food_player",
+      "space_id": "nursery_grove",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "first_food"
+    },
+    {
+      "capture_id": "eggbreakers_nursery_grove_first_water_player",
+      "space_id": "nursery_grove",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "first_water"
+    },
+    {
+      "capture_id": "eggbreakers_nursery_grove_safe_exit_player",
+      "space_id": "nursery_grove",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 0,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 0,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "safe_exit"
+    },
+    {
+      "capture_id": "eggbreakers_fern_plains_herd_view_player",
+      "space_id": "fern_plains",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 80,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "herd_view"
+    },
+    {
+      "capture_id": "eggbreakers_fern_plains_predator_edge_player",
+      "space_id": "fern_plains",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 80,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "predator_edge"
+    },
+    {
+      "capture_id": "eggbreakers_fern_plains_cover_route_player",
+      "space_id": "fern_plains",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 80,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "cover_route"
+    },
+    {
+      "capture_id": "eggbreakers_fern_plains_growth_rest_player",
+      "space_id": "fern_plains",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 80,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 80,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "growth_rest"
+    },
+    {
+      "capture_id": "eggbreakers_jungle_basin_vine_entry_player",
+      "space_id": "jungle_basin",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 160,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "vine_entry"
+    },
+    {
+      "capture_id": "eggbreakers_jungle_basin_call_cue_player",
+      "space_id": "jungle_basin",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 160,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "call_cue"
+    },
+    {
+      "capture_id": "eggbreakers_jungle_basin_ambush_cover_player",
+      "space_id": "jungle_basin",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 160,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "ambush_cover"
+    },
+    {
+      "capture_id": "eggbreakers_jungle_basin_food_shadow_player",
+      "space_id": "jungle_basin",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 160,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 160,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "food_shadow"
+    },
+    {
+      "capture_id": "eggbreakers_swamp_delta_shoreline_player",
+      "space_id": "swamp_delta",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 240,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "shoreline"
+    },
+    {
+      "capture_id": "eggbreakers_swamp_delta_lilypad_player",
+      "space_id": "swamp_delta",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 240,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "lilypad"
+    },
+    {
+      "capture_id": "eggbreakers_swamp_delta_fish_channel_player",
+      "space_id": "swamp_delta",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 240,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "fish_channel"
+    },
+    {
+      "capture_id": "eggbreakers_swamp_delta_spino_exit_player",
+      "space_id": "swamp_delta",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 240,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 240,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "spino_exit"
+    },
+    {
+      "capture_id": "eggbreakers_redstone_canyon_fossil_bed_player",
+      "space_id": "redstone_canyon",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 320,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "fossil_bed"
+    },
+    {
+      "capture_id": "eggbreakers_redstone_canyon_cliff_gate_player",
+      "space_id": "redstone_canyon",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 320,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "cliff_gate"
+    },
+    {
+      "capture_id": "eggbreakers_redstone_canyon_apex_patrol_player",
+      "space_id": "redstone_canyon",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 320,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "apex_patrol"
+    },
+    {
+      "capture_id": "eggbreakers_redstone_canyon_escape_route_player",
+      "space_id": "redstone_canyon",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 320,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 320,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "escape_route"
+    },
+    {
+      "capture_id": "eggbreakers_apocalyptic_city_street_entry_player",
+      "space_id": "apocalyptic_city",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 400,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "street_entry"
+    },
+    {
+      "capture_id": "eggbreakers_apocalyptic_city_wreck_lane_player",
+      "space_id": "apocalyptic_city",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 400,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "wreck_lane"
+    },
+    {
+      "capture_id": "eggbreakers_apocalyptic_city_ruin_landmark_player",
+      "space_id": "apocalyptic_city",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 400,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "ruin_landmark"
+    },
+    {
+      "capture_id": "eggbreakers_apocalyptic_city_old_eden_hint_player",
+      "space_id": "apocalyptic_city",
+      "kind": "player_height_quadrant",
+      "camera_position": {
+        "x": 400,
+        "y": 7,
+        "z": 0
+      },
+      "look_at_position": {
+        "x": 400,
+        "y": 3,
+        "z": 0
+      },
+      "quadrant": "old_eden_hint"
+    }
+  ],
+  "required_by_space": {
+    "nursery_grove": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "egg_nest",
+        "first_food",
+        "first_water",
+        "safe_exit"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    },
+    "fern_plains": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "herd_view",
+        "predator_edge",
+        "cover_route",
+        "growth_rest"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    },
+    "jungle_basin": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "vine_entry",
+        "call_cue",
+        "ambush_cover",
+        "food_shadow"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    },
+    "swamp_delta": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "shoreline",
+        "lilypad",
+        "fish_channel",
+        "spino_exit"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    },
+    "redstone_canyon": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "fossil_bed",
+        "cliff_gate",
+        "apex_patrol",
+        "escape_route"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    },
+    "apocalyptic_city": {
+      "required_kinds": [
+        "player_height_quadrant"
+      ],
+      "quadrants": [
+        "street_entry",
+        "wreck_lane",
+        "ruin_landmark",
+        "old_eden_hint"
+      ],
+      "ui_states": [],
+      "review_mode": "player_angle"
+    }
+  },
+  "report_contract": {
+    "required_fields": [
+      "project",
+      "spaces_reviewed",
+      "screenshots",
+      "findings",
+      "fixes",
+      "verdict"
+    ],
+    "verdicts": [
+      "player_angle_signed_off",
+      "signed_off_with_risks",
+      "not_signed_off"
+    ],
+    "finding_severities": [
+      "info",
+      "minor",
+      "major",
+      "blocker"
+    ],
+    "rule": "Any unresolved major/blocker finding means not_signed_off."
+  },
+  "next": [
+    "Capture screenshots sequentially with StudioMCP screen_capture.",
+    "Review each screenshot against the rubric before the next edit.",
+    "Fix blockers and recapture the same capture_id or a *_recap capture.",
+    "Audit for legacy generated filler such as ImportedDressingVisual, ImportedFoodVisual, VisibleRainVolume, and debug placeholders.",
+    "Run validate_playable_space_review before calling the game visually signed off."
+  ],
+  "format": "json"
+}

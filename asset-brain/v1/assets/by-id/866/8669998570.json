@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 8669998570,
+  "shard": "866",
+  "name": "Friendly Soldier NPC",
+  "category": "Model",
+  "creator": "LouBrawlerStars",
+  "score": 105.6,
+  "votes": 90,
+  "triangles": 22705,
+  "hasScripts": true,
+  "storyboardSlot": "system.lobby.guide_npc",
+  "beat": "System",
+  "role": "guide NPC base",
+  "query": "friendly npc",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

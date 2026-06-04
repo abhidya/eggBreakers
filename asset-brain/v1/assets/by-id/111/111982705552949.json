@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 111982705552949,
+  "shard": "111",
+  "name": "Rainly´s Asset Pack",
+  "category": "Model",
+  "creator": "Skill4free",
+  "score": 93.02585092994046,
+  "hasScripts": false,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": null,
+  "beat": null,
+  "role": null,
+  "query": null,
+  "queryKey": "q=nursery grove roblox map environment room|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

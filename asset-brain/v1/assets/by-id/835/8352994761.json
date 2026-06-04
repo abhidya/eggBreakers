@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 8352994761,
+  "shard": "835",
+  "name": "ADDI's ASSET PACK!",
+  "category": "Model",
+  "creator": "addidevv",
+  "score": 98.02585092994046,
+  "hasScripts": false,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": null,
+  "beat": null,
+  "role": null,
+  "query": null,
+  "queryKey": "q=nursery grove hideable prop pack|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

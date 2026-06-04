@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 3201274546,
+  "shard": "320",
+  "name": "Skull",
+  "category": "Model",
+  "creator": "slade_willon950",
+  "score": null,
+  "hasScripts": false,
+  "sourceScriptCount": 0,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat1.food.carnivore_carcass",
+  "beat": null,
+  "role": null,
+  "query": "skull",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

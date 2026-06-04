@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 125339771134171,
+  "shard": "125",
+  "name": "AO ONI RIG",
+  "category": "Model",
+  "creator": "bobplays2023",
+  "score": 75,
+  "hasScripts": false,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": null,
+  "beat": null,
+  "role": null,
+  "query": null,
+  "queryKey": "q=nursery grove character morph|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 82878503282637,
+  "shard": "828",
+  "name": "dinosaur skeleton bones fossil paleontology rp",
+  "category": "Model",
+  "creator": "EchoCrystalMast3r202",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 1,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat6.redstone_canyon.fossils",
+  "beat": null,
+  "role": null,
+  "query": "fossil",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

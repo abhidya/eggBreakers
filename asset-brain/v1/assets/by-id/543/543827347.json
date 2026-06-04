@@ -1,0 +1,34 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 543827347,
+  "shard": "543",
+  "name": "Dead Swamp Tree",
+  "category": "Model",
+  "creator": "AstralCore",
+  "score": 89.5,
+  "hasScripts": false,
+  "sourceScriptCount": 0,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat5.swamp_delta.reeds_lilypad",
+  "beat": "Beat 5",
+  "role": "swamp vertical landmark",
+  "query": "swamp tree",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest",
+    "live_mcp_curate_assets"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "votes": 10,
+  "triangles": 9312
+}

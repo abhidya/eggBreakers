@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 6185104172,
+  "shard": "618",
+  "name": "Baby Carnotaurus",
+  "category": "Model",
+  "creator": "dimdarkness0",
+  "score": 75,
+  "votes": 0,
+  "triangles": 20794,
+  "hasScripts": false,
+  "storyboardSlot": "beat0.egg_wakeup.hatchling_mesh",
+  "beat": "Beat 0",
+  "role": "baby dinosaur body candidate",
+  "query": "baby dinosaur",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

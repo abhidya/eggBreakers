@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 126412586507734,
+  "shard": "126",
+  "name": "wrecked car prop Drive Car Adventure Custom Garage",
+  "category": "Model",
+  "creator": "ProCrazeFlick51",
+  "score": null,
+  "hasScripts": false,
+  "sourceScriptCount": 0,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat7.city.ruins",
+  "beat": null,
+  "role": null,
+  "query": "wrecked car",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

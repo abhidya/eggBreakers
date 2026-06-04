@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 18474160015,
+  "shard": "184",
+  "name": "Realistic Waterfall V2",
+  "category": "Model",
+  "creator": "Corrupt-Studio",
+  "score": 93.02585092994046,
+  "hasScripts": false,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": null,
+  "beat": null,
+  "role": null,
+  "query": null,
+  "queryKey": "q=jungle temple ruins plant prop pack|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

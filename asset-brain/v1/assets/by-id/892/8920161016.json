@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 8920161016,
+  "shard": "892",
+  "name": "Spinosaurus NPC (WORKS ON BOTH R6 & R15)",
+  "category": "Model",
+  "creator": "steve13908",
+  "score": 92,
+  "votes": 20,
+  "triangles": 22384,
+  "hasScripts": true,
+  "storyboardSlot": "beat5.swamp_delta.spinosaurus",
+  "beat": "Beat 5",
+  "role": "semi-aquatic species fantasy",
+  "query": "spinosaurus",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

@@ -1,0 +1,1 @@
+{"schema":"roblox-asset-enrichment/v1","assetId":1725227984,"sourceLayers":["live_mcp_curate_assets"],"storyboardSlot":"beat5.swamp_delta.fish","beat":"Beat 5","role":"fish food target","query":"fish","visual":{"screenshotVerdict":"not_reviewed","visualRiskScore":null,"visualRisks":[]},"validationState":"needs_studio_geometry_script_audit_and_player_angle_review"}

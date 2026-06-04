@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 83348952256790,
+  "shard": "833",
+  "name": "💥 Destroyed City Ruins Hangout Roleplay Apocalypt",
+  "category": "Model",
+  "creator": "ElijahRiderNeon2194",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 4,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat7.city.ruins",
+  "beat": null,
+  "role": null,
+  "query": "city ruins",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

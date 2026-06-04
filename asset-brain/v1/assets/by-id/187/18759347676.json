@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 18759347676,
+  "shard": "187",
+  "name": "Rigged Dinosaur Models",
+  "category": "Model",
+  "creator": "happydinos115",
+  "score": 124.4,
+  "votes": 200,
+  "triangles": 1680433,
+  "hasScripts": false,
+  "storyboardSlot": "beat2.fern_plains.herd",
+  "beat": "Beat 2",
+  "role": "herd body library",
+  "query": "rigged dinosaur models",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

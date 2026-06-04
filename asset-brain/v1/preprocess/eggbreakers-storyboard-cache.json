@@ -1,0 +1,1795 @@
+{
+  "schema": "roblox-storyboard-cache-preprocess/v1",
+  "project": "eggbreakers",
+  "game": "dinosaur survival story mode",
+  "slots": [
+    {
+      "group": "lobby",
+      "slot": "lobby.spawn.plaza",
+      "query": "Roblox lobby spawn plaza",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "lobby",
+      "slot": "lobby.portal.room_queue",
+      "query": "Roblox portal doorway matchmaking lobby",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "lobby",
+      "slot": "lobby.npc.guide",
+      "query": "Roblox friendly guide NPC",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "lobby",
+      "slot": "lobby.shop.upgrades",
+      "query": "Roblox upgrade shop kiosk",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "lobby",
+      "slot": "lobby.board.leaderboard",
+      "query": "Roblox leaderboard board",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "lobby",
+      "slot": "lobby.cosmetics.display",
+      "query": "Roblox avatar display stand",
+      "purpose": "persistent social/gameplay shell"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.room.arena_shell",
+      "query": "nursery grove Roblox map environment room",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.portal.door",
+      "query": "nursery grove portal doorway Roblox",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.npc.host",
+      "query": "nursery grove NPC character",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.setpiece.anchor",
+      "query": "nursery grove setpiece landmark",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.hideable.prop_pack",
+      "query": "nursery grove hideable prop pack",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.hideable.small_props",
+      "query": "nursery grove small props crate barrel rock coral furniture",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.avatar.form",
+      "query": "nursery grove character morph",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "nursery grove",
+      "slot": "nursery_grove.ambience.audio",
+      "query": "nursery grove ambient audio",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.room.arena_shell",
+      "query": "fern plains Roblox map environment room",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.portal.door",
+      "query": "fern plains portal doorway Roblox",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.npc.host",
+      "query": "fern plains NPC character",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.setpiece.anchor",
+      "query": "fern plains setpiece landmark",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.hideable.prop_pack",
+      "query": "fern plains hideable prop pack",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.hideable.small_props",
+      "query": "fern plains small props crate barrel rock coral furniture",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.avatar.form",
+      "query": "fern plains character morph",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "fern plains",
+      "slot": "fern_plains.ambience.audio",
+      "query": "fern plains ambient audio",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.room.arena_shell",
+      "query": "jungle basin Roblox map environment room",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.portal.door",
+      "query": "jungle basin portal doorway Roblox",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.npc.host",
+      "query": "jungle basin NPC character",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.setpiece.anchor",
+      "query": "jungle temple ruins",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.hideable.prop_pack",
+      "query": "jungle temple ruins plant prop pack",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.hideable.small_props",
+      "query": "jungle basin small props crate barrel rock coral furniture",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.avatar.form",
+      "query": "explorer character morph",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "jungle basin",
+      "slot": "jungle_basin.ambience.audio",
+      "query": "jungle ambient audio",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.room.arena_shell",
+      "query": "swamp delta Roblox map environment room",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.portal.door",
+      "query": "swamp delta portal doorway Roblox",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.npc.host",
+      "query": "swamp delta NPC character",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.setpiece.anchor",
+      "query": "swamp delta setpiece landmark",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.hideable.prop_pack",
+      "query": "swamp delta hideable prop pack",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.hideable.small_props",
+      "query": "swamp delta small props crate barrel rock coral furniture",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.avatar.form",
+      "query": "swamp delta character morph",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "swamp delta",
+      "slot": "swamp_delta.ambience.audio",
+      "query": "swamp delta ambient audio",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.room.arena_shell",
+      "query": "redstone canyon Roblox map environment room",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.portal.door",
+      "query": "redstone canyon portal doorway Roblox",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.npc.host",
+      "query": "redstone canyon NPC character",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.setpiece.anchor",
+      "query": "redstone canyon setpiece landmark",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.hideable.prop_pack",
+      "query": "redstone canyon hideable prop pack",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.hideable.small_props",
+      "query": "redstone canyon small props crate barrel rock coral furniture",
+      "purpose": "capacity-limited themed room pack"
+    },
+    {
+      "group": "room",
+      "theme": "redstone canyon",
+      "slot": "redstone_canyon.avatar.form",
+      "query": "redstone canyon character morph",
+      "purpose": "capacity-limited themed room pack"
+    }
+  ],
+  "warmed": [
+    {
+      "slot": "lobby.spawn.plaza",
+      "query": "Roblox lobby spawn plaza",
+      "candidates": [
+        {
+          "id": 471785143,
+          "name": "Let's Play ROBLOX Classic Logo",
+          "category": "Model",
+          "creator": "Eventive",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 12361026,
+          "name": "Welcome to ROBLOX",
+          "category": "Model",
+          "creator": "TrussROBLOX",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9112744630,
+          "name": "Bank Ambience 2 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 11913162025,
+          "name": "Walmart",
+          "category": "Model",
+          "creator": "Roblox_genius0808",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 31200477,
+          "name": "ROBLOX HQ DESK",
+          "category": "Model",
+          "creator": "Adelli",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "lobby.portal.room_queue",
+      "query": "Roblox portal doorway matchmaking lobby",
+      "candidates": [
+        {
+          "id": 1473040963,
+          "name": "ROBLOX Arch",
+          "category": "Model",
+          "creator": "338218",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 4672044552,
+          "name": "MedievalDoorTrim001",
+          "category": "MeshPart",
+          "creator": "IPXWhitetiger",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9042807094,
+          "name": "What Did You Just Say to Me? (sting)",
+          "category": "Audio",
+          "creator": "APMOfficial",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 6770574068,
+          "name": "Portal",
+          "category": "Model",
+          "creator": "BagasRobloxia",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 85287751198168,
+          "name": "Temple Arch",
+          "category": "MeshPart",
+          "creator": "Int3r0x",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "lobby.npc.guide",
+      "query": "Roblox friendly guide NPC",
+      "candidates": [
+        {
+          "id": 12095414751,
+          "name": "ROBLOX R6 Rigs 2.0 Kit + Face pack!",
+          "category": "Model",
+          "creator": "alancm_09",
+          "score": 119.70170185988093,
+          "hasScripts": false
+        },
+        {
+          "id": 120276044786991,
+          "name": "Old/Classic Roblox Stud Parts",
+          "category": "Model",
+          "creator": "H0-SHI",
+          "score": 101.01197381662155,
+          "hasScripts": true
+        },
+        {
+          "id": 78336222704656,
+          "name": "The NPC.",
+          "category": "Model",
+          "creator": "Sergiodandy",
+          "score": 95.61197381662156,
+          "hasScripts": true
+        },
+        {
+          "id": 10323175297,
+          "name": "Classic Character Pack",
+          "category": "Model",
+          "creator": "EmmetDaMarble",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 2027957421,
+          "name": "Noob",
+          "category": "MeshPart",
+          "creator": "xJathur95x",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "lobby.shop.upgrades",
+      "query": "Roblox upgrade shop kiosk",
+      "candidates": [
+        {
+          "id": 14883581727,
+          "name": "Shop noob",
+          "category": "Model",
+          "creator": "Steve_800YT",
+          "score": 102.26197381662155,
+          "hasScripts": false
+        },
+        {
+          "id": 5139681583,
+          "name": "Bloxy Cola HD",
+          "category": "MeshPart",
+          "creator": "Xenothekid",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 7900972631,
+          "name": "Tienda",
+          "category": "Model",
+          "creator": "lapatatadiosgamer",
+          "score": 78.72585092994046,
+          "hasScripts": true
+        },
+        {
+          "id": 5146271582,
+          "name": "Kenny Weapon Shop",
+          "category": "Model",
+          "creator": "Ken1602",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5456278218,
+          "name": "Simulator House - Green",
+          "category": "Model",
+          "creator": "Oligamerprobro",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "lobby.board.leaderboard",
+      "query": "Roblox leaderboard board",
+      "candidates": [
+        {
+          "id": 5352156968,
+          "name": "Time Played Leaderboard with Player Thumbnails",
+          "category": "Model",
+          "creator": "RenanMSV",
+          "score": 144.36367567650245,
+          "hasScripts": true
+        },
+        {
+          "id": 15898661167,
+          "name": "Time Played Leaderboard with Player Thumbnails Old",
+          "category": "Model",
+          "creator": "RenanMSV",
+          "score": 106.75170185988092,
+          "hasScripts": true
+        },
+        {
+          "id": 17684025110,
+          "name": "Donation Board",
+          "category": "Model",
+          "creator": "Finnano",
+          "score": 90.02585092994046,
+          "hasScripts": true
+        },
+        {
+          "id": 137198544387400,
+          "name": "SaintlyMic's Top Time Played Leaderboard",
+          "category": "Model",
+          "creator": "SaintlyMic",
+          "score": 80.93879454113936,
+          "hasScripts": true
+        },
+        {
+          "id": 15176924737,
+          "name": "Leaderboard",
+          "category": "Model",
+          "creator": "america_boy223",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "lobby.cosmetics.display",
+      "query": "Roblox avatar display stand",
+      "candidates": [
+        {
+          "id": 990499469,
+          "name": "Guest 666 Morphs",
+          "category": "Model",
+          "creator": "Mirit4mokuu",
+          "score": 75.57585092994046,
+          "hasScripts": true
+        },
+        {
+          "id": 344182118,
+          "name": "OTIIBO: TANLOLOL12345",
+          "category": "Model",
+          "creator": "guy5f",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 57939781,
+          "name": "bill board",
+          "category": "Model",
+          "creator": "kasem64",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 6311954683,
+          "name": "Jasiek1440 toy!",
+          "category": "Model",
+          "creator": "Jasiek1440",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5044559264,
+          "name": "KraoESP´s toy",
+          "category": "Model",
+          "creator": "gatito_chetty",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.room.arena_shell",
+      "query": "nursery grove Roblox map environment room",
+      "candidates": [
+        {
+          "id": 9398475440,
+          "name": "Lobby",
+          "category": "Model",
+          "creator": "FirelyyDevv",
+          "score": 114.70170185988093,
+          "hasScripts": false
+        },
+        {
+          "id": 119863267,
+          "name": "Forest",
+          "category": "Model",
+          "creator": "blobbyblob",
+          "score": 104.23879454113936,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 111982705552949,
+          "name": "Rainly´s Asset Pack",
+          "category": "Model",
+          "creator": "Skill4free",
+          "score": 93.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 14101261109,
+          "name": "Classic Map: Crossroads",
+          "category": "Model",
+          "creator": "DevynSSJ",
+          "score": 92.41197381662155,
+          "hasScripts": true
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.portal.door",
+      "query": "nursery grove portal doorway Roblox",
+      "candidates": [
+        {
+          "id": 9324190936,
+          "name": "Spring Contest Display",
+          "category": "Model",
+          "creator": "Roblox Library Community",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 14840309510,
+          "name": "Portal",
+          "category": "Model",
+          "creator": "chikorita_leafstorm",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 4672044552,
+          "name": "MedievalDoorTrim001",
+          "category": "MeshPart",
+          "creator": "IPXWhitetiger",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 481276508,
+          "name": "Wizard101 - Generic Door",
+          "category": "MeshPart",
+          "creator": "Nengalore",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5490719837,
+          "name": "Portal",
+          "category": "Model",
+          "creator": "i_Berner",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.npc.host",
+      "query": "nursery grove NPC character",
+      "candidates": [
+        {
+          "id": 160000787,
+          "name": "Grumpy Dwarf",
+          "category": "Model",
+          "creator": "Roblox",
+          "score": 77.55732273553991,
+          "hasScripts": true
+        },
+        {
+          "id": 3158689499,
+          "name": "The Birdcaller R15 Package",
+          "category": "Model",
+          "creator": "Mario5697",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9453447661,
+          "name": "Frizz",
+          "category": "Model",
+          "creator": "TheAzureNeko",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 8198531850,
+          "name": "[OMORI] T-posing AUBREY mesh !",
+          "category": "Model",
+          "creator": "cutedogelol",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 7749017158,
+          "name": "Miku (Sakura)",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.setpiece.anchor",
+      "query": "nursery grove setpiece landmark",
+      "candidates": [
+        {
+          "id": 5308192867,
+          "name": "*Blossom Park!*",
+          "category": "Model",
+          "creator": "validlly",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 136349119159678,
+          "name": "🌌 [UPDATED] R03M's Ultimate Nature Pack",
+          "category": "Model",
+          "creator": "nocker182",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 18100804123,
+          "name": "Anime Nature Pack (V1)",
+          "category": "Model",
+          "creator": "gamermk19",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 131912121971268,
+          "name": "Signboards & Quest Boards [Silvergarden Village]",
+          "category": "Model",
+          "creator": "Earthdall",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 891127999,
+          "name": "Garden House",
+          "category": "MeshPart",
+          "creator": "SproutTheFairy",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.hideable.prop_pack",
+      "query": "nursery grove hideable prop pack",
+      "candidates": [
+        {
+          "id": 422659725,
+          "name": "#NBK || Potted Plant Friends",
+          "category": "Model",
+          "creator": "babyklebold",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 8352994761,
+          "name": "ADDI's ASSET PACK!",
+          "category": "Model",
+          "creator": "addidevv",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 5630174266,
+          "name": "Bunny Sanctuary",
+          "category": "Model",
+          "creator": "Greenish445",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 10541016395,
+          "name": "fog lounge",
+          "category": "Model",
+          "creator": "Airxeo",
+          "score": 81.77585092994046,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.hideable.small_props",
+      "query": "nursery grove small props crate barrel rock coral furniture",
+      "candidates": [
+        {
+          "id": 422659725,
+          "name": "#NBK || Potted Plant Friends",
+          "category": "Model",
+          "creator": "babyklebold",
+          "score": 98.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 8316797287,
+          "name": "cottage playdate ## ########",
+          "category": "Model",
+          "creator": "elysiana_yt",
+          "score": 88.52585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 10541016395,
+          "name": "fog lounge",
+          "category": "Model",
+          "creator": "Airxeo",
+          "score": 81.77585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 10540897472,
+          "name": "fog lounge",
+          "category": "Model",
+          "creator": "Airxeo",
+          "score": 79.52585092994046,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.avatar.form",
+      "query": "nursery grove character morph",
+      "candidates": [
+        {
+          "id": 1111340156,
+          "name": "[VERSION III TUBBY] ST- Teletubby creation kit",
+          "category": "Model",
+          "creator": "tucann",
+          "score": 100.73879454113936,
+          "hasScripts": true
+        },
+        {
+          "id": 87552527872021,
+          "name": "🚦 Squid Game Red Light Green Light Map RP",
+          "category": "Model",
+          "creator": "Naamogg0811",
+          "score": 86.29344562222101,
+          "hasScripts": true
+        },
+        {
+          "id": 125339771134171,
+          "name": "AO ONI RIG",
+          "category": "Model",
+          "creator": "bobplays2023",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 126918485762446,
+          "name": "FNAF: Secret of the Mimic - Hedgehog Hudgie",
+          "category": "Model",
+          "creator": "acoolfoxy400",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 6533748618,
+          "name": "Mabel Pines",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "nursery_grove.ambience.audio",
+      "query": "nursery grove ambient audio",
+      "candidates": [
+        {
+          "id": 5010848863,
+          "name": "Trees",
+          "category": "Model",
+          "creator": "marlingamer2",
+          "score": 93.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 478524874,
+          "name": "Twenty One Pilots Poster",
+          "category": "Model",
+          "creator": "fooheee",
+          "score": 89.87585092994047,
+          "hasScripts": false
+        },
+        {
+          "id": 438258454,
+          "name": "Small Plant (Un-Textured) ",
+          "category": "MeshPart",
+          "creator": "Krown0s",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 13787866903,
+          "name": "Low Poly Tree (FTU credit me please)",
+          "category": "MeshPart",
+          "creator": "AviRonV2",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 10684195710,
+          "name": "treegradient",
+          "category": "MeshPart",
+          "creator": "thedudewick",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.room.arena_shell",
+      "query": "fern plains Roblox map environment room",
+      "candidates": [
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 9112772474,
+          "name": "Distant Train 1 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9112834179,
+          "name": "Neighborhood Ambience 4 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9118747853,
+          "name": "Rumble Ambience Interior Wind Turbo Shaft 5 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 52609350,
+          "name": "RPG Map Kit",
+          "category": "Model",
+          "creator": "SenseiWarrior",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.portal.door",
+      "query": "fern plains portal doorway Roblox",
+      "candidates": [
+        {
+          "id": 172430624,
+          "name": "Grass Portal",
+          "category": "Model",
+          "creator": "darkjanggo",
+          "score": 107.32023005428147,
+          "hasScripts": false
+        },
+        {
+          "id": 4672044552,
+          "name": "MedievalDoorTrim001",
+          "category": "MeshPart",
+          "creator": "IPXWhitetiger",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 481276508,
+          "name": "Wizard101 - Generic Door",
+          "category": "MeshPart",
+          "creator": "Nengalore",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9125742262,
+          "name": "Plasma Trails Constant Airy Whooshing Windy  (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5490719837,
+          "name": "Portal",
+          "category": "Model",
+          "creator": "i_Berner",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.npc.host",
+      "query": "fern plains NPC character",
+      "candidates": [
+        {
+          "id": 9112775175,
+          "name": "Eerie Ambience 1 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 93.97585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 3158689499,
+          "name": "The Birdcaller R15 Package",
+          "category": "Model",
+          "creator": "Mario5697",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 17545565136,
+          "name": "Plantmesh",
+          "category": "MeshPart",
+          "creator": "Project_Aiya",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9112772474,
+          "name": "Distant Train 1 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9118747853,
+          "name": "Rumble Ambience Interior Wind Turbo Shaft 5 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.setpiece.anchor",
+      "query": "fern plains setpiece landmark",
+      "candidates": [
+        {
+          "id": 2557875249,
+          "name": "Giant Thingey/Arena (Arena Credit to Fecalmatters)",
+          "category": "Model",
+          "creator": "Shoeish",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 452340690,
+          "name": "Improperly textured bob omb battlefield",
+          "category": "MeshPart",
+          "creator": "DrippidyDan",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5730274731,
+          "name": "Seaweed Gate",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9112874053,
+          "name": "Small Town Ambience 1 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 973199293,
+          "name": "The Lost Island",
+          "category": "Model",
+          "creator": "SvNC_123",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.hideable.prop_pack",
+      "query": "fern plains hideable prop pack",
+      "candidates": [
+        {
+          "id": 7979002756,
+          "name": "Fern Bush",
+          "category": "Model",
+          "creator": "TheLegoGuy137",
+          "score": 109.14344562222101,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 9180619920,
+          "name": "PBR Palm Tree",
+          "category": "Model",
+          "creator": "GBGlock",
+          "score": 89.87585092994047,
+          "hasScripts": false
+        },
+        {
+          "id": 147537334,
+          "name": "Underwater Plants",
+          "category": "Model",
+          "creator": "Waterball3",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 124149138,
+          "name": "Decorations for fort.",
+          "category": "Model",
+          "creator": "Mastivious",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.hideable.small_props",
+      "query": "fern plains small props crate barrel rock coral furniture",
+      "candidates": [
+        {
+          "id": 87801222295603,
+          "name": "Plant Tree",
+          "category": "Model",
+          "creator": "CancelGrav",
+          "score": 97.7073227355399,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 425090361,
+          "name": "Palm-Bush",
+          "category": "Model",
+          "creator": "camcool12354",
+          "score": 83.57585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 575642906,
+          "name": "Potted Palm",
+          "category": "Model",
+          "creator": "BlueNebula10",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 15762203959,
+          "name": "• ~ Victorian Plant ~ •",
+          "category": "Model",
+          "creator": "6frqst",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.avatar.form",
+      "query": "fern plains character morph",
+      "candidates": [
+        {
+          "id": 13570951887,
+          "name": "Apu from the simpsons game",
+          "category": "Model",
+          "creator": "Mindinmatrix64",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 8314001839,
+          "name": "Sun Plush",
+          "category": "Model",
+          "creator": "Soproxifan",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 14963045679,
+          "name": "Hungry Tom",
+          "category": "MeshPart",
+          "creator": "Wasteddad",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5010680934,
+          "name": "Grandpa Joe",
+          "category": "MeshPart",
+          "creator": "roblox_user_267234425",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 6533748618,
+          "name": "Mabel Pines",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "fern_plains.ambience.audio",
+      "query": "fern plains ambient audio",
+      "candidates": [
+        {
+          "id": 17582502514,
+          "name": "Siren head old sky",
+          "category": "Model",
+          "creator": "2Cookies_AndCream",
+          "score": 99.9573227355399,
+          "hasScripts": false
+        },
+        {
+          "id": 478524874,
+          "name": "Twenty One Pilots Poster",
+          "category": "Model",
+          "creator": "fooheee",
+          "score": 89.87585092994047,
+          "hasScripts": false
+        },
+        {
+          "id": 37497715,
+          "name": "Sunset Skybox",
+          "category": "Model",
+          "creator": "blobbyblob",
+          "score": 85.10732273553991,
+          "hasScripts": false
+        },
+        {
+          "id": 17545565136,
+          "name": "Plantmesh",
+          "category": "MeshPart",
+          "creator": "Project_Aiya",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9112772474,
+          "name": "Distant Train 1 (SFX)",
+          "category": "Audio",
+          "creator": "ProSoundEffects",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.room.arena_shell",
+      "query": "jungle basin Roblox map environment room",
+      "candidates": [
+        {
+          "id": 9011775009,
+          "name": "Custom tower defense map",
+          "category": "Model",
+          "creator": "AbsolutelyGarbage134",
+          "score": 109.63879454113936,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 94248174,
+          "name": "Map.Mountain",
+          "category": "Model",
+          "creator": "MuIIy",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 13432854031,
+          "name": "Indoor Plant 2",
+          "category": "MeshPart",
+          "creator": "leheron_Valino2008",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 9347274440,
+          "name": "Low Poly Simulator Border",
+          "category": "MeshPart",
+          "creator": "aluminium2017",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.portal.door",
+      "query": "jungle basin portal doorway Roblox",
+      "candidates": [
+        {
+          "id": 172430624,
+          "name": "Grass Portal",
+          "category": "Model",
+          "creator": "darkjanggo",
+          "score": 107.32023005428147,
+          "hasScripts": false
+        },
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 5119320902,
+          "name": "MA:X Submission",
+          "category": "Model",
+          "creator": "jigwv",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 4672044552,
+          "name": "MedievalDoorTrim001",
+          "category": "MeshPart",
+          "creator": "IPXWhitetiger",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 481276508,
+          "name": "Wizard101 - Generic Door",
+          "category": "MeshPart",
+          "creator": "Nengalore",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.npc.host",
+      "query": "jungle basin NPC character",
+      "candidates": [
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 12473729994,
+          "name": "One Piece Island - Holiday Island",
+          "category": "Model",
+          "creator": "PyeongSa_68",
+          "score": 87.01197381662155,
+          "hasScripts": true
+        },
+        {
+          "id": 4615186485,
+          "name": "Natures' Grasp",
+          "category": "Model",
+          "creator": "TraceurSnowy",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 13432854031,
+          "name": "Indoor Plant 2",
+          "category": "MeshPart",
+          "creator": "leheron_Valino2008",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5789550255,
+          "name": "Slime Monster",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.setpiece.anchor",
+      "query": "jungle temple ruins",
+      "candidates": [
+        {
+          "id": 116185150014471,
+          "name": "sukunadomainnew",
+          "category": "MeshPart",
+          "creator": "Buldogko2019_2",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 15393443816,
+          "name": "penguins",
+          "category": "MeshPart",
+          "creator": "Duxa068",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 102944377062912,
+          "name": "Earthmover",
+          "category": "MeshPart",
+          "creator": "gray_sin",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 99663982912198,
+          "name": "Object_0",
+          "category": "MeshPart",
+          "creator": "Kiwy2021",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 12599187294,
+          "name": "map",
+          "category": "MeshPart",
+          "creator": "breter98",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.hideable.prop_pack",
+      "query": "jungle temple ruins plant prop pack",
+      "candidates": [
+        {
+          "id": 2874534251,
+          "name": "Palm Tree",
+          "category": "MeshPart",
+          "creator": "MichaelIsGr8",
+          "score": 96.99809670330265,
+          "hasScripts": false
+        },
+        {
+          "id": 18474160015,
+          "name": "Realistic Waterfall V2",
+          "category": "Model",
+          "creator": "Corrupt-Studio",
+          "score": 93.02585092994046,
+          "hasScripts": false
+        },
+        {
+          "id": 45096726,
+          "name": "Build a forest kit",
+          "category": "Model",
+          "creator": "treebee63",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 124149138,
+          "name": "Decorations for fort.",
+          "category": "Model",
+          "creator": "Mastivious",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 68132017,
+          "name": "Nature Meshes",
+          "category": "Model",
+          "creator": "Linzy88",
+          "score": 75,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.hideable.small_props",
+      "query": "jungle basin small props crate barrel rock coral furniture",
+      "candidates": [
+        {
+          "id": 8188280448,
+          "name": "lettuce pool",
+          "category": "Model",
+          "creator": "ibajablaster",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 547591021,
+          "name": "Fairy Garden",
+          "category": "Model",
+          "creator": "ToughGhost145",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 449106465,
+          "name": "Basket",
+          "category": "MeshPart",
+          "creator": "Lirn",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 12894067727,
+          "name": "Pet Food Bowl",
+          "category": "MeshPart",
+          "creator": "Carcat62",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 170436843,
+          "name": "Bucket",
+          "category": "Model",
+          "creator": "NewYorkAviator",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.avatar.form",
+      "query": "explorer character morph",
+      "candidates": [
+        {
+          "id": 5302611570,
+          "name": "Helpy Cleetus",
+          "category": "Model",
+          "creator": "Sethadeus",
+          "score": 84.92585092994045,
+          "hasScripts": false
+        },
+        {
+          "id": 5338881952,
+          "name": "Gas Guy",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 5338971301,
+          "name": "Waiter",
+          "category": "MeshPart",
+          "creator": "bubblegal112",
+          "score": 75,
+          "hasScripts": false
+        },
+        {
+          "id": 4456239424,
+          "name": "Mom",
+          "category": "Model",
+          "creator": "GoodAtGrindlng",
+          "score": 70,
+          "hasScripts": false
+        },
+        {
+          "id": 95919235966040,
+          "name": "Morph2",
+          "category": "Model",
+          "creator": "Biquesbeto",
+          "score": 70,
+          "hasScripts": false
+        }
+      ],
+      "filtered": 0
+    },
+    {
+      "slot": "jungle_basin.ambience.audio",
+      "query": "jungle ambient audio",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.room.arena_shell",
+      "query": "swamp delta Roblox map environment room",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.portal.door",
+      "query": "swamp delta portal doorway Roblox",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.npc.host",
+      "query": "swamp delta NPC character",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.setpiece.anchor",
+      "query": "swamp delta setpiece landmark",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.hideable.prop_pack",
+      "query": "swamp delta hideable prop pack",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.hideable.small_props",
+      "query": "swamp delta small props crate barrel rock coral furniture",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.avatar.form",
+      "query": "swamp delta character morph",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "swamp_delta.ambience.audio",
+      "query": "swamp delta ambient audio",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.room.arena_shell",
+      "query": "redstone canyon Roblox map environment room",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.portal.door",
+      "query": "redstone canyon portal doorway Roblox",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.npc.host",
+      "query": "redstone canyon NPC character",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.setpiece.anchor",
+      "query": "redstone canyon setpiece landmark",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.hideable.prop_pack",
+      "query": "redstone canyon hideable prop pack",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.hideable.small_props",
+      "query": "redstone canyon small props crate barrel rock coral furniture",
+      "candidates": [],
+      "filtered": 0
+    },
+    {
+      "slot": "redstone_canyon.avatar.form",
+      "query": "redstone canyon character morph",
+      "candidates": [],
+      "filtered": 0
+    }
+  ],
+  "pagesLayout": {
+    "manifest": "asset-brain/v1/manifest.json",
+    "asset": "asset-brain/v1/assets/by-id/{shard}/{assetId}.json",
+    "enrichment_events": "asset-brain/v1/enrichments/by-asset/{shard}/{assetId}.ndjson",
+    "reviews": "asset-brain/v1/reviews/by-asset/{shard}/{assetId}.ndjson",
+    "palette": "asset-brain/v1/palettes/eggbreakers.json",
+    "indexes": [
+      "asset-brain/v1/indexes/assets-lite.ndjson",
+      "asset-brain/v1/indexes/queries-lite.ndjson",
+      "asset-brain/v1/indexes/rejected-assets.ndjson"
+    ]
+  },
+  "next": [
+    "Use warmed candidates for storyboarding; do not invent uncached assets.",
+    "Claim shortlisted assets before Studio/lab inspection.",
+    "Record geometry, script audit, and visual risk with record_inspection.",
+    "Commit palette winners, then call plan_headless_assembly for .rbxm/.rbxlx work packets."
+  ]
+}

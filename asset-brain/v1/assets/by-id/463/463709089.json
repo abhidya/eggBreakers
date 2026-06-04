@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 463709089,
+  "shard": "463",
+  "name": "Sauropod Nest + Sauropod eggs",
+  "category": "Model",
+  "creator": "Dogetta",
+  "score": 75,
+  "votes": 0,
+  "triangles": 954,
+  "hasScripts": false,
+  "storyboardSlot": "beat0.egg_wakeup.nest_detail",
+  "beat": "Beat 0",
+  "role": "nest floor dressing",
+  "query": "egg nest",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

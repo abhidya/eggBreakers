@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 113882719724692,
+  "shard": "113",
+  "name": "🌿 Realistic Lilly Pad Pond Water Lily Nature Deco",
+  "category": "Model",
+  "creator": "Fusion2ZStarryU73",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 1,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat5.swamp_delta.reeds_lilypad",
+  "beat": null,
+  "role": null,
+  "query": "water lily",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}
