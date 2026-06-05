@@ -1,0 +1,123 @@
+{
+  "schema": "eggbreakers-existing-asset-inventory/v1",
+  "project": "eggbreakers",
+  "generatedAt": "2026-06-05T21:50:10Z",
+  "sources": {
+    "assetBrainManifest": "asset-brain/v1/manifest.json",
+    "assetIndex": "asset-brain/v1/indexes/assets-lite.ndjson",
+    "queryIndex": "asset-brain/v1/indexes/queries-lite.ndjson",
+    "projectManifest": "src/ReplicatedStorage/Shared/AssetManifest.lua",
+    "storySlots": "asset-brain/v1/curation/eggbreakers-story-slots.txt"
+  },
+  "counts": {
+    "projectManifestCatalogedSourceIds": 500,
+    "assetBrainByIdRecords": 425,
+    "queryRecords": 69,
+    "queryRecordsWithResults": 29,
+    "queryRecordsEmpty": 40,
+    "assetBrainVisualNotReviewed": 425,
+    "assetBrainScripted": 86,
+    "assetBrainScriptFree": 339,
+    "committedPaletteAssets": 0,
+    "recordedInspections": 0
+  },
+  "liveMcpSnapshot": {
+    "generatedAt": "2026-06-05T21:52:15.751Z",
+    "tool": "export_asset_brain_snapshot",
+    "counts": {
+      "assets": 103,
+      "searchQueries": 20,
+      "reviews": 41,
+      "inspections": 46,
+      "publishPermissions": 0,
+      "claims": 77,
+      "paletteAssets": 0
+    },
+    "syncNote": "The live asset-search MCP has review/inspection memory that is not mirrored in this repo-local Pages tree. Treat the local by-id records as the larger unreviewed cache, and the MCP snapshot as authoritative for live inspection memory until exported into shards.",
+    "filterNote": "The live MCP snapshot includes cross-project or older room claims; future sync should keep only Egg Breakers-relevant slots and asset families."
+  },
+  "sourceLayerCounts": {
+    "mcp_search_cache": 181,
+    "project_asset_manifest": 180,
+    "live_mcp_curate_assets": 72
+  },
+  "projectManifestScriptRisk": {
+    "catalogedSourceIds": 500,
+    "scripted": 143,
+    "scriptFree": 357,
+    "highestScriptedQueryFamilies": [
+      { "query": "city ruins", "scripted": 21 },
+      { "query": "wrecked car", "scripted": 16 },
+      { "query": "street light", "scripted": 9 },
+      { "query": "abandoned car", "scripted": 8 },
+      { "query": "concrete barrier", "scripted": 7 },
+      { "query": "red canyon", "scripted": 7 },
+      { "query": "arch rock", "scripted": 7 },
+      { "query": "swamp log", "scripted": 6 },
+      { "query": "water lily", "scripted": 6 },
+      { "query": "rubble", "scripted": 5 }
+    ]
+  },
+  "assetFamilyInventory": [
+    {
+      "family": "egg_nest_hatchling",
+      "reason": "Beat 0 needs readable hatch/nest assets before release visual signoff.",
+      "knownSeedIds": [240666886, 423991750, 463709089, 463710364, 708850786, 104497410410577],
+      "preferredInspectionOrder": [463710364, 463709089, 104497410410577, 240666886, 708850786],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "fern_food_and_ground_cover",
+      "reason": "Current world problem reports sideways ferns; herbivore food must be upright, grounded, readable, and edible from player height.",
+      "knownSeedIds": [7979002756, 434184732, 2915526744, 12630982706, 965843717, 965844264],
+      "preferredInspectionOrder": [7979002756, 434184732, 2915526744, 12630982706],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "staged_and_imported_dinosaurs",
+      "reason": "Current world problem reports some dinos face down; staged/player/NPC models need canonical up/forward and helper-root hiding proof.",
+      "knownSeedIds": [18759347676, 129426942556570, 248223518, 281912567, 1320554267, 2167783289, 6185104172, 2989814926],
+      "preferredInspectionOrder": [18759347676, 129426942556570, 248223518, 281912567, 2167783289, 6185104172],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "carnivore_food_carcass_and_bones",
+      "reason": "Carnivore food must read as edible carrion/meat/bones, not a generic fossil exhibit or tiny prop.",
+      "knownSeedIds": [3414358748, 6934081776, 1894867381, 11134159, 3201274546, 15679580048],
+      "preferredInspectionOrder": [3414358748, 6934081776, 1894867381, 15679580048],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "swamp_delta_water_life",
+      "reason": "Swamp play needs upright reeds/trees, grounded logs, water-surface lily pads, fish, and spino context.",
+      "knownSeedIds": [543827347, 18986634714, 432559636, 708797531, 1725227984, 2989814926],
+      "preferredInspectionOrder": [543827347, 18986634714, 708797531, 1725227984, 2989814926],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "redstone_canyon_rocks_fossils",
+      "reason": "Canyon needs grounded rocks/cliffs/fossils that frame routes without blocking camera or traversal.",
+      "knownSeedIds": [47609929, 55194015, 70617428, 94940698, 577078767, 6566037175, 70417873353617],
+      "preferredInspectionOrder": [70617428, 94940698, 577078767, 6566037175, 70417873353617],
+      "status": "seeded_not_inspected"
+    },
+    {
+      "family": "apocalyptic_city_ruins",
+      "reason": "City needs script-safe ruins, wrecks, barriers, signs, roads, and lights with useful forward direction from the player path.",
+      "knownSeedIds": [408225227, 108178603114720, 250378973, 368743404, 404475960, 536859534, 9213511042],
+      "preferredInspectionOrder": [108178603114720, 9213511042, 250378973, 368743404, 404475960, 536859534],
+      "status": "seeded_not_inspected"
+    }
+  ],
+  "currentGates": [
+    "No asset in the brain has player-angle screenshot evidence yet.",
+    "No final palette is committed in asset-brain/v1/palettes/eggbreakers.json.",
+    "Many cataloged city and vehicle assets carry scripts and need quarantine/script-removal review before placement.",
+    "Asset family orientation fixes cannot be proven from the cache alone; Studio screenshots are required."
+  ],
+  "recommendedNextPass": [
+    "Run the world asset family sweep on ferns first because it is the currently reported visible placement issue.",
+    "Run staged/imported dinosaur orientation second because it affects player/NPC readability.",
+    "Record inspection results with worldPlacementAudit and player-angle screenshot refs before committing palette winners."
+  ]
+}

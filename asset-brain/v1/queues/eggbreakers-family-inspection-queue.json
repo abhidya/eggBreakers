@@ -1,0 +1,300 @@
+{
+  "schema": "eggbreakers-family-inspection-queue/v1",
+  "project": "eggbreakers",
+  "generatedAt": "2026-06-05T22:05:00Z",
+  "purpose": "Convert the asset dream queue into a concrete asset-family inspection queue for Studio/lab passes.",
+  "queuePolicy": {
+    "unitOfWork": "one asset family at a time",
+    "firstGate": "clean-spot clone screenshots: front, back, left, right, overhead, player-height",
+    "secondGate": "same family seen in at least one live in-world player-height placement",
+    "propagationRule": "fixing a temp clone is not enough; apply canonical up/forward/scale/grounding to every live clone or explicitly skip non-visual helpers",
+    "releaseRule": "search metadata and bounding boxes are not release proof; palette commit waits for inspection plus player-angle screenshot evidence"
+  },
+  "items": [
+    {
+      "queueId": "Q001",
+      "family": "fern_food_and_ground_cover",
+      "priority": 1,
+      "slot": "beat1.food.herbivore_fern",
+      "problem": "reported ferns on their side",
+      "candidate": {
+        "assetId": 7979002756,
+        "name": "Fern Bush",
+        "query": "fern",
+        "sourceLayers": ["mcp_search_cache", "live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Best known fern seed in the local brain; score/votes are stronger than the other fern records and it is script-free.",
+      "missingEvidence": [
+        "clean-spot screenshots",
+        "canonical up/forward axis",
+        "grounding offset",
+        "edible metadata decision",
+        "in-world Fern Plains player-height screenshot",
+        "propagated clone count"
+      ],
+      "nextAction": "Studio asset family sweep; accept only if fronds are upright and grounded from player height.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q002",
+      "family": "fern_food_and_ground_cover",
+      "priority": 2,
+      "slot": "beat1.food.herbivore_fern",
+      "problem": "need fallback if Fern Bush scale/orientation fails",
+      "candidate": {
+        "assetId": 434184732,
+        "name": "Realisitc Fern",
+        "query": "fern",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Strong secondary fern seed and script-free; spelling in catalog name is preserved as source data.",
+      "missingEvidence": [
+        "clean-spot screenshots",
+        "part/mesh count",
+        "scale sanity",
+        "in-world food readability"
+      ],
+      "nextAction": "Inspect after Q001 or sooner if the live world already uses this family.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q003",
+      "family": "fern_food_and_ground_cover",
+      "priority": 3,
+      "slot": "beat1.food.plant_pack",
+      "problem": "need varied ground-cover pack if individual ferns look repetitive",
+      "candidate": {
+        "assetId": 2915526744,
+        "name": "Low Poly Plant Pack",
+        "query": "low poly plant",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Script-free plant pack seed; useful if it can produce upright food/ground-cover subfamilies.",
+      "missingEvidence": [
+        "pack contents split into subfamilies",
+        "per-subfamily orientation",
+        "accepted edible subset",
+        "rejected decorative-only subset"
+      ],
+      "nextAction": "Inspect only as a pack and split winners into separate asset-family records before placement.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q004",
+      "family": "staged_and_imported_dinosaurs",
+      "priority": 4,
+      "slot": "beat2.fern_plains.herd",
+      "problem": "reported dinos face down",
+      "candidate": {
+        "assetId": 18759347676,
+        "name": "Rigged Dinosaur Models",
+        "query": "rigged dinosaur models",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Highest-value dinosaur pack seed; could cover multiple player/NPC species if orientation and rig evidence pass.",
+      "missingEvidence": [
+        "clean-spot pack contents inventory",
+        "rig/root helper audit",
+        "canonical up/forward for each chosen species",
+        "animation/locomotion suitability",
+        "player/NPC in-world screenshot"
+      ],
+      "nextAction": "Inspect as a pack; do not place broadly until each selected species family has its own orientation record.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q005",
+      "family": "staged_and_imported_dinosaurs",
+      "priority": 5,
+      "slot": "beat2.fern_plains.predator",
+      "problem": "predator needs readable forward direction and script quarantine",
+      "candidate": {
+        "assetId": 248223518,
+        "name": "Jurassic World - Ridable Velociraptor",
+        "query": "velociraptor",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": true
+      },
+      "whyFirst": "Strong raptor visual seed but scripted; useful only after script review and orientation proof.",
+      "missingEvidence": [
+        "script source review or quarantine",
+        "clean active clone script count",
+        "forward-axis proof",
+        "player-height predator encounter screenshot"
+      ],
+      "nextAction": "Quarantine scripts before visual evaluation; reject if behavior cannot be separated from art.",
+      "currentVerdict": "inspect_with_script_risk"
+    },
+    {
+      "queueId": "Q006",
+      "family": "staged_and_imported_dinosaurs",
+      "priority": 6,
+      "slot": "beat0.egg_wakeup.hatchling_mesh",
+      "problem": "hatchling needs small readable body orientation",
+      "candidate": {
+        "assetId": 2167783289,
+        "name": "Blue",
+        "query": "baby dinosaur",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Script-free hatchling seed for Beat 0; lower risk than scripted raptor candidates.",
+      "missingEvidence": [
+        "scale against hatchling/player camera",
+        "orientation proof",
+        "helper part visibility audit",
+        "nursery spawn-path screenshot"
+      ],
+      "nextAction": "Inspect after the main dino pack, or earlier if current world hatchling is the source of face-down visuals.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q007",
+      "family": "egg_nest_hatchling",
+      "priority": 7,
+      "slot": "beat0.egg_wakeup.nest_detail",
+      "problem": "nest needs readable non-placeholder Beat 0 visual",
+      "candidate": {
+        "assetId": 463710364,
+        "name": "Theropod Nest + Theropod eggs",
+        "query": "egg nest",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Theropod nest is more on-theme for starter dinosaur hatching than generic egg/faberge assets.",
+      "missingEvidence": [
+        "clean-spot screenshots",
+        "nursery placement scale",
+        "spawn-path player-height readability",
+        "grounding and collision policy"
+      ],
+      "nextAction": "Inspect after visible fern/dino blockers unless current world nest is already placed wrong.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q008",
+      "family": "carnivore_food_carcass_and_bones",
+      "priority": 8,
+      "slot": "beat1.food.carnivore_carcass",
+      "problem": "carnivore food needs edible visual clarity",
+      "candidate": {
+        "assetId": 3414358748,
+        "name": "Dead rat",
+        "query": "animal carcass",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Only current animal carcass-like seed with no scripts; may be too small/off-theme but deserves a quick scale check.",
+      "missingEvidence": [
+        "scale and theme fit",
+        "edible from player height",
+        "not confused with tiny decoration",
+        "depletion/restore visual policy"
+      ],
+      "nextAction": "Inspect as a possible small-carcass food; reject if it reads as tiny clutter.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q009",
+      "family": "carnivore_food_carcass_and_bones",
+      "priority": 9,
+      "slot": "beat1.food.bone_fallback",
+      "problem": "need fallback bone/carrion dressing if carcass search remains weak",
+      "candidate": {
+        "assetId": 6934081776,
+        "name": "Synty Dungeon Pack: Skeletons & Bones",
+        "query": "bone",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Strong rated bone pack seed; likely useful as dressing or fallback food cue after scale/subasset split.",
+      "missingEvidence": [
+        "pack split into edible vs decorative families",
+        "scale reduction policy",
+        "player-height readability",
+        "collision safety"
+      ],
+      "nextAction": "Inspect as a pack; do not call it edible meat unless screenshots prove food readability.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q010",
+      "family": "swamp_delta_water_life",
+      "priority": 10,
+      "slot": "beat5.swamp_delta.lilypad",
+      "problem": "swamp water props need water-plane grounding",
+      "candidate": {
+        "assetId": 708797531,
+        "name": "Water Lily",
+        "query": "water lily",
+        "sourceLayers": ["live_mcp_curate_assets"],
+        "hasScripts": false
+      },
+      "whyFirst": "Direct lily pad seed; orientation and waterline fit are the main questions.",
+      "missingEvidence": [
+        "water-plane placement proof",
+        "top/side player-height screenshots",
+        "collision/swim clearance",
+        "repeated clone propagation"
+      ],
+      "nextAction": "Inspect after primary fern/dino blockers or when Swamp Delta pass begins.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q011",
+      "family": "redstone_canyon_rocks_fossils",
+      "priority": 11,
+      "slot": "beat6.redstone_canyon.rocks",
+      "problem": "route-framing rocks must not block camera or traversal",
+      "candidate": {
+        "assetId": 70617428,
+        "name": "Boulder/big rock",
+        "query": "boulder",
+        "sourceLayers": ["project_asset_manifest"],
+        "hasScripts": false
+      },
+      "whyFirst": "Simple script-free rock seed from project manifest; good candidate for canonical grounding/scale pass.",
+      "missingEvidence": [
+        "grounding on canyon terrain",
+        "collision policy",
+        "camera clearance",
+        "route placement screenshot"
+      ],
+      "nextAction": "Inspect during Redstone Canyon family pass.",
+      "currentVerdict": "inspect"
+    },
+    {
+      "queueId": "Q012",
+      "family": "apocalyptic_city_ruins",
+      "priority": 12,
+      "slot": "beat7.city.ruins",
+      "problem": "city ruins have high script risk; start with script-free core pieces",
+      "candidate": {
+        "assetId": 108178603114720,
+        "name": "Destroyed Building Ruins City Apocalypse RP",
+        "query": "city ruins",
+        "sourceLayers": ["project_asset_manifest"],
+        "hasScripts": false
+      },
+      "whyFirst": "Script-free city ruin seed; stronger starting point than many scripted city/wreck candidates.",
+      "missingEvidence": [
+        "size and part count",
+        "forward/facade direction",
+        "camera and navigation clearance",
+        "street-entry player-height screenshot"
+      ],
+      "nextAction": "Inspect during Apocalyptic City pass; reject if too large for the condensed map.",
+      "currentVerdict": "inspect"
+    }
+  ],
+  "readinessSummary": {
+    "inspect": 11,
+    "inspect_with_script_risk": 1,
+    "ready_for_palette": 0,
+    "rejected": 0
+  }
+}
