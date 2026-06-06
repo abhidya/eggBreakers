@@ -143,10 +143,10 @@ Owner Agent: worker-5
 Task ID: T006
 Story ID: US14
 Failing test: G015/G016 asset gate
-Failure message: 58/500 release-ready assets per latest persisted-place evidence.
+Failure message: 70/500 release-ready assets per latest persisted-place evidence.
 Root cause: actual imported audited placed assets below release threshold.
-Fix strategy: continue Creator Store import/audit/place batches after core playability loop is green; do not fake with docs or generated clones. Use `eggBreakers5.rbxl` as the current cleaned persisted baseline and keep removing validation-only leftovers before release audits.
-Files to edit: UniqueImportPilotReport.lua, docs/G016/ASSET_GATE_REPORT.md, `tools/g016_place_gate_audit.luau`, `tools/g016_clean_place_candidate.luau`, place assets through Studio MCP or an authenticated headless asset-delivery lane.
+Fix strategy: continue Creator Store import/audit/place batches after core playability loop is green; do not fake with docs or generated clones. Use `eggBreakers6.rbxl` as the current cleaned persisted baseline and keep removing validation-only leftovers before release audits.
+Files to edit: UniqueImportPilotReport.lua, docs/G016/ASSET_GATE_REPORT.md, `tools/g016_place_gate_audit.luau`, `tools/g016_clean_place_candidate.luau`, `tools/g016_release_ready_inventory.luau`, `tools/g016_merge_release_ready_candidates.luau`, place assets through Studio MCP or an authenticated headless asset-delivery lane.
 Studio/place actions: import/audit/place until >=500 or continue retry queue.
 Smallest retest: AssetImportAuditService ValidateReleaseCounts(500).
 Full retest: G016FinalGateSuite.
