@@ -1,0 +1,53 @@
+{
+  "schema": "roblox-asset-brain-pages/v1",
+  "project": "eggbreakers",
+  "generatedAt": "2026-06-05T21:50:10Z",
+  "source": {
+    "mcp": "asset-search-mcp v0.7 repo-local",
+    "searchPolicy": "custom asset-search MCP only; no Studio search used in this pass",
+    "projectManifestSource": "src/ReplicatedStorage/Shared/AssetManifest.lua",
+    "liveMcp": "mcp__asset_search.curate_assets",
+    "liveMcpNote": "Live custom asset-search MCP produced the story-slot candidates; repo-local v0.7 search returned empty in this session and was used only for schemas/plans."
+  },
+  "counts": {
+    "assetEntries": 425,
+    "mcpReviewedSeedAssets": 0,
+    "projectManifestSeedAssets": 180,
+    "searchQueries": 69,
+    "reviews": 0,
+    "inspections": 0,
+    "paletteAssets": 0,
+    "liveMcpCuratedSeedAssets": 72,
+    "inventoryArtifacts": 1,
+    "dreamQueueArtifacts": 1,
+    "inspectionQueueArtifacts": 1,
+    "pumpReadinessRecords": 12,
+    "pumpSessionReports": 1
+  },
+  "pagesLayout": {
+    "manifest": "asset-brain/v1/manifest.json",
+    "asset": "asset-brain/v1/assets/by-id/{shard}/{assetId}.json",
+    "enrichment_events": "asset-brain/v1/enrichments/by-asset/{shard}/{assetId}.ndjson",
+    "reviews": "asset-brain/v1/reviews/by-asset/{shard}/{assetId}.ndjson",
+    "palette": "asset-brain/v1/palettes/eggbreakers.json",
+    "indexes": [
+      "asset-brain/v1/indexes/assets-lite.ndjson",
+      "asset-brain/v1/indexes/queries-lite.ndjson",
+      "asset-brain/v1/indexes/rejected-assets.ndjson",
+      "asset-brain/v1/indexes/pump-readiness.ndjson"
+    ],
+    "inventory": "asset-brain/v1/inventory/eggbreakers-existing-assets.json",
+    "dreams": "asset-brain/v1/dreams/eggbreakers-asset-pump-2026-06-05.json",
+    "inspectionQueue": "asset-brain/v1/queues/eggbreakers-family-inspection-queue.json",
+    "pumpSessionReport": "asset-brain/v1/reports/eggbreakers-asset-brain-pump-session-2026-06-05.json"
+  },
+  "storyboards": {
+    "cacheBackedStoryboard": "docs/G020/CacheBackedStoryboards.md",
+    "seedReport": "docs/G020/AssetCacheSeedReport.md"
+  },
+  "warnings": [
+    "Catalog/storyboard cache only; final palette requires Studio geometry, script audit, and player-angle screenshots.",
+    "2026-06-05 asset pump added focused inventory/dream artifacts; no search-only candidate is release-ready.",
+    "No .rbxl, .rbxm, screenshots, meshes, or thumbnails are stored in this tree."
+  ]
+}

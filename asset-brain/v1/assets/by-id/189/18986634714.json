@@ -1,0 +1,34 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 18986634714,
+  "shard": "189",
+  "name": "Swamp Trees",
+  "category": "Model",
+  "creator": "Greentender_bacon08",
+  "score": 75,
+  "hasScripts": false,
+  "sourceScriptCount": 0,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat5.swamp_delta.reeds_lilypad",
+  "beat": "Beat 5",
+  "role": "swamp vertical landmark",
+  "query": "swamp tree",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest",
+    "live_mcp_curate_assets"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "votes": 0,
+  "triangles": 15930
+}

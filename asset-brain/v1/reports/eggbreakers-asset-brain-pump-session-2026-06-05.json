@@ -1,0 +1,94 @@
+{
+  "schema": "eggbreakers-asset-brain-pump-session/v1",
+  "project": "eggbreakers",
+  "generatedAt": "2026-06-05T21:57:05Z",
+  "objective": "Inventory existing assets, dream relevant related asset families, and pump the asset brain toward inspectable world-asset verification.",
+  "artifactsUpdated": [
+    {
+      "path": "asset-brain/v1/inventory/eggbreakers-existing-assets.json",
+      "role": "current-state inventory",
+      "summary": "Captures local Pages mirror counts, project manifest counts, script-risk families, seeded asset families, and live MCP mismatch."
+    },
+    {
+      "path": "asset-brain/v1/dreams/eggbreakers-asset-pump-2026-06-05.json",
+      "role": "dream queue",
+      "summary": "Defines focused dream groups for ferns, dinos, nests, carnivore food, swamp, canyon, city, and navigation/scent."
+    },
+    {
+      "path": "asset-brain/v1/queues/eggbreakers-family-inspection-queue.json",
+      "role": "inspection queue",
+      "summary": "Turns dream groups into 12 concrete candidate-family inspection items with missing evidence and next action."
+    },
+    {
+      "path": "asset-brain/v1/indexes/pump-readiness.ndjson",
+      "role": "readiness index",
+      "summary": "Fast NDJSON index of the 12 pump queue items and blockers."
+    },
+    {
+      "path": "asset-brain/v1/manifest.json",
+      "role": "asset-brain manifest",
+      "summary": "Links the inventory, dream queue, inspection queue, and pump readiness index."
+    }
+  ],
+  "currentCounts": {
+    "localAssetBrainByIdRecords": 425,
+    "localQueryRecords": 69,
+    "localCommittedPaletteAssets": 0,
+    "localInspectionRecords": 0,
+    "projectManifestCatalogedSourceIds": 500,
+    "pumpQueueItems": 12,
+    "pumpReadinessRecords": 12
+  },
+  "liveMcpContrast": {
+    "exportedAt": "2026-06-05T21:52:15.751Z",
+    "assets": 103,
+    "reviews": 41,
+    "inspections": 46,
+    "claims": 77,
+    "paletteAssets": 0,
+    "note": "The live asset-search MCP contains inspection/review memory that is not yet mirrored into repo-local Pages shards. Use the live MCP as inspection memory until a filtered Egg Breakers sync is written."
+  },
+  "firstPumpLane": {
+    "family": "fern_food_and_ground_cover",
+    "reason": "The current world problem reports sideways ferns.",
+    "queueIds": ["Q001", "Q002", "Q003"],
+    "candidateAssetIds": [7979002756, 434184732, 2915526744],
+    "requiredProof": [
+      "clean-spot front/back/left/right/overhead/player-height screenshots",
+      "canonical up/forward axis",
+      "grounding offset and scale policy",
+      "edible-vs-decorative metadata decision",
+      "in-world Fern Plains player-height screenshot",
+      "propagated live clone count",
+      "temporary validation clone cleanup proof"
+    ]
+  },
+  "secondPumpLane": {
+    "family": "staged_and_imported_dinosaurs",
+    "reason": "The current world problem reports face-down dinos.",
+    "queueIds": ["Q004", "Q005", "Q006"],
+    "candidateAssetIds": [18759347676, 248223518, 2167783289],
+    "requiredProof": [
+      "pack contents or staged model inventory",
+      "helper/root part visibility audit",
+      "script quarantine for scripted imports",
+      "canonical feet/down and forward-axis proof",
+      "player/NPC in-world player-height screenshot",
+      "propagated player/NPC/staged clone usage proof"
+    ]
+  },
+  "whatWasNotDone": [
+    "No final palette asset was committed because no queued candidate has player-angle screenshot proof.",
+    "No Studio place mutation was attempted from this Codex App surface.",
+    "No screenshot or binary asset was stored in the Pages tree.",
+    "The pre-existing modified eggBreakers3.rbxl file was not touched by this pump session."
+  ],
+  "nextActions": [
+    "Run Studio asset-family sweep for Q001 Fern Bush.",
+    "Record inspection with worldPlacementAudit and screenshot refs.",
+    "If Q001 fails, inspect Q002 Realisitc Fern and Q003 Low Poly Plant Pack.",
+    "Then run the dino orientation lane starting with Q004 Rigged Dinosaur Models.",
+    "Only update asset-brain/v1/palettes/eggbreakers.json after a family has accepted screenshot evidence."
+  ],
+  "completionState": "pumped_not_complete"
+}

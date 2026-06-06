@@ -1,0 +1,29 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 2915526744,
+  "shard": "291",
+  "name": "Low Poly Plant Pack",
+  "category": "Model",
+  "creator": "BL00MIE",
+  "score": 97.3,
+  "votes": 20,
+  "triangles": 28457,
+  "hasScripts": false,
+  "storyboardSlot": "beat1.food.plant_pack",
+  "beat": "Beat 1",
+  "role": "forage scatter pack",
+  "query": "low poly plant",
+  "sourceLayers": [
+    "live_mcp_curate_assets"
+  ],
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "reviews": []
+}

@@ -8,6 +8,19 @@ Roblox survival prototype where players hatch as dinosaurs, manage hunger/thirst
 - `ServerScriptService/ServerMain.server.lua` requires `Bootstrap` and calls `Bootstrap.Init()` before binding remotes.
 - `Bootstrap.Init()` is idempotent: it creates `ReplicatedStorage.Remotes` and one `RemoteEvent` per `ReplicatedStorage.Shared.RemoteContracts` entry.
 
+## Reviewer demo path
+
+1. Open the latest committed `.rbxl` place in Roblox Studio, or sync the Rojo
+   source tree from `default.project.json`.
+2. Press **Play** and verify the starter species selection, hunger/thirst/stamina
+   HUD, biome exploration, fossil collection, and NPC/prey interactions.
+3. Use the documents listed in `eggBreakers_STATUS.md` for current release-gate
+   counts before quoting asset or pass/fail numbers.
+
+The source tree is the reviewable implementation surface. Large binary place
+snapshots are retained as Studio evidence; do not treat them as the only source
+of truth for code review.
+
 ## Validation
 
 Use Rojo for source sync/build. Current automated gates are documented in `.omx/TestResults.md` and the G013 docs under `.omx/`.

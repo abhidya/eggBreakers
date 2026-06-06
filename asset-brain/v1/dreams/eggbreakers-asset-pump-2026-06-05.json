@@ -1,0 +1,200 @@
+{
+  "schema": "eggbreakers-asset-dream-queue/v1",
+  "project": "eggbreakers",
+  "generatedAt": "2026-06-05T21:50:10Z",
+  "purpose": "Pump the asset brain with focused, inspectable asset families related to the current Egg Breakers world instead of broad generic room/lobby searches.",
+  "mcpPumpResult": {
+    "tool": "preprocess_storyboard_asset_cache",
+    "themesRequested": [
+      "egg nest hatchling nursery grove",
+      "fern plains prehistoric fern herbivore food",
+      "rigged dinosaur models playable dino NPC predator prey",
+      "jungle basin vines temple prehistoric plants",
+      "swamp delta lily pads reeds fish spinosaurus",
+      "redstone canyon fossils bones sandstone cliffs",
+      "apocalyptic city ruins wrecked cars rubble road signs"
+    ],
+    "lesson": "Over-specific multi-concept searches produced sparse results. Next pump passes should use short family queries, then attach winners to story slots after inspection."
+  },
+  "dreamGroups": [
+    {
+      "id": "fern_orientation_repair",
+      "priority": 1,
+      "why": "The user reported ferns on their side; herbivore starter food and Fern Plains dressing need immediate family-level orientation proof.",
+      "queries": [
+        "prehistoric fern",
+        "fern bush",
+        "low poly fern plant",
+        "cycad plant",
+        "low poly grass clump",
+        "jungle ground cover plant"
+      ],
+      "seedAssetIds": [7979002756, 434184732, 2915526744, 12630982706, 11611657675],
+      "acceptanceChecks": [
+        "single family clean-spot clone captured from front/back/left/right/overhead/player height",
+        "fronds upright from player height",
+        "bottom geometry grounded with no sideways pivot",
+        "edible metadata preserved or stamped only on accepted food roots",
+        "all live clones using the same family updated before temp clone cleanup"
+      ]
+    },
+    {
+      "id": "dinosaur_orientation_repair",
+      "priority": 2,
+      "why": "The user reported face-down dinosaurs; staged species and imported dino candidates need canonical up/forward before player/NPC use.",
+      "queries": [
+        "rigged dinosaur models",
+        "rigged dinosaur models 2",
+        "velociraptor rigged dinosaur",
+        "triceratops rigged dinosaur",
+        "spinosaurus npc dinosaur",
+        "baby dinosaur model"
+      ],
+      "seedAssetIds": [18759347676, 129426942556570, 248223518, 281912567, 1320554267, 2167783289, 6185104172, 2989814926],
+      "acceptanceChecks": [
+        "model feet/down axis visible from clean-spot player-height view",
+        "forward axis faces movement/combat/action path rather than ground",
+        "helper roots and hitboxes hidden/non-colliding where appropriate",
+        "scripted imported dino models quarantined or rejected until reviewed",
+        "canonical fix propagated to player, NPC, and staged clone uses"
+      ]
+    },
+    {
+      "id": "hatch_nest_upgrade",
+      "priority": 3,
+      "why": "Beat 0 needs a readable egg/nest object that is not generic filler.",
+      "queries": [
+        "theropod nest eggs",
+        "sauropod nest eggs",
+        "dinosaur egg nest",
+        "prehistoric egg nest",
+        "hatching dinosaur egg"
+      ],
+      "seedAssetIds": [463710364, 463709089, 104497410410577, 240666886, 708850786],
+      "acceptanceChecks": [
+        "egg/nest reads from the spawn path, not only overhead",
+        "scale fits hatchling/player camera",
+        "no uncontrolled scripts",
+        "grounded on nursery floor",
+        "safe to mark as required playable visual only after screenshot proof"
+      ]
+    },
+    {
+      "id": "carnivore_food_upgrade",
+      "priority": 4,
+      "why": "Carnivore survival needs food that reads as carrion/meat, not an abstract marker or museum fossil.",
+      "queries": [
+        "animal carcass dead deer ribcage",
+        "dead animal carcass",
+        "low poly bones pack",
+        "meat bone carcass",
+        "raw meat haunch bone",
+        "skeleton bones pack"
+      ],
+      "seedAssetIds": [3414358748, 6934081776, 1894867381, 2915304314, 15679580048],
+      "acceptanceChecks": [
+        "reads as edible carnivore target from player height",
+        "not too large for first food interaction",
+        "does not imply non-edible museum-only fossil unless used as dressing",
+        "script-free or scripts removed",
+        "depletion/restore visual policy documented if used as food"
+      ]
+    },
+    {
+      "id": "swamp_delta_density",
+      "priority": 5,
+      "why": "Swamp Delta needs water-surface and shoreline families that are easy to orient and ground.",
+      "queries": [
+        "water lily lily pad",
+        "swamp reeds",
+        "swamp tree",
+        "swamp log",
+        "fish school low poly",
+        "pond plants"
+      ],
+      "seedAssetIds": [543827347, 18986634714, 432559636, 708797531, 1725227984],
+      "acceptanceChecks": [
+        "lily pads sit on water plane",
+        "trees/logs are grounded or intentionally waterline-placed",
+        "fish remain inside valid water volumes",
+        "spino sightline and camera clearance remain playable",
+        "family fixes recorded before broad scatter"
+      ]
+    },
+    {
+      "id": "redstone_canyon_landmarks",
+      "priority": 6,
+      "why": "Canyon needs route-framing rocks, cliffs, fossils, and bones that do not block traversal.",
+      "queries": [
+        "red canyon rock",
+        "sandstone boulder",
+        "dinosaur fossil bones",
+        "rock arch",
+        "cave entrance",
+        "crystal rock"
+      ],
+      "seedAssetIds": [70617428, 94940698, 577078767, 6566037175, 70417873353617, 11239705094],
+      "acceptanceChecks": [
+        "grounded on canyon terrain",
+        "does not create stuck spots",
+        "fossil display reads as landmark or food according to slot",
+        "scale does not occlude the camera on core route",
+        "accepted family has orientation metadata before repeated placement"
+      ]
+    },
+    {
+      "id": "apocalyptic_city_readability",
+      "priority": 7,
+      "why": "City assets are plentiful but script risk is high; use smaller script-free families first.",
+      "queries": [
+        "destroyed building ruins city",
+        "wrecked car",
+        "rubble debris",
+        "road sign",
+        "street light",
+        "concrete barrier",
+        "asphalt road"
+      ],
+      "seedAssetIds": [108178603114720, 9213511042, 250378973, 368743404, 404475960, 536859534, 9709196113],
+      "acceptanceChecks": [
+        "script-free or imported scripts quarantined",
+        "sign/lamp/car forward direction useful from player path",
+        "wrecks and barriers do not trap players",
+        "ruins do not block camera or hide core landmarks",
+        "family propagation count recorded after placement"
+      ]
+    },
+    {
+      "id": "navigation_and_scent_ui",
+      "priority": 8,
+      "why": "Search is still weak for waypoint/scent assets; keep this as a dream lane until a safe UI/particle candidate exists.",
+      "queries": [
+        "survival compass gui",
+        "waypoint marker gui",
+        "scent trail particles",
+        "food smell particle",
+        "offscreen indicator marker"
+      ],
+      "seedAssetIds": [],
+      "acceptanceChecks": [
+        "no false-direction arrows",
+        "no gameplay authority scripts from imported UI without review",
+        "readable on mobile and desktop",
+        "does not occlude hatch/action UI",
+        "kept separate from world placement asset signoff"
+      ]
+    }
+  ],
+  "pumpRules": [
+    "Prefer focused queries of one family or role at a time.",
+    "Do not commit a palette winner from search metadata alone.",
+    "Every asset family needs clean-spot screenshots plus at least one in-world player-angle screenshot.",
+    "Record inspection metadata before using a family as a repeated placement template.",
+    "Reject or quarantine scripted imported content until script source has been reviewed."
+  ],
+  "nextPumpActions": [
+    "Run fern_orientation_repair first and record inspections for all accepted/rejected fern candidates.",
+    "Run dinosaur_orientation_repair second against the staged/imported dino families currently visible in the place.",
+    "After screenshots, update asset-brain/v1/palettes/eggbreakers.json only with pass/fix families that have accepted risk."
+  ]
+}

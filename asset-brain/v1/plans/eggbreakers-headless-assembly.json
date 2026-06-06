@@ -1,0 +1,547 @@
+{
+  "project": "eggbreakers",
+  "target_place": "eggBreakers3.rbxl",
+  "working_copy": "work/rojo-working/eggBreakers3.working.rbxl",
+  "rojo_build_output": "work/rojo-working/Place1.rojo-built.rbxlx",
+  "mode": "headless-fragment-fanout",
+  "assembly_profile": "prop_hunt",
+  "endpoints": [
+    {
+      "name": "Creator Store search",
+      "method": "POST",
+      "url": "https://apis.roblox.com/toolbox-service/v2/assets:search",
+      "auth": "Roblox-authenticated client context; respect creator permissions and rate limits",
+      "purpose": "Find model/plugin/audio/image candidates before claiming and inspecting them."
+    },
+    {
+      "name": "Toolbox asset metadata",
+      "method": "GET",
+      "url": "https://apis.roblox.com/toolbox-service/v2/assets/{assetId}",
+      "auth": "Roblox-authenticated client context",
+      "purpose": "Fetch current catalog metadata for a shortlisted Creator Store asset."
+    },
+    {
+      "name": "Asset Delivery",
+      "method": "GET",
+      "url": "https://assetdelivery.roblox.com/v1/asset/?id={assetId}",
+      "auth": "Cookie/session when the asset requires ownership or permission",
+      "purpose": "Download model content as the same serialized rbxm/rbxl family parsed by Lune/rbx-dom."
+    },
+    {
+      "name": "Open Cloud Assets",
+      "method": "POST/PATCH",
+      "url": "https://apis.roblox.com/assets/v1/assets",
+      "auth": "Open Cloud API key with asset scopes",
+      "purpose": "Upload or update owned assets used by generated games."
+    },
+    {
+      "name": "Open Cloud place publish",
+      "method": "POST",
+      "url": "https://apis.roblox.com/universes/v1/{universeId}/places/{placeId}/versions?versionType=Published",
+      "auth": "Open Cloud API key with universe/place publish scope",
+      "purpose": "Publish a generated rbxl after local validation and visual signoff."
+    }
+  ],
+  "fragment_contract": {
+    "version": "roblox-fragment-manifest/v1",
+    "required_fields": [
+      "fragment_id",
+      "target_parent",
+      "order_key",
+      "single_root or roots[1]",
+      "source_digest",
+      "asset_ids",
+      "identity_policy.referents",
+      "identity_policy.unique_ids"
+    ],
+    "identity_policy": {
+      "referents": "coordinator_remap",
+      "unique_ids": "strip | coordinator_generate",
+      "history_ids": "strip",
+      "parent_links": "coordinator_assigns_after_import"
+    },
+    "disallowed_script_patterns": [
+      {
+        "id": "numeric_require",
+        "label": "require(assetId)",
+        "reason": "loads opaque third-party module code at runtime"
+      },
+      {
+        "id": "insert_service_load_asset",
+        "label": "InsertService:LoadAsset",
+        "reason": "pulls new assets during runtime instead of from the reviewed fragment"
+      },
+      {
+        "id": "loadstring",
+        "label": "loadstring",
+        "reason": "executes dynamic code that cannot be reviewed in the fragment"
+      },
+      {
+        "id": "http_get_post",
+        "label": "HttpService request",
+        "reason": "performs external network calls from imported content"
+      }
+    ]
+  },
+  "agent_work_packets": [
+    {
+      "fragment_id": "eggbreakers_lobby_shell",
+      "role": "lobby-shell",
+      "target_parent": "Workspace",
+      "order_key": "000-lobby",
+      "output_model": "fragments/eggbreakers_lobby_shell.rbxm",
+      "output_manifest": "fragments/eggbreakers_lobby_shell.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "lobby.spawn.plaza",
+          "query": "Roblox lobby spawn plaza",
+          "purpose": "persistent social/gameplay shell"
+        },
+        {
+          "slot": "lobby.portal.room_queue",
+          "query": "Roblox portal doorway matchmaking lobby",
+          "purpose": "persistent social/gameplay shell"
+        },
+        {
+          "slot": "lobby.npc.guide",
+          "query": "Roblox friendly guide NPC",
+          "purpose": "persistent social/gameplay shell"
+        },
+        {
+          "slot": "lobby.shop.upgrades",
+          "query": "Roblox upgrade shop kiosk",
+          "purpose": "persistent social/gameplay shell"
+        },
+        {
+          "slot": "lobby.board.leaderboard",
+          "query": "Roblox leaderboard board",
+          "purpose": "persistent social/gameplay shell"
+        },
+        {
+          "slot": "lobby.cosmetics.display",
+          "query": "Roblox avatar display stand",
+          "purpose": "persistent social/gameplay shell"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing lobby visual affordances only.",
+        "Portal/NPC/shop/leaderboard assets arranged as an editable subtree.",
+        "Manifest declaring asset ids, digest, identity policy, and any external anchors."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_nursery_grove_room",
+      "role": "themed-room",
+      "theme": "nursery grove",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "001-nursery_grove",
+      "output_model": "fragments/nursery_grove.rbxm",
+      "output_manifest": "fragments/nursery_grove.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "nursery_grove.room.arena_shell",
+          "query": "nursery grove Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.portal.door",
+          "query": "nursery grove portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.npc.host",
+          "query": "nursery grove NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.setpiece.anchor",
+          "query": "nursery grove setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.hideable.prop_pack",
+          "query": "nursery grove hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.hideable.small_props",
+          "query": "nursery grove small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.avatar.form",
+          "query": "nursery grove character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "nursery_grove.ambience.audio",
+          "query": "nursery grove ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_fern_plains_room",
+      "role": "themed-room",
+      "theme": "fern plains",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "002-fern_plains",
+      "output_model": "fragments/fern_plains.rbxm",
+      "output_manifest": "fragments/fern_plains.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "fern_plains.room.arena_shell",
+          "query": "fern plains Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.portal.door",
+          "query": "fern plains portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.npc.host",
+          "query": "fern plains NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.setpiece.anchor",
+          "query": "fern plains setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.hideable.prop_pack",
+          "query": "fern plains hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.hideable.small_props",
+          "query": "fern plains small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.avatar.form",
+          "query": "fern plains character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "fern_plains.ambience.audio",
+          "query": "fern plains ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_jungle_basin_room",
+      "role": "themed-room",
+      "theme": "jungle basin",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "003-jungle_basin",
+      "output_model": "fragments/jungle_basin.rbxm",
+      "output_manifest": "fragments/jungle_basin.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "jungle_basin.room.arena_shell",
+          "query": "jungle basin Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.portal.door",
+          "query": "jungle basin portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.npc.host",
+          "query": "jungle basin NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.setpiece.anchor",
+          "query": "jungle temple ruins",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.hideable.prop_pack",
+          "query": "jungle temple ruins plant prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.hideable.small_props",
+          "query": "jungle basin small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.avatar.form",
+          "query": "explorer character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "jungle_basin.ambience.audio",
+          "query": "jungle ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_swamp_delta_room",
+      "role": "themed-room",
+      "theme": "swamp delta",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "004-swamp_delta",
+      "output_model": "fragments/swamp_delta.rbxm",
+      "output_manifest": "fragments/swamp_delta.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "swamp_delta.room.arena_shell",
+          "query": "swamp delta Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.portal.door",
+          "query": "swamp delta portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.npc.host",
+          "query": "swamp delta NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.setpiece.anchor",
+          "query": "swamp delta setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.hideable.prop_pack",
+          "query": "swamp delta hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.hideable.small_props",
+          "query": "swamp delta small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.avatar.form",
+          "query": "swamp delta character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "swamp_delta.ambience.audio",
+          "query": "swamp delta ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_redstone_canyon_room",
+      "role": "themed-room",
+      "theme": "redstone canyon",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "005-redstone_canyon",
+      "output_model": "fragments/redstone_canyon.rbxm",
+      "output_manifest": "fragments/redstone_canyon.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "redstone_canyon.room.arena_shell",
+          "query": "redstone canyon Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.portal.door",
+          "query": "redstone canyon portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.npc.host",
+          "query": "redstone canyon NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.setpiece.anchor",
+          "query": "redstone canyon setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.hideable.prop_pack",
+          "query": "redstone canyon hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.hideable.small_props",
+          "query": "redstone canyon small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.avatar.form",
+          "query": "redstone canyon character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "redstone_canyon.ambience.audio",
+          "query": "redstone canyon ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_mountain_nesting_cliffs_room",
+      "role": "themed-room",
+      "theme": "mountain nesting cliffs",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "006-mountain_nesting_cliffs",
+      "output_model": "fragments/mountain_nesting_cliffs.rbxm",
+      "output_manifest": "fragments/mountain_nesting_cliffs.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "mountain_nesting_cliffs.room.arena_shell",
+          "query": "mountain nesting cliffs Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.portal.door",
+          "query": "mountain nesting cliffs portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.npc.host",
+          "query": "mountain nesting cliffs NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.setpiece.anchor",
+          "query": "mountain nesting cliffs setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.hideable.prop_pack",
+          "query": "mountain nesting cliffs hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.hideable.small_props",
+          "query": "mountain nesting cliffs small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.avatar.form",
+          "query": "mountain nesting cliffs character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "mountain_nesting_cliffs.ambience.audio",
+          "query": "mountain nesting cliffs ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    },
+    {
+      "fragment_id": "eggbreakers_apocalyptic_city_room",
+      "role": "themed-room",
+      "theme": "apocalyptic city",
+      "target_parent": "Workspace.PropHuntRooms",
+      "order_key": "007-apocalyptic_city",
+      "output_model": "fragments/apocalyptic_city.rbxm",
+      "output_manifest": "fragments/apocalyptic_city.manifest.json",
+      "asset_slots": [
+        {
+          "slot": "apocalyptic_city.room.arena_shell",
+          "query": "apocalyptic city Roblox map environment room",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.portal.door",
+          "query": "apocalyptic city portal doorway Roblox",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.npc.host",
+          "query": "apocalyptic city NPC character",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.setpiece.anchor",
+          "query": "apocalyptic city setpiece landmark",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.hideable.prop_pack",
+          "query": "apocalyptic city hideable prop pack",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.hideable.small_props",
+          "query": "apocalyptic city small props crate barrel rock coral furniture",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.avatar.form",
+          "query": "apocalyptic city character morph",
+          "purpose": "capacity-limited themed room pack"
+        },
+        {
+          "slot": "apocalyptic_city.ambience.audio",
+          "query": "apocalyptic city ambient audio",
+          "purpose": "capacity-limited themed room pack"
+        }
+      ],
+      "deliverables": [
+        "One root Model containing room shell, setpieces, hideables, host, portal marker, and ambience references.",
+        "No gameplay authority scripts inside imported asset content unless explicitly reviewed.",
+        "Manifest declaring the room spawn anchor and any references to shared lobby/session folders."
+      ]
+    }
+  ],
+  "coordinator_merge_steps": [
+    "Copy the target place to a scratch rbxl before mutation.",
+    "For each packet, validate the manifest before loading the rbxm subtree.",
+    "Run scripts/headless_fragment_merge.luau as the coordinator merge entrypoint.",
+    "Deserialize with Lune/rbx-dom and reject fragments with unresolved external references.",
+    "Strip or regenerate UniqueId/HistoryId and remap all referents in coordinator-owned memory.",
+    "Parent exactly one root model into the declared target_parent in deterministic order_key order.",
+    "Resolve declared anchors by path/name after parenting; never trust raw parent links from agents.",
+    "Write the merged rbxl, run Rojo/Lune validation, then open in Studio only for visual/player QA."
+  ],
+  "validation_commands": [
+    "lune run scripts/headless_place_insert_poc.luau",
+    "lune run scripts/headless_fragment_merge.luau --place work/headless-poc/Place1.headless-working.rbxl --out work/headless-poc/Place1.headless-merged.rbxl --fragment work/headless-poc/generated-headless-marker.manifest.json --replace-existing",
+    "lune run scripts/headless_place_verify_poc.luau work/headless-poc/Place1.headless-merged.rbxl",
+    "rojo build default.project.json -o /tmp/RobloxAIDevPropHunt.rbxlx",
+    "cd asset-search-mcp && npm run gate:prop-hunt"
+  ],
+  "studio_gate": [
+    "Use StudioMCP for final insertion checks only when direct file validation passes.",
+    "Capture lobby, portal, and each room from player-height quadrant views.",
+    "Run validate_prop_hunt_gate before claiming the asset palette is ready."
+  ]
+}

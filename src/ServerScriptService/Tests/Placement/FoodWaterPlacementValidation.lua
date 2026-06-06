@@ -136,6 +136,50 @@ table.insert(suite.tests, { name = "food resolver does not use carnivore carcass
     carcassTemplate:Destroy()
 end })
 
+table.insert(suite.tests, { name = "oversized flat imported food panels are rejected", run = function()
+    local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
+    if not library then
+        library = Instance.new("Folder")
+        library.Name = "ImportedAssetLibrary"
+        library.Parent = ReplicatedStorage
+    end
+    local panelTemplate = Instance.new("Model")
+    panelTemplate.Name = "TestImportedFlatPanelFernVisual"
+    panelTemplate:SetAttribute("ImportedFoodVisualTemplate", true)
+    panelTemplate:SetAttribute("FoodKind", "MarshPlant")
+    panelTemplate:SetAttribute("Diet", "Herbivore")
+    panelTemplate:SetAttribute("CreatorStoreOnly", true)
+    panelTemplate:SetAttribute("ImportedVisibleAsset", true)
+    panelTemplate:SetAttribute("AssetManifestId", "TestImportedFlatPanelFern")
+
+    local panel = Instance.new("Part")
+    panel.Name = "BillboardFernPanel"
+    panel.Size = Vector3.new(24, 20, 0.2)
+    panel.Transparency = 0
+    panel.Parent = panelTemplate
+    panelTemplate.PrimaryPart = panel
+    panelTemplate.Parent = library
+
+    local folders = MapLayoutService:EnsureMapFolders()
+    local swampFolder = folders.FoodSources:FindFirstChild("SwampDelta")
+    if swampFolder then
+        local old = swampFolder:FindFirstChild("SwampDeltaMarshPlant_01")
+        if old then old:Destroy() end
+    end
+    MapLayoutService:EnsureFoodSourcePlacements(folders)
+
+    local food = folders.FoodSources.SwampDelta:FindFirstChild("SwampDeltaMarshPlant_01")
+    Assert.notNil(food, "swamp marsh plant exists")
+    Assert.equals(food:GetAttribute("ImportedFoodVisualAttached"), false, "flat imported food visual is rejected")
+    Assert.equals(food:GetAttribute("ImportedFoodVisualRejected"), true, "rejection is recorded on query part")
+    Assert.equals(food:GetAttribute("ImportedFoodVisualRejectReason"), "oversized_flat_panel_food_visual", "flat panel reason is explicit")
+    Assert.falsy(food:FindFirstChild(MapLayoutService.ImportedFoodVisualName), "oversized imported panel is not attached")
+    Assert.notNil(food:FindFirstChild(MapLayoutService.FoliageVisualName), "procedural fallback remains readable")
+    Assert.truthy(countVisibleFoodAffordances(food) >= 3, "fallback has readable local affordances")
+
+    panelTemplate:Destroy()
+end })
+
 table.insert(suite.tests, { name = "procedural food visual remains fallback when import absent", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     local source = folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")

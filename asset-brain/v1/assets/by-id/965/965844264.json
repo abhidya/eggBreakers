@@ -1,0 +1,34 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 965844264,
+  "shard": "965",
+  "name": "Another average plant",
+  "category": "MeshPart",
+  "creator": "Cobleth",
+  "score": 75,
+  "hasScripts": false,
+  "sourceScriptCount": null,
+  "shouldSandbox": null,
+  "storyboardSlot": "beat4.jungle_basin.vines",
+  "beat": "Beat 4",
+  "role": "ambush cover / canopy",
+  "query": "jungle vine",
+  "queryKey": "q=jungle temple ruins plant prop pack|cats=|verified=false|ext=false",
+  "sourceLayers": [
+    "mcp_search_cache",
+    "live_mcp_curate_assets"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review",
+  "votes": 0,
+  "triangles": null
+}

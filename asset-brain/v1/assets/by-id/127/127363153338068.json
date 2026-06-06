@@ -1,0 +1,31 @@
+{
+  "schema": "roblox-asset-cache-entry/v1",
+  "project": "eggbreakers",
+  "assetId": 127363153338068,
+  "shard": "127",
+  "name": "Canyons Echo Rock Nature Classic Red Canyon Build",
+  "category": "Model",
+  "creator": "ShadebiVenomn159785",
+  "score": null,
+  "hasScripts": true,
+  "sourceScriptCount": 5,
+  "shouldSandbox": true,
+  "storyboardSlot": "beat6.redstone_canyon.rocks",
+  "beat": null,
+  "role": null,
+  "query": "red canyon",
+  "queryKey": null,
+  "sourceLayers": [
+    "project_asset_manifest"
+  ],
+  "rejected": false,
+  "reviews": [],
+  "visual": {
+    "screenshotVerdict": "not_reviewed",
+    "visualRiskScore": null,
+    "visualRisks": []
+  },
+  "inspection": null,
+  "cacheAction": "storyboard_seed",
+  "validationState": "needs_studio_geometry_script_audit_and_player_angle_review"
+}

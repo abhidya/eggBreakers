@@ -1,0 +1,1 @@
+{"schema":"roblox-asset-enrichment/v1","assetId":13708942684,"sourceLayers":["live_mcp_curate_assets"],"storyboardSlot":"system.lobby.guide_npc","beat":"System","role":"guide NPC base","query":"friendly npc","visual":{"screenshotVerdict":"not_reviewed","visualRiskScore":null,"visualRisks":[]},"validationState":"needs_studio_geometry_script_audit_and_player_angle_review"}
