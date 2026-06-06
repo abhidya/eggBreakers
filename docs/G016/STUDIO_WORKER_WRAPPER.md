@@ -138,13 +138,27 @@ plugin menu item `Plugins > Rojo 7.6.1 > Rojo`; it did not expose a native
 `Rojo: Connect` plugin action. The probe is now bounded to the Plugins menu with
 a 15s timeout because broad native menu enumeration can hang.
 
-The next viable branch is a worker-specific Rojo plugin build. The prototype can
-now copy a local `rojo-rbx/rojo` checkout, patch the plugin default port and
-label, inject edit-mode auto-connect, and build `CodexRojoWorker-<port>.rbxm`.
-It can also install and remove only that manifest-owned local plugin path. Smoke
-evidence in `.omx/studio-controller-rojo-worker-plugin-build` and
+The worker-specific Rojo plugin branch is now testable but not accepted. The
+prototype can copy a local `rojo-rbx/rojo` checkout, patch the plugin default
+port and label, pin `Config.protocolVersion` from the live worker
+`/api/rojo` server, inject edit-mode auto-connect, and build
+`CodexRojoWorker-<port>.rbxm`. It can also install and remove only that
+manifest-owned local plugin path. Smoke evidence in
+`.omx/studio-controller-rojo-worker-plugin-build` and
 `.omx/studio-controller-rojo-worker-plugin-install-smoke` proves the artifact
 builds and the install side effect is reversible without launching Studio.
+
+Live worker-plugin attempt `.omx/studio-controller-worker-plugin-live` built
+and installed `CodexRojoWorker-34945.rbxm` against live Rojo `7.6.1` protocol
+`4`, launched the scratch place, ignored Auto-Recovery, dismissed the stale
+`localhost:34872` prompt, and ended with no startup blockers. It still failed
+the acceptance gate because built-in StudioMCP stopped discovering the active
+Studio instance: `list_roblox_studios` returned zero, `get_studio_state` said
+there was no active Studio instance, and every sentinel poll returned no marker
+or payload. The controller now records that as `mcp_target_unavailable` before
+falling back to stale-port Rojo diagnostics. The worker plugin and worker Rojo
+were removed after the run; only the existing `MCPStudioPlugin.rbxm` remained in
+the local Plugins folder.
 
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
@@ -224,13 +238,15 @@ The next script should own Studio lifecycle:
    exact copy;
 3. move Studio into a full-screen macOS Space before visual evidence capture;
 4. wait for a unique MCP session token or port;
-5. connect Rojo only when the prompt port/default-port diagnostic matches the
+5. prove StudioMCP can still discover and select the launched Studio after any
+   worker plugin is installed;
+6. connect Rojo only when the prompt port/default-port diagnostic matches the
    worker manifest;
-6. prove Rojo sync with a temporary source sentinel add/delete;
-7. fail or quarantine the capture pass if startup/UI blockers remain visible;
-8. run import/capture/playtest batches;
-9. save, close, reopen, and audit;
-10. kill only the Studio pid recorded in the worker manifest.
+7. prove Rojo sync with a temporary source sentinel add/delete;
+8. fail or quarantine the capture pass if startup/UI blockers remain visible;
+9. run import/capture/playtest batches;
+10. save, close, reopen, and audit;
+11. kill only the Studio pid recorded in the worker manifest.
 
 The asset/search MCP remains the asset discovery and inventory brain. The
 Studio MCP path here is only the controlled render, edit, screenshot, and

@@ -616,11 +616,18 @@ export class StudioControllerPrototype {
     const workerSourceDir = path.join(this.workDir, "rojo-worker-plugin-src");
     const outputPath = path.join(this.workDir, `CodexRojoWorker-${this.options.rojoPort}.rbxm`);
     copyRojoSourceForWorker(sourceDir, workerSourceDir);
+    const liveServerInfo = readRojoServerInfo(this.options.rojoPort);
+    const protocolVersion = Number.isFinite(liveServerInfo.protocolVersion)
+      ? liveServerInfo.protocolVersion
+      : null;
 
     const configPath = path.join(workerSourceDir, "plugin/src/Config.lua");
     const appPath = path.join(workerSourceDir, "plugin/src/App/init.lua");
     const configPatched = patchTextFile(configPath, (text) => {
       let next = text.replace(/defaultPort = "\d+",/, `defaultPort = "${this.options.rojoPort}",`);
+      if (protocolVersion !== null) {
+        next = next.replace(/protocolVersion = \d+,/, `protocolVersion = ${protocolVersion},`);
+      }
       next = next.replace(
         /defaultHost = "localhost",\n/,
         `defaultHost = "localhost",\n\tworkerAutoConnect = true,\n\tworkerPluginLabel = "Codex Worker ${this.options.rojoPort}",\n`
@@ -671,10 +678,12 @@ export class StudioControllerPrototype {
       outputPath,
       outputBytes: ok ? fs.statSync(outputPath).size : 0,
       rojoPort: this.options.rojoPort,
+      liveServerInfo,
       patched: {
         configPatched,
         appPatched,
         defaultPort: String(this.options.rojoPort),
+        protocolVersion,
         autoConnect: true,
         pluginLabel: `Codex Worker ${this.options.rojoPort}`,
       },
@@ -698,6 +707,7 @@ export class StudioControllerPrototype {
         installedPath,
         reportPath,
         port: this.options.rojoPort,
+        protocolVersion,
         autoConnect: true,
       },
       events: [{
@@ -1129,6 +1139,7 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
           markerFound: probe.markerFound,
           payload: probe.payload,
           luauTool: probe.luauTool,
+          mcpText: probe.result.text,
         });
         if (
           probe.payload
@@ -1159,6 +1170,7 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
           markerFound: probe.markerFound,
           payload: probe.payload,
           luauTool: probe.luauTool,
+          mcpText: probe.result.text,
           phase: "delete-check",
         });
         if (probe.payload && probe.payload.exists === false) {
@@ -1169,6 +1181,7 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
       }
     }
 
+    const probeFailureKind = inferRojoProbeFailureKind(probes);
     const report = {
       schema: "studio-controller-rojo-sync-probe/v1",
       generatedAt: nowIso(),
@@ -1178,8 +1191,10 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
         removed,
         writeError,
         cleanupError,
+        probeFailureKind,
         diagnostics: portDiagnostics.report,
       }),
+      probeFailureKind,
       projectPath,
       expectedPlace,
       rojoPort: manifest.rojoPort || this.options.rojoPort,
@@ -1205,6 +1220,8 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
         ok: report.ok,
         observed: Boolean(observed),
         removed: Boolean(removed),
+        probeFailureKind,
+        likelyFailureReason: report.likelyFailureReason,
         sourcePath,
         reportPath,
       },
@@ -2146,11 +2163,25 @@ function summarizeMcpCall(result) {
   };
 }
 
-function inferRojoSyncFailureReason({ observed, removed, writeError, cleanupError, diagnostics }) {
+function inferRojoProbeFailureKind(probes) {
+  if (!Array.isArray(probes) || probes.length === 0) return null;
+  const allPayloadless = probes.every((probe) => !probe.payload);
+  const allMarkersMissing = probes.every((probe) => probe.markerFound === false);
+  if (!allPayloadless || !allMarkersMissing) return null;
+  const text = probes.map((probe) => probe.mcpText || "").join("\n").toLowerCase();
+  if (text.includes("unable to find an active studio instance")) {
+    return "mcp_target_unavailable";
+  }
+  return "mcp_marker_not_found";
+}
+
+function inferRojoSyncFailureReason({ observed, removed, writeError, cleanupError, probeFailureKind, diagnostics }) {
   if (writeError) return "sentinel_source_write_failed";
   if (cleanupError) return "sentinel_source_cleanup_failed";
   if (observed && !removed) return "sentinel_delete_did_not_sync";
   if (observed && removed) return null;
+  if (probeFailureKind === "mcp_target_unavailable") return "mcp_target_unavailable";
+  if (probeFailureKind === "mcp_marker_not_found") return "mcp_probe_marker_not_found";
   if (diagnostics?.acceptanceRisk) return diagnostics.acceptanceRisk;
   return "studio_rojo_plugin_not_connected_to_worker_server";
 }

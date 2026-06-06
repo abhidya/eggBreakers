@@ -265,13 +265,28 @@ Live scratch run on `prototype-place.rbxl`:
 - Worker-specific Rojo plugin branch: `build-rojo-worker-plugin` copies a local
   `rojo-rbx/rojo` checkout, patches `Config.defaultPort`, gives the plugin a
   unique `Codex Worker <port>` label, injects edit-mode auto-connect, and builds
-  `CodexRojoWorker-<port>.rbxm`. Build smoke
+  `CodexRojoWorker-<port>.rbxm`. The builder now reads the live worker
+  `/api/rojo` endpoint and pins the plugin `protocolVersion` to the running
+  server, which avoided mixing a `7.7.0-rc.1` source checkout with the installed
+  `7.6.1` Rojo server protocol. Build smoke
   `.omx/studio-controller-rojo-worker-plugin-build/rojo-worker-plugin-build.json`
   produced a `377263` byte plugin for port `34941`. Install/remove smoke
   `.omx/studio-controller-rojo-worker-plugin-install-smoke/manifest.json`
   copied `CodexRojoWorker-34942.rbxm` into
   `~/Documents/Roblox/Plugins`, then removed exactly that manifest-owned file;
   the local Plugins folder returned to only `MCPStudioPlugin.rbxm`.
+- Live worker-plugin attempt `.omx/studio-controller-worker-plugin-live`
+  started worker Rojo on `34945`, built and installed
+  `CodexRojoWorker-34945.rbxm` with live protocol `4`, launched Studio in the
+  scratch place, ignored Auto-Recovery, dismissed the stale `localhost:34872`
+  prompt, and ended with no startup blockers. It still did **not** prove Rojo
+  acceptance: `list_roblox_studios` returned `count: 0`, `get_studio_state` and
+  `execute_luau` said `Unable to find an active Studio instance`, and every
+  Rojo sentinel poll had `markerFound: false` / `payload: null`. The worker
+  plugin and worker Rojo were removed afterward, and the Plugins folder returned
+  to only `MCPStudioPlugin.rbxm`. `rojo-sync-probe` now records
+  `probeFailureKind` so this branch reports `mcp_target_unavailable` instead of
+  misclassifying the run as only a stale default-port problem.
 - Port lease smoke
   `.omx/studio-controller-port-lease-smoke/manifest.json` proved the normal
   non-default worker path still works: worker pid `17324` owned `34931`, then
@@ -292,11 +307,13 @@ be used as evidence, not just the desktop preflight screenshot.
 
 Known Rojo gate: Rojo's Studio plugin starts a session from the plugin UI
 `Connect` action or from plugin auto-reconnect settings. Current live evidence
-shows the reminder can be stale and tied to the old default `34872` server. The
-worker must either control the Rojo plugin state directly or launch in a clean
-Studio/plugin state where the worker-owned port prompt appears and the sentinel
-sync probe passes. A non-worker default server on `34872` is now a first-class
-diagnostic blocker because Rojo's plugin defaults to `localhost:34872`.
+shows the reminder can be stale and tied to the old default `34872` server, and
+the worker-specific local plugin can leave built-in StudioMCP unable to discover
+the active Studio instance. The next branch should isolate plugin state:
+stock plugin only, worker plugin only, clean local plugin directory, then MCP
+target selection before any sentinel sync claim. A non-worker default server on
+`34872` remains a first-class diagnostic blocker because Rojo's plugin defaults
+to `localhost:34872`.
 
 ## Next Absorb Step
 
