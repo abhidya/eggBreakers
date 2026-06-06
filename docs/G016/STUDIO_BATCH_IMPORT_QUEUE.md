@@ -49,7 +49,9 @@ It still does not prove G016 complete. After every applied batch:
 
 On 2026-06-06, compile-only validation passed, but dry-run refused the active
 MCP target because StudioMCP was attached to `eggBreakers4.rbxl`, not
-`eggBreakers7.rbxl`:
+`eggBreakers7.rbxl`. The enriched preflight now also reports local Studio
+processes, which showed that an `eggBreakers7.rbxl` process existed but was not
+the DataModel receiving MCP commands:
 
 ```json
 {
@@ -59,8 +61,18 @@ MCP target because StudioMCP was attached to `eggBreakers4.rbxl`, not
   "schema": "g016-studio-batch-import/v1",
   "placeId": 0,
   "error": "wrong_place",
-  "apply": false
+  "apply": false,
+  "mcpTargetMatchesExpectedPlace": false,
+  "localStudioProcessSummary": {
+    "expectedPlaceProcessCount": 1,
+    "robloxStudioProcessCount": 2,
+    "studioMcpProcessCount": 5
+  }
 }
 ```
 
 No assets were imported by that refused run.
+
+When this happens, do not force `--apply`. First reduce Studio to one intended
+candidate process or otherwise reconnect StudioMCP so the dry-run reports
+`mcpTargetMatchesExpectedPlace=true`.

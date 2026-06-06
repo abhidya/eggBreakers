@@ -108,6 +108,68 @@ function studioCall(toolName, args, commandText) {
   return JSON.parse(result.stdout);
 }
 
+function listRobloxProcesses() {
+  const result = spawnSync("ps", ["axo", "pid=,ppid=,command="], {
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) {
+    return {
+      error: result.error ? result.error.message : result.stderr.trim(),
+      robloxStudio: [],
+      studioMcp: [],
+    };
+  }
+
+  const robloxStudio = [];
+  const studioMcp = [];
+  for (const line of result.stdout.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const match = trimmed.match(/^(\d+)\s+(\d+)\s+(.+)$/);
+    if (!match) continue;
+    const [, pid, ppid, command] = match;
+    if (command.includes("RobloxCrashHandler")) continue;
+    if (command.includes("/Contents/MacOS/RobloxStudio")) {
+      const localPlaceFile = command.match(/-localPlaceFile\s+(\S+)/)?.[1] || null;
+      const parentPid = command.match(/-parentPid\s+(\d+)/)?.[1] || null;
+      robloxStudio.push({
+        pid: Number(pid),
+        ppid: Number(ppid),
+        parentPid: parentPid ? Number(parentPid) : null,
+        localPlaceFile,
+        command,
+      });
+    } else if (command.includes("/Contents/MacOS/StudioMCP")) {
+      studioMcp.push({
+        pid: Number(pid),
+        ppid: Number(ppid),
+        command,
+      });
+    }
+  }
+  return { robloxStudio, studioMcp };
+}
+
+function attachTargetDiagnostics(result, expectedPlace) {
+  const processes = listRobloxProcesses();
+  const expectedByProcess = (processes.robloxStudio || []).filter((entry) =>
+    entry.localPlaceFile && path.basename(entry.localPlaceFile) === expectedPlace
+  );
+  return {
+    ...result,
+    mcpTargetMatchesExpectedPlace: result.placeName === expectedPlace,
+    localStudioProcessSummary: {
+      expectedPlaceProcessCount: expectedByProcess.length,
+      robloxStudioProcessCount: (processes.robloxStudio || []).length,
+      studioMcpProcessCount: (processes.studioMcp || []).length,
+    },
+    localStudioProcesses: processes.robloxStudio || [],
+    localStudioMcpProcesses: processes.studioMcp || [],
+    localProcessProbeError: processes.error || null,
+  };
+}
+
 function extractText(toolResult) {
   return (toolResult.content || [])
     .filter((part) => part.type === "text")
@@ -425,7 +487,7 @@ function main() {
     return;
   }
   const result = extractBatchPayload(studioCall("run_code", {}, command));
-  console.log(JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(attachTargetDiagnostics(result, args.expectedPlace), null, 2));
 }
 
 main();

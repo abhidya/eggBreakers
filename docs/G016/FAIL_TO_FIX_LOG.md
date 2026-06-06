@@ -1200,3 +1200,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: attach StudioMCP to `eggBreakers7.rbxl`, run `node tools/g016_studio_batch_import_queue.mjs --apply --start 1 --limit 5 --expected-place eggBreakers7.rbxl`, save/reopen the candidate through a working Studio control lane, then run `tools/g016_clean_place_candidate.luau` and `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R077 — StudioMCP target/process preflight — 2026-06-06
+
+Tests run: `node --check tools/g016_studio_batch_import_queue.mjs`; `node tools/g016_studio_batch_import_queue.mjs --dry-run --start 1 --limit 3 --expected-place eggBreakers7.rbxl`; `ps aux | rg -i 'RobloxStudio|StudioMCP|rbx-studio-mcp'`; StudioMCP active-place probe; `lune run tools/g016_place_gate_audit.luau eggBreakers7.rbxl`.
+
+Passed: the batch importer now enriches dry-run output with local Studio process diagnostics. The current dry-run refused mutation with `mcpTargetMatchesExpectedPlace=false` because MCP commands still land in `eggBreakers4.rbxl`, while local process inspection shows `2` Roblox Studio processes, including one expected `eggBreakers7.rbxl` process launched with `-localPlaceFile /Users/abdulrehmanbhidya/PycharmProjects/eggBreakers/eggBreakers7.rbxl`, plus `5` StudioMCP helper processes. This makes the target mismatch machine-readable before any `--apply` import can run.
+
+Failed: no assets were imported and no release count changed. The fresh offline audit still reports `eggBreakers7.rbxl` at `gateReleaseReadyVisibleAssets=295`, `gateReleaseGapTo500=205`, `storiesLivePassed=13/15`, missing `US14,US15`, `freshAllCategory=false`, `rbxlPersistence=false`, and `finalG016Pass=false`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: correct-candidate import remains blocked by StudioMCP attachment, not by the queue or parser. The tool can now detect the mismatch, but the live command channel still targets the stale `eggBreakers4.rbxl` DataModel.
+
+Root cause: Roblox Studio currently has multiple DataModels/processes alive. The MCP plugin connects over a shared localhost channel, so the command queue can be consumed by the stale Studio process even when `eggBreakers7.rbxl` is also open.
+
+Patch applied: updated `tools/g016_studio_batch_import_queue.mjs` to include local `RobloxStudio` and `StudioMCP` process diagnostics in the structured dry-run result, and updated `docs/G016/STUDIO_BATCH_IMPORT_QUEUE.md`.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: reduce Studio/MCP to one intended `eggBreakers7.rbxl` target or reconnect StudioMCP to that DataModel, rerun the dry-run until `mcpTargetMatchesExpectedPlace=true`, then apply a small import batch and persist/reopen the candidate before auditing.
