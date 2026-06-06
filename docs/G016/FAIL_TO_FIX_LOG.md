@@ -1179,3 +1179,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: open or sync `eggBreakers7.rbxl` in Studio, run a screenshot-capable asset-family sweep/import batch, save/reopen or otherwise persist a new `.rbxl`, then rerun the full G016 place gate audit.
+
+## Run G016-R076 — guarded StudioMCP queue importer — 2026-06-06
+
+Tests run: `node --check tools/g016_studio_batch_import_queue.mjs`; `node tools/g016_studio_batch_import_queue.mjs --compile-only --dry-run --start 1 --limit 3 --expected-place eggBreakers7.rbxl`; `node tools/g016_studio_batch_import_queue.mjs --dry-run --start 1 --limit 3 --expected-place eggBreakers7.rbxl`; StudioMCP active-place probes; macOS Studio window probes.
+
+Passed: added `tools/g016_studio_batch_import_queue.mjs`, a guarded batch-import driver for `docs/G016/ASSET_ACQUISITION_QUEUE.json`. The generated Luau now compiles in Studio MCP (`G016_STUDIO_BATCH_COMPILE ok=true err=nil`). The dry-run is read-only and refused the active MCP target with structured JSON because StudioMCP was attached to `eggBreakers4.rbxl`, not the expected `eggBreakers7.rbxl`: `{"ok":false,"placeName":"eggBreakers4.rbxl","expectedPlace":"eggBreakers7.rbxl","schema":"g016-studio-batch-import/v1","placeId":0,"error":"wrong_place","apply":false}`. The tool defaults to dry-run, requires `--apply`, caps applied batches at `25`, strips imported scripts, stamps queue/source metadata, and records `WorldAssetVerificationStatus=imported_geometry_needs_clean_spot_screenshots` for future clean-spot visual review.
+
+Failed: no new asset geometry was imported into a persisted candidate, and the release count did not change. Studio still exposes no normal macOS windows (`System Events` reported `0` windows for `RobloxStudio`), so screenshot capture and UI save-as remain unavailable in this environment. The current persisted release baseline remains `eggBreakers7.rbxl` at `295/500`, with missing US14/US15, no fresh all-category proof, no RBXL persistence proof, and `finalG016Pass=false`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: the import automation can now prevent wrong-place asset churn, but it cannot satisfy US14 until StudioMCP is attached to `eggBreakers7.rbxl` or another intended candidate, applied imports are saved/reopened, and the offline place gate accepts the persisted file.
+
+Root cause: the active Studio MCP target is not stable across the open-file attempts and currently resolves to `eggBreakers4.rbxl`. The MCP tool list has no save/reopen operation, and the desktop window layer is not available for screenshots or save-as automation.
+
+Patch applied: added `tools/g016_studio_batch_import_queue.mjs` and `docs/G016/STUDIO_BATCH_IMPORT_QUEUE.md`.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: attach StudioMCP to `eggBreakers7.rbxl`, run `node tools/g016_studio_batch_import_queue.mjs --apply --start 1 --limit 5 --expected-place eggBreakers7.rbxl`, save/reopen the candidate through a working Studio control lane, then run `tools/g016_clean_place_candidate.luau` and `tools/g016_place_gate_audit.luau`.
