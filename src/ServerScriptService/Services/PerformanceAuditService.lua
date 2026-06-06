@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local NPCService = require(script.Parent.NPCService)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local PerformanceAuditService = {}
 PerformanceAuditService.MaxNPCs = 30
@@ -26,6 +27,27 @@ end
 
 function PerformanceAuditService:_isRuntimeScript(instance)
     return instance:IsA("Script") or instance:IsA("LocalScript")
+end
+
+function PerformanceAuditService:_hasStringAttribute(instance, attributeName)
+    return ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
+end
+
+function PerformanceAuditService:_hasAncestorAttribute(instance, attributeName, expectedValue)
+    return ImportedScriptPolicy.HasAncestorAttribute(instance, attributeName, expectedValue)
+end
+
+function PerformanceAuditService:_isRawScriptReviewQueue(instance)
+    return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
+end
+
+function PerformanceAuditService:_isReviewedAdaptedStamped(instance)
+    return ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
+end
+
+function PerformanceAuditService:_isAllowedImportedRuntimeScript(instance)
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance)
+        or ImportedScriptPolicy.IsDisabledRawRuntimeReviewScript(instance)
 end
 
 function PerformanceAuditService:_worldScanRoot()
@@ -61,6 +83,7 @@ function PerformanceAuditService:Scan()
     local decorativeCollidable = 0
     local importedTouchEnabled = 0
     local importedRuntimeScriptCount = 0
+    local allowedImportedRuntimeScriptCount = 0
     if #NPCService.NPCs > self.MaxNPCs then
         table.insert(failures, "NPC count exceeds cap: " .. tostring(#NPCService.NPCs))
     end
@@ -68,8 +91,12 @@ function PerformanceAuditService:Scan()
     for _, scanRoot in ipairs(self:_scriptScanRoots()) do
         for _, instance in ipairs(scanRoot:GetDescendants()) do
             if self:_isRuntimeScript(instance) and self:_isImportedAssetDescendant(instance) then
-                importedRuntimeScriptCount = importedRuntimeScriptCount + 1
-                table.insert(failures, instance:GetFullName() .. " imported runtime script should be removed or quarantined")
+                if self:_isAllowedImportedRuntimeScript(instance) then
+                    allowedImportedRuntimeScriptCount = allowedImportedRuntimeScriptCount + 1
+                else
+                    importedRuntimeScriptCount = importedRuntimeScriptCount + 1
+                    table.insert(failures, instance:GetFullName() .. " imported runtime script must be disabled raw queue or reviewed/adapted/stamped")
+                end
             end
         end
     end
@@ -113,6 +140,7 @@ function PerformanceAuditService:Scan()
         decorativeCollidable = decorativeCollidable,
         importedTouchEnabled = importedTouchEnabled,
         importedRuntimeScriptCount = importedRuntimeScriptCount,
+        allowedImportedRuntimeScriptCount = allowedImportedRuntimeScriptCount,
     }
 end
 

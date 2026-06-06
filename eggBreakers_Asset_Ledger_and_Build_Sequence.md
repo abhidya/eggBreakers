@@ -24,7 +24,7 @@ See also `eggBreakers_STATUS.md` for the consolidated status page.
 | `AssetImportAuditService` + quarantine | 1 | Useful, but MeshPart rule wrong | **KEEP + FIX** |
 | Primitive CSG dinos (`Imported_Playable_*`) | 6 sets | Block/union, no rig | **CUT/REPLACE** |
 | Live NPC instances (anchored primitives) | 50 *(historical — 2026-05-30 audit: `Workspace.NPCs` are primitives at 88-172 Parts, 0 MeshParts; see Current Authoritative Snapshot)* | Anchored, no Humanoid/anim | **REPLACE** (new rigs) |
-| New mesh dino packs (`Dino Pack!`, `rex`, loose models) | 5,767 MeshParts, 21 roots *(historical — 2026-05-30 audit finds 56 genuine textured mesh dino species staged in `Workspace.dinosaur` but UNUSED; see Current Authoritative Snapshot)* | Real meshes/rigs — **but** 758 Workspace scripts (744 enabled) + 20 looped sounds; live-only, not in repo | **KEEP MESH/RIG, STRIP scripts+sounds** |
+| New mesh dino packs (`Dino Pack!`, `rex`, loose models) | 5,767 MeshParts, 21 roots *(historical — 2026-05-30 audit finds 56 genuine textured mesh dino species staged in `Workspace.dinosaur` but UNUSED; see Current Authoritative Snapshot)* | Real meshes/rigs — **plus** 758 Workspace scripts (744 enabled) + 20 looped sounds; live-only, not in repo | **KEEP MESH/RIG, REVIEW scripts/sounds, ADAPT or STRIP per safety** |
 | Imported props (`Map/ImportedAssets`) | 8 placed / ~28 unique SourceIds | Mostly CSG wearing import tags | **AUDIT/REPLACE** |
 | Quarantined imports (`ReplicatedStorage/QuarantinedImportedAssets`) | 96 moved by Codex | Low-quality/mesh/simple-gen | **REVIEW** (some are real meshes wrongly quarantined) |
 | Placeholder food (balls/markers) | 47 hidden + visible | Junk | **CUT/REPLACE** |
@@ -63,7 +63,7 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 **Import discipline (from Codex learnings — non-negotiable):**
 - `insert_from_creator_store` places **only the primary result** → use **many distinct searches**, not one.
 - **No parallel inserts** → stop play, insert **serially**, retry on "target not reachable".
-- Loop per asset: search → insert → tag (`SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly`/`ImportedVisibleAsset`) → strip scripts+sounds → move to `Map/ImportedAssets` → `AuditAndRepair({mutate=true})`.
+- Loop per asset: search → insert → tag (`SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly`/`ImportedVisibleAsset`) → review scripts/sounds → adapt useful behavior or quarantine unsafe behavior → move to `Map/ImportedAssets` → `AuditAndRepair({mutate=true})`.
 - **Fix the MeshPart audit rule FIRST** or every quality import gets quarantined (BR-18).
 
 ---
@@ -73,7 +73,7 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 | Mechanic | Current state | Disposition |
 |----------|--------------|-------------|
 | Hatch → 4-stage growth | Works (engine) | **KEEP**, re-skin with real rigs |
-| Hunger/thirst/stamina | Works | **KEEP** + HUD polish |
+| Hunger/thirst/stamina + age/rest/dying | Works as a server lifecycle spine | **KEEP** + HUD/story proof for movement, eat/drink, rest/sleep, age tick, dying state, death age, respawn |
 | NPC AI brain (sense/flee/hunt/herd/apex) | Works as data; movement broken | **DEVELOP** (Humanoid locomotion + anim) |
 | Movement (locomotion) | Teleport via PivotTo, anchored | **REPLACE** approach (Humanoid:MoveTo + physics) |
 | Animation | None (empty IDs) | **DEVELOP** + asset (animation packs) |
@@ -87,6 +87,8 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 | HUD / mobile UI | Functional, plain | **DEVELOP** (design in-house) |
 | Map / biomes | Flat, sparse, far apart | **REBUILD** from storyboards |
 
+Current starter slice: Coelophysis, Parasaurolophus, Utahraptor, and Citipati. Treat older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter notes as historical planning unless a task explicitly promotes them as non-starter fauna.
+
 ---
 
 ## STEP 4 — From-Scratch Build Sequence
@@ -96,7 +98,7 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 **Wave 0 — Safe reset (⚠ needs your go-ahead, see gate below)**
 1. Branch/snapshot the place; **archive** the current Workspace dressing/NPCs/water into a `_Legacy` folder (non-destructive) rather than permanent delete.
 2. Fix the MeshPart audit policy (A.7) so real imports can count.
-3. Strip all pack scripts + embedded looped sounds (A.1, A.6) — kills the buzzing and the AI conflicts.
+3. Review all pack scripts + embedded looped sounds (A.1, A.6) — keep useful dynamic behavior only after adaptation; disable/quarantine buzzing, duplicate AI, exploit-risk, and authority-conflicting scripts.
 
 **Wave 1 — World shell**
 4. Sculpt Terrain per biome (elevation, water bodies) from the storyboard map layout.
@@ -108,6 +110,8 @@ Category quotas inherited from Codex's `ImportBatchPlan` (proven to be what the 
 8. Import + wire rigged species (mesh + rig + animation) into `NPCService`/spawns.
 9. Import food foliage + carcasses; fix diet metadata.
 10. ApocalypticCity build-out (ruins/cars/rubble).
+
+For each biome batch, record the asset state explicitly: candidate/search ref, inserted in edit mode, tagged/reviewed, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted. A catalog row alone is not live dressing.
 
 **Wave 3 — Feel**
 11. Locomotion rework (Humanoid:MoveTo, grounding, flight/swim physics).

@@ -1,0 +1,12 @@
+# Roblox asset search is intentionally NOT registered as a Codex MCP server.
+# The MCP wrapper can leave Codex with a stale/hung transport. Use the direct
+# one-shot stdio route from the repo instead:
+#
+#   node tools/roblox_search_direct.js search_assets '{"query":"survival ui icon pack","max_results":5}'
+#   node tools/roblox_search_direct.js preview_asset '{"asset_id":"110801640375836"}'
+#
+# Studio insertion still goes through Roblox_Studio.search_creator_store plus
+# Roblox_Studio.insert_from_creator_store after a direct-search candidate is chosen.
+
+[mcp_servers.Roblox_Studio]
+command = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP"

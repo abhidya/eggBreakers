@@ -2,6 +2,8 @@
 
 Status: IN PROGRESS / HONEST FAIL for release.
 
+Current starter-note correction (2026-05-31): this report contains historical G019 implementation notes for Gallimimus/Triceratops/Velociraptor/Carnotaurus. Current first-session UX and proof work should use Coelophysis, Parasaurolophus, Utahraptor, and Citipati unless a task explicitly reintroduces the older names as non-starter fauna.
+
 ## Parallel execution
 
 `omx team` was attempted but this pane was not inside the tmux leader pane, so the runtime rejected launch with `Team mode requires running inside tmux current leader pane`. Native parallel worker lanes were used instead with the same tracked task split.

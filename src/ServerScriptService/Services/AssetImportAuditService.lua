@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local AssetImportAuditService = {}
 
@@ -57,6 +58,15 @@ local function nameLooksLowQuality(instance)
     return false
 end
 
+local function nameHasStandaloneBallToken(instance)
+    local text = string.lower(instance.Name or "")
+    if text == "ball" then return true end
+    if string.find(text, "^ball[%s_%-_]") then return true end
+    if string.find(text, "[%s_%-_]ball$") then return true end
+    if string.find(text, "[%s_%-_]ball[%s_%-_]") then return true end
+    return false
+end
+
 local function looksLowQualityGeneratedFoodOrVegetation(instance)
     if nameLooksLowQuality(instance) or isGlowingBallPart(instance) or looksLikeRectangleBallTree(instance) then
         return true
@@ -77,7 +87,7 @@ end
 
 isGlowingBallPart = function(instance)
     if not isA(instance, "BasePart") then return false end
-    if not instanceNameContains(instance, "ball") and not isPartShape(instance, Enum.PartType.Ball) then return false end
+    if not nameHasStandaloneBallToken(instance) and not isPartShape(instance, Enum.PartType.Ball) then return false end
     if instance.Material == Enum.Material.Neon then return true end
     if instance.GetDescendants then
         for _, descendant in ipairs(instance:GetDescendants()) do
@@ -118,11 +128,39 @@ local function containsMeshPart(instance)
 end
 
 local function isScriptInstance(instance)
-    return SCRIPT_CLASS_NAMES[instance.ClassName] == true
+    return ImportedScriptPolicy.IsScriptContainer(instance)
 end
 
 local function isExecutableScript(instance)
-    return EXECUTABLE_CLASS_NAMES[instance.ClassName] == true
+    return ImportedScriptPolicy.IsExecutableScript(instance)
+end
+
+local function hasStringAttribute(instance, attributeName)
+    return ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
+end
+
+local function isReviewedAdaptedStampedScript(instance)
+    return ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
+end
+
+local function hasAncestorAttribute(instance, attributeName, expectedValue)
+    return ImportedScriptPolicy.HasAncestorAttribute(instance, attributeName, expectedValue)
+end
+
+local function isRawScriptReviewQueue(instance)
+    return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
+end
+
+local function isAuditedSandboxedModuleScript(instance)
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance) and instance.ClassName == "ModuleScript"
+end
+
+local function isReleaseReadyScript(instance)
+    return ImportedScriptPolicy.IsReleaseReadyScript(instance)
+end
+
+local function isEnabledExecutableScript(instance)
+    return ImportedScriptPolicy.IsEnabledExecutableScript(instance)
 end
 
 local function addUnique(set, value)
@@ -373,17 +411,33 @@ function AssetImportAuditService:AuditAndRepair(options)
                 table.insert(candidates, descendant)
             end
             if isScriptInstance(descendant) then
-                table.insert(scriptRecords, {
-                    path = descendant:GetFullName(),
-                    className = descendant.ClassName,
-                    audited = descendant:GetAttribute("ImportedScriptAudited") == true,
-                    sandboxed = descendant:GetAttribute("Sandboxed") == true,
-                    quarantined = descendant:GetAttribute("ImportedScriptQuarantined") == true,
-                })
-                if isExecutableScript(descendant) and mutate and quarantineFolder then
+                local rawReview = isRawScriptReviewQueue(descendant)
+                local releaseReadyScript = isReleaseReadyScript(descendant)
+                local rawExecutableEnabled = rawReview and isEnabledExecutableScript(descendant)
+                table.insert(scriptRecords, ImportedScriptPolicy.BuildRecord(descendant))
+                if releaseReadyScript then
+                    if mutate then
+                        descendant:SetAttribute("ImportedScriptPreserved", true)
+                    end
+                elseif rawReview and descendant:IsA("ModuleScript") then
+                    if mutate and quarantineFolder then
+                        self:_quarantineScript(descendant, quarantineFolder, quarantinedScripts)
+                    else
+                        table.insert(failures, descendant:GetFullName() .. " raw queued ModuleScript must be reviewed, adapted, stamped, and Sandboxed=true before preservation")
+                    end
+                elseif rawReview then
+                    if mutate then
+                        if isExecutableScript(descendant) then
+                            descendant.Disabled = true
+                        end
+                        descendant:SetAttribute("ImportedScriptPreservedForReview", true)
+                    elseif rawExecutableEnabled then
+                        table.insert(failures, descendant:GetFullName() .. " raw review queued executable script is enabled")
+                    end
+                elseif isExecutableScript(descendant) and mutate and quarantineFolder then
                     self:_quarantineScript(descendant, quarantineFolder, quarantinedScripts)
                 elseif isExecutableScript(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
-                    table.insert(failures, descendant:GetFullName() .. " executable imported script is not quarantined")
+                    table.insert(failures, descendant:GetFullName() .. " executable imported script is not reviewed, adapted, stamped, or quarantined")
                 end
             end
         end
@@ -400,10 +454,13 @@ function AssetImportAuditService:AuditAndRepair(options)
                 and instance:GetAttribute("CreatorStoreOnly") == true
             local visible = self:IsVisibleImportedAsset(instance)
             local scriptsPresent = false
+            local rawScriptReviewQueued = false
 			for _, descendant in ipairs(instance:GetDescendants()) do
-				if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
-					scriptsPresent = true
-					break
+                if isScriptInstance(descendant) and descendant:GetAttribute("ImportedScriptQuarantined") ~= true then
+                    rawScriptReviewQueued = rawScriptReviewQueued or isRawScriptReviewQueue(descendant)
+                    if not isReleaseReadyScript(descendant) then
+                        scriptsPresent = true
+                    end
 				end
 			end
 			if mutate and not scriptsPresent and instance:GetAttribute("ScriptsAudited") ~= true then
@@ -431,7 +488,10 @@ function AssetImportAuditService:AuditAndRepair(options)
 			addUnique(importedSourceIds, sourceAssetId)
 			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
 			if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
-            if instance:GetAttribute("ScriptsAudited") == true or (entry and entry.ScriptsAudited == true and not scriptsPresent) then
+            if instance:GetAttribute("ScriptsAudited") == true
+                or rawScriptReviewQueued
+                or (entry and entry.ScriptsAudited == true and not scriptsPresent)
+            then
                 addUnique(auditedSourceIds, sourceAssetId)
             end
             if tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded then
@@ -446,6 +506,7 @@ function AssetImportAuditService:AuditAndRepair(options)
                 tagged = tagged,
                 placed = visible or rootInfo.placed,
                 scriptsPresent = scriptsPresent,
+                rawScriptReviewQueued = rawScriptReviewQueued,
                 qualityExclusionKind = qualityExclusionKind,
                 releaseReady = tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded,
             })

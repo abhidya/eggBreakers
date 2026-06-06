@@ -8,7 +8,8 @@ local suite = { name = "NestServiceTests.server", category = "Integration", test
 
 local function setup(id, stage)
     local p = MockPlayer.new(id, "NestTester"); RateLimitService:ClearPlayer(p)
-    local state = SurvivalService:CreateState(p, "triceratops"); state.Hatched = true; state.GrowthStage = stage or "Adult"
+    NestService:Clear(p)
+    local state = SurvivalService:CreateState(p, "parasaurolophus"); state.Hatched = true; state.GrowthStage = stage or "Adult"
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local nest = Instance.new("Part"); nest.Name = "NestZone"; nest.Position = Vector3.new(4, 3, 0); nest.Parent = workspace; CollectionService:AddTag(nest, "NestZone")
@@ -40,6 +41,48 @@ table.insert(suite.tests, { name = "zone distance cooldown validation", run = fu
     Assert.falsy(ok, "far nest rejected")
     Assert.equals(reason, "too_far", "distance reason")
     nest:Destroy()
+end })
+
+table.insert(suite.tests, { name = "lay eggs caps slots and nest hatch consumes egg", run = function()
+    local p, nest, state = setup(37004, "Adult")
+    Assert.truthy(NestService:RequestNestAction(p, "Create", nest), "adult can claim nest")
+    RateLimitService:ClearPlayer(p)
+    Assert.truthy(NestService:RequestNestAction(p, "LayEgg", nest), "first egg laid")
+    RateLimitService:ClearPlayer(p)
+    Assert.truthy(NestService:RequestNestAction(p, "LayEgg", nest), "second egg laid")
+    RateLimitService:ClearPlayer(p)
+    Assert.truthy(NestService:RequestNestAction(p, "LayEgg", nest), "third egg laid")
+    RateLimitService:ClearPlayer(p)
+    local fullOk, fullReason = NestService:RequestNestAction(p, "LayEgg", nest)
+    Assert.falsy(fullOk, "fourth egg rejected")
+    Assert.equals(fullReason, "nest_full", "nest full reason")
+    Assert.equals(state.NestEggSlots, 3, "egg slots track laid eggs")
+    Assert.equals(state.NestEggCount, 3, "state tracks egg count")
+
+    SurvivalService:Kill(p, "test")
+    RateLimitService:ClearPlayer(p)
+    local hatchOk, newState = NestService:RequestHatchFromNest(p)
+    Assert.truthy(hatchOk, "dead player hatches from egged nest")
+    Assert.equals(newState.Dead, false, "nest hatch respawns living state")
+    Assert.equals(newState.GrowthStage, "Hatchling", "nest hatch returns hatchling stage")
+    Assert.equals(newState.NestRespawn, nest, "nest respawn persists")
+    Assert.equals(newState.HatchlingBuff, "NestRested", "nest buff applied")
+    Assert.equals(newState.NestEggCount, 2, "hatch consumes one egg")
+    Assert.equals(NestService:GetNest(p).Eggs, 2, "nest record consumes one egg")
+    nest:Destroy()
+    NestService:Clear(p)
+end })
+
+table.insert(suite.tests, { name = "nest hatch requires a laid egg", run = function()
+    local p, nest = setup(37005, "Adult")
+    Assert.truthy(NestService:RequestNestAction(p, "Create", nest), "adult can claim nest")
+    SurvivalService:Kill(p, "test")
+    RateLimitService:ClearPlayer(p)
+    local ok, reason = NestService:RequestHatchFromNest(p)
+    Assert.falsy(ok, "empty nest cannot respawn")
+    Assert.equals(reason, "no_eggs", "empty nest reason")
+    nest:Destroy()
+    NestService:Clear(p)
 end })
 
 return suite

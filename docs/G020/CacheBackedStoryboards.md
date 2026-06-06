@@ -230,4 +230,3 @@ Player-angle review target:
 ## Headless Assembly Use
 
 Use `asset-brain/v1/plans/eggbreakers-headless-assembly.json` to fan out room/lobby fragments. Each fragment must pass `validate_fragment_manifest` and then merge with `scripts/headless_fragment_merge.luau` before Studio opens for screenshot review.
-

@@ -4,6 +4,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
 local SurvivalService = require(ServerScriptService.Services.SurvivalService)
 
@@ -112,7 +113,7 @@ table.insert(suite.tests, { name = "fresh player sees imported egg visual instea
     local player = MockPlayer.new(11001, "EggVisualTester")
     local character, head = makeCharacter()
     player.Character = character
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
 
     local ok, mode = CharacterVisualService:ApplyForState(player, state)
 
@@ -132,7 +133,7 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     local player = MockPlayer.new(11002, "DinosaurVisualTester")
     local character, head = makeCharacter()
     player.Character = character
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     for _ = 1, 5 do SurvivalService:RequestHatch(player, "tap") end
 
     local ok, mode = CharacterVisualService:ApplyForState(player, state)
@@ -150,6 +151,25 @@ table.insert(suite.tests, { name = "hatched player sees imported dinosaur visual
     local _, size = visual:GetBoundingBox()
     Assert.truthy(math.max(size.X, size.Y, size.Z) >= CharacterVisualService.MinimumDinosaurLength, "attached model preserves readable part offsets")
     Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible dinosaur replacement exists")
+    cleanup(player)
+end })
+
+table.insert(suite.tests, { name = "starter visual fallback hatches citipati into imported dinosaur", run = function()
+    setupImportedVisuals()
+    local player = MockPlayer.new(11022, "CitipatiVisualTester")
+    local character, head = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "citipati")
+    for _ = 1, 5 do SurvivalService:RequestHatch(player, "tap") end
+
+    local ok, mode = CharacterVisualService:ApplyForState(player, state)
+
+    Assert.truthy(ok, "citipati starter visual fallback applied")
+    Assert.truthy(mode == "dinosaur_model" or mode == "staged_dinosaur_mesh", "citipati renders as imported dinosaur proxy")
+    Assert.equals(head.Transparency, 1, "default avatar hidden after citipati hatch")
+    local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+    Assert.notNil(visual, "citipati dinosaur visual exists")
+    Assert.truthy(visual:GetAttribute("ImportedVisual"), "citipati proxy remains an imported asset clone")
     cleanup(player)
 end })
 
@@ -219,85 +239,142 @@ table.insert(suite.tests, { name = "sideways and backwards imported dinosaurs ar
     cleanup(player)
 end })
 
-
-table.insert(suite.tests, { name = "carnotaurus imported visual is corrected upright and forward", run = function()
-    local player = MockPlayer.new(11007, "CarnotaurusUprightProbe")
+table.insert(suite.tests, { name = "face-down imported dinosaurs are auto-uprighted before forward correction", run = function()
+    local player = MockPlayer.new(11016, "DinosaurAutoUprightProbe")
     local character = makeCharacter()
     player.Character = character
     character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
 
     local source = Instance.new("Model")
-    source.Name = "UpsideDownCarnotaurus"
+    source.Name = "RolledUnknownDinosaur"
     source.Parent = ReplicatedStorage
+    local roll = CFrame.Angles(0, 0, math.rad(90))
+    local rootPart = Instance.new("Part")
+    rootPart.Name = "RootPart"
+    rootPart.Size = Vector3.new(1, 1, 1)
+    rootPart.Transparency = 1
+    rootPart.Parent = source
+    source.PrimaryPart = rootPart
     local body = Instance.new("Part")
-    body.Name = "CarnotaurusBody"
+    body.Name = "RolledBody"
     body.Size = Vector3.new(2, 2, 4)
-    body.CFrame = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(180), 0, 0)
+    body.CFrame = CFrame.new(0, 0, 0) * roll
     body.Parent = source
-    source.PrimaryPart = body
     local head = Instance.new("Part")
-    head.Name = "CarnotaurusHead"
+    head.Name = "RolledHead"
     head.Size = Vector3.new(1, 1, 1)
-    head.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(math.rad(180), 0, 0)
+    head.CFrame = CFrame.new(0, 0, -4) * roll
     head.Parent = source
     local tail = Instance.new("Part")
-    tail.Name = "CarnotaurusTail"
+    tail.Name = "RolledTail"
     tail.Size = Vector3.new(1, 1, 2)
-    tail.CFrame = CFrame.new(0, 0, 4) * CFrame.Angles(math.rad(180), 0, 0)
+    tail.CFrame = CFrame.new(0, 0, 4) * roll
     tail.Parent = source
 
-    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "unknown", Growth = 0 })
     local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
-    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBody", true)
+    local attachedBody = attached and attached:FindFirstChild("RolledBody", true)
 
-    Assert.notNil(attached, "carnotaurus visual attaches")
-    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "carnotaurus species correction applied")
-    Assert.equals(attached:GetAttribute("OrientationCorrectionPitchDegrees"), 180, "carnotaurus pitch correction recorded")
-    Assert.truthy(attached:GetAttribute("UprightVerified"), "carnotaurus upright verification attr set")
-    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "carnotaurus body is upright after correction")
-    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "carnotaurus still faces player forward")
-    Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward-facing proof remains verified")
+    Assert.notNil(attached, "rolled dinosaur visual attaches")
+    Assert.equals(attached:GetAttribute("AutoUprightApplied"), true, "generic auto-upright correction applied")
+    Assert.truthy(attached:GetAttribute("UprightVerified"), "auto-upright verification attr set")
+    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.82, "rolled body is upright")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "auto-uprighted dinosaur still faces forward")
+
     source:Destroy()
     cleanup(player)
 end })
 
 
-table.insert(suite.tests, { name = "carnotaurus force-upright recovers when static pitch over-rotates", run = function()
-    local player = MockPlayer.new(11008, "CarnotaurusForceUprightProbe")
+table.insert(suite.tests, { name = "utahraptor imported visual is corrected upright and forward", run = function()
+    local player = MockPlayer.new(11007, "UtahraptorUprightProbe")
     local character = makeCharacter()
     player.Character = character
     character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+    local oldUtahraptor = SpeciesConfig.utahraptor
+    SpeciesConfig.utahraptor = {
+        SpeciesId = "utahraptor",
+        VisualOrientationCorrection = { PitchDegrees = 180, ForceUpright = true, Reason = "test_imported_pack_axis" },
+    }
 
     local source = Instance.new("Model")
-    source.Name = "AlreadyUprightCarnotaurus"
+    source.Name = "UpsideDownUtahraptor"
     source.Parent = ReplicatedStorage
     local body = Instance.new("Part")
-    body.Name = "CarnotaurusBody"
+    body.Name = "UtahraptorBody"
+    body.Size = Vector3.new(2, 2, 4)
+    body.CFrame = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(180), 0, 0)
+    body.Parent = source
+    source.PrimaryPart = body
+    local head = Instance.new("Part")
+    head.Name = "UtahraptorHead"
+    head.Size = Vector3.new(1, 1, 1)
+    head.CFrame = CFrame.new(0, 0, -4) * CFrame.Angles(math.rad(180), 0, 0)
+    head.Parent = source
+    local tail = Instance.new("Part")
+    tail.Name = "UtahraptorTail"
+    tail.Size = Vector3.new(1, 1, 2)
+    tail.CFrame = CFrame.new(0, 0, 4) * CFrame.Angles(math.rad(180), 0, 0)
+    tail.Parent = source
+
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "utahraptor", Growth = 0 })
+    local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
+    local attachedBody = attached and attached:FindFirstChild("UtahraptorBody", true)
+
+    Assert.notNil(attached, "utahraptor visual attaches")
+    Assert.truthy(attached:GetAttribute("SpeciesOrientationCorrected") == true or attached:GetAttribute("AutoUprightApplied") == true, "utahraptor upright correction applied")
+    Assert.truthy(attached:GetAttribute("UprightVerified"), "utahraptor upright verification attr set")
+    Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "utahraptor body is upright after correction")
+    Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "utahraptor still faces player forward")
+    Assert.truthy(attached:GetAttribute("ForwardFacingVerified"), "forward-facing proof remains verified")
+    SpeciesConfig.utahraptor = oldUtahraptor
+    source:Destroy()
+    cleanup(player)
+end })
+
+
+table.insert(suite.tests, { name = "utahraptor force-upright recovers when static pitch over-rotates", run = function()
+    local player = MockPlayer.new(11008, "UtahraptorForceUprightProbe")
+    local character = makeCharacter()
+    player.Character = character
+    character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(0, 4, 0), Vector3.new(0, 4, -10))
+    local oldUtahraptor = SpeciesConfig.utahraptor
+    SpeciesConfig.utahraptor = {
+        SpeciesId = "utahraptor",
+        VisualOrientationCorrection = { PitchDegrees = 180, ForceUpright = true, Reason = "test_imported_pack_axis" },
+    }
+
+    local source = Instance.new("Model")
+    source.Name = "AlreadyUprightUtahraptor"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "UtahraptorBody"
     body.Size = Vector3.new(2, 2, 4)
     body.CFrame = CFrame.new(0, 0, 0)
     body.Parent = source
     source.PrimaryPart = body
     local head = Instance.new("Part")
-    head.Name = "CarnotaurusHead"
+    head.Name = "UtahraptorHead"
     head.Size = Vector3.new(1, 1, 1)
     head.CFrame = CFrame.new(0, 0, -4)
     head.Parent = source
     local tail = Instance.new("Part")
-    tail.Name = "CarnotaurusTail"
+    tail.Name = "UtahraptorTail"
     tail.Size = Vector3.new(1, 1, 2)
     tail.CFrame = CFrame.new(0, 0, 4)
     tail.Parent = source
 
-    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "utahraptor", Growth = 0 })
     local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
-    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBody", true)
+    local attachedBody = attached and attached:FindFirstChild("UtahraptorBody", true)
 
-    Assert.notNil(attached, "upright carnotaurus visual attaches")
-    Assert.equals(attached:GetAttribute("SpeciesOrientationCorrected"), true, "carnotaurus correction path applied")
-    Assert.truthy((attached:GetAttribute("UprightDotBeforeCorrection") or 1) < 0, "static pitch over-rotation was detected")
+    Assert.notNil(attached, "upright utahraptor visual attaches")
+    Assert.truthy(attached:GetAttribute("SpeciesOrientationCorrected") == true or attached:GetAttribute("AutoUprightApplied") == true, "utahraptor correction path applied")
+    Assert.truthy((attached:GetAttribute("UprightDotBeforeCorrection") or attached:GetAttribute("AutoUprightDotBefore") or 1) < 0.82, "static over-rotation was detected")
     Assert.truthy(attached:GetAttribute("UprightVerified"), "force-upright restored visual orientation")
     Assert.truthy(attachedBody and attachedBody.CFrame.UpVector:Dot(character.HumanoidRootPart.CFrame.UpVector) >= 0.92, "body remains upright after force-upright")
     Assert.truthy((attached:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "forward correction still succeeds after force-upright")
+    SpeciesConfig.utahraptor = oldUtahraptor
     source:Destroy()
     cleanup(player)
 end })
@@ -307,7 +384,7 @@ table.insert(suite.tests, { name = "growth progress makes dinosaur visual larger
     local player = MockPlayer.new(11005, "GrowthScaleVisualTester")
     local character = makeCharacter()
     player.Character = character
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
     state.Growth = 0
 
@@ -327,6 +404,40 @@ table.insert(suite.tests, { name = "growth progress makes dinosaur visual larger
     cleanup(player)
 end })
 
+table.insert(suite.tests, { name = "oversized staged hatchlings are scaled down to hatchling readable size", run = function()
+    local source = Instance.new("Model")
+    source.Name = "OversizedParasaurolophusSource"
+    source.Parent = ReplicatedStorage
+    local body = Instance.new("Part")
+    body.Name = "ParasaurolophusBodyMesh"
+    body.Size = Vector3.new(10, 24, 46)
+    body.Parent = source
+    source.PrimaryPart = body
+
+    local hatchling = CharacterVisualService:_prepareDinosaurClone(source, {
+        SpeciesId = "parasaurolophus",
+        GrowthStage = "Hatchling",
+        Growth = 0,
+    })
+    local hatchlingLength = hatchling:GetAttribute("ReadableLength")
+    local hatchlingHeight = hatchling:GetAttribute("ReadableHeight")
+
+    Assert.truthy(hatchlingLength <= CharacterVisualService.TargetDinosaurLengthByStage.Hatchling + 0.25, "hatchling visual is not adult-sized")
+    Assert.truthy(hatchlingHeight >= CharacterVisualService.MinimumDinosaurHeight, "hatchling remains readable after downscale")
+    Assert.truthy((hatchling:GetAttribute("ReadableScaleApplied") or 1) < 1, "oversized staged source was downscaled")
+
+    local adult = CharacterVisualService:_prepareDinosaurClone(source, {
+        SpeciesId = "parasaurolophus",
+        GrowthStage = "Adult",
+        Growth = 0,
+    })
+    Assert.truthy((adult:GetAttribute("ReadableLength") or 0) > hatchlingLength, "adult visual remains larger than hatchling")
+
+    hatchling:Destroy()
+    adult:Destroy()
+    source:Destroy()
+end })
+
 table.insert(suite.tests, { name = "release validation fails when imported visuals are missing", run = function()
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     local originalParent = library and library.Parent
@@ -339,9 +450,9 @@ end })
 
 table.insert(suite.tests, { name = "debug fallback is disabled for release ApplyForState", run = function()
     local player = MockPlayer.new(11003, "NoFallbackTester")
-    local character = makeCharacter()
+    local character, head = makeCharacter()
     player.Character = character
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
     state.SpeciesId = "missing_species"
 
@@ -349,7 +460,92 @@ table.insert(suite.tests, { name = "debug fallback is disabled for release Apply
 
     Assert.falsy(ok, "release mode rejects generic dinosaur fallback")
     Assert.equals(reason, "fallback_disabled_in_release", "fallback disabled reason")
+    Assert.equals(head.Transparency, 0, "default avatar stays visible when no replacement exists")
+    Assert.equals(character:GetAttribute("CharacterVisualApplyFailed"), true, "visual failure is recorded")
+    Assert.equals(character:GetAttribute("CharacterVisualFailureReason"), "fallback_disabled_in_release", "visual failure reason is recorded")
+    Assert.equals(character:FindFirstChild(CharacterVisualService.VisualFolderName), nil, "failed visual apply does not leave an empty replacement folder")
     cleanup(player)
+end })
+
+table.insert(suite.tests, { name = "staged mesh library resolves imported dinosaur storage fallback", run = function()
+    local workspaceRoot = workspace:FindFirstChild(StagedMeshLibrary.StagingFolderName)
+    local workspaceRootParent = workspaceRoot and workspaceRoot.Parent
+    if workspaceRoot then
+        workspaceRoot.Parent = nil
+    end
+
+    local library = ensureFolder(ReplicatedStorage, "ImportedAssetLibrary")
+    local root = ensureFolder(library, StagedMeshLibrary.StagingFolderName)
+    local carnivores = ensureFolder(root, "Carnivores (land)")
+    local coelophysis = carnivores:FindFirstChild("Coelophysis") or Instance.new("Model")
+    coelophysis.Name = "Coelophysis"
+    coelophysis.Parent = carnivores
+    if not coelophysis:FindFirstChild("CoelophysisBodyMesh") then
+        local body = Instance.new("Part")
+        body.Name = "CoelophysisBodyMesh"
+        body.Size = Vector3.new(2, 3, 8)
+        body.Parent = coelophysis
+        coelophysis.PrimaryPart = body
+    end
+
+    StagedMeshLibrary:RefreshRoster()
+    local resolved, reason = StagedMeshLibrary:ResolveAny("coelophysis")
+
+    Assert.equals(resolved, coelophysis, "staged library resolves ReplicatedStorage imported dinosaur root")
+    Assert.equals(reason, nil, "staged fallback resolves without a failure reason")
+
+    root:Destroy()
+    if workspaceRoot then
+        workspaceRoot.Parent = workspaceRootParent
+    end
+    StagedMeshLibrary:RefreshRoster()
+end })
+
+table.insert(suite.tests, { name = "50 plus asset pack species hatches into mesh visual", run = function()
+    setupImportedVisuals()
+    local library = ensureFolder(ReplicatedStorage, "ImportedAssetLibrary")
+    local oldAllosaurus = StagedMeshLibrary.AssetPackSpecies.allosaurus
+
+    local pack = Instance.new("Folder")
+    pack.Name = "CharacterVisual_AssetPackFixture"
+    pack.Parent = library
+    local allosaurus = Instance.new("MeshPart")
+    allosaurus.Name = "Allosaurus"
+    allosaurus.Size = Vector3.new(5, 9, 18)
+    allosaurus:SetAttribute("SourceAssetId", "8289268262")
+    allosaurus.Parent = pack
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = {
+        folder = "Carnivores (land)",
+        name = "Allosaurus",
+        sourceFolder = pack.Name,
+        sourceName = "Allosaurus",
+        sourceAssetId = "8289268262",
+    }
+
+    local player = MockPlayer.new(11023, "AllosaurusVisualTester")
+    local character, head = makeCharacter()
+    player.Character = character
+    local state = SurvivalService:CreateState(player, "allosaurus")
+    state.Hatched = true
+    state.GrowthStage = "Hatchling"
+
+    local testOk, err = pcall(function()
+        local ok, mode = CharacterVisualService:ApplyForState(player, state)
+        local visual = character[CharacterVisualService.VisualFolderName]:FindFirstChild(CharacterVisualService.DinosaurVisualName)
+
+        Assert.truthy(ok, "asset-pack mesh species visual applied")
+        Assert.equals(mode, "staged_dinosaur_mesh", "asset-pack mesh follows staged dinosaur path")
+        Assert.equals(head.Transparency, 1, "default avatar is hidden only after mesh replacement exists")
+        Assert.notNil(visual, "asset-pack dinosaur visual exists")
+        Assert.truthy(visual:IsA("MeshPart"), "asset-pack visual remains a MeshPart, not a Lego block model")
+        Assert.equals(visual:GetAttribute("VisualKind"), "ImportedDinosaur", "mesh visual is stamped as imported dinosaur")
+        Assert.truthy(CharacterVisualService:HasVisibleGameVisual(character), "visible mesh replacement exists")
+    end)
+
+    StagedMeshLibrary.AssetPackSpecies.allosaurus = oldAllosaurus
+    pack:Destroy()
+    cleanup(player)
+    if not testOk then error(err) end
 end })
 
 
@@ -391,13 +587,13 @@ table.insert(suite.tests, { name = "staged rig helper root remains invisible aft
     root.Parent = source
     source.PrimaryPart = root
     local body = Instance.new("Part")
-    body.Name = "CarnotaurusBodyMesh"
+    body.Name = "UtahraptorBodyMesh"
     body.Size = Vector3.new(5, 4, 12)
     body.CFrame = CFrame.new(0, 0, -4)
     body.Transparency = 0.2
     body.Parent = source
     local head = Instance.new("Part")
-    head.Name = "CarnotaurusHeadMesh"
+    head.Name = "UtahraptorHeadMesh"
     head.Size = Vector3.new(3, 3, 4)
     head.CFrame = CFrame.new(0, 1, -11)
     head.Transparency = 0.2
@@ -408,10 +604,10 @@ table.insert(suite.tests, { name = "staged rig helper root remains invisible aft
     motor.Part1 = body
     motor.Parent = root
 
-    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "carnotaurus", Growth = 0 })
+    local clone = CharacterVisualService:_prepareDinosaurClone(source, { SpeciesId = "utahraptor", Growth = 0 })
     local attached = CharacterVisualService:_attachModel(character, character.HumanoidRootPart, clone)
     local attachedRoot = attached and attached:FindFirstChild("RootPart", true)
-    local attachedBody = attached and attached:FindFirstChild("CarnotaurusBodyMesh", true)
+    local attachedBody = attached and attached:FindFirstChild("UtahraptorBodyMesh", true)
 
     Assert.notNil(attached, "staged rig attaches")
     Assert.equals(attachedRoot.Transparency, 1, "large rig RootPart stays invisible")
@@ -427,7 +623,7 @@ table.insert(suite.tests, { name = "folder based imported dinosaur stays readabl
     local player = MockPlayer.new(11004, "FolderDinoVisualTester")
     local character = makeCharacter()
     player.Character = character
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     state.Hatched = true
 
     local source = Instance.new("Folder")

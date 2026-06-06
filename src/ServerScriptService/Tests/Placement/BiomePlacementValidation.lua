@@ -15,6 +15,16 @@ local READABILITY_BIOMES = {
 
 local MAX_FALLBACK_CANOPY_SIZE = 18
 
+local function ensureFolder(parent, name)
+    local folder = parent:FindFirstChild(name)
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = name
+        folder.Parent = parent
+    end
+    return folder
+end
+
 local function isOversizedBlockFallbackCanopy(instance)
     if not instance:IsA("BasePart") then return false end
     if instance:GetAttribute("ImportedVisibleAsset") == true then return false end
@@ -29,6 +39,31 @@ local function isOversizedBlockFallbackCanopy(instance)
     if not looksLikeCanopy then return false end
 
     return math.max(instance.Size.X, instance.Size.Y, instance.Size.Z) > MAX_FALLBACK_CANOPY_SIZE
+end
+
+local function worldBounds(instance)
+    local minV = Vector3.new(math.huge, math.huge, math.huge)
+    local maxV = Vector3.new(-math.huge, -math.huge, -math.huge)
+    local found = false
+    local function scan(part)
+        local half = part.Size * 0.5
+        for _, sx in ipairs({ -1, 1 }) do
+            for _, sy in ipairs({ -1, 1 }) do
+                for _, sz in ipairs({ -1, 1 }) do
+                    local point = part.CFrame:PointToWorldSpace(Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+                    minV = Vector3.new(math.min(minV.X, point.X), math.min(minV.Y, point.Y), math.min(minV.Z, point.Z))
+                    maxV = Vector3.new(math.max(maxV.X, point.X), math.max(maxV.Y, point.Y), math.max(maxV.Z, point.Z))
+                    found = true
+                end
+            end
+        end
+    end
+    if instance:IsA("BasePart") then scan(instance) end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") then scan(descendant) end
+    end
+    if not found then return nil, nil, Vector3.new(0, 0, 0) end
+    return minV, maxV, maxV - minV
 end
 
 table.insert(suite.tests, { name = "required biome folders exist", run = function()
@@ -93,6 +128,108 @@ table.insert(suite.tests, { name = "nursery and fern plains reject oversized blo
     end
 
     Assert.truthy(inspected > 0, "readability audit inspected visible Nursery/FernPlains dressing")
+end })
+
+table.insert(suite.tests, { name = "imported biome dressing hides block anchors", run = function()
+    local existingLibrary = ReplicatedStorage:FindFirstChild(MapLayoutService.ImportedAssetLibraryName)
+    local stashName = "_BiomePlacementValidationImportedAssetLibrary"
+    local stashedLibrary = ReplicatedStorage:FindFirstChild(stashName)
+    if stashedLibrary then stashedLibrary:Destroy() end
+    if existingLibrary then existingLibrary.Name = stashName end
+
+    local library = ensureFolder(ReplicatedStorage, MapLayoutService.ImportedAssetLibraryName)
+    local template = Instance.new("Model")
+    template.Name = "Jungle Plant Dressing Asset"
+    template:SetAttribute("ImportedVisibleAsset", true)
+    template:SetAttribute("CreatorStoreOnly", true)
+    template:SetAttribute("SourceAssetId", "78440826469281")
+    template.Parent = library
+
+    local visiblePart = Instance.new("Part")
+    visiblePart.Name = "FoliageMeshProxy"
+    visiblePart.Size = Vector3.new(8, 9, 7)
+    visiblePart.Transparency = 0
+    visiblePart.Parent = template
+    template.PrimaryPart = visiblePart
+
+    local ok, err = pcall(function()
+        local folders = MapLayoutService:EnsureMapFolders()
+        MapLayoutService:EnsureBiomeDressing(folders)
+
+        local importedCount = 0
+        local hiddenAnchors = 0
+        for _, instance in ipairs(folders.BiomeDressing:GetDescendants()) do
+            if instance.Name == MapLayoutService.ImportedDressingVisualName and instance:GetAttribute("ImportedDressingVisual") == true then
+                importedCount = importedCount + 1
+                Assert.equals(instance:GetAttribute("CreatorStoreOnly"), true, "imported dressing stays Creator Store sourced")
+                Assert.equals(instance:GetAttribute("BiomeDressing"), true, "imported dressing keeps biome tag")
+            end
+            if instance:IsA("BasePart") and instance:GetAttribute("ImportedDressingVisualAttached") == true then
+                hiddenAnchors = hiddenAnchors + 1
+                Assert.equals(instance.Transparency, 1, "block anchor is hidden after imported dressing attaches")
+                Assert.equals(instance:GetAttribute("ReleaseHiddenProceduralVisual"), true, "hidden anchor remains release-auditable")
+            end
+        end
+
+        Assert.truthy(importedCount >= 1, "at least one imported biome dressing visual attached")
+        Assert.truthy(hiddenAnchors >= 1, "at least one procedural block anchor was hidden")
+    end)
+
+    library:Destroy()
+    if existingLibrary then existingLibrary.Name = MapLayoutService.ImportedAssetLibraryName end
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "imported tree dressing is stood upright and bottom-aligned", run = function()
+    local existingLibrary = ReplicatedStorage:FindFirstChild(MapLayoutService.ImportedAssetLibraryName)
+    local stashName = "_BiomePlacementValidationUprightImportedAssetLibrary"
+    local stashedLibrary = ReplicatedStorage:FindFirstChild(stashName)
+    if stashedLibrary then stashedLibrary:Destroy() end
+    if existingLibrary then existingLibrary.Name = stashName end
+
+    local library = ensureFolder(ReplicatedStorage, MapLayoutService.ImportedAssetLibraryName)
+    local template = Instance.new("Model")
+    template.Name = "Jungle Tree Upright Asset"
+    template:SetAttribute("ImportedVisibleAsset", true)
+    template:SetAttribute("CreatorStoreOnly", true)
+    template:SetAttribute("SourceAssetId", "upright-tree-probe")
+    template.Parent = library
+
+    local sidewaysTrunk = Instance.new("Part")
+    sidewaysTrunk.Name = "SidewaysTreeMeshProxy"
+    sidewaysTrunk.Size = Vector3.new(28, 4, 4)
+    sidewaysTrunk.Transparency = 0
+    sidewaysTrunk.Parent = template
+    template.PrimaryPart = sidewaysTrunk
+
+    local anchor = Instance.new("Part")
+    anchor.Name = "ImportedTreeAnchorProbe"
+    anchor.Position = Vector3.new(0, 24, 0)
+    anchor.Size = Vector3.new(5, 20, 5)
+    anchor:SetAttribute("GroundTopY", 9)
+    anchor:SetAttribute("PlacementSurfaceSource", "test_ground")
+    anchor.Parent = workspace
+
+    local ok, err = pcall(function()
+        local clone = MapLayoutService:AttachImportedDressingVisual(anchor, {
+            name = "TreeUprightProbe",
+            kind = "Tree",
+            zone = "JungleBasin",
+            size = Vector3.new(10, 18, 10),
+            canopySize = Vector3.new(10, 18, 10),
+        }, "ImportedTreeDressing")
+        Assert.notNil(clone, "imported tree dressing attached")
+        local minV, _, size = worldBounds(clone)
+        Assert.truthy(size.Y >= math.max(size.X, size.Z) * 1.2, "sideways tree proxy is rotated vertical")
+        Assert.truthy(math.abs(minV.Y - 9) <= 0.05, "imported tree bottom sits on authored ground")
+        Assert.equals(clone:GetAttribute("PlacementOrientationNormalized"), true, "orientation correction is recorded")
+        Assert.equals(clone:GetAttribute("GroundBottomAligned"), true, "ground alignment is recorded")
+    end)
+
+    anchor:Destroy()
+    library:Destroy()
+    if existingLibrary then existingLibrary.Name = MapLayoutService.ImportedAssetLibraryName end
+    if not ok then error(err) end
 end })
 
 table.insert(suite.tests, { name = "scenic landmarks and flower clusters are materialized", run = function()
@@ -246,8 +383,33 @@ end })
 table.insert(suite.tests, { name = "full map terrain underlay is single and compact", run = function()
     local folders = MapLayoutService:EnsureMapFolders()
     MapLayoutService:EnsureTerrainContinuity(folders)
+    Assert.equals(folders.Map:GetAttribute("ProceduralTerrainCleared"), true, "stale procedural terrain is cleared before rebuild")
     Assert.truthy(folders.Map:GetAttribute("FullMapTerrainUnderlay"), "full map underlay marker set")
+    Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlayMaterial"), "Enum.Material.Water", "full map underlay is ocean basin, not a visible ground slab")
+    Assert.equals(folders.Map:GetAttribute("OceanBackdropMargin"), 3000, "ocean backdrop extends past playable bounds so the map edge is not camera-visible")
     Assert.equals(folders.Map:GetAttribute("FullMapTerrainUnderlaySize"), "2350,12,2200", "50% compact full map underlay covers all biomes and routes")
+end })
+
+table.insert(suite.tests, { name = "story biome gates are visible landmarks", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureBiomeDressing(folders)
+
+    local gateCount = 0
+    local zoneGateCount = {}
+    for _, descendant in ipairs(folders.BiomeDressing:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("BiomeGate") == true and descendant:GetAttribute("PlacementRole") == "VisibleBiomeProp" then
+            gateCount = gateCount + 1
+            local zoneId = descendant:GetAttribute("ZoneId")
+            zoneGateCount[zoneId] = (zoneGateCount[zoneId] or 0) + 1
+            Assert.truthy(descendant.Size.X >= 90 or descendant.Size.Y >= 35 or descendant.Size.Z >= 24, "biome gate has landmark scale: " .. descendant.Name)
+        end
+    end
+
+    Assert.truthy(gateCount >= 8, "story map exposes route gates as visible landmarks")
+    Assert.truthy((zoneGateCount.NurseryGrove or 0) >= 1, "nursery has a readable outbound gate")
+    Assert.truthy((zoneGateCount.JungleBasin or 0) >= 1, "jungle has a canopy gate")
+    Assert.truthy((zoneGateCount.RedstoneCanyon or 0) >= 2, "redstone has canyon gate silhouettes")
+    Assert.truthy((zoneGateCount.ApocalypticCity or 0) >= 1, "Old Eden has an entry ruin gate")
 end })
 
 table.insert(suite.tests, { name = "compact map keeps every biome in playable range", run = function()

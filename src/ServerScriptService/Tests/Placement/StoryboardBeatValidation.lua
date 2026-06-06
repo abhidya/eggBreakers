@@ -1,11 +1,20 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local CollectionService = game:GetService("CollectionService")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
+local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
 local NPCService = require(ServerScriptService.Services.NPCService)
 local NPCSpawnService = require(ServerScriptService.Services.NPCSpawnService)
+local SurvivalService = require(ServerScriptService.Services.SurvivalService)
+local StatReplicationService = require(ServerScriptService.Services.StatReplicationService)
+local FishService = require(ServerScriptService.Services.FishService)
+local WaterService = require(ServerScriptService.Services.WaterService)
+local NestService = require(ServerScriptService.Services.NestService)
+local RateLimitService = require(ServerScriptService.Services.RateLimitService)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local StoryAssetPlacements = require(ReplicatedStorage.Shared.StoryAssetPlacements)
 
@@ -89,19 +98,32 @@ local function makeSpawnMarker(name, kind)
     return marker
 end
 
+local function makeNPCModel(name, position)
+    local model = Instance.new("Model")
+    model.Name = name
+    local root = Instance.new("Part")
+    root.Name = "HumanoidRootPart"
+    root.Size = Vector3.new(3, 3, 3)
+    root.CFrame = CFrame.new(position)
+    root.Parent = model
+    model.PrimaryPart = root
+    model.Parent = workspace
+    return model
+end
+
 table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hides helper boxes", run = function()
     local oldStagingFolderName = StagedMeshLibrary.StagingFolderName
-    local oldGallimimusEntry = StagedMeshLibrary.SpeciesMesh.gallimimus
+    local oldParasaurolophusEntry = StagedMeshLibrary.SpeciesMesh.parasaurolophus
     StagedMeshLibrary.StagingFolderName = "StoryboardBeatValidation_PlayerMeshes_" .. tostring(math.floor(os.clock() * 1000000))
-    StagedMeshLibrary.SpeciesMesh.gallimimus = {
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = {
         folder = "Herbivores (land)",
-        name = "GallimimusStoryboardProbe",
+        name = "ParasaurolophusStoryboardProbe",
     }
 
     local stagingRoot
     local character
     local ok, err = pcall(function()
-        stagingRoot = select(2, makeStagedDinosaur("Herbivores (land)", "GallimimusStoryboardProbe", "storyboard-player-mesh"))
+        stagingRoot = select(2, makeStagedDinosaur("Herbivores (land)", "ParasaurolophusStoryboardProbe", "storyboard-player-mesh"))
 
         character = Instance.new("Model")
         character.Name = "StoryboardBeat0Character"
@@ -116,7 +138,7 @@ table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hid
         local player = { Character = character }
         local applied, reason = CharacterVisualService:ApplyForState(player, {
             Hatched = true,
-            SpeciesId = "gallimimus",
+            SpeciesId = "parasaurolophus",
             GrowthStage = "Hatchling",
         })
 
@@ -134,7 +156,7 @@ table.insert(suite.tests, { name = "Beat 0 hatched baby uses staged mesh and hid
 
     if character then character:Destroy() end
     if stagingRoot then stagingRoot:Destroy() end
-    StagedMeshLibrary.SpeciesMesh.gallimimus = oldGallimimusEntry
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = oldParasaurolophusEntry
     StagedMeshLibrary.StagingFolderName = oldStagingFolderName
     if not ok then error(err) end
 end })
@@ -174,7 +196,7 @@ table.insert(suite.tests, { name = "Beat 0 egg/nest visual is imported when sour
 
         local applied, reason = CharacterVisualService:ApplyForState({ Character = character }, {
             Hatched = false,
-            SpeciesId = "gallimimus",
+            SpeciesId = "parasaurolophus",
             GrowthStage = "Hatchling",
         })
         Assert.equals(applied, true, "unhatched Beat 0 egg visual applies")
@@ -261,17 +283,17 @@ end })
 table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshParts when staged sources exist", run = function()
     local oldRecords = NPCService.NPCs
     local oldStagingFolderName = StagedMeshLibrary.StagingFolderName
-    local oldGallimimusEntry = StagedMeshLibrary.SpeciesMesh.gallimimus
-    local oldCarnotaurusEntry = StagedMeshLibrary.SpeciesMesh.carnotaurus
+    local oldParasaurolophusEntry = StagedMeshLibrary.SpeciesMesh.parasaurolophus
+    local oldUtahraptorEntry = StagedMeshLibrary.SpeciesMesh.utahraptor
     NPCService.NPCs = {}
     StagedMeshLibrary.StagingFolderName = "StoryboardBeatValidation_NPCMeshes_" .. tostring(math.floor(os.clock() * 1000000))
-    StagedMeshLibrary.SpeciesMesh.gallimimus = {
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = {
         folder = "Herbivores (land)",
-        name = "GallimimusPreyStoryboardProbe",
+        name = "ParasaurolophusPreyStoryboardProbe",
     }
-    StagedMeshLibrary.SpeciesMesh.carnotaurus = {
+    StagedMeshLibrary.SpeciesMesh.utahraptor = {
         folder = "Carnivores (land)",
-        name = "CarnotaurusPredatorStoryboardProbe",
+        name = "UtahraptorPredatorStoryboardProbe",
     }
 
     local stagingRoot
@@ -280,9 +302,9 @@ table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshPar
     local preyRecord
     local predatorRecord
     local ok, err = pcall(function()
-        local _, firstRoot = makeStagedDinosaur("Herbivores (land)", "GallimimusPreyStoryboardProbe", "storyboard-prey-mesh")
+        local _, firstRoot = makeStagedDinosaur("Herbivores (land)", "ParasaurolophusPreyStoryboardProbe", "storyboard-prey-mesh")
         stagingRoot = firstRoot
-        makeStagedDinosaur("Carnivores (land)", "CarnotaurusPredatorStoryboardProbe", "storyboard-predator-mesh")
+        makeStagedDinosaur("Carnivores (land)", "UtahraptorPredatorStoryboardProbe", "storyboard-predator-mesh")
         preyMarker = makeSpawnMarker("StoryboardPreySpawn", "Prey")
         predatorMarker = makeSpawnMarker("StoryboardPredatorSpawn", "Predator")
 
@@ -310,10 +332,235 @@ table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshPar
     if preyMarker then preyMarker:Destroy() end
     if predatorMarker then predatorMarker:Destroy() end
     if stagingRoot then stagingRoot:Destroy() end
-    StagedMeshLibrary.SpeciesMesh.gallimimus = oldGallimimusEntry
-    StagedMeshLibrary.SpeciesMesh.carnotaurus = oldCarnotaurusEntry
+    StagedMeshLibrary.SpeciesMesh.parasaurolophus = oldParasaurolophusEntry
+    StagedMeshLibrary.SpeciesMesh.utahraptor = oldUtahraptorEntry
     StagedMeshLibrary.StagingFolderName = oldStagingFolderName
     NPCService.NPCs = oldRecords
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "Beat 3 growth advances stage and exposes larger visual scale", run = function()
+    local player = MockPlayer.new(93003, "StoryboardBeat3Growth")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
+    state.Hatched = true
+
+    local hatchlingScale = CharacterVisualService:GrowthVisualScaleForState(state)
+    local ok, grown = SurvivalService:AddGrowth(player, 75)
+
+    Assert.equals(ok, true, "growth can be awarded from survival actions")
+    Assert.equals(grown.GrowthStage, "Adult", "growth reaches adult story stage")
+    Assert.equals(grown.JustMaturedTo, "Adult", "stage-up event is observable")
+    Assert.equals(grown.AlphaEligible, true, "adult growth unlocks alpha eligibility")
+    Assert.truthy(CharacterVisualService:GrowthVisualScaleForState(grown) > hatchlingScale, "grown dinosaur has larger visual scale")
+
+    local payload = StatReplicationService:BuildPayload(grown)
+    Assert.equals(payload.growthStage, "Adult", "growth stage replicates to UI payload")
+    SurvivalService.States[player] = nil
+end })
+
+table.insert(suite.tests, { name = "Beat 4 jungle ambush source marks predator and call-capable species", run = function()
+    local junglePredator = nil
+    for _, spec in ipairs(MapLayoutService.NPCSpawnPlacements) do
+        if spec.zone == "JungleBasin" and spec.kind == "Predator" and spec.dangerous == true then
+            junglePredator = spec
+            break
+        end
+    end
+
+    Assert.notNil(junglePredator, "JungleBasin has a dangerous predator ambush marker")
+    local speciesId = MapLayoutService.NPCKindSpeciesIds[junglePredator.kind]
+    local species = SpeciesConfig[speciesId]
+    Assert.notNil(species, "jungle predator resolves to a configured species")
+    Assert.truthy(type(species.Abilities.CallSet) == "table" and #species.Abilities.CallSet > 0,
+        "jungle predator species has call/roar affordances for directional threat feedback")
+end })
+
+table.insert(suite.tests, { name = "Beat 5 fish schools stay inside valid swim water habitats", run = function()
+    local temp = Instance.new("Folder")
+    temp.Name = "StoryboardBeat5WaterProbe"
+    temp.Parent = workspace
+
+    local validWater = Instance.new("Part")
+    validWater.Name = "StoryboardBeat5SwimWater"
+    validWater.Size = Vector3.new(40, 8, 30)
+    validWater.Position = Vector3.new(0, 20, 0)
+    validWater:SetAttribute("WaterSource", true)
+    validWater:SetAttribute("SwimZone", true)
+    validWater:SetAttribute("FishSpawnAllowed", true)
+    validWater.Parent = temp
+    CollectionService:AddTag(validWater, WaterService.WaterTag)
+
+    local shallowWater = Instance.new("Part")
+    shallowWater.Name = "StoryboardBeat5ShallowDrinkOnly"
+    shallowWater.Size = Vector3.new(40, 3, 30)
+    shallowWater.Position = Vector3.new(90, 20, 0)
+    shallowWater:SetAttribute("WaterSource", true)
+    shallowWater.Parent = temp
+    CollectionService:AddTag(shallowWater, WaterService.WaterTag)
+
+    local fish
+    local ok, err = pcall(function()
+        fish = FishService:CreateFishSource(validWater, "StoryboardBeat5FishSchool", Vector3.new(12, 2, -10))
+        Assert.notNil(fish, "fish school is created for valid swim habitat")
+        Assert.equals(fish:GetAttribute("FishSchool"), true, "fish source is marked as a school")
+        Assert.equals(fish:GetAttribute("WaterSourceName"), validWater.Name, "fish records its water source")
+        Assert.equals(WaterService:ContainsPoint(validWater, fish.Position), true, "fish school stays inside water bounds")
+        Assert.truthy(FishService:ApplyBeat5ImportedRandomWalk(fish, validWater, { stepStuds = 80 }),
+            "Beat 5 adapted vendor random-walk layer moves fish safely")
+        Assert.equals(WaterService:ContainsPoint(validWater, fish.Position), true,
+            "Beat 5 adapted random-walk output remains clamped to water bounds")
+        Assert.equals(fish:GetAttribute("ImportedScriptAdapted"), true,
+            "Beat 5 fish movement carries reviewed adapted-script ownership")
+        Assert.equals(fish:GetAttribute("ScriptAdaptedTo"), "FishService.ApplyBeat5ImportedRandomWalk",
+            "Beat 5 fish movement records source-side adaptation target")
+        Assert.truthy(CollectionService:HasTag(fish, FishService.ImportedScriptAdaptedTag),
+            "Beat 5 fish movement carries adapted ownership tag")
+
+        local invalidFish, reason = FishService:CreateFishSource(shallowWater, "StoryboardBeat5InvalidFishSchool")
+        Assert.equals(invalidFish, nil, "fish school is rejected for drink-only shallow water")
+        Assert.equals(reason, "fish_not_allowed", "invalid shallow water explains why fish cannot spawn")
+    end)
+
+    if fish then fish:Destroy() end
+    CollectionService:RemoveTag(validWater, WaterService.WaterTag)
+    CollectionService:RemoveTag(shallowWater, WaterService.WaterTag)
+    temp:Destroy()
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "Beat 6 apex event warns nearby non-apex creatures", run = function()
+    local oldRecords = NPCService.NPCs
+    NPCService.NPCs = {}
+
+    local apexModel
+    local preyModel
+    local ok, err = pcall(function()
+        apexModel = makeNPCModel("StoryboardBeat6Apex", Vector3.new(0, 20, 0))
+        preyModel = makeNPCModel("StoryboardBeat6Prey", Vector3.new(25, 20, 0))
+
+        local apexOk, apexRecord = NPCService:Register(apexModel, "Apex")
+        local preyOk, preyRecord = NPCService:Register(preyModel, "Prey")
+        Assert.equals(apexOk, true, "apex NPC registers")
+        Assert.equals(preyOk, true, "prey NPC registers")
+        Assert.equals(apexRecord.Apex, true, "apex record carries apex flag")
+
+        local eventOk = NPCService:StampApexEvent(apexRecord, 100)
+        Assert.equals(eventOk, true, "apex event can broadcast")
+        Assert.equals(apexModel:GetAttribute("ApexEventActive"), true, "apex source exposes active warning")
+        Assert.equals(apexModel:GetAttribute("ApexEventAffected"), 1, "apex warning affects nearby prey")
+        Assert.equals(preyModel:GetAttribute("ApexThreatState"), "Warned", "nearby prey receives readable threat state")
+        Assert.equals(preyRecord.LastApexThreat, apexModel, "prey records apex threat source")
+    end)
+
+    if apexModel then apexModel:Destroy() end
+    if preyModel then preyModel:Destroy() end
+    NPCService.NPCs = oldRecords
+    if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "Beat 7 city discovery triggers are invisible Old Eden story volumes", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    local triggerFolder = MapLayoutService:EnsureCityDiscoveryTriggers(folders)
+    local triggers = 0
+
+    for _, trigger in ipairs(triggerFolder:GetChildren()) do
+        if trigger:GetAttribute("CityDiscoveryTrigger") == true then
+            triggers = triggers + 1
+            Assert.equals(trigger.Transparency, 1, trigger.Name .. " is invisible gameplay volume")
+            Assert.equals(trigger.CanCollide, false, trigger.Name .. " does not block traversal")
+            Assert.equals(trigger:GetAttribute("ZoneId"), "ApocalypticCity", trigger.Name .. " points to Old Eden city")
+        end
+    end
+
+    Assert.truthy(triggers >= 3, "city approach/core discovery volumes exist")
+end })
+
+table.insert(suite.tests, { name = "Beat 8 nesting herd markers resolve to herd-capable prey spawns", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureNPCSpawnMarkers(folders)
+    local herdMarkersByZone = {}
+    local herdMarkerCount = 0
+
+    for _, spec in ipairs(MapLayoutService.NPCSpawnPlacements) do
+        if spec.nestingHerd == true then
+            herdMarkerCount = herdMarkerCount + 1
+            Assert.equals(spec.kind, "Prey", spec.name .. " nesting herd marker is prey")
+            local speciesId = MapLayoutService.NPCKindSpeciesIds[spec.kind]
+            local species = SpeciesConfig[speciesId]
+            Assert.notNil(species, spec.name .. " resolves to a configured species")
+            Assert.equals(species.EcosystemProfile.Herding, true, spec.name .. " resolves to a herd-capable species")
+            local marker = folders.NPCSpawns:FindFirstChild(spec.name)
+            Assert.notNil(marker, spec.name .. " nesting herd marker is authored")
+            Assert.equals(marker:GetAttribute("NestingHerd"), true, spec.name .. " is stamped as a nesting herd marker")
+            Assert.equals(marker:GetAttribute("SpeciesRelevantSpawn"), true, spec.name .. " remains relevant even outside preferred biome")
+            Assert.equals(marker:GetAttribute("SpeciesId"), speciesId, spec.name .. " spawn marker records herd-capable species")
+
+            local zoneMarkers = herdMarkersByZone[spec.zone]
+            if not zoneMarkers then
+                zoneMarkers = {}
+                herdMarkersByZone[spec.zone] = zoneMarkers
+            end
+            table.insert(zoneMarkers, spec)
+        end
+    end
+
+    local groupedZones = 0
+    for zoneName, zoneMarkers in pairs(herdMarkersByZone) do
+        if #zoneMarkers >= 2 then
+            groupedZones = groupedZones + 1
+            for i = 1, #zoneMarkers do
+                for j = i + 1, #zoneMarkers do
+                    Assert.truthy((zoneMarkers[i].position - zoneMarkers[j].position).Magnitude <= NPCService.HerdRadius * 2,
+                        zoneName .. " nesting herd markers stay near enough to read as one authored group")
+                end
+            end
+        end
+    end
+
+    Assert.truthy(herdMarkerCount >= 4, "Beat 8 has authored nesting herd prey markers")
+    Assert.truthy(groupedZones >= 1, "Beat 8 has at least one multi-marker nesting herd group")
+end })
+
+table.insert(suite.tests, { name = "Beat 8 adult nest action lays egg and records home state", run = function()
+    local player = MockPlayer.new(93008, "StoryboardBeat8Adult")
+    RateLimitService:ClearPlayer(player)
+    NestService.Nests[player] = nil
+
+    local character = Instance.new("Model")
+    character.Name = "StoryboardBeat8Character"
+    local root = Instance.new("Part")
+    root.Name = "HumanoidRootPart"
+    root.Position = Vector3.new(0, 10, 0)
+    root.Parent = character
+    character.PrimaryPart = root
+    character.Parent = workspace
+    player.Character = character
+
+    local nest = Instance.new("Part")
+    nest.Name = "StoryboardBeat8NestZone"
+    nest.Position = Vector3.new(4, 10, 0)
+    nest.Parent = workspace
+    CollectionService:AddTag(nest, "NestZone")
+
+    local ok, err = pcall(function()
+        local state = SurvivalService:CreateState(player, "parasaurolophus")
+        state.Hatched = true
+        state.GrowthStage = "Adult"
+
+        local nestOk, record = NestService:RequestNestAction(player, "LayEgg", nest)
+        Assert.equals(nestOk, true, "adult can lay an egg at a nest")
+        Assert.equals(record.Eggs, 1, "nest records laid egg")
+        Assert.equals(state.NestRespawn, nest, "nest becomes home/respawn state")
+        Assert.equals(state.NestEggCount, 1, "state exposes egg count for UI")
+        Assert.equals(state.HatchlingBuff, "NestRested", "nest records hatchling payoff")
+    end)
+
+    CollectionService:RemoveTag(nest, "NestZone")
+    nest:Destroy()
+    character:Destroy()
+    NestService.Nests[player] = nil
+    SurvivalService.States[player] = nil
+    RateLimitService:ClearPlayer(player)
     if not ok then error(err) end
 end })
 

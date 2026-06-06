@@ -1,8 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
 local StarterSpeciesService = {}
-StarterSpeciesService.StarterOrder = { "gallimimus", "triceratops", "velociraptor", "carnotaurus" }
+StarterSpeciesService.StarterOrder = { "coelophysis", "parasaurolophus", "utahraptor", "citipati" }
+StarterSpeciesService.RandomOptionId = Constants.RandomStarterSpeciesId
 
 function StarterSpeciesService:GetUnlockedStarterSpecies(data)
     local unlocked = data and data.UnlockedSpecies or {}
@@ -24,7 +26,7 @@ end
 
 function StarterSpeciesService:ChooseStarterSpecies(data, roll)
     local candidates = self:GetUnlockedStarterSpecies(data)
-    if #candidates == 0 then return "gallimimus" end
+    if #candidates == 0 then return Constants.DefaultSpeciesId end
     if type(roll) == "number" then
         local index = math.clamp(math.floor(roll), 1, #candidates)
         local chosen = candidates[index]
@@ -51,7 +53,7 @@ end
 function StarterSpeciesService:GetSelectableSpecies()
     local ids = {}
     for speciesId, entry in pairs(SpeciesConfig) do
-        if type(entry) == "table" and entry.SpeciesId == speciesId then
+        if type(entry) == "table" and entry.SpeciesId == speciesId and not Constants.RetiredPrototypeSpecies[speciesId] then
             ids[#ids + 1] = speciesId
         end
     end
@@ -75,6 +77,25 @@ function StarterSpeciesService:GetHatchPool(data, requireUnlock)
         end
     end
     return self:GetSelectableSpecies()
+end
+
+function StarterSpeciesService:ChooseRandomHatchSpecies(data, roll, predicate)
+    local candidates = self:GetHatchPool(data, false)
+    if type(predicate) == "function" then
+        local filtered = {}
+        for _, speciesId in ipairs(candidates) do
+            if predicate(speciesId) == true then
+                filtered[#filtered + 1] = speciesId
+            end
+        end
+        candidates = filtered
+    end
+    if #candidates == 0 then return nil, "no_renderable_random_species" end
+    if type(roll) == "number" then
+        local index = math.clamp(math.floor(roll), 1, #candidates)
+        return candidates[index]
+    end
+    return candidates[math.random(1, #candidates)]
 end
 
 function StarterSpeciesService:HasCarnivoreAndHerbivore(data)

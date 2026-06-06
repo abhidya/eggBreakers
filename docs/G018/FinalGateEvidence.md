@@ -8,8 +8,8 @@ This file intentionally does **not** claim release PASS. It records the gate con
 
 | Proof / assertion | Current status | Why |
 | --- | --- | --- |
-| G018 gate files present | PASS (source) | `src/ServerScriptService/Tests/G018/G018FinalGate.server.lua`, `G018FinalGateSuite.lua`, `G018UserStoryTestRegistry.lua`, and `G018EcosystemProfileTests.lua` exist. |
-| G018 registry enumerates ecosystem stories | PASS (source) | Registry enumerates G018-US01 through G018-US11. |
+| G018 gate files present | PASS (source) | `src/ServerScriptService/Tests/G018/G018FinalGate.server.lua`, `G018FinalGateSuite.lua`, `UserStoryTestRegistry.lua`, `G018LiveProofHarness.lua`, and `G018EcosystemProfileTests.lua` exist. |
+| G018 registry enumerates ecosystem stories | PASS (source) | Registry enumerates US27 through US36 and the final gate consumes the same live-proof attribute names as `LIVE_PLAY_E2E_MATRIX.md`. |
 | Shared G018 profile plumbing exists | PASS (source) | Species profile/category/movement/oxygen fields and StatUpdate profile payload are present. |
 | Fresh live proof matrix attached | BLOCKED | No `ReplicatedStorage.G018FinalGateProof` live PASS attributes from Studio/live E2E; each story must also provide PASS status, evidence, observed timestamp, proof source, and `G018FinalGate` milestone. |
 | Fresh all-category TestRunner | BLOCKED | No fresh `G018FinalGate` all-category zero-failure proof attached; client suite coverage must explicitly report `FreshAllCategoryClientSuitesMissing=0`. |
@@ -21,4 +21,4 @@ This file intentionally does **not** claim release PASS. It records the gate con
 
 ## Honest Release Conclusion
 
-G018 cannot be signed off from this evidence set. Source plumbing and final-gate scaffolding exist, but live E2E, mobile/client proof, RBXL persistence, fresh full TestRunner, fish/apex/herding implementation, and the 500 release-ready asset gate remain blockers.
+G018 cannot be signed off from this evidence set. Source plumbing and final-gate scaffolding exist, but live E2E, mobile/client proof, RBXL persistence, fresh full TestRunner, fish/apex/herding/pack visual proof, and the 500 release-ready asset gate remain blockers.

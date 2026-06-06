@@ -88,7 +88,7 @@ table.insert(suite.tests, { name = "near target becomes one tap eat action", run
     Assert.equals(eatDrink:GetAttribute("ActionVerb"), "EAT", "button gets eat action")
     Assert.equals(eatDrink:GetAttribute("CurrentTargetName"), "NearFern", "button tracks target")
     Assert.equals(eatDrink.Active, true, "near button is tappable")
-    Assert.truthy(string.find(eatDrink.Text, "Snack", 1, true) ~= nil, "button names snack action")
+    Assert.truthy(string.find(eatDrink.Text, "Eat", 1, true) ~= nil, "button names the eat action")
 
     target:Destroy()
     gui:Destroy()

@@ -2,6 +2,16 @@
 
 Status: **NOT FINAL PASS**. This matrix defines the required proof contract for `G018FinalGateProof`; it is not satisfied until a fresh live harness writes the listed attributes with concrete evidence.
 
+## Hatch/select dinosaur regression boundary
+
+The hatch/select dinosaur fix is a prerequisite for live play but is not itself a G018 US27-US36 ecological proof row. Keep it covered by focused regression tests instead of marking any G018 live proof attribute:
+
+- `src/ServerScriptService/Tests/E2E/E2E_HatchToFirstFood.lua` verifies that a pre-hatch species selection persists through hatch and exposes the selected species diet.
+- `src/ServerScriptService/Tests/Integration/HatchServiceTests.lua` verifies valid/invalid pre-hatch selection and rejects post-hatch switching.
+- `src/StarterPlayer/StarterPlayerScripts/Tests/HatchUITests.client.lua` verifies that the selector renders starter dinosaur options and highlights the selected option.
+
+Do not treat these regression tests as live proof. Final G018 status still requires the concrete live harness attributes below.
+
 | Story | Player-visible outcome | Required proof attribute | Current status | Evidence needed |
 | --- | --- | --- | --- | --- |
 | US27 | Small prey categories are visible, edible, and predator-aware. | `US27LiveProofPassed` | PENDING | Live prey spawn/avoid/flee/eat chain with visible prey count and predator interaction. |

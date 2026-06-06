@@ -31,6 +31,7 @@ These are the non-negotiable qualities every task is measured against.
 4. **Readable, responsive gameplay.** Combat, growth, hunger/thirst, and threat are all visible through a clean survival HUD with feedback (hit, heal, danger, progression).
 5. **Honest, shippable content.** The asset-honesty audit passes legitimately; nothing tagged as imported that isn't; release gates green.
 6. **Scoped & coherent.** A clear slice of species across all three movement modes — ground, **flying, and aquatic** — and 6 biomes. Flight and swim are first-class mechanics to build properly (real physics movement), not faux-Y floats. Cut only true noise, not core traversal.
+7. **Starter identity is current.** First-session UX is scoped to Coelophysis, Parasaurolophus, Utahraptor, and Citipati until broader staged-roster species have their own proof rows.
 
 ---
 
@@ -43,7 +44,7 @@ Each row: severity, the problem, the evidence, and the disposition (**FIX** in p
 | BR-01 | Critical | NPC movement | `PivotTo(CFrame.lookAt())` in 8-stud steps on a 1s tick → teleport. NPC bodies fully anchored, no Humanoid. | FIX (rework to Humanoid:MoveTo) |
 | BR-02 | Critical | NPC animation | All `SpeciesConfig.AnimationIds` empty; NPCs have 0 Animation objects / no Animator. | BUILD + REPLACE (use pack rigs) |
 | BR-03 | Critical | Playable models | `ModelPaths` point at primitive block/union sets, not real mesh dinos. | REPLACE (wire new packs) |
-| BR-04 | Critical | Imported scripts | **758 Workspace scripts (744 enabled)** from imported packs (qPerfectionWeld/RandomlyWalk/AttackPeople/README) — security + perf + behavior conflict. Live-only; not in repo `src/`. | FIX (strip/quarantine) |
+| BR-04 | Critical | Imported scripts | **758 Workspace scripts (744 enabled)** from imported packs (qPerfectionWeld/RandomlyWalk/AttackPeople/README) — many are useful raw material, but loose Workspace authority creates security/perf/behavior conflict. Live-only; not in repo `src/`. | FIX (review, adapt/sandbox, strip only unsafe/unowned behavior) |
 | BR-05 | High | Map spread | Biomes far apart with empty traversal (test: "outer biome centers condensed"); terrain flat & unnatural. | FIX + REPLACE (re-layout + dressing) |
 | BR-06 | High | Biome dressing | Trees are invisible-helper trunk/canopy parts violating naming rules; map ~6% dressed. | REPLACE (nature packs) |
 | BR-07 | High | Water | Visible generated Parts missing release tags; `FernLakeSwimZone` too deep (collision test). | FIX + REPLACE (water material/mesh) |
@@ -56,7 +57,7 @@ Each row: severity, the problem, the evidence, and the disposition (**FIX** in p
 | BR-14 | Medium | Carnotaurus | Config hack `VisualOrientationCorrection PitchDegrees=180` to fix inverted import. | REPLACE (clean rig) |
 | BR-15 | High | Release gates | Need ≥500 honest imported visible assets + live-proof artifacts (G015/G016/G018). | FIX (after asset pipeline) |
 | BR-16 | Medium | E2E loop | "player can attack registered dinosaur NPC" fails — record lookup vs instance mismatch. | FIX |
-| BR-17 | High | Audio | Startup buzzing: ~20 looped + 6 auto-playing Sounds embedded in free-model dinos (e.g. `Gigazilla` Sound vol **7.9** looped; multiple `TrueNeck/Head.Sound`) all fire at once via 82 enabled sound-playing pack scripts → loud drone that fades as scripts settle. | FIX (strip pack sounds+scripts) |
+| BR-17 | High | Audio | Startup buzzing: ~20 looped + 6 auto-playing Sounds embedded in free-model dinos (e.g. `Gigazilla` Sound vol **7.9** looped; multiple `TrueNeck/Head.Sound`) all fire at once via 82 enabled sound-playing pack scripts → loud drone that fades as scripts settle. | FIX (review/tame sound scripts; keep curated dynamic SFX only) |
 | BR-18 | High | Audit policy | The import audit **forbids MeshPart roots as release-ready** and quarantines them as "mesh excluded" — directly conflicts with shipping the user's new genuine **mesh** dino packs. Policy must change or the real assets will never count toward 500. | DECISION + FIX (audit rule) |
 
 ---
@@ -70,12 +71,12 @@ Foundational; unblocks B, C, D. Make imports safe, honest, and organized.
 
 | Task | Goal | Acceptance criterion | Asset/source |
 |------|------|----------------------|--------------|
-| A.1 | Strip & quarantine pack scripts | Run `AssetImportAuditService:AuditAndRepair({mutate=true})`; 0 enabled executable scripts remain in Workspace dino packs | existing service |
+| A.1 | Review & integrate pack scripts | Run `AssetImportAuditService:AuditAndRepair({mutate=true})`; every enabled imported script has review status, owner, authority boundary, and test coverage, or is disabled/quarantined | existing service |
 | A.2 | Establish a clean import convention | Every shipping asset lives under `Map/ImportedAssets` or a species library, tagged `SourceAssetId` + `AssetManifestId` + `CreatorStoreOnly` | AssetManifest |
 | A.3 | De-dup SourceAssetIds | No duplicate SourceAssetId inflates counts (fixes AssetImportAuditStateTests) | audit |
 | A.4 | Curate species rig set | One canonical rigged mesh per playable species (Hatchling→Adult scale), Humanoid + Animator present | Creator Store query (§5) |
 | A.5 | Retire primitive sets | Old block/union `Imported_Playable_*` sets removed from shipping path | — |
-| A.6 | Silence audio spam | Strip/disable all embedded looped & auto-play Sounds from imported packs (fixes startup buzzing BR-17); keep only intentional, curated SFX | sound sweep |
+| A.6 | Silence audio spam | Review/tame embedded looped & auto-play Sounds from imported packs (fixes startup buzzing BR-17); keep intentional, curated SFX under controller/service authority | sound sweep |
 | A.7 | Resolve MeshPart audit policy | Decide how genuine mesh imports count toward release (BR-18); update `AssetImportAuditService` so quality mesh packs are release-ready, not auto-quarantined | audit rule |
 
 ### WS-B — NPC Movement & Animation  *(owner: "Locomotion")*
@@ -183,7 +184,7 @@ A six-panel arc the team can illustrate and build toward:
 
 1. **Hatch.** Egg cracks in NurseryGrove dawn light. Camera pulls back to reveal a small dinosaur. UI fades in (hunger/thirst calm).
 2. **First needs.** Player nibbles foliage, drinks at a shallow pool. Tutorial prompts via diegetic HUD, not popups.
-3. **Leaving safety.** Crossing the NurseryGrove boundary into FernPlains; a herd of gallimimus scatters — the world reacts to you.
+3. **Leaving safety.** Crossing the NurseryGrove boundary into FernPlains; a Parasaurolophus-led herd or ambient grazer group scatters — the world reacts to you.
 4. **First threat.** A predator call echoes; threat indicator pulses; player flees or hides. Stamina matters.
 5. **Growth.** After feeding, a visible stage-up: the dinosaur grows, stats rise, new ability unlocks. Earned power.
 6. **The horizon.** Camera lingers on the distant canyon/city skyline — the promise of where survival leads. Loop hook.
@@ -199,6 +200,8 @@ A six-panel arc the team can illustrate and build toward:
 | Combat (bite/claw/headbutt) | Earn your place | Attack anims + impact VFX |
 | Apex events | Endgame pressure | Apex roar SFX + screen UI |
 | Biome traversal | The journey outward | Nature/landmark packs |
+
+**Current starter proof target:** Coelophysis (small carnivore), Parasaurolophus (herbivore grazer), Utahraptor (pack carnivore), and Citipati (omnivore forager/scavenger). Asset-backed biome work must distinguish candidate/catalog assets from inserted, dressed, screenshot-proven, and saved place content.
 
 ---
 
@@ -220,7 +223,7 @@ Creator Store searches validated live through the MCP. Strong category matches r
 | Terrain / water / egg-nest | refine queries | ◇ use Terrain tools; audio index separate | WS-C / WS-D |
 | UI/HUD | n/a | **3D-only store — design in-house** | WS-E |
 
-**Sourcing rule:** insert via `insert_from_creator_store`, immediately run A.1 (strip scripts) + A.2 (tag), keep mesh+rig only, verify license is free/commercial-safe, drive all behavior from our services.
+**Sourcing rule:** insert via `insert_from_creator_store`, immediately run A.1 (script/sound review) + A.2 (tag), keep mesh/rig/VFX/audio and reviewed dynamic scripts only, verify license is free/commercial-safe, and drive all behavior from our services/controllers.
 
 ---
 
@@ -241,7 +244,7 @@ Wave 4 (ship):        WS-H (gates & proofs)  [needs A, C, D]
 ## 7. Definition of Done (prod-ready bar)
 - No teleporting/floating/sliding creatures; all animated.
 - 6 biomes naturally dressed, condensed, grounded, with believable water.
-- Only high-rated imported (script-stripped, tagged) assets in the shipping build.
+- Only high-rated imported assets with reviewed scripts/sounds and provenance tags in the shipping build.
 - Survival HUD + combat feedback complete and mobile-usable.
 - Flight/swim cleanly gated or cut; one source of truth per stat.
 - Asset-honesty audit + all release gates green with live proofs.
@@ -260,7 +263,7 @@ Salvaged from the repo's `.omx/` orchestration state and `docs/G014–G019` gate
 ### 8.2 Creator Store import tooling gotchas (critical for WS-A)
 - **`insert_from_creator_store` inserts only the PRIMARY result** per search; secondary IDs are alternatives and don't get placed/counted. → To hit volume, run **many distinct searches**, not one search expecting many assets.
 - **Parallel inserts fail** with play-mode / "target not reachable" errors → must `start_stop_play(false)` and insert **serially** with retries.
-- Established import loop (keep it): search → insert primary → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly`/`ImportedVisibleAsset` → quarantine scripts → move under `Workspace.Map.ImportedAssets` → `AssetImportAuditService:AuditAndRepair({mutate=true})`.
+- Established import loop (keep it): search → insert primary → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly`/`ImportedVisibleAsset` → review/adapt/quarantine scripts as needed → move under `Workspace.Map.ImportedAssets` → `AssetImportAuditService:AuditAndRepair({mutate=true})`.
 
 ### 8.3 The MeshPart paradox (now blocking, see BR-18)
 - The audit auto-quarantined **96 low-quality/mesh/simple-generated** candidates and hid **47 procedural food markers**; it treats **MeshPart imports as non-release-ready**. Required playable dinos were only kept via `RequiredPlayableVisual` policy-note exceptions.

@@ -9,13 +9,11 @@ to `origin` github.com/abhidya/eggBreakers).
 ## Session Learnings & Operating Rules (2026-05-30)
 Hard-won rules from a full build session. Obey these to avoid re-losing the same hours.
 
-- **MCP SPLIT IS STRICT**: use **`Roblox_Studio` (proxy -> the `eggBreakers2` Studio)** for ALL live game actions
-  (execute_luau, asset-id inserts, terrain, screenshots, inspection). Use **`Roblox_Search` (kevinswint fork -> the
-  `place1` Studio)** for **SEARCH/DISCOVERY ONLY** (`search_assets`/`preview_asset` quality ranking). The Rust legacy
-  fork is filtered to expose only those two tools. **BLOCK on search
-  failure** — if the fork search fails, retry it only after the user toggles the `place1` plugin; do **NOT** fall back to
-  proxy search for discovery. The fork cannot insert into eggBreakers2; to actually insert a validated asset, pass the
-  accepted numeric asset id to `Roblox_Studio`/eggBreakers2 without using proxy creator-store search.
+- **TOOL SPLIT IS STRICT**: use **`Roblox_Studio` (proxy -> active `eggBreakers3`)** for ALL live game actions
+  (execute_luau, inserts, terrain, screenshots, inspection). Use the repo direct helper for **SEARCH/DISCOVERY ONLY**:
+  `node tools/roblox_search_direct.js search_assets '{"query":"survival ui icon pack","max_results":5}'`
+  and `node tools/roblox_search_direct.js preview_asset '{"asset_id":"<id>"}'`. Do **not** use Codex's
+  `mcp__Roblox_Search.search_assets` wrapper as the default; it can time out while the direct route succeeds.
 - **INSERTS ONLY WORK IN EDIT MODE**: marketplace/creator-store inserts are **silently dropped in play mode** (this was
   the "vanishing assets" bug — assets seemed to insert then disappeared). Always **stop play before inserting**. Pass the
   **`assetName` param and use a snapshot-diff** (tree before/after) to reliably locate the inserted model — the default
@@ -81,7 +79,8 @@ Your responsibility, every wave, forever until the slice is done:
   **GUARD: never introduce NEW logic failures**; the LEADER runs the suite live (agents can't). Re-baseline world-dependent
   reds AFTER the world build — don't chase them mid-build.
 - **SHIPPED (real, validated this session)**: real dino NPCs + dino PLAYER (recovered **56-mesh pen** wired via the new
-  shared **`StagedMeshLibrary`** module); **food / sense-guide (diet-aware pulse) / combat / nest / dying pipeline /
+  shared **`StagedMeshLibrary`** module); **four-starter hatch UX is Coelophysis / Parasaurolophus / Utahraptor /
+  Citipati**; **food / sense-guide (diet-aware pulse) / combat / nest / dying pipeline /
   cleanup-despawn / audio-SFX layer / mobile thumb UX** all shipped.
 - **WORLD ENGINES BUILT (LIVE-ONLY — unsaved, remind user to SAVE)**: ocean-island **boundary**, **trees across all 6
   biomes**, **terrain-paint** engine, and a **varied-dressing** engine. These are live Studio state only; a restart loses
@@ -101,18 +100,19 @@ Your responsibility, every wave, forever until the slice is done:
 - Pipelines to fix: `CharacterVisualService:ApplyForState` -> `SpeciesModelService:ResolveModel` ->
   `SpeciesConfig.ModelPaths`; `NPCSpawnService:ResolveImportedNPCModel` -> `NPCModelCandidatePaths`. Make BOTH prefer
   the staged `Workspace.dinosaur` meshes (a shared `StagedMeshLibrary` module is the clean approach).
-- **ALL 56 dinos are the ECOSYSTEM**, not just 8 playable: 8 playable species + the rest become NPC prey/predator/
-  ambient fauna/aquatic/flyers populating the biomes. Playable -> staged mapping (exact names; substitute where none staged):
-  `gallimimus->Coelophysis, triceratops->Triceratops, velociraptor->Utahraptor, carnotaurus->Carnotaurus,
-  tyrannosaurus->Tyrannosaurus, oviraptor->Citipati (male), pteranodon->Quetzalcoatlus, spinosaurus->Spinosaurus`.
+- **ALL 56 dinos are the ECOSYSTEM**, but first-session UX starts with the current curated starters:
+  `coelophysis->Coelophysis`, `parasaurolophus->Parasaurolophus`, `utahraptor->Utahraptor`,
+  `citipati->Citipati (female)`. The broader hatch/staged roster can become NPC prey/predator/ambient/aquatic/flyer
+  population only after per-species proof rows. Older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter mappings
+  are historical planning language unless a task explicitly reintroduces them as non-starter fauna.
   RISK: weld only a model's **PrimaryPart** to the player HumanoidRootPart (welding every skinned part fights the Motor6D rig).
 
 ## BUILD WORKSTREAMS (parallelizable across waves; each ends at a storyboard acceptance check)
 **A. ASSET QUALITY GATE & SOURCING** — gate every asset: accept Creator-Store textured mesh, reject primitive/CSG/
 AI-generated/test. Use `Roblox_Search.search_assets` to source missing/weak assets (real velociraptor + gallimimus
 meshes; recognizable FOOD: foliage/ferns/fruit + dino CARCASS/meat; believable WATER; a proper food-finding WAYPOINT
-UI; impact/blood VFX; roar/eat SFX); `preview_asset` to compare; strip scripts + looped sounds; tag SourceAssetId/
-AssetManifestId/CreatorStoreOnly/ImportedVisibleAsset.
+  UI; impact/blood VFX; roar/eat SFX); `preview_asset` to compare; review imported scripts, strip/rewrite only unsafe or
+  uncontrolled behavior, tame looped sounds, and tag SourceAssetId/AssetManifestId/CreatorStoreOnly/ImportedVisibleAsset.
 
 **B. ROSTER & NPC LIFE / BEHAVIOR** — fix default-avatar->dino; wire 56 staged meshes into player+NPC; replace
 primitive NPCs; add Animator + populate `SpeciesConfig.AnimationIds` (idle/walk/run/eat/attack/hurt/death); locomotion
@@ -145,12 +145,27 @@ popups); mobile thumb controls; optional themed cursor.
 **G. QA GATE** — per-beat screenshot proofs (Storyboard acceptance + Gates A-D), test parity, release-count progress,
 fresh-Play-session proofs.
 
-**H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (8 playable + each NPC fauna species), validate
+**Docs/UX guardrail (2026-05-31):** storyboards and status docs must show the lifecycle as movement → eat/drink →
+rest/sleep with age ticking → growth → dying/death age → respawn/nest. For biome work, distinguish candidate/catalog
+assets from assets inserted live, scattered by `WorldDressingService`, screenshot-proven, and saved/persisted.
+
+**Priority override from user mobile evidence (2026-05-31):** iPhone portrait and landscape are currently not playable
+because UI cards block the play space. Fix mobile card/HUD layout before new story polish. Required proof: live
+iPhone-sized portrait and landscape captures where the dinosaur, path, food/water target, threat, context action, and
+mobile controls remain visible and tappable.
+
+**E2E story gate (2026-05-31):** `src/ServerScriptService/Tests/E2E/E2E_PlayableLoopClosure.lua` must remain the
+behavior guard for hatch → movement/sprint → eat/drink → rest/sleep with age ticking → growth → dying/death age →
+respawn, plus validated shallow water drinkability, NPC reaction/fight-back proof (prey flee, food/fight signal stamps,
+hostile NPC attack state), and player-killed carcass-to-bone/carcass-remains proof. This does not replace the storyboard
+screenshot gates; it prevents the playable loop from drifting while visual work continues.
+
+**H. PER-SPECIES PHYSICS & VALIDATION MATRIX** — for EVERY species in use (current four starters first, then each promoted hatch-pool/NPC fauna species), validate
 individually and record a pass/fail matrix WITH screenshots: spawns; renders as correct mesh; PrimaryPart/collision/
 hitbox sane; scale correct per growth stage; locomotion matches movement mode (ground/air/water) with no teleport or
 floating; animations play (idle/walk/run/eat/attack/hurt/death); eats correct diet; fights (deals + takes damage,
 telegraph reads); grows through 4 stages; dies cleanly (death->ragdoll->carcass->respawn); nests if adult. Add automated
-tests per species where logic allows (extend the suite; keep 176/143/34 parity). No species ships until its row is green.
+tests per species where logic allows (extend the suite; keep current baseline parity). No species ships until its row is green.
 
 ## MOVEMENT-MODE / TYPE-SPECIAL HANDLING (extends B + E + H)
 - **AQUATIC** (Aquatic folder: Megalodon, Liopleurodon, Elasmosaurus, Plesiosaurus, Styxosaurus, Archelon, Atopodentatus
@@ -180,7 +195,7 @@ Minimal, diegetic, easy — a young player understands what to do within seconds
   as water, threat as danger, and the single next action is obvious from one on-screen affordance.
 
 ## ORCHESTRATION LOOP
-- **Wave 0 (now)**: read STATUS + storyboard; set active Studio; run tests to confirm 176/143/34 baseline; create the
+- **Wave 0 (now)**: read STATUS + storyboard; set active Studio; run tests to confirm current baseline; create the
   task backlog (TaskCreate) from the workstreams; pick the wave's target beat(s).
 - **Recommended order**: B (player+NPC visual) -> C+D (world+food/vegetation) -> E+F (combat+UI/guidance) -> H per-species
   matrix folded in continuously -> A sourcing folded in as gaps appear -> G proofs. Do **Beats 0-2 first** (hatch, food/
@@ -199,6 +214,6 @@ Minimal, diegetic, easy — a young player understands what to do within seconds
   and strips ServerScriptService client-side; don't do it mid-inspection.
 - Memory: `~/.claude/projects/.../memory/eggbreakers-concurrent-agents.md`.
 
-**BEGIN**: read `eggBreakers_STATUS.md` + `docs/StoryModeStoryboard.md`, set the active Studio, confirm the 176/143/34
+**BEGIN**: read `eggBreakers_STATUS.md` + `docs/StoryModeStoryboard.md`, set the active Studio, confirm the current
 test baseline, seed the task backlog from the workstreams, then orchestrate Wave 0 toward Beats 0-2 (real dino player +
 real, recognizable food/water visible in a screenshot with the UI hidden).

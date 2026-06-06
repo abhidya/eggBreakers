@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
+local SpeciesRoster = require(ReplicatedStorage.Shared.SpeciesRoster)
 local Constants = require(ReplicatedStorage.Shared.Constants)
 local requiredStages = { "Hatchling", "Juvenile", "SubAdult", "Adult" }
 local suite = { name = "SpeciesConfigTests", category = "Unit", tests = {} }
@@ -34,20 +35,46 @@ table.insert(suite.tests, { name = "every species has required fields and stages
         end
     end
     Assert.truthy(count >= Constants.ScopeFreeze.RequiredPlayableSpecies, "vertical slice keeps required starter species")
-    -- The full staged roster is now playable. Workspace.dinosaur holds 56 rigs that
-    -- de-duplicate to 48 distinct staged species; merged with the curated 8 (4 of which
-    -- -- gallimimus, velociraptor, oviraptor, pteranodon -- have no staged-name twin)
-    -- the playable roster is 52. The cap is the full-roster upper bound, not the old
-    -- vertical-slice number; field validation above stays strict.
+    -- The full staged roster plus reviewed Creator Store mesh-pack entries keeps
+    -- the random hatch option genuinely above 50 species while excluding old
+    -- primitive prototype ids from runtime config.
     Assert.truthy(count <= Constants.ScopeFreeze.MaxPlayableSpecies, "playable roster stays within full-roster cap")
-    Assert.truthy(count >= 48, "full staged roster (>=48 distinct playable species) is available")
+    Assert.truthy(count >= 50, "full dinosaur roster (>=50 distinct playable species) is available")
 end })
 
 table.insert(suite.tests, { name = "starter species diet roles stay fixed", run = function()
-    Assert.equals(SpeciesConfig.gallimimus.Diet, "Herbivore")
-    Assert.equals(SpeciesConfig.triceratops.Diet, "Herbivore")
-    Assert.equals(SpeciesConfig.velociraptor.Diet, "Carnivore")
-    Assert.equals(SpeciesConfig.carnotaurus.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.coelophysis.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.parasaurolophus.Diet, "Herbivore")
+    Assert.equals(SpeciesConfig.utahraptor.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.citipati.Diet, "Omnivore")
+end })
+
+table.insert(suite.tests, { name = "retired prototype species are not playable", run = function()
+    for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
+        Assert.equals(SpeciesConfig[speciesId], nil, speciesId .. " is retired from runtime species config")
+    end
+end })
+
+table.insert(suite.tests, { name = "part-only NPC pack species use mesh-pack visual proxies", run = function()
+    local mustUseMeshPack = {
+        compies = true,
+        saurophaganax = true,
+        shantungosaurus = true,
+        citipati = true,
+        oviraptor = true,
+    }
+    local found = {}
+    for _, rec in ipairs(SpeciesRoster.SupplementalAssetSpecies) do
+        local id = SpeciesRoster.toSpeciesId(rec.name)
+        if mustUseMeshPack[id] then
+            Assert.equals(rec.sourceFolder, SpeciesRoster.AssetPackFolders.G033DinosaurMeshes, rec.name .. " avoids part-only NPC pack visual")
+            Assert.equals(rec.sourceAssetId, "8289268262", rec.name .. " resolves through the mesh-backed pack")
+            found[id] = true
+        end
+    end
+    for id in pairs(mustUseMeshPack) do
+        Assert.equals(found[id], true, id .. " has an explicit mesh-pack proxy")
+    end
 end })
 
 table.insert(suite.tests, { name = "ecosystem expansion profiles cover apex herding and omnivore", run = function()

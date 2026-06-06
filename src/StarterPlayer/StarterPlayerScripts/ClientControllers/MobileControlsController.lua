@@ -23,6 +23,7 @@
 --   MobileControlsController:ShowActionFeedback(gui, message, durationSeconds) -- transient toast
 
 local Players   = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local UIFactory = require(script.Parent.UIFactory)
 
 local MobileControlsController = {}
@@ -59,7 +60,7 @@ end
 -- Scent cue shown in the NearestActionHintLabel.
 -- Nearby targets sparkle; distant targets use a non-directional scent trail.
 function MobileControlsController:BuildWaypointText(targetType, distance, diet)
-    if not targetType or targetType == "None" then return "◌ 🌿  💧" end
+    if not targetType or targetType == "None" then return "◌ " .. self:BuildTargetIcon("Food", diet) .. "  💧" end
     local icon   = self:BuildTargetIcon(targetType, diet)
     local meters = math.max(0, tonumber(distance) or 0)
     local pulse  = meters <= 14 and "✨" or "〰"
@@ -227,7 +228,7 @@ local BUTTON_LABELS = {
     Attack   = "🦷",
     Sprint   = "⚡",
     Call     = "📣",
-    RestHide = "🌿",
+    RestHide = "🌿💤",
     Flight   = "🪽",
     Swim     = "🌊",
 }
@@ -237,16 +238,31 @@ local BUTTON_ICONS = {
     Attack   = "🦷",
     Sprint   = "⚡",
     Call     = "📣",
-    RestHide = "🌿",
+    RestHide = "🌿💤",
     Flight   = "🪽",
     Swim     = "🌊",
 }
+
+local function getViewportSize(settings)
+    if settings and settings.ViewportSize then return settings.ViewportSize end
+    local camera = Workspace.CurrentCamera
+    return camera and camera.ViewportSize or Vector2.new(1280, 720)
+end
+
+function MobileControlsController:GetResponsiveScale(baseScale, viewport)
+    viewport = viewport or getViewportSize()
+    local compact = viewport.X < 900 or viewport.Y < 540
+    if not compact then return baseScale or 1, false end
+    local viewportScale = math.clamp(math.min(viewport.X / 844, viewport.Y / 390), 0.68, 0.86)
+    return math.min(baseScale or 1, viewportScale), true
+end
 
 -- ── CreateControls ────────────────────────────────────────────────────────────
 
 function MobileControlsController:CreateControls(settings)
     if self.Gui then return self.Gui end
-    local scale = settings and settings.MobileButtonScale or 1.0
+    local baseScale = settings and settings.MobileButtonScale or 1.0
+    local scale, compact = self:GetResponsiveScale(baseScale, getViewportSize(settings))
 
     -- Button dimensions
     local bW = 76 * scale
@@ -270,6 +286,7 @@ function MobileControlsController:CreateControls(settings)
     }
 
     local gui = UIFactory:CreateRootGui("MobileControls")
+    gui:SetAttribute("MobileSafeLayout", compact)
 
     -- ── Movement thumbstick placeholder ───────────────────────────────────
     -- Roblox's TouchThumbstick takes over this area at runtime.
@@ -303,6 +320,7 @@ function MobileControlsController:CreateControls(settings)
         -- asserted by MobileControlsTests stays geometrically true.
         button.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
         button.TextStrokeTransparency = 0.45
+        button.Font = Enum.Font.FredokaOne
         -- Flight and Swim start hidden until species unlocks them
         if name == "Flight" or name == "Swim" then
             button.Visible         = false
@@ -316,7 +334,7 @@ function MobileControlsController:CreateControls(settings)
     local dialogue = Instance.new("TextLabel")
     dialogue.Name                  = "DialoguePromptLabel"
     dialogue.Size                  = UDim2.fromOffset(168 * scale, 32 * scale)
-    dialogue.Position              = UDim2.new(0.5, -84 * scale, 1, -360 * scale)
+    dialogue.Position              = compact and UDim2.new(0.5, -84 * scale, 0, 62 * scale) or UDim2.new(0.5, -84 * scale, 1, -360 * scale)
     dialogue.BackgroundTransparency = 0.1
     dialogue.BackgroundColor3      = Color3.fromRGB(16, 28, 20)
     dialogue.TextColor3            = Color3.fromRGB(240, 255, 220)
@@ -326,6 +344,7 @@ function MobileControlsController:CreateControls(settings)
     dialogue:SetAttribute("GuidesToActionableAssets",  true)
     dialogue:SetAttribute("IconOnlyTracker",           true)
     dialogue:SetAttribute("ProductionKidGuidance",     true)
+    dialogue:SetAttribute("MobileSafeLayout",          compact)
     dialogue.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
     dialogue.TextStrokeTransparency = 0.5
     UIFactory:RoundCorners(dialogue, 6)
@@ -335,7 +354,7 @@ function MobileControlsController:CreateControls(settings)
     local targetHint = Instance.new("TextLabel")
     targetHint.Name                  = "NearestActionHintLabel"
     targetHint.Size                  = UDim2.fromOffset(168 * scale, 44 * scale)
-    targetHint.Position              = UDim2.new(0.5, -84 * scale, 1, -320 * scale)
+    targetHint.Position              = compact and UDim2.new(0.5, -84 * scale, 0, 100 * scale) or UDim2.new(0.5, -84 * scale, 1, -320 * scale)
     targetHint.BackgroundTransparency = 0.04
     targetHint.BackgroundColor3      = Color3.fromRGB(24, 54, 34)
     targetHint.TextColor3            = Color3.fromRGB(255, 255, 255)
@@ -346,6 +365,7 @@ function MobileControlsController:CreateControls(settings)
     targetHint:SetAttribute("IconOnlyTracker",          true)
     targetHint:SetAttribute("FloatsAboveActionButtons", true)
     targetHint:SetAttribute("WaypointCue",              "scent-pulse-nearby-trail")
+    targetHint:SetAttribute("MobileSafeLayout",         compact)
     targetHint.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
     targetHint.TextStrokeTransparency = 0.45
     UIFactory:RoundCorners(targetHint, 6)
@@ -355,7 +375,7 @@ function MobileControlsController:CreateControls(settings)
     local feedback = Instance.new("TextLabel")
     feedback.Name                  = "ActionFeedbackLabel"
     feedback.Size                  = UDim2.fromOffset(180 * scale, 34 * scale)
-    feedback.Position              = UDim2.new(0.5, -90 * scale, 1, -268 * scale)
+    feedback.Position              = compact and UDim2.new(0.5, -90 * scale, 0, 150 * scale) or UDim2.new(0.5, -90 * scale, 1, -268 * scale)
     feedback.BackgroundTransparency = 0.1
     feedback.BackgroundColor3      = Color3.fromRGB(20, 35, 24)
     feedback.TextColor3            = Color3.new(1, 1, 1)
@@ -364,6 +384,7 @@ function MobileControlsController:CreateControls(settings)
     feedback:SetAttribute("MobileReadable", true)
     feedback:SetAttribute("LastFeedback",   "")
     feedback:SetAttribute("FeedbackToken",  0)
+    feedback:SetAttribute("MobileSafeLayout", compact)
     feedback.TextStrokeColor3       = Color3.fromRGB(0, 0, 0)
     feedback.TextStrokeTransparency = 0.45
     UIFactory:RoundCorners(feedback, 6)

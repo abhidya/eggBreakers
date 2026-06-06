@@ -60,7 +60,7 @@ function ActionGuidanceController:Update(gui, context)
         local targetDiet = dietForTarget(actionableTarget, stats)
         local icon = MobileControlsController:BuildTargetIcon(actionableType, targetDiet)
         if eatDrink then
-            eatDrink.Text = icon .. " " .. (actionableType == "Water" and "Drink" or "Snack")
+            eatDrink.Text = icon .. " " .. (actionableType == "Water" and "Drink" or "Eat")
             eatDrink:SetAttribute("CurrentTargetName", actionableTarget.Name)
             eatDrink:SetAttribute("CurrentTargetLabel", targetName)
             eatDrink:SetAttribute("CurrentTargetType", actionableType)

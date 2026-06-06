@@ -129,7 +129,7 @@ function G016LiveProofHarness:Run(options)
         local character, root = makeCharacter("G016LiveProbeCharacter", Vector3.new(-2000, 13, 0))
         table.insert(created, character)
         player.Character = character
-        local state = SurvivalService:CreateState(player, "gallimimus")
+        local state = SurvivalService:CreateState(player, "parasaurolophus")
 
         for _ = 1, 5 do
             local hatchOk = SurvivalService:RequestHatch(player, "tap")
@@ -143,12 +143,12 @@ function G016LiveProofHarness:Run(options)
         assertTrue(dinoVisual ~= nil and visiblePartCount(dinoVisual) > 0, "dinosaur visual has no visible parts")
         assertTrue((dinoVisual:GetAttribute("ForwardFacingDot") or 0) >= 0.92, "dinosaur is not verified forward-facing")
 
-        local data = { UnlockedSpecies = { gallimimus = true, triceratops = true, velociraptor = true, carnotaurus = true } }
+        local data = { UnlockedSpecies = { coelophysis = true, parasaurolophus = true, utahraptor = true, citipati = true } }
         local picked = {}
         for i = 1, 4 do
             picked[StarterSpeciesService:ChooseStarterSpecies(data, i)] = true
         end
-        assertTrue(picked.gallimimus and picked.triceratops and picked.velociraptor and picked.carnotaurus, "starter species variety missing")
+        assertTrue(picked.coelophysis and picked.parasaurolophus and picked.utahraptor and picked.citipati, "starter species variety missing")
         assertTrue(StarterSpeciesService:HasCarnivoreAndHerbivore(data), "starter species do not include both diets")
 
         local food = folders.FoodSources.NurseryGrove and folders.FoodSources.NurseryGrove:FindFirstChild("NurseryStarterFern_01")
@@ -185,7 +185,7 @@ function G016LiveProofHarness:Run(options)
         local carnivoreCharacter, carnivoreRoot = makeCharacter("G016CarnivoreProbeCharacter", meat.Position + Vector3.new(0, 0, -3))
         table.insert(created, carnivoreCharacter)
         carnivorePlayer.Character = carnivoreCharacter
-        local carnivoreState = SurvivalService:CreateState(carnivorePlayer, "velociraptor")
+        local carnivoreState = SurvivalService:CreateState(carnivorePlayer, "utahraptor")
         carnivoreState.Hatched = true
         carnivoreState.Hunger = 35
         RateLimitService:ClearPlayer(carnivorePlayer)
@@ -214,7 +214,7 @@ function G016LiveProofHarness:Run(options)
         state.Stamina = 100
         root.CFrame = CFrame.new(target.Position + Vector3.new(0, 0, -4))
         RateLimitService:ClearPlayer(player)
-        local attackOk = CombatService:RequestAttack(player, "Nibble", target)
+        local attackOk = CombatService:RequestAttack(player, SpeciesConfig[state.SpeciesId].Abilities.PrimaryAttack, target)
         assertTrue(attackOk == true, "combat attack request failed")
         assertTrue((target:GetAttribute("Health") or 1) <= 5, "combat did not reduce real target health")
         local callOk, callResult = CallService:RequestCall(player, "Warning")
@@ -320,7 +320,7 @@ function G016LiveProofHarness:Run(options)
         local adultCharacter, adultRoot = makeCharacter("G016NestAdultCharacter", nest.Position + Vector3.new(0, 0, -5))
         table.insert(created, adultCharacter)
         adultPlayer.Character = adultCharacter
-        local adultState = SurvivalService:CreateState(adultPlayer, "triceratops")
+        local adultState = SurvivalService:CreateState(adultPlayer, "parasaurolophus")
         adultState.Hatched = true
         adultState.GrowthStage = "Adult"
         RateLimitService:ClearPlayer(adultPlayer)

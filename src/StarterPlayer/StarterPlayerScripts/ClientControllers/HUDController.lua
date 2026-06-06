@@ -8,16 +8,21 @@
 --   HUDController:BuildGrowthBadge(payload)        -> string
 --   HUDController:BuildRoleCard(payload)            -> string
 --   HUDController:BuildDietGuidance(payload)        -> string
+--   HUDController:BuildThreatBadge(payload)         -> string
+--   HUDController:BuildStoryCue(payload)            -> string
 --   HUDController:BuildDeltaText(previous, current) -> string
+--   HUDController:ShouldShowOxygen(payload)         -> bool
 --   HUDController:ApplyStatUpdate(payload)
 --   HUDController:SetBar(name, value)
 --   HUDController:EnsureGui()                       -> gui
 
 local Players           = game:GetService("Players")
+local Workspace         = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIFactory         = require(script.Parent.UIFactory)
 local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
 local SpeciesConfig     = require(ReplicatedStorage.Shared.SpeciesConfig)
+local Constants         = require(ReplicatedStorage.Shared.Constants)
 
 local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
 
@@ -25,10 +30,31 @@ local HUDController = { LastStats = nil, Bars = {}, ValueLabels = {} }
 
 local stageOrder = { Hatchling = 1, Juvenile = 2, SubAdult = 3, Adult = 4 }
 local dietIcons  = { Herbivore = "🌿", Carnivore = "🍖", Omnivore = "🌿🍖" }
+local categoryIcons = {
+    SmallPrey = "🐾",
+    DefensiveHerbivore = "🛡",
+    PackPredator = "⟐",
+    ApexCandidate = "⚠",
+    Apex = "⚠",
+    Omnivore = "🍽️",
+    Flyer = "🪽",
+    SemiAquatic = "🌊",
+}
+local biomeIcons = {
+    NurseryGrove = "🐣",
+    FernPlains = "🌿",
+    JungleBasin = "🌴",
+    SwampDelta = "🌊",
+    RedstoneCanyon = "🦴",
+    ApocalypticCity = "🏚",
+    OldEden = "🏚",
+    CoastalCliffs = "🪽",
+    MountainNestingCliffs = "🪺",
+}
 
 -- HUD panel layout
 local PANEL_W    = 338
-local PANEL_H    = 256  -- slightly taller to breathe
+local PANEL_H    = 282  -- slightly taller to breathe
 local PANEL_PAD  = 10
 
 -- Bar row layout (icon | [====bar====] | 75%)
@@ -50,6 +76,17 @@ local BAR_STEP    = 22
 
 -- ── Pure helpers ──────────────────────────────────────────────────────────────
 
+local function getViewportSize()
+    local camera = Workspace.CurrentCamera
+    return camera and camera.ViewportSize or Vector2.new(1280, 720)
+end
+
+function HUDController:GetResponsiveScale(viewport)
+    viewport = viewport or getViewportSize()
+    if viewport.X >= 900 and viewport.Y >= 540 then return 1, false end
+    return math.clamp(math.min(viewport.X / 844, viewport.Y / 390), 0.62, 0.78), true
+end
+
 local function round(value)
     return math.floor((tonumber(value) or 0) + 0.5)
 end
@@ -57,7 +94,7 @@ end
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 function HUDController:GetSpeciesDisplayName(speciesId)
-    local id      = tostring(speciesId or "gallimimus")
+    local id      = tostring(speciesId or Constants.DefaultSpeciesId)
     local species = SpeciesConfig[id] or SpeciesConfig[string.lower(id)]
     return species and species.DisplayName or id
 end
@@ -72,22 +109,93 @@ function HUDController:BuildGrowthBadge(payload)
     return string.format("⭐ LV %d  %.0f%% %s", level, growth, nextHint)
 end
 
+local function firstTruthyProfileIcon(profile)
+    if type(profile) ~= "table" then return nil end
+    if profile.Apex == true or profile.ApexEventEligible == true or profile.ThreatRadius ~= nil then return "⚠" end
+    if profile.SemiAquatic == true or profile.RiverPredator == true then return "🌊" end
+    if profile.CanFly == true or profile.Soaring == true then return "🪽" end
+    if profile.PackHunter == true then return "⟐" end
+    if profile.Herding == true then return "👥" end
+    if profile.CanGraze == true then return "🌿" end
+    if profile.SmallPrey == true then return "🐾" end
+    return nil
+end
+
+function HUDController:BuildMovementBadge(payload)
+    local modes = payload and payload.movementModes or {}
+    local parts = {}
+    if modes.Ground or modes.ground then table.insert(parts, "👣") end
+    if modes.Swim or modes.swim or modes.swimming then table.insert(parts, "🌊") end
+    if modes.Flight or modes.flight or modes.flying then table.insert(parts, "🪽") end
+    if #parts == 0 then return "👣" end
+    return table.concat(parts, "")
+end
+
+function HUDController:BuildThreatBadge(payload)
+    payload = payload or {}
+    local profile = payload.ecosystemProfile
+    local status = payload.statusEffects
+    local category = tostring(payload.creatureCategory or "")
+    local isThreat = category == "Apex" or category == "ApexCandidate"
+    if type(profile) == "table" then
+        isThreat = isThreat or profile.Apex == true or profile.ApexEventEligible == true
+    end
+    if type(status) == "table" then
+        isThreat = isThreat or status.ApexThreatNearby == true or status.apexThreatNearby == true
+    end
+    if not isThreat then return "" end
+
+    local radius = type(profile) == "table" and tonumber(profile.ThreatRadius or profile.threatRadius) or nil
+    if radius then
+        return string.format("⚠ %.0fm", radius)
+    end
+    return "⚠"
+end
+
 -- Returns a compact species role card: "🦖 Velociraptor  🍖  🦷 Claw"
 -- Tests assert: DisplayName, diet icon, no "Carnivore" word, no "Role:" label.
 function HUDController:BuildRoleCard(payload)
-    local speciesId   = tostring(payload.species or "gallimimus")
+    payload = payload or {}
+    local speciesId   = tostring(payload.species or Constants.DefaultSpeciesId)
     local species     = SpeciesConfig[speciesId] or SpeciesConfig[string.lower(speciesId)]
     local displayName = species and species.DisplayName or speciesId
     local diet        = tostring(payload.diet or (species and species.Diet) or "Food")
+    local category    = tostring(payload.creatureCategory or (species and species.CreatureCategory) or "")
+    local profileIcon = firstTruthyProfileIcon(payload.ecosystemProfile or (species and species.EcosystemProfile))
+    local categoryIcon = categoryIcons[category]
+    local movement = self:BuildMovementBadge({
+        movementModes = payload.movementModes or (species and species.MovementModes) or {},
+    })
+    local threat = self:BuildThreatBadge({
+        creatureCategory = category,
+        ecosystemProfile = payload.ecosystemProfile or (species and species.EcosystemProfile),
+        statusEffects = payload.statusEffects,
+    })
     local attack      = tostring(
         species and species.Abilities and species.Abilities.PrimaryAttack or "Nibble"
     )
-    return string.format("🦖 %s  %s  🦷 %s", displayName, dietIcons[diet] or "🍽️", attack)
+    local badges = {}
+    local function addBadge(value)
+        if not value or value == "" then return end
+        for _, existing in ipairs(badges) do
+            if existing == value then return end
+        end
+        table.insert(badges, value)
+    end
+    addBadge(dietIcons[diet] or "🍽️")
+    addBadge(movement)
+    addBadge(categoryIcon)
+    addBadge(profileIcon)
+    if threat ~= "⚠" or (categoryIcon ~= "⚠" and profileIcon ~= "⚠") then
+        addBadge(threat)
+    end
+    return string.format("🦖 %s  %s  🦷 %s", displayName, table.concat(badges, " "), attack)
 end
 
 -- Returns icon-only diet + movement guidance: "🌿 + 💧 = ⭐"
 -- Tests assert: food icon present, water icon present, no long-form words.
 function HUDController:BuildDietGuidance(payload)
+    payload = payload or {}
     local diet     = tostring(payload.diet or "Food")
     local foodIcon = dietIcons[diet] or "🍽️"
     local movementModes = payload.movementModes or {}
@@ -100,6 +208,130 @@ function HUDController:BuildDietGuidance(payload)
         moveHint = "⭐"
     end
     return string.format("%s + 💧 = %s", foodIcon, moveHint)
+end
+
+local function firstNonEmpty(...)
+    for i = 1, select("#", ...) do
+        local value = select(i, ...)
+        if value ~= nil and tostring(value) ~= "" then
+            return value
+        end
+    end
+    return nil
+end
+
+local function profileBiome(profile)
+    if type(profile) ~= "table" then return nil end
+    if profile.PreferredBiome then return profile.PreferredBiome end
+    local zones = profile.PreferredZones
+    if type(zones) == "table" then
+        return zones[1]
+    end
+    return nil
+end
+
+local function payloadBiome(payload)
+    local status = type(payload.statusEffects) == "table" and payload.statusEffects or {}
+    return firstNonEmpty(
+        payload.biomeId,
+        payload.currentBiome,
+        payload.zoneId,
+        status.BiomeId,
+        status.biomeId,
+        status.CurrentBiome,
+        status.currentBiome,
+        status.ZoneId,
+        status.zoneId,
+        profileBiome(payload.ecosystemProfile)
+    )
+end
+
+local function hasStatus(status, ...)
+    if type(status) ~= "table" then return false end
+    for i = 1, select("#", ...) do
+        local key = select(i, ...)
+        if status[key] == true then
+            return true
+        end
+    end
+    return false
+end
+
+-- Returns a compact story/mechanics state line:
+-- "🌊 SwampDelta  🐟 🫧 ⚠" or "🐣 NurseryGrove  🐣 🍎! 💧!"
+function HUDController:BuildStoryCue(payload)
+    payload = payload or {}
+    local profile = type(payload.ecosystemProfile) == "table" and payload.ecosystemProfile or {}
+    local status = type(payload.statusEffects) == "table" and payload.statusEffects or {}
+    local biome = tostring(payloadBiome(payload) or "Wilds")
+    local parts = { string.format("%s %s", biomeIcons[biome] or "🧭", biome) }
+
+    local deathState = tostring(payload.deathState or "")
+    local sleepState = tostring(payload.sleepState or "")
+    if deathState ~= "" or sleepState == "Dead" or payload.diedAtAgeSeconds ~= nil then
+        table.insert(parts, deathState ~= "" and ("☠ " .. deathState) or "☠")
+    elseif payload.resting == true or sleepState == "Resting" then
+        table.insert(parts, "💤")
+    end
+
+    local ageSeconds = tonumber(payload.ageSeconds)
+    if ageSeconds and ageSeconds > 0 then
+        table.insert(parts, string.format("⏱%ds", math.floor(ageSeconds + 0.5)))
+    end
+
+    local stage = tostring(payload.growthStage or "")
+    if stage == "Hatchling" or payload.hatched == false then
+        table.insert(parts, "🐣")
+    elseif stage == "Adult" then
+        table.insert(parts, "★")
+    end
+
+    local diet = tostring(payload.diet or "")
+    local hunger = tonumber(payload.hunger)
+    local thirst = tonumber(payload.thirst)
+    if hunger and hunger < 35 then
+        table.insert(parts, (dietIcons[diet] or "🍽️") .. "!")
+    end
+    if thirst and thirst < 35 then
+        table.insert(parts, "💧!")
+    end
+
+    local semiAquatic = profile.SemiAquatic == true or profile.RiverPredator == true
+    if payload.swimming == true or payload.underwater == true or payload.submerged == true then
+        if semiAquatic or hasStatus(status, "FishNearby", "fishNearby", "FishSchoolNearby", "fishSchoolNearby") then
+            table.insert(parts, "🐟")
+        end
+        local oxygen = tonumber(payload.oxygen)
+        local maxOxygen = tonumber(payload.maxOxygen) or 0
+        if maxOxygen > 0 and oxygen and oxygen < maxOxygen then
+            table.insert(parts, oxygen / maxOxygen < 0.35 and "🫧!" or "🫧")
+        end
+    elseif hasStatus(status, "FishNearby", "fishNearby", "FishSchoolNearby", "fishSchoolNearby") then
+        table.insert(parts, "🐟")
+    end
+
+    local threat = self:BuildThreatBadge(payload)
+    if threat ~= "" then
+        table.insert(parts, threat)
+    end
+
+    local eggCount = tonumber(status.NestEggCount or status.nestEggCount)
+    if eggCount and eggCount > 0 then
+        table.insert(parts, string.format("🪺x%d", eggCount))
+    elseif hasStatus(status, "NestNearby", "nestNearby", "CanNest", "canNest", "NestReady", "nestReady") then
+        table.insert(parts, "🪺")
+    end
+
+    return table.concat(parts, "  ")
+end
+
+function HUDController:ShouldShowOxygen(payload)
+    payload = payload or {}
+    local maxOxy = tonumber(payload.maxOxygen) or 0
+    if maxOxy <= 0 then return false end
+    if payload.swimming == true or payload.underwater == true or payload.submerged == true then return true end
+    local oxygen = tonumber(payload.oxygen)
+    return oxygen ~= nil and oxygen < maxOxy
 end
 
 -- Returns a compact delta string showing what changed since the last tick.
@@ -139,6 +371,18 @@ function HUDController:EnsureGui()
         UDim2.fromOffset(PANEL_PAD, PANEL_PAD)
     )
     root:SetAttribute("CompactKidHUD", true)
+    local hudScale, compactViewport = self:GetResponsiveScale()
+    if compactViewport then
+        local uiScale = Instance.new("UIScale")
+        uiScale.Name = "MobileViewportScale"
+        uiScale.Scale = hudScale
+        uiScale.Parent = root
+        root.BackgroundTransparency = 0.26
+        root:SetAttribute("MobileSafeLayout", true)
+        root:SetAttribute("MobileViewportScale", hudScale)
+    else
+        root:SetAttribute("MobileSafeLayout", false)
+    end
 
     -- ── Row 1: species name ────────────────────────────────────────────────
     self.SpeciesLabel              = Instance.new("TextLabel")
@@ -203,6 +447,21 @@ function HUDController:EnsureGui()
     self.StatusDeltaLabel:SetAttribute("IconOnlyTracker", true)
     self.StatusDeltaLabel.Parent        = root
 
+    self.StoryStateLabel                = Instance.new("TextLabel")
+    self.StoryStateLabel.Name           = "StoryStateLabel"
+    self.StoryStateLabel.Size           = UDim2.fromOffset(PANEL_W - 20, 24)
+    self.StoryStateLabel.Position       = UDim2.fromOffset(10, 246)
+    self.StoryStateLabel.BackgroundTransparency = 0.05
+    self.StoryStateLabel.BackgroundColor3 = Color3.fromRGB(24, 46, 42)
+    self.StoryStateLabel.TextColor3     = Color3.fromRGB(215, 245, 230)
+    self.StoryStateLabel.TextWrapped    = true
+    self.StoryStateLabel.TextScaled     = true
+    self.StoryStateLabel.Text           = "🐣 NurseryGrove  🐣 🍎 💧"
+    self.StoryStateLabel:SetAttribute("IconOnlyTracker", true)
+    self.StoryStateLabel:SetAttribute("MobileReadable", true)
+    UIFactory:RoundCorners(self.StoryStateLabel, 6)
+    self.StoryStateLabel.Parent         = root
+
     -- Thin separator line
     local sep      = Instance.new("Frame")
     sep.Name       = "Separator"
@@ -236,10 +495,13 @@ function HUDController:EnsureGui()
     local oxyBar = root:FindFirstChild("OxygenBar")
     local oxyLbl = root:FindFirstChild("OxygenLabel")
     local oxyVal = root:FindFirstChild("OxygenValueLabel")
-    self._oxygenVisible = true  -- will be toggled by ApplyStatUpdate
+    self._oxygenVisible = false
     self._oxygenBar     = oxyBar
     self._oxygenLabel   = oxyLbl
     self._oxygenValue   = oxyVal
+    if oxyBar then oxyBar.Visible = false end
+    if oxyLbl then oxyLbl.Visible = false end
+    if oxyVal then oxyVal.Visible = false end
 
     gui.Parent   = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.Gui     = gui
@@ -303,6 +565,8 @@ function HUDController:ApplyStatUpdate(payload)
     self.GuidanceLabel.Text = self:BuildDietGuidance(payload)
     self.StatusDeltaLabel.Text = self:BuildDeltaText(previous, payload)
     self.StatusDeltaLabel:SetAttribute("LastDeltaText", self.StatusDeltaLabel.Text)
+    self.StoryStateLabel.Text = self:BuildStoryCue(payload)
+    self.StoryStateLabel:SetAttribute("StoryCueText", self.StoryStateLabel.Text)
 
     -- Stat bars
     self:SetBar("health",  payload.health)
@@ -311,14 +575,19 @@ function HUDController:ApplyStatUpdate(payload)
     self:SetBar("stamina", payload.stamina)
     self:SetBar("growth",  payload.growth)
 
-    -- Oxygen: show only when the creature has an oxygen stat (swimming species
-    -- or currently underwater).  maxOxygen > 0 signals the server considers it relevant.
+    -- Oxygen: progressive disclosure. The stat exists for server authority, but
+    -- the row appears only during water risk or while recovering from oxygen loss.
     local maxOxy = tonumber(payload.maxOxygen) or 0
-    local showOxy = maxOxy > 0
+    local showOxy = self:ShouldShowOxygen(payload)
     setOxygenRowVisible(self, showOxy)
+    if self._oxygenLabel then self._oxygenLabel:SetAttribute("OxygenRelevant", showOxy) end
     if showOxy then
         local oxyPct = math.clamp((tonumber(payload.oxygen) or maxOxy) / maxOxy * 100, 0, 100)
         self:SetBar("oxygen", oxyPct)
+        if self._oxygenValue then
+            self._oxygenValue:SetAttribute("OxygenPercent", round(oxyPct))
+            self._oxygenValue:SetAttribute("OxygenDanger", oxyPct < 35)
+        end
     end
 end
 

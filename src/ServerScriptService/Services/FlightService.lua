@@ -56,8 +56,12 @@ function FlightService:RequestFlight(player, enabled)
         if not SurvivalService:ConsumeStamina(player, self.TakeoffStaminaCost) then return false, "low_stamina" end
         state.Flying = true
         state.Swimming = false
+        state.MovementState = "Flying"
+        state.MovementSurface = "Flight"
     else
         state.Flying = false
+        state.MovementState = state.Swimming and "Swimming" or "Grounded"
+        state.MovementSurface = state.Swimming and "Swim" or "Ground"
     end
     return true, state
 end

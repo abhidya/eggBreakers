@@ -9,6 +9,18 @@ local SecurityAuditService = require(ServerScriptService.Services.SecurityAuditS
 
 local suite = { name = "AssetImportAuditStateTests", category = "Security", tests = {} }
 
+local function stampReviewedAdaptedScript(scriptObject)
+    scriptObject:SetAttribute("ImportedScriptAudited", true)
+    scriptObject:SetAttribute("ImportedScriptAdapted", true)
+    scriptObject:SetAttribute("ScriptAdaptedTo", "eggBreakers runtime import adapter")
+    scriptObject:SetAttribute("ImportedScriptStamped", true)
+    scriptObject:SetAttribute("ImportedScriptOwner", "AssetImportAuditService")
+    scriptObject:SetAttribute("ScriptAuditPurpose", "adapted imported utility owned by eggBreakers service flow")
+    scriptObject:SetAttribute("ScriptSandboxStatus", "reviewed_no_remotes_no_datastore_no_damage")
+    scriptObject:SetAttribute("ScriptAuditDecision", "keep")
+    scriptObject:SetAttribute("ScriptAuditScope", "G032")
+end
+
 local function makeImportedVisual(parent, name, manifestEntry, attributes)
     local fixture = Instance.new("Model")
     fixture.Name = name
@@ -103,6 +115,20 @@ table.insert(suite.tests, { name = "audit separates cataloged imported tagged pl
     end)
 end })
 
+table.insert(suite.tests, { name = "reviewed adapted stamped executable scripts are preserved during repair", run = function()
+    withImportedFixture(function(fixture)
+        local runtimeScript = fixture:FindFirstChild("UnsafeImportedRuntime")
+        stampReviewedAdaptedScript(runtimeScript)
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(result.passed, table.concat(result.failures, "; "))
+        Assert.equals(result.counts.scriptsQuarantined, 0, "reviewed adapted stamped runtime script is not quarantined")
+        Assert.equals(runtimeScript.Parent, fixture, "reviewed adapted stamped runtime script remains with imported asset")
+        Assert.equals(runtimeScript:GetAttribute("ImportedScriptPreserved"), true, "preserved runtime script is stamped")
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 1, "reviewed adapted stamped script does not block release-ready count")
+    end)
+end })
+
 
 
 table.insert(suite.tests, { name = "quality exclusions are separated and withheld from release counts", run = function()
@@ -193,6 +219,77 @@ table.insert(suite.tests, { name = "genuine tagged MeshPart import without exclu
             "genuine tagged MeshPart import counts toward release gate alongside baseline fixture")
         Assert.truthy(genuineMesh.Parent ~= nil and not genuineMesh:GetAttribute("AssetQualityQuarantined"),
             "genuine mesh import must not be quarantined")
+    end)
+end })
+
+table.insert(suite.tests, { name = "ui icon names containing baseball do not trigger glowing ball quarantine", run = function()
+    withImportedFixture(function(_, library)
+        local iconPack = makeImportedVisual(library, "Task27MonochromeUIIconPack", AssetManifest.Entries[2])
+        local baseballIcon = Instance.new("Part")
+        baseballIcon.Name = "Baseball_Bat"
+        baseballIcon.Material = Enum.Material.Neon
+        baseballIcon.Shape = Enum.PartType.Block
+        baseballIcon.Parent = iconPack
+
+        local actualGlowingBall = makeImportedVisual(library, "Task27ActualGlowingBall", AssetManifest.Entries[3])
+        local ball = Instance.new("Part")
+        ball.Name = "Glowing_Ball"
+        ball.Material = Enum.Material.Neon
+        ball.Shape = Enum.PartType.Block
+        ball.Parent = actualGlowingBall
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.truthy(result.counts.lowQualityExcludedAssets >= 1, "real glowing ball token is still low-quality")
+        Assert.truthy(iconPack.Parent ~= nil and not iconPack:GetAttribute("AssetQualityQuarantined"),
+            "UI icon pack with Baseball_Bat remains release-eligible")
+        Assert.truthy(actualGlowingBall:GetAttribute("AssetQualityQuarantined") == true,
+            "actual glowing ball fixture is quarantined")
+        Assert.truthy(result.counts.releaseReadyVisibleAssets >= 2,
+            "baseline fixture and UI icon pack remain release-ready")
+    end)
+end })
+
+table.insert(suite.tests, { name = "G027 nest plant and ui batch remains release-ready when tagged", run = function()
+    withImportedFixture(function(_, library)
+        local expectedSources = {
+            ["8895193"] = true,
+            ["12630982706"] = true,
+            ["110801640375836"] = true,
+        }
+
+        local nest = makeImportedVisual(library, "G027_DinosaurNestEggs", AssetManifest.Entries[2])
+        nest:SetAttribute("SourceAssetId", "8895193")
+        nest:SetAttribute("AssetManifestId", "G027-8895193")
+
+        local plantPack = makeImportedVisual(library, "G027_PreHistoricPlantPack", AssetManifest.Entries[3])
+        plantPack:SetAttribute("SourceAssetId", "12630982706")
+        plantPack:SetAttribute("AssetManifestId", "G027-12630982706")
+        local plantMesh = Instance.new("MeshPart")
+        plantMesh.Name = "LowPolyFernMesh"
+        plantMesh.Parent = plantPack
+
+        local iconPack = makeImportedVisual(library, "G027_UIIconPack", AssetManifest.Entries[4])
+        iconPack:SetAttribute("SourceAssetId", "110801640375836")
+        iconPack:SetAttribute("AssetManifestId", "G027-110801640375836")
+        local baseballIcon = Instance.new("Part")
+        baseballIcon.Name = "Baseball_Bat"
+        baseballIcon.Material = Enum.Material.Neon
+        baseballIcon.Shape = Enum.PartType.Block
+        baseballIcon.Parent = iconPack
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        local releaseReadySources = {}
+        for _, record in ipairs(result.importedRecords) do
+            if expectedSources[tostring(record.sourceAssetId)] then
+                Assert.truthy(record.releaseReady, tostring(record.sourceAssetId) .. " should stay release-ready")
+                releaseReadySources[tostring(record.sourceAssetId)] = true
+            end
+        end
+        for sourceAssetId in pairs(expectedSources) do
+            Assert.truthy(releaseReadySources[sourceAssetId], "G027 source audited: " .. sourceAssetId)
+        end
+        Assert.falsy(iconPack:GetAttribute("AssetQualityQuarantined"), "G027 UI icon pack is not quality-quarantined")
+        Assert.falsy(plantPack:GetAttribute("AssetQualityQuarantined"), "G027 plant pack is not quality-quarantined")
     end)
 end })
 

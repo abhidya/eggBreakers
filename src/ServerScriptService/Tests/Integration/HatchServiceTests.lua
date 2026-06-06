@@ -1,5 +1,6 @@
 local Assert = require(game:GetService("ReplicatedStorage").Shared.TestFramework.Assert)
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
+local Constants = require(game:GetService("ReplicatedStorage").Shared.Constants)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local suite = { name = "HatchServiceTests.server", category = "Integration", tests = {} }
@@ -13,7 +14,7 @@ end
 
 table.insert(suite.tests, { name = "new player egg state and hatch threshold", run = function()
     local p = player()
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     Assert.equals(state.Hatched, false, "new player starts as egg")
     for _ = 1, 5 do Assert.truthy(SurvivalService:RequestHatch(p, "tap"), "valid hatch input accepted") end
     Assert.equals(SurvivalService:GetState(p).Hatched, true, "hatch completes at threshold")
@@ -49,7 +50,7 @@ end })
 
 table.insert(suite.tests, { name = "rejected hatch taps do not strand egg below threshold", run = function()
     local p = player(31005)
-    SurvivalService:CreateState(p, "gallimimus")
+    SurvivalService:CreateState(p, "parasaurolophus")
     local accepted = 0
     local now = 300
 
@@ -70,10 +71,51 @@ end })
 
 table.insert(suite.tests, { name = "dinosaur/tutorial after hatch", run = function()
     local p = player(31003)
-    local state = SurvivalService:CreateState(p, "triceratops")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     for _ = 1, 5 do SurvivalService:RequestHatch(p, "tap") end
-    Assert.equals(state.SpeciesId, "triceratops", "species assignment retained")
+    Assert.equals(state.SpeciesId, "parasaurolophus", "species assignment retained")
     Assert.equals(state.Diet, "Herbivore", "diet state available for tutorial/HUD")
+end })
+
+table.insert(suite.tests, { name = "select species replaces egg state before hatch", run = function()
+    local p = player(31006)
+    SurvivalService:CreateState(p, "parasaurolophus")
+
+    local ok, state = SurvivalService:SelectSpecies(p, "utahraptor")
+
+    Assert.truthy(ok, "valid pre-hatch species selection accepted")
+    Assert.equals(state.SpeciesId, "utahraptor", "selected species stored")
+    Assert.equals(state.Hatched, false, "selected species remains an egg")
+    Assert.equals(state.SelectedBeforeHatch, true, "selection marker is stamped")
+end })
+
+table.insert(suite.tests, { name = "select species rejects already hatched player", run = function()
+    local p = player(31007)
+    SurvivalService:CreateState(p, "parasaurolophus")
+    for _ = 1, 5 do SurvivalService:RequestHatch(p, "tap") end
+
+    local ok, reason = SurvivalService:SelectSpecies(p, "utahraptor")
+
+    Assert.falsy(ok, "hatched player cannot switch species through egg selector")
+    Assert.equals(reason, "already_hatched", "already hatched reason")
+end })
+
+table.insert(suite.tests, { name = "select species rejects unknown species id", run = function()
+    local p = player(31008)
+
+    local ok, reason = SurvivalService:SelectSpecies(p, "unknownosaurus")
+
+    Assert.falsy(ok, "unknown species rejected")
+    Assert.equals(reason, "unknown_species", "unknown species reason")
+end })
+
+table.insert(suite.tests, { name = "random full-roster sentinel is resolved by visual-gated server path", run = function()
+    local p = player(31009)
+
+    local ok, reason = SurvivalService:SelectSpecies(p, Constants.RandomStarterSpeciesId)
+
+    Assert.falsy(ok, "SurvivalService does not persist unresolved random sentinel")
+    Assert.equals(reason, "random_species_requires_visual_gate", "random selection stays on the visual-gated remote path")
 end })
 
 return suite

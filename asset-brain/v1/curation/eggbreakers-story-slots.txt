@@ -189,4 +189,3 @@
    category=Model creator=alczvv score=120.6 votes=500 tris=4134 SCRIPT_REVIEW
 3. Minecraft Portal [WORKING] (ID: 6991952630)
    category=Model creator=Tem4ik_Mem4ik score=118.2 votes=300 tris=1280 SCRIPT_REVIEW
-

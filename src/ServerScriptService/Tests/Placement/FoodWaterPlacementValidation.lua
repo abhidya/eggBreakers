@@ -4,6 +4,7 @@ local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MapLayoutService = require(ServerScriptService.Services.MapLayoutService)
 local RemoteValidationService = require(ServerScriptService.Services.RemoteValidationService)
+local WaterService = require(ServerScriptService.Services.WaterService)
 local CollectionService = game:GetService("CollectionService")
 
 local suite = { name = "FoodWaterPlacementValidation.server", category = "Placement", tests = {} }
@@ -15,6 +16,19 @@ local function countVisibleFoodAffordances(food)
             Assert.falsy(CollectionService:HasTag(descendant, "FoodSource"), "visible affordance is not a FoodSource tag " .. descendant.Name)
             Assert.equals(descendant.CanQuery, false, "visible affordance is not the gameplay query " .. descendant.Name)
             Assert.truthy(descendant.Transparency < 1, "visible affordance starts readable " .. descendant.Name)
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function countVisibleWaterAffordances(water)
+    local count = 0
+    for _, descendant in ipairs(water:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant:GetAttribute("WaterVisual") == true then
+            Assert.truthy(descendant.Transparency < 1, "water visual starts readable " .. descendant.Name)
+            Assert.equals(descendant.CanQuery, false, "water visual is not the gameplay query " .. descendant.Name)
+            Assert.equals(descendant:GetAttribute("VisibleGameplayAffordance"), true, "water visual is stamped readable " .. descendant.Name)
             count = count + 1
         end
     end
@@ -65,9 +79,9 @@ table.insert(suite.tests, { name = "nursery food water exists", run = function()
     Assert.equals(tutorialFood.Transparency, 1, "tutorial food hidden for release")
     Assert.equals(tutorialFood:GetAttribute("InvisibleQueryHelper"), true, "tutorial food remains an invisible query helper")
     Assert.falsy(tutorialFood:GetAttribute("VisibleGameplayAffordance"), "tutorial food does not expose procedural visuals")
-    Assert.truthy(tutorialWater.Transparency < 1, "tutorial water visible")
-    Assert.truthy(tutorialWater.Transparency >= MapLayoutService.ShallowWaterMarkerTransparency, "tutorial water stays low-obstruction for player cameras")
-    Assert.equals(tutorialWater.CastShadow, false, "tutorial water marker does not cast visual blockers")
+    Assert.equals(tutorialWater.Transparency, 1, "tutorial water query hidden for release")
+    Assert.equals(tutorialWater:GetAttribute("InvisibleQueryHelper"), true, "tutorial water remains an invisible query helper")
+    Assert.truthy(countVisibleWaterAffordances(tutorialWater) >= 3, "tutorial water has rounded readable visual surfaces")
     Assert.equals(tutorialFood:GetAttribute("TutorialSafe"), true, "tutorial food marked safe")
     Assert.equals(tutorialWater:GetAttribute("TutorialSafe"), true, "tutorial water marked safe")
     Assert.equals(tutorialMeat:GetAttribute("TutorialSafe"), true, "tutorial meat marked safe")
@@ -104,6 +118,21 @@ table.insert(suite.tests, { name = "imported food visual templates are preferred
     Assert.falsy(tutorialMeat:FindFirstChild("CarcassBoneVisual"), "procedural carcass bone is not generated when import exists")
 
     plantTemplate:Destroy()
+    carcassTemplate:Destroy()
+end })
+
+table.insert(suite.tests, { name = "food resolver does not use carnivore carcass template for herbivore plants", run = function()
+    local carcassTemplate = makeImportedFoodTemplate("TestImportedTutorialCarcassVisual", "TutorialCarcass", "Carnivore")
+    local query = Instance.new("Part")
+    query.Name = "HerbivorePlantProbe"
+    query:SetAttribute("FoodKind", "StarterPlant")
+    query:SetAttribute("Diet", "Herbivore")
+
+    local resolved = MapLayoutService:ResolveImportedFoodVisualTemplate(query)
+
+    Assert.equals(resolved, nil, "herbivore plant resolver rejects carnivore carcass template")
+
+    query:Destroy()
     carcassTemplate:Destroy()
 end })
 
@@ -186,7 +215,7 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
     for _, target in ipairs(CollectionService:GetTagged("WaterSource")) do
         if target:IsA("BasePart") and (target.Position - spawnPosition).Magnitude <= 260 then
             counts.water = counts.water + 1
-            Assert.truthy(target:GetAttribute("VisibleGameplayAffordance"), "nearby water is visibly marked")
+            Assert.truthy(countVisibleWaterAffordances(target) >= 1, "nearby water has visible rounded affordance")
         end
     end
     for _, target in ipairs(CollectionService:GetTagged("TreeProp")) do
@@ -200,6 +229,56 @@ table.insert(suite.tests, { name = "tutorial loop has nearby food water and tree
     Assert.truthy(counts.carnivoreFood >= 5, "tutorial radius has enough carnivore starter meat/carcass")
     Assert.truthy(counts.water >= 1, "tutorial radius has visible water")
     Assert.truthy(counts.trees >= 2, "tutorial radius has tree browse query helpers")
+end })
+
+table.insert(suite.tests, { name = "G018 fish schools are sourced from valid swim water volumes", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureTerrainContinuity(folders)
+
+    local fishSchools = 0
+    for _, fish in ipairs(CollectionService:GetTagged("FishSchool")) do
+        if fish:IsA("BasePart") then
+            fishSchools = fishSchools + 1
+            Assert.equals(fish:GetAttribute("FishSchool"), true, "fish school attr set " .. fish.Name)
+            Assert.truthy(type(fish:GetAttribute("ZoneId")) == "string", "fish school has ZoneId " .. fish.Name)
+            Assert.truthy(type(fish:GetAttribute("BiomeId")) == "string", "fish school has BiomeId " .. fish.Name)
+            local waterName = fish:GetAttribute("WaterSourceName")
+            Assert.truthy(type(waterName) == "string", "fish school has water source " .. fish.Name)
+            local water = folders.WaterSources:FindFirstChild(waterName)
+            Assert.notNil(water, "fish school water source exists " .. fish.Name)
+            Assert.truthy(WaterService:IsValidFishHabitat(water), "fish school source is valid habitat " .. waterName)
+            Assert.truthy(WaterService:ContainsPoint(water, fish.Position, 0.01), "fish school stays inside water " .. fish.Name)
+        end
+    end
+
+    Assert.truthy(fishSchools >= 3, "fish schools exist for swim/fish water volumes")
+end })
+
+table.insert(suite.tests, { name = "G018 water integrity marks drinkable and swim sources separately", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    MapLayoutService:EnsureTerrainContinuity(folders)
+    local drinkable = 0
+    local swim = 0
+
+    for _, water in ipairs(folders.WaterSources:GetChildren()) do
+        if water:IsA("BasePart") then
+            local integrity = water:GetAttribute("WaterIntegrity")
+            Assert.truthy(type(integrity) == "string", "water integrity stamped " .. water.Name)
+            if CollectionService:HasTag(water, "DrinkableWater") then
+                drinkable = drinkable + 1
+                Assert.equals(integrity, "DrinkableShallow", "drinkable water is shallow " .. water.Name)
+                Assert.equals(water:GetAttribute("ShallowDrinkable"), true, "drinkable attr set " .. water.Name)
+            end
+            if CollectionService:HasTag(water, "SwimWater") then
+                swim = swim + 1
+                Assert.truthy(integrity == "SwimShallow" or integrity == "SwimDeep", "swim water integrity set " .. water.Name)
+                Assert.falsy(CollectionService:HasTag(water, "DrinkableWater"), "swim source is not drink-only " .. water.Name)
+            end
+        end
+    end
+
+    Assert.truthy(drinkable >= 3, "drinkable shallow water exists")
+    Assert.truthy(swim >= 3, "swim water exists")
 end })
 
 table.insert(suite.tests, { name = "non nursery water and risky food/fossils reachable", run = function()

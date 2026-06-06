@@ -30,6 +30,8 @@ table.insert(suite.tests, { name = "small screen readability gate", run = functi
     Assert.truthy(table.find(payload, "creatureCategory") ~= nil, "StatUpdate includes creature category")
     Assert.truthy(table.find(payload, "movementModes") ~= nil, "StatUpdate includes movement modes")
     Assert.truthy(table.find(payload, "sprinting") ~= nil, "StatUpdate includes sprinting")
+    Assert.truthy(table.find(payload, "resting") ~= nil, "StatUpdate includes resting")
+    Assert.truthy(table.find(payload, "sleepState") ~= nil, "StatUpdate includes sleep state")
     Assert.truthy(table.find(payload, "ecosystemProfile") ~= nil, "StatUpdate includes ecosystem profile")
     Assert.truthy(table.find(payload, "growthStage") ~= nil, "StatUpdate includes growth stage")
 end })
@@ -48,7 +50,7 @@ end })
 
 table.insert(suite.tests, { name = "diet guidance is visual for young readers", run = function()
     local herbivore = HUDController:BuildDietGuidance({
-        species = "gallimimus",
+        species = "parasaurolophus",
         diet = "Herbivore",
         growthStage = "Hatchling",
         creatureCategory = "SmallPrey",
@@ -59,7 +61,7 @@ table.insert(suite.tests, { name = "diet guidance is visual for young readers", 
     Assert.truthy(string.find(herbivore, "green plants", 1, true) == nil, "long food copy removed")
 
     local carnivore = HUDController:BuildDietGuidance({
-        species = "velociraptor",
+        species = "utahraptor",
         diet = "Carnivore",
         growthStage = "Hatchling",
     })
@@ -80,12 +82,141 @@ table.insert(suite.tests, { name = "growth badge makes dinosaur leveling clear",
 end })
 
 table.insert(suite.tests, { name = "species role card explains diet role and action", run = function()
-    local card = HUDController:BuildRoleCard({ species = "velociraptor", diet = "Carnivore" })
-    Assert.truthy(string.find(card, "Velociraptor", 1, true) ~= nil, "display name appears")
+    local card = HUDController:BuildRoleCard({ species = "utahraptor", diet = "Carnivore" })
+    Assert.truthy(string.find(card, "Utahraptor", 1, true) ~= nil, "display name appears")
     Assert.truthy(string.find(card, "🍖", 1, true) ~= nil, "diet icon appears")
+    Assert.truthy(string.find(card, "👣", 1, true) ~= nil, "movement badge appears")
+    Assert.truthy(string.find(card, "⟐", 1, true) ~= nil, "pack/profile badge appears")
     Assert.truthy(string.find(card, "Carnivore", 1, true) == nil, "diet word removed for density")
     Assert.truthy(string.find(card, "Role:", 1, true) == nil, "role label removed for density")
     Assert.truthy(string.find(card, "Claw", 1, true) ~= nil, "primary action appears")
+end })
+
+table.insert(suite.tests, { name = "ecosystem profile badges expose species category and movement", run = function()
+    local prey = HUDController:BuildRoleCard({
+        species = "parasaurolophus",
+        diet = "Herbivore",
+        creatureCategory = "SmallPrey",
+        movementModes = { Ground = true },
+        ecosystemProfile = { SmallPrey = true, Herding = true, CanGraze = true },
+    })
+    Assert.truthy(string.find(prey, "Parasaurolophus", 1, true) ~= nil, "species display name appears")
+    Assert.truthy(string.find(prey, "🌿", 1, true) ~= nil, "diet/profile plant badge appears")
+    Assert.truthy(string.find(prey, "🐾", 1, true) ~= nil, "small prey category badge appears")
+    Assert.truthy(string.find(prey, "👣", 1, true) ~= nil, "ground movement badge appears")
+
+    local swimmer = HUDController:BuildRoleCard({
+        species = "spinosaurus",
+        diet = "Carnivore",
+        creatureCategory = "SemiAquatic",
+        movementModes = { Ground = true, Swim = true },
+        ecosystemProfile = { SemiAquatic = true, RiverPredator = true, ApexEventEligible = true },
+    })
+    Assert.truthy(string.find(swimmer, "Spinosaurus", 1, true) ~= nil, "swimmer species appears")
+    Assert.truthy(string.find(swimmer, "🌊", 1, true) ~= nil, "swim/profile badge appears")
+    Assert.truthy(string.find(swimmer, "⚠", 1, true) ~= nil, "apex-eligible threat badge appears")
+end })
+
+table.insert(suite.tests, { name = "oxygen uses progressive disclosure", run = function()
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 60,
+        swimming = false,
+        movementModes = { Swim = true },
+    }), false, "full oxygen on shore stays hidden even for swimmers")
+
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 60,
+        swimming = true,
+    }), true, "active swimming shows oxygen")
+
+    Assert.equals(HUDController:ShouldShowOxygen({
+        maxOxygen = 60,
+        oxygen = 34,
+        swimming = false,
+    }), true, "oxygen recovery remains visible after loss")
+end })
+
+table.insert(suite.tests, { name = "apex threat badge is compact and observable", run = function()
+    local apex = HUDController:BuildThreatBadge({
+        species = "tyrannosaurus",
+        creatureCategory = "Apex",
+        ecosystemProfile = { Apex = true, ThreatRadius = 140 },
+    })
+    Assert.equals(apex, "⚠ 140m", "apex threat radius is visible without prose")
+
+    local statusThreat = HUDController:BuildThreatBadge({
+        creatureCategory = "SmallPrey",
+        statusEffects = { ApexThreatNearby = true },
+    })
+    Assert.equals(statusThreat, "⚠", "nearby apex status is observable")
+
+    local calm = HUDController:BuildThreatBadge({
+        creatureCategory = "SmallPrey",
+        ecosystemProfile = { Herding = true },
+    })
+    Assert.equals(calm, "", "non-threat profiles stay quiet")
+end })
+
+table.insert(suite.tests, { name = "story cue exposes biome needs threat fish and nest state", run = function()
+    local hatchling = HUDController:BuildStoryCue({
+        species = "parasaurolophus",
+        diet = "Herbivore",
+        growthStage = "Hatchling",
+        hunger = 22,
+        thirst = 18,
+        ecosystemProfile = { PreferredBiome = "NurseryGrove", SmallPrey = true },
+    })
+    Assert.truthy(string.find(hatchling, "NurseryGrove", 1, true) ~= nil, "biome context appears")
+    Assert.truthy(string.find(hatchling, "🐣", 1, true) ~= nil, "hatchling story state appears")
+    Assert.truthy(string.find(hatchling, "🌿!", 1, true) ~= nil, "food need appears with diet icon")
+    Assert.truthy(string.find(hatchling, "💧!", 1, true) ~= nil, "water need appears")
+
+    local swamp = HUDController:BuildStoryCue({
+        species = "spinosaurus",
+        diet = "Carnivore",
+        growthStage = "Adult",
+        hunger = 88,
+        thirst = 75,
+        swimming = true,
+        oxygen = 28,
+        maxOxygen = 100,
+        creatureCategory = "SemiAquatic",
+        ecosystemProfile = { SemiAquatic = true, RiverPredator = true, ApexEventEligible = true, PreferredBiome = "SwampDelta" },
+        statusEffects = { CurrentBiome = "SwampDelta", FishSchoolNearby = true, ApexThreatNearby = true, NestEggCount = 2 },
+    })
+    Assert.truthy(string.find(swamp, "SwampDelta", 1, true) ~= nil, "current biome overrides profile")
+    Assert.truthy(string.find(swamp, "🐟", 1, true) ~= nil, "fish cue appears for aquatic story beat")
+    Assert.truthy(string.find(swamp, "🫧!", 1, true) ~= nil, "oxygen danger appears")
+    Assert.truthy(string.find(swamp, "⚠", 1, true) ~= nil, "apex warning appears")
+    Assert.truthy(string.find(swamp, "🪺x2", 1, true) ~= nil, "nest egg state appears when replicated")
+end })
+
+table.insert(suite.tests, { name = "story cue exposes rest age and dying state", run = function()
+    local resting = HUDController:BuildStoryCue({
+        species = "parasaurolophus",
+        diet = "Herbivore",
+        growthStage = "Juvenile",
+        ageSeconds = 42,
+        resting = true,
+        sleepState = "Resting",
+        ecosystemProfile = { PreferredBiome = "NurseryGrove" },
+    })
+    Assert.truthy(string.find(resting, "💤", 1, true) ~= nil, "resting/sleep state is visible")
+    Assert.truthy(string.find(resting, "⏱42s", 1, true) ~= nil, "age seconds are visible")
+
+    local dying = HUDController:BuildStoryCue({
+        species = "utahraptor",
+        diet = "Carnivore",
+        growthStage = "Adult",
+        ageSeconds = 88,
+        deathState = "Dying",
+        diedAtAgeSeconds = 88,
+        currentBiome = "RedstoneCanyon",
+    })
+    Assert.truthy(string.find(dying, "☠ Dying", 1, true) ~= nil, "dying state is visible")
+    Assert.truthy(string.find(dying, "⏱88s", 1, true) ~= nil, "death age remains visible")
 end })
 
 table.insert(suite.tests, { name = "hud factory supports compact mobile bars", run = function()
@@ -103,6 +234,12 @@ table.insert(suite.tests, { name = "hud factory supports compact mobile bars", r
     Assert.equals(root.HungerValueLabel.Position.X.Offset, 256, "compact value label applied")
     Assert.notNil(fill, "fill still returned")
     root:Destroy()
+end })
+
+table.insert(suite.tests, { name = "hud scales down for phone viewport", run = function()
+    local scale, compact = HUDController:GetResponsiveScale(Vector2.new(390, 844))
+    Assert.equals(compact, true, "portrait phone uses compact HUD")
+    Assert.truthy(scale < 1, "compact HUD scales down")
 end })
 
 TestRunner.registerSuite(suite)

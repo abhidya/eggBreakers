@@ -103,7 +103,7 @@ end })
 table.insert(suite.tests, { name = "mobile buttons expose icon-first minimal labels", run = function()
     local result = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     local controlsGui = result.Gui
-    local expected = { EatDrink = "🍎💧", Attack = "🦷", Sprint = "⚡", Call = "📣", RestHide = "🌿", Flight = "🪽", Swim = "🌊" }
+    local expected = { EatDrink = "🍎💧", Attack = "🦷", Sprint = "⚡", Call = "📣", RestHide = "🌿💤", Flight = "🪽", Swim = "🌊" }
     for name, text in pairs(expected) do
         local button = controlsGui:FindFirstChild(name .. "Button")
         Assert.equals(button.Text, text, name .. " label is icon-first/minimal")
@@ -122,11 +122,11 @@ table.insert(suite.tests, { name = "waypoint tracker stays icon based", run = fu
     local food = MobileControlsController:BuildWaypointText("Food", 12.4, "Herbivore")
     local water = MobileControlsController:BuildWaypointText("Water", 7.6)
     local distant = MobileControlsController:BuildWaypointText("Food", 42.2, "Carnivore")
-    local none = MobileControlsController:BuildWaypointText("None")
+    local none = MobileControlsController:BuildWaypointText("None", nil, "Carnivore")
     Assert.truthy(string.find(food, "✨ 🌿 12m", 1, true) ~= nil, "nearby herbivore food uses sense pulse and distance")
     Assert.truthy(string.find(water, "✨ 💧 8m", 1, true) ~= nil, "nearby water waypoint uses sparkle cue and rounded distance")
     Assert.truthy(string.find(distant, "〰 🍖 42m", 1, true) ~= nil, "distant carnivore food uses scent trail and diet icon")
-    Assert.truthy(string.find(none, "🌿", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows food and water icons")
+    Assert.truthy(string.find(none, "🍖", 1, true) ~= nil and string.find(none, "💧", 1, true) ~= nil, "idle tracker shows diet-valid food and water icons")
     Assert.truthy(string.find(food, "Food", 1, true) == nil, "food word removed from tracker")
     Assert.truthy(string.find(water, "Water", 1, true) == nil, "water word removed from tracker")
     Assert.truthy(string.find(food, "⬆", 1, true) == nil and string.find(distant, "⬆", 1, true) == nil, "target tracker never uses generic up arrow")
@@ -178,6 +178,54 @@ table.insert(suite.tests, { name = "mobile hud prompts do not overlap controls",
         end
     end
     Assert.equals(gui:FindFirstChild("NearestActionHintLabel"):GetAttribute("WaypointCue"), "scent-pulse-nearby-trail", "scent cue contract exists")
+    gui:Destroy()
+    MobileControlsController.Gui = nil
+end })
+
+table.insert(suite.tests, { name = "phone controls shrink and move hints out of play center", run = function()
+    local scale, compact = MobileControlsController:GetResponsiveScale(1, Vector2.new(844, 390))
+    Assert.equals(compact, true, "iPhone landscape uses compact controls")
+    Assert.truthy(scale < 1, "compact controls shrink buttons")
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1, ViewportSize = Vector2.new(844, 390) })
+    local gui = result.Gui
+    Assert.equals(gui:GetAttribute("MobileSafeLayout"), true, "gui records mobile-safe layout")
+    Assert.truthy(gui:FindFirstChild("NearestActionHintLabel").Position.Y.Scale == 0, "scent cue moves to top band on phones")
+    gui:Destroy()
+    MobileControlsController.Gui = nil
+end })
+
+table.insert(suite.tests, { name = "portrait phone controls leave center play space visible", run = function()
+    local viewport = Vector2.new(390, 844)
+    local result = MobileControlsController:CreateControls({ MobileButtonScale = 1, ViewportSize = viewport })
+    local gui = result.Gui
+    local centerTop = viewport.Y * 0.28
+    local centerBottom = viewport.Y * 0.72
+    local centerLeft = viewport.X * 0.18
+    local centerRight = viewport.X * 0.82
+
+    local function rect(instance)
+        local x = instance.Position.X.Scale * viewport.X + instance.Position.X.Offset
+        local y = instance.Position.Y.Scale * viewport.Y + instance.Position.Y.Offset
+        return {
+            left = x,
+            top = y,
+            right = x + instance.Size.X.Offset,
+            bottom = y + instance.Size.Y.Offset,
+        }
+    end
+
+    local function overlapsPlayCenter(instance)
+        local bounds = rect(instance)
+        return bounds.left < centerRight and bounds.right > centerLeft and bounds.top < centerBottom and bounds.bottom > centerTop
+    end
+
+    for _, name in ipairs({ "MoveThumbstick", "EatDrinkButton", "AttackButton", "SprintButton", "CallButton", "RestHideButton", "DialoguePromptLabel", "NearestActionHintLabel", "ActionFeedbackLabel" }) do
+        local control = gui:FindFirstChild(name)
+        Assert.notNil(control, name .. " exists in portrait mobile controls")
+        Assert.falsy(overlapsPlayCenter(control), name .. " leaves the portrait play center visible")
+    end
+    Assert.equals(gui:GetAttribute("MobileSafeLayout"), true, "portrait phone records mobile-safe layout")
+
     gui:Destroy()
     MobileControlsController.Gui = nil
 end })

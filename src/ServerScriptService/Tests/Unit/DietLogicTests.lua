@@ -20,8 +20,8 @@ table.insert(suite.tests, { name = "herbivore carnivore and omnivore diet matrix
 end })
 
 table.insert(suite.tests, { name = "starter diets align with roles", run = function()
-    Assert.equals(SpeciesConfig.gallimimus.Diet, "Herbivore")
-    Assert.equals(SpeciesConfig.carnotaurus.Diet, "Carnivore")
+    Assert.equals(SpeciesConfig.parasaurolophus.Diet, "Herbivore")
+    Assert.equals(SpeciesConfig.utahraptor.Diet, "Carnivore")
     Assert.equals(SpeciesConfig.oviraptor.Diet, "Omnivore")
 end })
 

@@ -53,7 +53,7 @@ table.insert(suite.tests, { name = "hatch contract survives clean bootstrap relo
     local remotes = Bootstrap.Init()
     Assert.notNil(remotes:FindFirstChild("RequestHatch"), "RequestHatch remote exists after Init")
     local player = MockPlayer.new(26001, "HatchReload")
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     for _ = 1, 5 do
         local ok = SurvivalService:RequestHatch(player, "tap")
         Assert.truthy(ok, "hatch input accepted")

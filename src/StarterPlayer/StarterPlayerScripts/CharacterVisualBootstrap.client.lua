@@ -48,6 +48,19 @@ local function hideDefaultAvatar(character)
     end
 end
 
+local function hasVisibleGameVisual(character)
+    if not character then return false end
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if isGameVisualDescendant(descendant)
+            and descendant:IsA("BasePart")
+            and descendant.Transparency < 1
+            and descendant.LocalTransparencyModifier < 1 then
+            return true
+        end
+    end
+    return false
+end
+
 local function clearVisual(character)
     local existing = character and character:FindFirstChild(VISUAL_NAME)
     if existing then existing:Destroy() end
@@ -125,11 +138,14 @@ end
 local function applyVisual()
     local character = player.Character
     if not character then return end
-    hideDefaultAvatar(character)
+    local fallbackShown
     if hatched then
-        showDinosaur(character)
+        fallbackShown = showDinosaur(character)
     else
-        showEgg(character)
+        fallbackShown = showEgg(character)
+    end
+    if fallbackShown or hasVisibleGameVisual(character) then
+        hideDefaultAvatar(character)
     end
 end
 

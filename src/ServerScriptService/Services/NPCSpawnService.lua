@@ -5,6 +5,8 @@ local NPCService = require(script.Parent.NPCService)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
 local EcosystemRoster = require(ReplicatedStorage.Shared.EcosystemRoster)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
+local CharacterVisualService = require(script.Parent.CharacterVisualService)
 
 local NPCSpawnService = { SpawnLoopRunning = false }
 NPCSpawnService.TargetActive = 12
@@ -12,28 +14,25 @@ NPCSpawnService.SpawnKinds = { "Prey", "Prey", "Prey", "AerialPrey", "Omnivore",
 NPCSpawnService.SpawnTickSeconds = 10
 NPCSpawnService.NPCModelCandidatePaths = {
     Prey = {
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Hatchling",
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Triceratops_Model_Set/Hatchling",
-    },
-    AerialPrey = {
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Hatchling",
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Hatchling",
     },
+    AerialPrey = {
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Pteranodon_Model_Set/Hatchling",
+    },
     Predator = {
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Tyrannosaurus_Model_Set/Hatchling",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Spinosaurus_Model_Set/Hatchling",
     },
     AerialPredator = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Pteranodon_Model_Set/Hatchling",
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Velociraptor_Model_Set/Hatchling",
     },
     Apex = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Tyrannosaurus_Model_Set/Hatchling",
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Carnotaurus_Model_Set/Adult",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Tyrannosaurus_Model_Set/Adult",
     },
     Omnivore = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Hatchling",
-        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Gallimimus_Model_Set/Juvenile",
+        "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Oviraptor_Model_Set/Juvenile",
     },
     SemiAquatic = {
         "ReplicatedStorage/ImportedAssetLibrary/Imported_Playable_Spinosaurus_Model_Set/Hatchling",
@@ -58,6 +57,72 @@ local function hasVisiblePart(instance)
     return false
 end
 
+local function countMeshParts(instance)
+    if not instance then return 0 end
+    local count = instance:IsA("MeshPart") and 1 or 0
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("MeshPart") then
+            count += 1
+        end
+    end
+    return count
+end
+
+local function isPackContainer(instance)
+    return instance:GetAttribute("DinosaurRosterPack") == true
+        or instance:GetAttribute("PrimitivePartOnlyPack") == true
+        or instance:GetAttribute("UseAsDinoVisualHappyPath") ~= nil
+end
+
+local REJECTED_LIVE_DINO_VISUAL_MARKERS = {
+    "bone",
+    "carcass",
+    "corpse",
+    "fossil",
+    "jaw",
+    "nest",
+    "rib",
+    "skeleton",
+    "skull",
+}
+
+local function hasRejectedLiveDinoVisualName(name)
+    if type(name) ~= "string" then return false end
+    local lowered = string.lower(name)
+    for _, marker in ipairs(REJECTED_LIVE_DINO_VISUAL_MARKERS) do
+        if string.find(lowered, marker, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function hasRejectedLiveDinoVisualLineage(instance)
+    local current = instance
+    while current and current ~= ReplicatedStorage and current ~= Workspace do
+        if hasRejectedLiveDinoVisualName(current.Name) then
+            return true
+        end
+        if current:GetAttribute("CarcassFoodSource") == true
+            or current:GetAttribute("PlayerCarcass") == true
+            or current:GetAttribute("BoneDecoration") == true
+            or current:GetAttribute("FossilDecoration") == true
+            or current:GetAttribute("NestDecoration") == true
+        then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+local function isUsableDinosaurVisualCandidate(instance)
+    if not instance or isPackContainer(instance) then return false end
+    if not (instance:IsA("Model") or instance:IsA("BasePart")) then return false end
+    if hasRejectedLiveDinoVisualLineage(instance) then return false end
+    return hasVisiblePart(instance) and countMeshParts(instance) > 0
+end
+
 local function isHelperVisualPart(part)
     local name = string.lower(part.Name)
     return name == "rootpart"
@@ -70,22 +135,37 @@ local function isHelperVisualPart(part)
         or string.find(name, "helper", 1, true) ~= nil
 end
 
+function NPCSpawnService:NormalizeNPCModelOrientation(model, speciesId, targetCFrame)
+    if not (model and (model:IsA("Model") or model:IsA("BasePart"))) then
+        return false
+    end
+    local ok, err = pcall(function()
+        CharacterVisualService:NormalizeDinosaurOrientation(model, targetCFrame, speciesId)
+    end)
+    model:SetAttribute("NPCOrientationNormalized", ok)
+    if not ok then
+        model:SetAttribute("NPCOrientationNormalizeError", tostring(err))
+    end
+    return ok
+end
+
 function NPCSpawnService:ResolveImportedNPCModel(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
     if speciesId then
-        local staged = StagedMeshLibrary:ResolveModel(speciesId)
+        local resolver = StagedMeshLibrary.ResolveAny or StagedMeshLibrary.ResolveModel
+        local staged = resolver and resolver(StagedMeshLibrary, speciesId)
         if staged and hasVisiblePart(staged) then return staged end
     end
     for _, path in ipairs(self.NPCModelCandidatePaths[kind] or {}) do
         local candidate = resolvePath(path)
-        if candidate and hasVisiblePart(candidate) then return candidate end
+        if candidate and hasVisiblePart(candidate) and countMeshParts(candidate) > 0 then return candidate end
     end
     local library = ReplicatedStorage:FindFirstChild("ImportedAssetLibrary")
     if library then
         for _, descendant in ipairs(library:GetDescendants()) do
             local name = string.lower(descendant.Name)
-            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "triceratops", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and hasVisiblePart(descendant) then
+            if (string.find(name, "dinosaur", 1, true) or string.find(name, "raptor", 1, true) or string.find(name, "saurus", 1, true) or string.find(name, "rex", 1, true) or string.find(name, "pterodactyl", 1, true) or string.find(name, "pteranodon", 1, true) or string.find(name, "pterosaur", 1, true)) and isUsableDinosaurVisualCandidate(descendant) then
                 return descendant
             end
         end
@@ -130,12 +210,10 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
     clone:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
     clone:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId") or source:GetAttribute("SourceAssetId"))
     clone:SetAttribute("SpawnZone", spawnInstance and spawnInstance.Name or "Generated")
+    local scriptSourceUse = "npc_spawn:" .. tostring(kind)
     for _, descendant in ipairs(clone:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            descendant:Destroy()
-        elseif descendant:IsA("ModuleScript") then
-            descendant:SetAttribute("ImportedScriptAudited", true)
-            descendant:SetAttribute("Sandboxed", true)
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            ImportedScriptPolicy.PreserveOrQuarantineCloneScript(descendant, scriptSourceUse, clone)
         elseif descendant:IsA("BasePart") then
             descendant.Anchored = true
             descendant.CanCollide = false
@@ -150,9 +228,16 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         end
     end
     local spawnPosition = spawnInstance and spawnInstance:IsA("BasePart") and spawnInstance.Position or Vector3.new(0, 12, 0)
+    local spawnYaw = spawnInstance and tonumber(spawnInstance:GetAttribute("YawRadians") or spawnInstance:GetAttribute("Yaw")) or nil
+    if not spawnYaw and spawnInstance then
+        local degrees = tonumber(spawnInstance:GetAttribute("YawDegrees"))
+        if degrees then spawnYaw = math.rad(degrees) end
+    end
+    spawnYaw = spawnYaw or 0
+    local targetCFrame = CFrame.new(spawnPosition) * CFrame.Angles(0, spawnYaw, 0)
     if clone:IsA("Model") then
         if not clone.PrimaryPart then clone.PrimaryPart = clone:FindFirstChildWhichIsA("BasePart", true) end
-        if clone.PrimaryPart then clone:PivotTo(CFrame.new(spawnPosition)) end
+        if clone.PrimaryPart then clone:PivotTo(targetCFrame) end
     elseif clone:IsA("BasePart") then
         local wrapper = Instance.new("Model")
         wrapper.Name = clone.Name
@@ -176,10 +261,11 @@ function NPCSpawnService:PrepareNPCModel(source, kind, index, spawnInstance)
         wrapper:SetAttribute("AssetManifestId", clone:GetAttribute("AssetManifestId") or ("NPC_" .. kind))
         wrapper:SetAttribute("SourceAssetId", clone:GetAttribute("SourceAssetId"))
         clone.Parent = wrapper
-        clone.CFrame = CFrame.new(spawnPosition)
+        clone.CFrame = targetCFrame
         wrapper.PrimaryPart = clone
         clone = wrapper
     end
+    self:NormalizeNPCModelOrientation(clone, profile.SpeciesId, targetCFrame)
     return clone
 end
 
@@ -232,13 +318,7 @@ end
 
 -- Count MeshParts anywhere in the model; 0 means a primitive (Part-only) placeholder body.
 function NPCSpawnService:CountMeshParts(instance)
-    if not instance then return 0 end
-    local count = 0
-    if instance:IsA("MeshPart") then count = count + 1 end
-    for _, descendant in ipairs(instance:GetDescendants()) do
-        if descendant:IsA("MeshPart") then count = count + 1 end
-    end
-    return count
+    return countMeshParts(instance)
 end
 
 -- A staged mesh is available for a kind when StagedMeshLibrary resolves a visible model for its species.
@@ -247,7 +327,8 @@ function NPCSpawnService:HasStagedMeshForKind(kind)
     local profile = NPCService:GetKindProfile(kind)
     local speciesId = profile and profile.SpeciesId
     if not speciesId then return false end
-    local staged = StagedMeshLibrary:ResolveModel(speciesId)
+    local resolver = StagedMeshLibrary.ResolveAny or StagedMeshLibrary.ResolveModel
+    local staged = resolver and resolver(StagedMeshLibrary, speciesId)
     return staged ~= nil and hasVisiblePart(staged)
 end
 
@@ -447,13 +528,33 @@ end
 
 -- Lowest world-Y of a model's (or part's) axis-aligned bounding box.
 local function modelMinY(instance)
-    if instance:IsA("Model") then
-        local cframe, size = instance:GetBoundingBox()
-        return cframe.Position.Y - size.Y * 0.5
-    elseif instance:IsA("BasePart") then
-        return instance.Position.Y - instance.Size.Y * 0.5
+    local minY = math.huge
+    local found = false
+    local scan = {}
+    if instance:IsA("BasePart") then
+        table.insert(scan, instance)
+    elseif instance:IsA("Model") then
+        for _, descendant in ipairs(instance:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                table.insert(scan, descendant)
+            end
+        end
+    else
+        return nil
     end
-    return nil
+    for _, part in ipairs(scan) do
+        local half = part.Size * 0.5
+        for _, sx in ipairs({ -1, 1 }) do
+            for _, sy in ipairs({ -1, 1 }) do
+                for _, sz in ipairs({ -1, 1 }) do
+                    local point = part.CFrame:PointToWorldSpace(Vector3.new(half.X * sx, half.Y * sy, half.Z * sz))
+                    minY = math.min(minY, point.Y)
+                    found = true
+                end
+            end
+        end
+    end
+    return found and minY or nil
 end
 
 -- Raycast straight down from high above `xz` to find the terrain/world Y under it.
@@ -597,6 +698,11 @@ function NPCSpawnService:PrepareEcosystemNPCModel(entry, kind, index, spawnPosit
         elseif clone:IsA("BasePart") then
             clone.CFrame = CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z)
         end
+        self:NormalizeNPCModelOrientation(
+            clone,
+            entry.speciesId,
+            CFrame.new(spawnXZ.X, self.GroundProbeHeight, spawnXZ.Z) * CFrame.Angles(0, yaw or 0, 0)
+        )
         self:GroundModelAt(clone, spawnXZ, isAquatic, yaw)
     end
     return clone

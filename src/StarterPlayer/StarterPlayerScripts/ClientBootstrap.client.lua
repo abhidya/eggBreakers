@@ -114,8 +114,8 @@ function ClientBootstrap:FindNearestTagged(tag, maxDistance)
 end
 
 function ClientBootstrap:GetPrimaryAttack()
-    local speciesId = self.LastStats and self.LastStats.species or "gallimimus"
-    local species = SpeciesConfig[speciesId] or SpeciesConfig.gallimimus
+    local speciesId = self.LastStats and self.LastStats.species or Constants.DefaultSpeciesId
+    local species = SpeciesConfig[speciesId] or SpeciesConfig[Constants.DefaultSpeciesId]
     return (species and species.Abilities and species.Abilities.PrimaryAttack) or "Nibble"
 end
 
@@ -329,7 +329,7 @@ local function wireMobileButtons(result)
         setButtonContext(gui:FindFirstChild("AttackButton"), "🦷 " .. ClientBootstrap:GetPrimaryAttack(), true)
         setButtonContext(gui:FindFirstChild("SprintButton"), (stats.stamina and stats.stamina < 15) and "⚡ low" or "⚡", stats.stamina == nil or stats.stamina >= 5)
         setButtonContext(gui:FindFirstChild("CallButton"), "📣", true)
-        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "🌿 cozy" or "🌿", true)
+        setButtonContext(gui:FindFirstChild("RestHideButton"), player:GetAttribute("Hidden") and "🌿💤" or "🌿 Rest", true)
         local canFly = modes.Flight == true or modes.flight == true or modes.flying == true
         local canSwim = modes.Swim == true or modes.swim == true or modes.swimming == true
         setButtonContext(gui:FindFirstChild("FlightButton"), canFly and "🪽" or "", canFly, true)
@@ -401,9 +401,10 @@ local function wireMobileButtons(result)
         restHide.Activated:Connect(function()
             local isHidden = not player:GetAttribute("Hidden")
             player:SetAttribute("Hidden", isHidden)
+            InputController:RequestRest(isHidden)
             ClientBootstrap:PlayActionMotion("Hide")
             applyHiddenVisual(isHidden)
-            restHide.Text = isHidden and "🌿 Cozy" or "🌿 Rest"
+            restHide.Text = isHidden and "🌿💤" or "🌿 Rest"
             setButtonActive(restHide, isHidden)
             markButtonPressed(restHide, isHidden and "Cozy" or "Ready")
             showFeedback(gui, isHidden and "🌿💤" or "✅", restHide)
@@ -437,6 +438,12 @@ end
 function ClientBootstrap:Init()
     HUDController:EnsureGui()
     HatchUIController:Show()
+    HatchUIController:BindHatchInput(function(inputType)
+        InputController:RequestHatch(inputType or "tap")
+    end)
+    HatchUIController:SetSpeciesOptions(HatchUIController.StarterSpecies, nil, function(speciesId)
+        InputController:RequestSelectSpecies(speciesId)
+    end)
     local mobile = MobileControlsController:CreateControls({ MobileButtonScale = 1 })
     wireMobileButtons(mobile)
     -- Diegetic food/water sense guide. Reuses our authoritative, diet-aware target
@@ -467,6 +474,9 @@ function ClientBootstrap:Init()
         ClientBootstrap:UpdateActionGuidance(mobile.Gui)
         SenseGuideController:Update()
         if type(payload.hatchProgress) == "number" then HatchUIController:SetProgress(payload.hatchProgress) end
+        if type(payload.species) == "string" and HatchUIController.Gui and HatchUIController.Gui.Enabled ~= false then
+            HatchUIController:SetSpeciesOptions(HatchUIController.StarterSpecies, payload.species)
+        end
         if payload.hatched == true and HatchUIController.Gui then HatchUIController.Gui.Enabled = false end
     end)
     return true

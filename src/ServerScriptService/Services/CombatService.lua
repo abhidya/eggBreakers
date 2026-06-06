@@ -30,8 +30,8 @@ CombatService.Range = { Bite = 9, HeavyBite = 10, Claw = 8, Lunge = 14, Headbutt
 CombatService.StaminaCost = { Bite = 14, HeavyBite = 24, Claw = 10, Lunge = 20, Headbutt = 16, Nibble = 6 }
 
 -- Crit chance: 10% base
-local CRIT_CHANCE = 0.10
-local CRIT_MULTIPLIER = 1.75
+CombatService.CritChance = 0.10
+CombatService.CritMultiplier = 1.75
 
 -- Attack telegraph (server-authoritative wind-up). The server broadcasts a brief
 -- "wind-up" signal so clients can render an anticipation cue before damage lands.
@@ -74,6 +74,58 @@ function CombatService:ResolvePosition(target)
     return Vector3.new(0, 0, 0)
 end
 
+function CombatService:RollCrit()
+    return math.random() < (self.CritChance or 0)
+end
+
+function CombatService:ComputeAttackDamage(state)
+    local damage = SpeciesConfig[state.SpeciesId].BaseStats[state.GrowthStage].Damage
+    local isCrit = self:RollCrit()
+    if isCrit then
+        damage = math.floor(damage * (self.CritMultiplier or 1))
+    end
+    return damage, isCrit
+end
+
+function CombatService:BuildAttackTelegraphPayload(player, attackType, target)
+    local windup = self.WindupSeconds[attackType] or DEFAULT_WINDUP
+    local attackerPos = Vector3.new(0, 0, 0)
+    local character = player and player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if root then attackerPos = root.Position end
+
+    return {
+        kind           = "telegraph",
+        attackType     = attackType,
+        attackerName   = (player and player.Name) or "",
+        attackerUserId = (player and player.UserId) or 0,
+        position       = attackerPos,
+        targetName     = target and target.Name or nil,
+        targetPosition = target and self:ResolvePosition(target) or nil,
+        windupSeconds  = windup,
+    }
+end
+
+function CombatService:BuildCombatFeedbackPayload(target, damage, isCrit, npcRecord)
+    local targetHealth = target:GetAttribute("Health") or 0
+    local targetMaxHealth = target:GetAttribute("MaxHealth") or 100
+    if npcRecord then
+        targetHealth = npcRecord.Health or targetHealth
+        targetMaxHealth = npcRecord.MaxHealth or targetMaxHealth
+    end
+
+    return {
+        kind            = "damage",
+        targetName      = target.Name or "NPC",
+        position        = self:ResolvePosition(target),
+        damage          = damage,
+        targetHealth    = targetHealth,
+        targetMaxHealth = targetMaxHealth,
+        isCrit          = isCrit == true,
+        isApex          = (npcRecord and npcRecord.Apex == true) or target:GetAttribute("ApexCategory") == true,
+    }
+end
+
 -- Server-authoritative attack telegraph. Broadcasts a brief wind-up cue BEFORE
 -- damage is applied so clients can render anticipation (and counter-play reads).
 -- This does NOT delay or gate server damage resolution — damage authority is
@@ -94,26 +146,12 @@ local function getTelegraphRemote()
 end
 
 function CombatService:FireAttackTelegraph(player, attackType, target)
-    local windup = self.WindupSeconds[attackType] or DEFAULT_WINDUP
+    local payload = self:BuildAttackTelegraphPayload(player, attackType, target)
     local remote = getTelegraphRemote()
-    if not remote then return windup end
-
-    local attackerPos = Vector3.new(0, 0, 0)
-    local character = player and player.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if root then attackerPos = root.Position end
-
-    remote:FireAllClients({
-        kind          = "telegraph",
-        attackType    = attackType,
-        attackerName  = (player and player.Name) or "",
-        attackerUserId = (player and player.UserId) or 0,
-        position      = attackerPos,
-        targetName    = target and target.Name or nil,
-        targetPosition = target and self:ResolvePosition(target) or nil,
-        windupSeconds = windup,
-    })
-    return windup
+    if remote then
+        remote:FireAllClients(payload)
+    end
+    return payload.windupSeconds, payload
 end
 
 -- Fire CombatFeedback remote to all clients (additive; does not affect server authority)
@@ -123,49 +161,22 @@ function CombatService:FireCombatFeedback(target, damage, isCrit, npcRecord)
     local remote = remotes:FindFirstChild("CombatFeedback")
     if not remote then return end
 
-    local targetName = target.Name or "NPC"
-    local position = Vector3.new(0, 0, 0)
-    local root = target:IsA("Model") and target:FindFirstChild("HumanoidRootPart")
-    if root then
-        position = root.Position
-    elseif target:IsA("BasePart") then
-        position = target.Position
-    elseif target:IsA("Model") and target.PrimaryPart then
-        position = target.PrimaryPart.Position
-    end
-
-    local targetHealth = target:GetAttribute("Health") or 0
-    local targetMaxHealth = target:GetAttribute("MaxHealth") or 100
-    if npcRecord then
-        targetHealth = npcRecord.Health or targetHealth
-        targetMaxHealth = npcRecord.MaxHealth or targetMaxHealth
-    end
+    local payload = self:BuildCombatFeedbackPayload(target, damage, isCrit, npcRecord)
 
     -- Mirror authoritative health/max onto the instance so the overhead health
     -- bar controller can read it directly from the model attributes.
-    target:SetAttribute("Health", targetHealth)
-    target:SetAttribute("MaxHealth", targetMaxHealth)
-
-    local isApex = (npcRecord and npcRecord.Apex == true) or target:GetAttribute("ApexCategory") == true
+    target:SetAttribute("Health", payload.targetHealth)
+    target:SetAttribute("MaxHealth", payload.targetMaxHealth)
 
     -- Fire to all players (broadcast feedback so group members see it too)
-    remote:FireAllClients({
-        kind          = "damage",
-        targetName    = targetName,
-        position      = position,
-        damage        = damage,
-        targetHealth  = targetHealth,
-        targetMaxHealth = targetMaxHealth,
-        isCrit        = isCrit,
-        isApex        = isApex,
-    })
+    remote:FireAllClients(payload)
 end
 
 function CombatService:ApplyDamage(target, damage, attacker, isCrit)
     if not target then return false, "missing_target" end
     local npcRecord = NPCService:FindRecordForInstance(target)
     if npcRecord then
-        local ok, reason = NPCService:DamageRecord(npcRecord, damage)
+        local ok, reason = NPCService:DamageRecord(npcRecord, damage, attacker)
         self:StampDamageAttributes(target, damage, attacker)
         target:SetAttribute("Health", npcRecord.Health)
         if npcRecord.State == "Dead" then
@@ -273,12 +284,7 @@ function CombatService:RequestAttack(player, attackType, target)
         -- authority below is unchanged; this is purely a client anticipation cue.
         self:FireAttackTelegraph(player, attackType, target)
 
-        local damage = SpeciesConfig[state.SpeciesId].BaseStats[state.GrowthStage].Damage
-        -- Roll for crit server-side
-        local isCrit = math.random() < CRIT_CHANCE
-        if isCrit then
-            damage = math.floor(damage * CRIT_MULTIPLIER)
-        end
+        local damage, isCrit = self:ComputeAttackDamage(state)
 
         -- Lane D: detect if target is another player's character and the attacker is a predator.
         local victimPlayer = self:GetPlayerFromCharacter(target)

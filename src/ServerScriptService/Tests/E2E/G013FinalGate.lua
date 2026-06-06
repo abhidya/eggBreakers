@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local Bootstrap = require(ServerScriptService.Bootstrap)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
@@ -35,7 +36,7 @@ end
 local function makePlayer(userId, speciesId, hatched)
     local player = MockPlayer.new(userId, "G013Player" .. tostring(userId))
     player.Character = makeCharacter("G013Character" .. tostring(userId))
-    local state = SurvivalService:CreateState(player, speciesId or "gallimimus")
+    local state = SurvivalService:CreateState(player, speciesId or "parasaurolophus")
     state.Hatched = hatched == true
     return player, state
 end
@@ -65,7 +66,7 @@ table.insert(suite.tests, { name = "client bootstrap exists", run = function()
 end })
 
 table.insert(suite.tests, { name = "release cannot use fallback visible Part egg or dinosaur", run = function()
-    local player, state = makePlayer(91301, "gallimimus", false)
+    local player, state = makePlayer(91301, "parasaurolophus", false)
     local ok, visualKind = CharacterVisualService:ApplyForState(player, state)
     Assert.truthy(ok, "egg visual applied")
     local folder = player.Character:FindFirstChild(CharacterVisualService.VisualFolderName)
@@ -79,7 +80,7 @@ table.insert(suite.tests, { name = "release cannot use fallback visible Part egg
 end })
 
 table.insert(suite.tests, { name = "drinking before hatch is rejected", run = function()
-    local player = makePlayer(91302, "gallimimus", false)
+    local player = makePlayer(91302, "parasaurolophus", false)
     local water = Instance.new("Part")
     water.Name = "G013WaterSource"
     water.Position = Vector3.new(1, 5, 0)
@@ -92,14 +93,15 @@ table.insert(suite.tests, { name = "drinking before hatch is rejected", run = fu
 end })
 
 table.insert(suite.tests, { name = "combat applies actual health damage, not PendingServerDamage only", run = function()
-    local player = makePlayer(91303, "velociraptor", true)
+    local player = makePlayer(91303, "utahraptor", true)
     local target = Instance.new("Part")
     target.Name = "G013DamageableTarget"
     target.Position = Vector3.new(4, 5, 0)
     target:SetAttribute("Health", 30)
     target.Parent = Workspace
     CollectionService:AddTag(target, "Damageable")
-    local ok = CombatService:RequestAttack(player, "Claw", target)
+    local attack = SpeciesConfig.utahraptor.Abilities.PrimaryAttack
+    local ok = CombatService:RequestAttack(player, attack, target)
     local pending = target:GetAttribute("PendingServerDamage")
     local health = target:GetAttribute("Health")
     target:Destroy()

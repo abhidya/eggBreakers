@@ -339,18 +339,36 @@ function PlacementValidationService:ValidateNoFloatingVisibleAssets(root)
     root = root or workspace
     local failures = {}
     local checked = 0
-    for _, instance in ipairs(root:GetDescendants()) do
-        if instance:IsA("BasePart") and instance.Transparency < 1 and instance:GetAttribute("FloatingAllowed") ~= true then
+    local function inheritedAttribute(instance, attributeName)
+        local current = instance
+        while current do
+            local value = current:GetAttribute(attributeName)
+            if value ~= nil then return value end
+            if current == root then break end
+            current = current.Parent
+        end
+        return nil
+    end
+    local instances = { root }
+    for _, descendant in ipairs(root:GetDescendants()) do
+        table.insert(instances, descendant)
+    end
+    for _, instance in ipairs(instances) do
+        if instance:IsA("BasePart") and instance.Transparency < 1 then
             checked = checked + 1
-            local groundTopY = instance:GetAttribute("GroundTopY")
-            local zoneId = instance:GetAttribute("ZoneId")
+            local groundTopY = inheritedAttribute(instance, "GroundTopY")
+            local zoneId = inheritedAttribute(instance, "ZoneId")
+            local floatingAllowed = inheritedAttribute(instance, "FloatingAllowed") == true
             if groundTopY == nil and type(zoneId) == "string" and MapLayoutService.ZoneTerrain[zoneId] then
                 groundTopY = MapLayoutService.ZoneTerrain[zoneId].topY
             end
             if type(groundTopY) == "number" then
                 local bottomY = instance.Position.Y - instance.Size.Y / 2
-                if bottomY > groundTopY + 2 then
+                if bottomY > groundTopY + 2 and not floatingAllowed then
                     table.insert(failures, instance:GetFullName() .. " floats above ground by " .. tostring(math.floor((bottomY - groundTopY) * 10 + 0.5) / 10) .. " studs")
+                end
+                if bottomY < groundTopY - 0.25 then
+                    table.insert(failures, instance:GetFullName() .. " clips below ground by " .. tostring(math.floor((groundTopY - bottomY) * 10 + 0.5) / 10) .. " studs")
                 end
             end
         end

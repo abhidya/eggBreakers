@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local TestRunner = require(ReplicatedStorage.Shared.TestFramework.TestRunner)
 local Assert = require(ReplicatedStorage.Shared.TestFramework.Assert)
 local MockPlayer = require(ReplicatedStorage.Shared.TestFramework.MockPlayer)
+local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 
 local Bootstrap = require(ServerScriptService.Bootstrap)
 local CharacterVisualService = require(ServerScriptService.Services.CharacterVisualService)
@@ -35,7 +36,7 @@ end
 local function makePlayer(userId, speciesId, hatched)
     local player = MockPlayer.new(userId, "G014Player" .. tostring(userId))
     player.Character = makeCharacter("G014Character" .. tostring(userId))
-    local state = SurvivalService:CreateState(player, speciesId or "gallimimus")
+    local state = SurvivalService:CreateState(player, speciesId or "parasaurolophus")
     state.Hatched = hatched == true
     return player, state
 end
@@ -76,7 +77,7 @@ table.insert(suite.tests, { name = "client release fallback parts are dev disabl
 end })
 
 table.insert(suite.tests, { name = "hatch, drink, and combat are server authoritative", run = function()
-    local player, state = makePlayer(91401, "velociraptor", false)
+    local player, state = makePlayer(91401, "utahraptor", false)
     local water = Instance.new("Part")
     water.Name = "G014Water"
     water.Position = Vector3.new(1, 5, 0)
@@ -91,10 +92,17 @@ table.insert(suite.tests, { name = "hatch, drink, and combat are server authorit
     target:SetAttribute("Health", 30)
     target.Parent = Workspace
     CollectionService:AddTag(target, "Damageable")
-    local attackOk = CombatService:RequestAttack(player, "Claw", target)
-    Assert.truthy(attackOk, "valid attack rejected")
-    Assert.truthy((target:GetAttribute("Health") or 30) < 30, "attack did not reduce health")
-    Assert.equals(target:GetAttribute("LastServerDamage"), 7, "server damage marker")
+    local attack = SpeciesConfig.utahraptor.Abilities.PrimaryAttack
+    local oldCrit = CombatService.CritChance
+    CombatService.CritChance = 0
+    local ok, err = pcall(function()
+        local attackOk = CombatService:RequestAttack(player, attack, target)
+        Assert.truthy(attackOk, "valid attack rejected")
+        Assert.truthy((target:GetAttribute("Health") or 30) < 30, "attack did not reduce health")
+        Assert.equals(target:GetAttribute("LastServerDamage"), SpeciesConfig.utahraptor.BaseStats.Hatchling.Damage, "server damage marker")
+    end)
+    CombatService.CritChance = oldCrit
+    if not ok then error(err) end
     target:Destroy(); water:Destroy(); cleanupPlayer(player)
 end })
 

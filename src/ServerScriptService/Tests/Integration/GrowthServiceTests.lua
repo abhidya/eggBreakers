@@ -5,13 +5,13 @@ local ProgressionService = require(game:GetService("ServerScriptService").Servic
 local suite = { name = "GrowthServiceTests.server", category = "Integration", tests = {} }
 
 table.insert(suite.tests, { name = "growth from survival/eating", run = function()
-    local p = MockPlayer.new(35001, "GrowthTester"); local state = SurvivalService:CreateState(p, "gallimimus")
+    local p = MockPlayer.new(35001, "GrowthTester"); local state = SurvivalService:CreateState(p, "parasaurolophus")
     Assert.truthy(SurvivalService:AddGrowth(p, 25), "server can add growth")
     Assert.equals(state.GrowthStage, "Juvenile", "25 growth reaches juvenile")
 end })
 
 table.insert(suite.tests, { name = "stage updates stats/model/popup", run = function()
-    local p = MockPlayer.new(35002, "GrowthTester2"); local state = SurvivalService:CreateState(p, "triceratops")
+    local p = MockPlayer.new(35002, "GrowthTester2"); local state = SurvivalService:CreateState(p, "parasaurolophus")
     SurvivalService:AddGrowth(p, 75)
     Assert.equals(state.GrowthStage, "Adult", "adult threshold applied")
     Assert.equals(state.Health, 190, "adult stats applied")
@@ -25,7 +25,7 @@ table.insert(suite.tests, { name = "eat and drink loop reaches bigger juvenile s
     local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
     local p = MockPlayer.new(35004, "FoodWaterGrowthTester")
     RateLimitService:ClearPlayer(p)
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     state.Hatched = true
     state.Growth = 23
     state.Hunger = 40

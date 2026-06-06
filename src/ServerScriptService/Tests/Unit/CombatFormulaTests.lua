@@ -17,7 +17,7 @@ end })
 
 table.insert(suite.tests, { name = "invalid attack and dead player fail", run = function()
     local player = MockPlayer.new(401, "CombatTester")
-    local state = SurvivalService:CreateState(player, "gallimimus")
+    local state = SurvivalService:CreateState(player, "parasaurolophus")
     Assert.falsy(CombatService:AttackAllowedForSpecies(state, "Laser"))
     SurvivalService:Kill(player, "test")
     local ok = CombatService:RequestAttack(player, "Nibble", nil)

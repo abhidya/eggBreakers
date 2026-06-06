@@ -1,4 +1,6 @@
 local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Constants = require(ReplicatedStorage.Shared.Constants)
 
 local PlayerDataService = {}
 PlayerDataService.StoreName = "PlayerDataV1"
@@ -13,11 +15,22 @@ function PlayerDataService:GetStore()
 end
 
 local STARTER_SPECIES = {
-    gallimimus = true,
-    triceratops = true,
-    velociraptor = true,
-    carnotaurus = true,
+    coelophysis = true,
+    parasaurolophus = true,
+    utahraptor = true,
+    citipati = true,
 }
+
+local function normalizeUnlockedSpecies(unlocked)
+    unlocked = unlocked or {}
+    for speciesId in pairs(Constants.RetiredPrototypeSpecies) do
+        unlocked[speciesId] = nil
+    end
+    for speciesId in pairs(STARTER_SPECIES) do
+        unlocked[speciesId] = true
+    end
+    return unlocked
+end
 
 function PlayerDataService.DefaultData(now)
     return {
@@ -25,7 +38,7 @@ function PlayerDataService.DefaultData(now)
         DNA = 0,
         Fossils = 0,
         TutorialCompleted = false,
-        UnlockedSpecies = table.clone(STARTER_SPECIES),
+        UnlockedSpecies = normalizeUnlockedSpecies(table.clone(STARTER_SPECIES)),
         SpeciesMastery = {},
         CosmeticsOwned = {},
         EquippedCosmetics = {},
@@ -45,7 +58,7 @@ function PlayerDataService:Load(player)
         data = self.DefaultData()
     end
     data.SchemaVersion = 1
-    data.UnlockedSpecies = data.UnlockedSpecies or table.clone(STARTER_SPECIES)
+    data.UnlockedSpecies = normalizeUnlockedSpecies(data.UnlockedSpecies or table.clone(STARTER_SPECIES))
     self.Profiles[player] = data
     return data
 end

@@ -5,6 +5,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
 local AssetImportAuditService = require(script.Parent.AssetImportAuditService)
+local ImportedScriptPolicy = require(ReplicatedStorage.Shared.ImportedScriptPolicy)
 
 local AssetAuditService = {}
 AssetAuditService.ForbiddenVisibleNameSignals = { "Placeholder", "Temp", "TODO", "Graybox", "Blockout", "TestCube", "ReplaceMe" }
@@ -204,6 +205,49 @@ function AssetAuditService:ValidateManifest(minimum)
     return AssetManifest.Validate({ minimum = minimum or AssetManifest.MinimumUniqueAssets })
 end
 
+function AssetAuditService:_hasStringAttribute(instance, attributeName)
+    return ImportedScriptPolicy.HasStringAttribute(instance, attributeName)
+end
+
+function AssetAuditService:_hasAncestorAttribute(instance, attributeName, expectedValue)
+    return ImportedScriptPolicy.HasAncestorAttribute(instance, attributeName, expectedValue)
+end
+
+function AssetAuditService:_isRawScriptReviewQueue(instance)
+    return ImportedScriptPolicy.IsRawScriptReviewQueue(instance)
+end
+
+function AssetAuditService:_isReviewedAdaptedStamped(instance)
+    return ImportedScriptPolicy.IsReviewedAdaptedStampedScript(instance)
+end
+
+function AssetAuditService:_isAllowedImportedScript(instance)
+    if ImportedScriptPolicy.IsReleaseReadyScript(instance) then
+        return true
+    end
+    return ImportedScriptPolicy.IsDisabledRawRuntimeReviewScript(instance)
+end
+
+function AssetAuditService:_hasAllowedImportedScriptState(instance)
+    local foundScript = false
+    if instance:IsA("Script") or instance:IsA("LocalScript") or instance:IsA("ModuleScript") then
+        foundScript = true
+        if not self:_isAllowedImportedScript(instance) then
+            return false
+        end
+    end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") or descendant:IsA("ModuleScript") then
+            foundScript = true
+            if not self:_isAllowedImportedScript(descendant) then
+                return false
+            end
+        end
+    end
+    if foundScript then return true end
+    return self:_isRawScriptReviewQueue(instance) or self:_isReviewedAdaptedStamped(instance)
+end
+
 function AssetAuditService:ValidateManifestReference(instance, failures)
     local manifestId = instance:GetAttribute("AssetManifestId")
     if manifestId == nil then
@@ -220,10 +264,17 @@ function AssetAuditService:ValidateManifestReference(instance, failures)
     if sourceAssetId ~= nil and tostring(sourceAssetId) ~= entry.SourceAssetId then
         table.insert(failures, instance:GetFullName() .. " SourceAssetId does not match manifest entry " .. tostring(manifestId))
     end
-    if instance:GetAttribute("ImportedScriptsPresent") == true then
-        table.insert(failures, instance:GetFullName() .. " still contains imported scripts after catalog audit")
+    if instance:GetAttribute("ImportedScriptsPresent") == true and not self:_hasAllowedImportedScriptState(instance) then
+        table.insert(failures, instance:GetFullName() .. " contains imported scripts without disabled review queue or reviewed/adapted/stamped state")
     end
-    if entry.ImportedScriptsPresent or entry.ScriptsAudited ~= true then
+    if entry.ImportedScriptsPresent
+        and entry.ScriptSandboxStatus ~= "Sandboxed"
+        and entry.ScriptSandboxStatus ~= "ReviewedAdapted"
+        and entry.ScriptSandboxStatus ~= "RawReviewQueued"
+    then
+        table.insert(failures, instance:GetFullName() .. " references unaudited imported script state in manifest")
+    end
+    if entry.ScriptsAudited ~= true then
         table.insert(failures, instance:GetFullName() .. " references unaudited imported script state in manifest")
     end
     if not AssetManifest.AllowedScriptSandboxStatuses[entry.ScriptSandboxStatus] then

@@ -3,12 +3,13 @@ local CollectionService = game:GetService("CollectionService")
 local MockPlayer = require(game:GetService("ReplicatedStorage").Shared.TestFramework.MockPlayer)
 local SurvivalService = require(game:GetService("ServerScriptService").Services.SurvivalService)
 local FoodWaterService = require(game:GetService("ServerScriptService").Services.FoodWaterService)
+local WaterService = require(game:GetService("ServerScriptService").Services.WaterService)
 local RateLimitService = require(game:GetService("ServerScriptService").Services.RateLimitService)
 local suite = { name = "WaterServiceTests.server", category = "Integration", tests = {} }
 
 local function setup(id, dist)
     local p = MockPlayer.new(id, "WaterTester"); RateLimitService:ClearPlayer(p)
-    SurvivalService:CreateState(p, "gallimimus").Hatched = true
+    SurvivalService:CreateState(p, "parasaurolophus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local water = Instance.new("Part"); water.Name = "TestWater"; water.Position = Vector3.new(dist or 3, 3, 0); water.Parent = workspace; CollectionService:AddTag(water, "WaterSource")
@@ -39,11 +40,47 @@ table.insert(suite.tests, { name = "thirst updates", run = function()
     water:Destroy()
 end })
 
+table.insert(suite.tests, { name = "drinkable tag alone is accepted as water source", run = function()
+    local p = MockPlayer.new(33007, "DrinkableTagTester")
+    RateLimitService:ClearPlayer(p)
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
+    state.Hatched = true
+    state.Thirst = 25
+    local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
+    local char = Instance.new("Model"); root.Parent = char; p.Character = char
+    local water = Instance.new("Part")
+    water.Name = "DrinkableTaggedOnly"
+    water.Size = Vector3.new(12, 3, 12)
+    water.Position = Vector3.new(2, 3, 0)
+    water:SetAttribute("ShallowDrinkable", true)
+    water.Parent = workspace
+    CollectionService:AddTag(water, "DrinkableWater")
+
+    Assert.truthy(WaterService:IsWaterSource(water), "drinkable water tag counts as water source")
+    Assert.truthy(FoodWaterService:RequestDrink(p, water), "drinkable-tagged water can be consumed")
+    Assert.truthy(state.Thirst > 25, "drinkable-tagged water restores thirst")
+
+    water:Destroy(); char:Destroy()
+end })
+
+table.insert(suite.tests, { name = "swim water is not a drink target", run = function()
+    local p, water = setup(33006, 3)
+    water.Name = "SwimOnlyWater"
+    water.Size = Vector3.new(24, 5, 24)
+    water:SetAttribute("SwimZone", true)
+    water:SetAttribute("FishSpawnAllowed", true)
+    WaterService:ValidateAllWaterSources()
+    local ok, reason = FoodWaterService:RequestDrink(p, water)
+    Assert.falsy(ok, "swim water rejected as drink source")
+    Assert.equals(reason, "swim_water", "swim water rejection reason")
+    water:Destroy()
+end })
+
 
 table.insert(suite.tests, { name = "egg cannot drink before hatch", run = function()
     local p = MockPlayer.new(33004, "WaterEgg")
     RateLimitService:ClearPlayer(p)
-    local state = SurvivalService:CreateState(p, "gallimimus")
+    local state = SurvivalService:CreateState(p, "parasaurolophus")
     state.Hatched = false
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = Vector3.new(0, 3, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
@@ -64,7 +101,7 @@ table.insert(suite.tests, { name = "map tutorial water is tagged drink target", 
     Assert.truthy(CollectionService:HasTag(water, "WaterSource"), "tutorial water tagged")
     local p = MockPlayer.new(33005, "MapWaterTester")
     RateLimitService:ClearPlayer(p)
-    SurvivalService:CreateState(p, "gallimimus").Hatched = true
+    SurvivalService:CreateState(p, "parasaurolophus").Hatched = true
     local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Position = water.Position + Vector3.new(2, 0, 0)
     local char = Instance.new("Model"); root.Parent = char; p.Character = char
     local state = SurvivalService:GetState(p); state.Thirst = 20; state.Growth = 0

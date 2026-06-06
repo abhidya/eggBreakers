@@ -7,12 +7,13 @@ local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local SurvivalService = require(ServerScriptService.Services.SurvivalService)
 local StatReplicationService = require(ServerScriptService.Services.StatReplicationService)
 local RemoteContracts = require(ReplicatedStorage.Shared.RemoteContracts)
+local G018LiveProofHarness = require(script.Parent.G018LiveProofHarness)
 
 local suite = { name = "G018EcosystemProfileTests", category = "Integration", tests = {} }
 
 local function resetPlayer(id, speciesId)
     local player = MockPlayer.new(id, "G018ProfileTester")
-    local state = SurvivalService:CreateState(player, speciesId or "gallimimus")
+    local state = SurvivalService:CreateState(player, speciesId or "parasaurolophus")
     state.Hatched = true
     return player, state
 end
@@ -32,7 +33,7 @@ table.insert(suite.tests, { name = "species expose ecosystem category movement a
 end })
 
 table.insert(suite.tests, { name = "survival state and stat payload include G018 profile fields", run = function()
-    local player, state = resetPlayer(61801, "gallimimus")
+    local player, state = resetPlayer(61801, "parasaurolophus")
     Assert.equals(state.CreatureCategory, "SmallPrey", "state carries small-prey category")
     Assert.equals(state.EcosystemProfile.CanGraze, true, "state carries grazing profile")
     Assert.equals(state.MovementModes.Ground, true, "state carries movement modes")
@@ -43,10 +44,16 @@ table.insert(suite.tests, { name = "survival state and stat payload include G018
     Assert.equals(payload.ecosystemProfile.CanGraze, true, "payload carries ecosystem profile")
     Assert.equals(payload.movementModes.Ground, true, "payload carries movement modes")
     Assert.equals(payload.maxOxygen, state.MaxOxygen, "payload carries max oxygen")
+    Assert.equals(payload.ageSeconds, state.AgeSeconds, "payload carries readable age")
+
+    SurvivalService:Kill(player, "ProfileProof")
+    local deathPayload = StatReplicationService:BuildPayload(state)
+    Assert.equals(deathPayload.deathState, "Dying", "payload carries death state")
+    Assert.equals(deathPayload.diedAtAgeSeconds, state.DiedAtAgeSeconds, "payload carries death age")
 end })
 
 table.insert(suite.tests, { name = "swim oxygen recovers and flight stamina is capability gated", run = function()
-    local player, state = resetPlayer(61802, "velociraptor")
+    local player, state = resetPlayer(61802, "utahraptor")
     state.Oxygen = state.MaxOxygen
     local ok = SurvivalService:ApplySwimOxygenTick(player, true, 1)
     Assert.truthy(ok, "submerged tick succeeds")
@@ -70,6 +77,18 @@ table.insert(suite.tests, { name = "remote stat contract advertises G018 profile
     Assert.truthy(seen.creatureCategory, "category in stat payload contract")
     Assert.truthy(seen.movementModes, "movement modes in stat payload contract")
     Assert.truthy(seen.ecosystemProfile, "ecosystem profile in stat payload contract")
+    Assert.truthy(seen.ageSeconds, "age in stat payload contract")
+    Assert.truthy(seen.deathState, "death state in stat payload contract")
+    Assert.truthy(seen.diedAtAgeSeconds, "death age in stat payload contract")
+end })
+
+table.insert(suite.tests, { name = "G018 live proof harness uses US27-US36 matrix contract", run = function()
+    Assert.truthy(G018LiveProofHarness:AssertContractOnly(), "live proof harness follows US27-US36 contract")
+    local stories = G018LiveProofHarness:RequiredStories()
+    Assert.equals(#stories, 10, "ten G018 ecosystem stories required")
+    Assert.equals(stories[1].id, "US27", "first story id")
+    Assert.equals(stories[#stories].id, "US36", "last story id")
+    Assert.equals(stories[1].liveProof, "US27LiveProofPassed", "proof attr matches live matrix")
 end })
 
 return TestRunner.registerSuite(suite)

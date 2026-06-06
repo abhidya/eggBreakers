@@ -64,6 +64,8 @@ Replace square Part plates with **Terrain water** (rivers, lakes, swamp) or qual
 ### 3.1 Core Loop (unchanged spine, upgraded feel)
 Hatch → sense needs → **find food/water** → grow (4 stages) → **fight/flee** → survive deeper biomes → reach the city. The ecosystem is the only quest-giver.
 
+Current first-session starter roster is **Coelophysis, Parasaurolophus, Utahraptor, and Citipati**. Older Gallimimus/Triceratops/Velociraptor/Carnotaurus starter references are historical unless explicitly marked as non-starter ecosystem fauna or previous planning language.
+
 ### 3.2 Improved Food Finding
 Today NPCs/players eat via raw nearest-tagged scans with placeholder food. Upgrade:
 - **Real foliage food** (ferns/bushes/fruit) for herbivores, **carcasses** for carnivores, scavengeable scraps for omnivores.
@@ -88,8 +90,9 @@ Carnivores can **hunt, kill, and feed on** both AI prey and other players:
 - **UX:** clear "you were hunted by X" / "you fed on X" feedback; carcass clearly readable in-world.
 
 ### 3.5 Movement Modes — Ground, Flight & Swim (all in scope)
-All three traversal modes are **core mechanics**, with species mapped to each:
-- **Ground** (default): gallimimus, triceratops, velociraptor, carnotaurus, tyrannosaurus, oviraptor.
+All three traversal modes remain long-term core mechanics, with first-session proof focused on the current ground starter set:
+- **Starter ground set:** coelophysis, parasaurolophus, utahraptor, citipati.
+- **Broader staged roster / later proof:** other ground, flyer, semi-aquatic, and aquatic species remain in `SpeciesRoster`/`StagedMeshLibrary` but need per-species proof before they become release commitments.
 - **Flight** — add/enable a **flyer** (e.g. pterosaur): `Flight=true`, real airborne movement via BodyVelocity/AlignPosition, stamina-gated takeoff, altitude control. Fix `FlightService` so the unlock is actually granted (today it always returns `flight_locked`). NPC flyers must use the same real physics, not faux-Y float.
 - **Swim** — add/enable an **aquatic/semi-aquatic** species (e.g. spinosaurus): `Swim=true`, swim triggers on real Terrain-water bodies, with the **Oxygen/drowning** loop active. Unify `MaxOxygen` to one constant (currently 60 in config vs 100 in service).
 
@@ -102,7 +105,7 @@ Lift the `Constants.ScopeFreeze` ban on Flyers/Aquatics once these land, and upd
 ### 4.1 First-Session Journey (six beats)
 1. **Hatch** — egg cracks at NurseryGrove dawn, custom sky glowing; camera reveals a small, *animated* dinosaur.
 2. **First needs** — nibble real ferns, drink at a clear terrain pool; diegetic HUD teaches hunger/thirst.
-3. **Cross the threshold** — leave the grove into FernPlains; a herd scatters; the world reacts.
+3. **Cross the threshold** — leave the grove into FernPlains; a Parasaurolophus-led herd or ambient grazer group scatters; the world reacts.
 4. **First hunt/threat** — a predator call; threat indicator pulses; flee, hide, or (as carnivore) chase and feed.
 5. **Growth** — feed enough → visible stage-up, stats rise, ability unlocks; earned power.
 6. **The horizon** — distant ruined-city skyline over the boundary ring; the promise of the endgame. Loop hook.
@@ -124,7 +127,7 @@ Searches run through the Studio MCP. **✅** = strong category matches returned;
 
 | World need | Query used | Result | Action |
 |------------|-----------|--------|--------|
-| Rigged dinos (playable + NPC) | "rigged animated dinosaur" | ✅ dinosaur, creature, monster, npc | insert top-rated, strip scripts, keep rig |
+| Rigged dinos (playable + NPC) | "rigged animated dinosaur" | ✅ dinosaur, creature, monster, npc | insert top-rated, keep rig, review/adapt useful scripts |
 | Creature animations | "dinosaur creature animation pack walk run idle" | ✅ dinosaur, creature, npc, pack | fills empty AnimationIds (BR-02) |
 | Biome dressing | "low poly nature trees rocks environment pack" | ✅ tree, landscape, plant, rock, nature pack, forest, mountain | dress all biomes |
 | Food foliage | "low poly plants ferns bushes foliage food" | ✅ plants, rocks, vegetation, fern, flowers | herbivore food sources |
@@ -139,7 +142,9 @@ Searches run through the Studio MCP. **✅** = strong category matches returned;
 
 **Search-completeness note:** the catalog is now category-complete across creatures, terrain (canyon/jungle/volcano/meadow/swamp), food (foliage/berries/carcass/egg-nest), city, and VFX — all with confirmed Creator Store matches. **One open item:** dedicated **Audio/SFX** (Creator Store audio is a separate index, run at insert). "Overgrown-moss ruins" returned no distinct type but is covered by the rubble/vehicle/wall results.
 
-**Sourcing rule (locked):** insert → run `AssetImportAuditService:AuditAndRepair({mutate=true})` to strip/quarantine bundled scripts → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly` → keep mesh+rig only → behavior from our services. Verify free/commercial license before shipping.
+**Sourcing rule (locked):** insert → run `AssetImportAuditService:AuditAndRepair({mutate=true})` to inventory bundled scripts/sounds → tag `SourceAssetId`/`AssetManifestId`/`CreatorStoreOnly` → keep mesh/rig/VFX/audio and any reviewed dynamic script that can be adapted safely. Behavior must end under eggBreakers service/controller authority, not loose free-model authority. Verify free/commercial license before shipping.
+
+**Biome insertion rule:** searched/cataloged assets are not placed assets. A biome anchor is storyboard-ready only after it is inserted in edit mode, tagged, stripped/reviewed, scattered with `WorldDressingService:DressBiome` or `:DressBiomeVaried`, screenshot-proven in the intended biome, and saved/persisted in the place.
 
 ---
 
@@ -151,7 +156,7 @@ The 21 dino roots are **two very different tiers**:
 
 **Tier 2 — salvage rig only / mostly cut:** the loose free-models (`rex`, `Barosaurus`, `Stegoceratops` = 161 unions, `Ankylodocus` = 117 unions, `Carnotaurus`, `Indominus Rex`, etc.) are union/primitive builds of inconsistent quality. Keep a rig/animation reference at most; don't ship the geometry.
 
-**Scripts — strip 100%.** Behavior-script tally confirms pure free-model bloat: **`Cloak Script` ×298**, `HurtScript` ×119, `qPerfectionWeld` ×103, plus `RandomlyWalk`, `AttackPeople`, `Roar`, `Health`, `Respawn`, `ragdollDeath`, `BloodS`, `SoundScript`. All conflict with our server-authoritative engine and cause the buzzing + teleport. None ship.
+**Scripts — review, adapt, or strip.** Behavior-script tally confirms a lot of free-model bloat: **`Cloak Script` ×298**, `HurtScript` ×119, `qPerfectionWeld` ×103, plus `RandomlyWalk`, `AttackPeople`, `Roar`, `Health`, `Respawn`, `ragdollDeath`, `BloodS`, `SoundScript`. These cannot ship as uncontrolled Workspace behavior because they conflict with the server-authoritative engine and caused buzzing/teleport behavior. Useful scripts may ship only after source review, ownership assignment, sandbox/authority adaptation, and focused tests.
 
 **Salvage the animations.** The pack scripts/Animation objects reference **17 distinct dinosaur animation asset IDs** (walk/run/roar/attack/idle), e.g. `rbxassetid://2914393495`, `2914138808`, `2911668948`, `2914742341`, `2914158644`, `2914173919`. These are **reusable** — wire them into `SpeciesConfig.AnimationIds` + `NPCAnimationService` instead of authoring from scratch. (Validate each plays cleanly on our rigs; replace any low-quality ones with a dedicated animation-pack import.)
 
@@ -204,14 +209,14 @@ Each asset is chosen for a specific experiential job — **beautiful, simple, dy
 | Creature SFX (roar/bite/ambient) | Calls, combat, biome ambience | Sound = presence & tension | ◇ dedicated Audio search |
 | Custom HUD (in-house) | Survival stats, damage, threat | Legible, kid-friendly, beautiful | build (3D store has no UI) |
 
-**Standing rule for every insert:** beautiful (high-rated mesh), simple (readable silhouette), dynamic (animated/interactive where it lives), alive (creatures move, foliage sways), realistic (cohesive scale & material), awesome (landmark moments). Strip scripts + embedded sounds, tag, ground-place, audit.
+**Standing rule for every insert:** beautiful (high-rated mesh), simple (readable silhouette), dynamic (animated/interactive where it lives), alive (creatures move, foliage sways), realistic (cohesive scale & material), awesome (landmark moments). Review scripts and embedded sounds, strip/rewrite unsafe behavior, tag, ground-place, audit.
 
 ---
 
 ## 6. Existing-Asset & Script Audit (start-from-scratch inventory)
 
 **Cut from shipping build:**
-- JPOG dino rips (`Dino Pack!`, `rex`, loose Workspace dino models) — **mesh/rig salvageable, 744 legacy scripts must be stripped**.
+- JPOG dino rips (`Dino Pack!`, `rex`, loose Workspace dino models) — **mesh/rig salvageable; 744 legacy scripts must be reviewed, adapted, or stripped before any can ship**.
 - Primitive `Imported_Playable_*` block/union dino sets — replace with rigged imports.
 - Placeholder "ball"/square food & water Parts.
 - Invisible-helper trunk/canopy "trees".
@@ -221,9 +226,9 @@ Each asset is chosen for a specific experiential job — **beautiful, simple, dy
 - All server **services** (`NPCService`, `CombatService`, `SurvivalService`, etc.) — solid engine, keep.
 - `AssetImportAuditService` + quarantine — the cleanup tool.
 - The **test suite** — re-baseline as content lands.
-- New pack **meshes + rigs** — after script strip + tag.
+- New pack **meshes + rigs** — after script review/sanitization + tag.
 
-**Script policy:** zero imported executable Scripts in the shipping Workspace. Behavior is ours. Imported ModuleScripts only if audited + sandboxed.
+**Script policy:** imported executable scripts are allowed only when reviewed, tested, and integrated into eggBreakers-owned service/controller flows. Unreviewed scripts, autoplay sound scripts, random walkers, damage scripts, respawn scripts, and duplicate AI brains do not run loose in shipping Workspace.
 
 ---
 
