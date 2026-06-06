@@ -1032,3 +1032,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: use a Studio/control lane or headless place writer to persist the missing release-ready import batches into a `.rbxl`, clean validation leftovers, prove save/reopen, then rerun `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R069 — persisted release-gate audit correction — 2026-06-06
+
+Tests run: `lune run tools/g016_place_gate_audit.luau eggBreakers.rbxl eggBreakers2.rbxl eggBreakers3.rbxl eggBreakers4.rbxl`.
+
+Passed: the offline parser now reports a service-equivalent `gate*` lane that mirrors `AssetImportAuditService` roots (`ReplicatedStorage.ImportedAssetLibrary` and `Workspace.Map.ImportedAssets`) separately from the broader world/readability scan. Best persisted candidate `eggBreakers4.rbxl` still has `storiesLivePassed=13/15`, `liveE2E=true`, `mobileController=true`, `clientLiveControls=true`, `gateScriptObjectsFound=0`, `gateExecutableScriptObjectsFound=0`, `visibleDinosaurs=198`, and `visibleCarnivores=80`.
+
+Failed: no persisted `.rbxl` proves G016 complete. The corrected production-gate count for `eggBreakers4.rbxl` is `gateReleaseReadyVisibleAssets=35`, leaving a `465` gap to the 500 release-ready asset gate. The previous `49` count was only `broadWorldUniqueReleaseReadySourceIds`; it is useful placement/readability evidence, but it includes assets outside the current production audit roots and must not be used as the release count. `US14` and `US15` proof are absent, `FreshAllCategoryTestRunnerPassed` is absent, and `RBXLPersistencePassed` is absent. `eggBreakers3.rbxl` is worse for release because it still contains `gateExecutableScriptObjectsFound=453`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: persisted place files still do not match the higher historical live-import log counts and cannot prove the release asset gate.
+
+Root cause: the historical 233/500 import progress appears to have lived under live Studio state such as `Workspace.Map.ImportedAssets.G016Batch*`, while the persisted `.rbxl` candidates available to this repo audit only contain `ReplicatedStorage.ImportedAssetLibrary` as a counted service root.
+
+Patch applied: tightened `tools/g016_place_gate_audit.luau` to report service-equivalent gate counts, kept broad world counts as non-release supplementary evidence, and updated `docs/G016/PLACE_GATE_AUDIT.md` with the corrected release-gate table.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: either persist the missing Studio import batches under `Workspace.Map.ImportedAssets` or deliberately widen `AssetImportAuditService` with test coverage, then clean validation leftovers, prove save/reopen, and rerun `tools/g016_place_gate_audit.luau`.
