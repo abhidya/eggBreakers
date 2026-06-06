@@ -6,6 +6,8 @@ local ZoneConfig = require(ReplicatedStorage.Shared.ZoneConfig)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local SpeciesConfig = require(ReplicatedStorage.Shared.SpeciesConfig)
 local SwampDeltaStoryboard = require(ReplicatedStorage.Shared.SwampDeltaStoryboard)
+local StoryAssetPlacements = require(ReplicatedStorage.Shared.StoryAssetPlacements)
+local AssetManifest = require(ReplicatedStorage.Shared.AssetManifest)
 
 local MapLayoutService = {}
 MapLayoutService.MapFolderName = "Map"
@@ -250,6 +252,13 @@ local function lowerContains(value, token)
     return string.find(string.lower(value), string.lower(token), 1, true) ~= nil
 end
 
+local function nameMatchesFoodDiet(name, diet)
+    if diet == "Carnivore" then
+        return lowerContains(name, "carcass") or lowerContains(name, "meat") or lowerContains(name, "bone") or lowerContains(name, "fossil")
+    end
+    return lowerContains(name, "fern") or lowerContains(name, "plant") or lowerContains(name, "foliage") or lowerContains(name, "leaf")
+end
+
 function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
     if not (instance and (instance:IsA("Model") or instance:IsA("BasePart")) and hasVisibleBasePart(instance)) then
         return false
@@ -264,30 +273,63 @@ function MapLayoutService:IsFoodVisualTemplateCandidate(instance, kind, diet)
         return true
     end
 
-    local name = instance.Name
-    if diet == "Carnivore" then
-        return lowerContains(name, "carcass") or lowerContains(name, "meat") or lowerContains(name, "bone") or lowerContains(name, "fossil")
+    return nameMatchesFoodDiet(instance.Name, diet)
+end
+
+function MapLayoutService:GetImportedFoodVisualTemplateCandidates()
+    local library = ReplicatedStorage:FindFirstChild(self.ImportedAssetLibraryName)
+    if not library then return {} end
+
+    local cache = self._ImportedFoodVisualTemplateCache
+    if cache and cache.library == library then
+        return cache.candidates
     end
-    return lowerContains(name, "fern") or lowerContains(name, "plant") or lowerContains(name, "foliage") or lowerContains(name, "leaf")
+
+    local candidates = {}
+    for _, descendant in ipairs(library:GetDescendants()) do
+        if descendant:IsA("Model") or descendant:IsA("BasePart") then
+            if hasVisibleBasePart(descendant) and not self:HasOversizedFlatPanelFoodVisual(descendant) then
+                table.insert(candidates, {
+                    instance = descendant,
+                    foodKind = descendant:GetAttribute("FoodKind"),
+                    diet = descendant:GetAttribute("Diet"),
+                    explicitTemplate = descendant:GetAttribute("ImportedFoodVisualTemplate") == true
+                        or descendant:GetAttribute("FoodVisualTemplate") == true,
+                    name = descendant.Name,
+                })
+            end
+        end
+    end
+
+    self._ImportedFoodVisualTemplateCache = {
+        library = library,
+        candidates = candidates,
+    }
+    return candidates
+end
+
+local function foodVisualCandidateMatches(candidate, kind, diet)
+    if candidate.explicitTemplate then return true end
+    if kind ~= nil and candidate.foodKind == kind then return true end
+    if candidate.diet == diet then return true end
+    return nameMatchesFoodDiet(candidate.name, diet)
 end
 
 function MapLayoutService:ResolveImportedFoodVisualTemplate(queryPart, opts)
-    local library = ReplicatedStorage:FindFirstChild(self.ImportedAssetLibraryName)
-    if not library then return nil end
     opts = opts or {}
     local kind = opts.kind or queryPart:GetAttribute("FoodKind")
     local diet = opts.diet or queryPart:GetAttribute("Diet") or "Herbivore"
 
     local bestFallback = nil
-    for _, descendant in ipairs(library:GetDescendants()) do
-        if self:IsFoodVisualTemplateCandidate(descendant, kind, diet) then
-            if descendant:GetAttribute("FoodKind") == kind then
-                return descendant
+    for _, candidate in ipairs(self:GetImportedFoodVisualTemplateCandidates()) do
+        if foodVisualCandidateMatches(candidate, kind, diet) then
+            if kind ~= nil and candidate.foodKind == kind then
+                return candidate.instance
             end
-            if descendant:GetAttribute("Diet") == diet and not bestFallback then
-                bestFallback = descendant
+            if candidate.diet == diet and not bestFallback then
+                bestFallback = candidate.instance
             elseif not bestFallback then
-                bestFallback = descendant
+                bestFallback = candidate.instance
             end
         end
     end
@@ -1392,6 +1434,380 @@ function MapLayoutService:EnsureBiomeDressing(folders)
     return folders.BiomeDressing
 end
 
+local function hasVisibleStoryBasePart(instance)
+    if not instance then return false end
+    if instance:IsA("BasePart") and instance.Transparency < 1 then
+        return true
+    end
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") and descendant.Transparency < 1 then
+            return true
+        end
+    end
+    return false
+end
+
+local function firstBasePart(instance)
+    if not instance then return nil end
+    if instance:IsA("BasePart") then return instance end
+    return instance:FindFirstChildWhichIsA("BasePart", true)
+end
+
+local function isHelperPartName(name)
+    local lowerName = string.lower(name or "")
+    return lowerName == "rootpart"
+        or lowerName == "humanoidrootpart"
+        or string.find(lowerName, "hitbox", 1, true) ~= nil
+        or string.find(lowerName, "helper", 1, true) ~= nil
+        or string.find(lowerName, "collider", 1, true) ~= nil
+        or string.find(lowerName, "collision", 1, true) ~= nil
+        or string.find(lowerName, "bounds", 1, true) ~= nil
+        or string.find(lowerName, "bounding", 1, true) ~= nil
+end
+
+local function findBySlashPath(root, path)
+    local current = root
+    for token in string.gmatch(path or "", "[^/]+") do
+        if not current then return nil end
+        current = current:FindFirstChild(token)
+    end
+    return current
+end
+
+local StoryPlacementTagsToClear = {
+    "Damageable",
+    "FishSource",
+    "FoodSource",
+    "NPCSpawn",
+    "TreeProp",
+}
+
+local StoryPlacementGameplayAttributesToClear = {
+    "BrowseTier",
+    "CarnivoreFoodCandidate",
+    "CarnivoreFoodKind",
+    "CompactFoodGroup",
+    "Diet",
+    "EdibleVegetation",
+    "FishSource",
+    "FoodKind",
+    "FoodSourceCandidate",
+    "FoodWhenDefeated",
+    "MeatType",
+    "Nutrition",
+    "PlantPart",
+    "PotentialCarnivoreFood",
+    "PotentialHerbivoreFood",
+    "TreeBrowse",
+    "VegetationType",
+}
+
+local function clearStoryPlacementGameplayState(instance)
+    for _, tag in ipairs(StoryPlacementTagsToClear) do
+        if CollectionService:HasTag(instance, tag) then
+            CollectionService:RemoveTag(instance, tag)
+        end
+    end
+    for _, attributeName in ipairs(StoryPlacementGameplayAttributesToClear) do
+        instance:SetAttribute(attributeName, nil)
+    end
+end
+
+function MapLayoutService:GetStoryBeatRoot(folders, rootName, beatId, displayName)
+    local storyboards = self:GetOrCreateFolder(folders.Map, "Storyboards")
+    local root = self:GetOrCreateFolder(storyboards, rootName)
+    root:SetAttribute("StoryBeatId", beatId)
+    root:SetAttribute("DisplayName", displayName or rootName)
+    root:SetAttribute("SourceDocument", StoryAssetPlacements.SourceDocument)
+    root:SetAttribute("ValidationState", StoryAssetPlacements.ValidationState)
+    root:SetAttribute("NeedsPlayerAngleScreenshot", true)
+    root:SetAttribute("RequiredVerdict", StoryAssetPlacements.RequiredVerdict)
+    root:SetAttribute("LiveStoryAssetLayer", true)
+    return root
+end
+
+function MapLayoutService:EnsureStoryBeatRoots(folders)
+    local roots = {}
+    for _, rootSpec in ipairs(StoryAssetPlacements.BeatRoots) do
+        roots[rootSpec.name] = self:GetStoryBeatRoot(folders, rootSpec.name, rootSpec.id, rootSpec.displayName)
+    end
+    return roots
+end
+
+function MapLayoutService:GetStoryAssetTargetFolder(folders, spec)
+    local targetRoot = folders[spec.targetFolder] or self:GetOrCreateFolder(folders.Map, spec.targetFolder or "StoryAssets")
+    if spec.targetFolder == "BiomeDressing" then
+        return self:GetOrCreateFolder(targetRoot, spec.zone)
+    end
+    if spec.targetFolder == "Landmarks" and spec.landmarkFolder then
+        return self:GetOrCreateFolder(targetRoot, spec.landmarkFolder)
+    end
+    if spec.targetFolder == "Nests" or spec.targetFolder == "Fossils" then
+        return self:GetOrCreateFolder(targetRoot, spec.zone)
+    end
+    return targetRoot
+end
+
+function MapLayoutService:FindStoryAssetTemplate(spec)
+    local library = ReplicatedStorage:FindFirstChild(self.ImportedAssetLibraryName)
+    if not library then return nil end
+    for _, sourceName in ipairs(spec.sourceNames or {}) do
+        local source = string.find(sourceName, "/", 1, true) and findBySlashPath(library, sourceName)
+            or library:FindFirstChild(sourceName, true)
+        if source and (source:IsA("BasePart") or source:IsA("Model") or source:IsA("Folder")) and hasVisibleStoryBasePart(source) then
+            return source
+        end
+    end
+    return nil
+end
+
+function MapLayoutService:CloneStoryAssetSource(source)
+    if source:IsA("Folder") then
+        local wrapper = Instance.new("Model")
+        for _, child in ipairs(source:GetChildren()) do
+            child:Clone().Parent = wrapper
+        end
+        return wrapper
+    end
+    return source:Clone()
+end
+
+function MapLayoutService:GetStoryManifestEntry(sourceAssetId, assetManifestId)
+    if type(assetManifestId) == "string" and assetManifestId ~= "" then
+        local entry = AssetManifest.GetById(assetManifestId)
+        if entry then return entry end
+    end
+    if sourceAssetId ~= nil then
+        return AssetManifest.GetBySourceAssetId(sourceAssetId)
+    end
+    return nil
+end
+
+function MapLayoutService:ApplyStoryAssetMetadata(instance, spec, source, manifestEntry, sourceAssetId)
+    clearStoryPlacementGameplayState(instance)
+    local sourceName = source and source.Name or "procedural_story_fallback"
+    local manifestId = manifestEntry and manifestEntry.AssetId or nil
+    local manifestSourceId = manifestEntry and manifestEntry.SourceAssetId or tostring(sourceAssetId or spec.sourceAssetId or "")
+    local importedClaim = manifestEntry ~= nil
+
+    instance:SetAttribute("StoryBeatId", spec.beatId)
+    instance:SetAttribute("StoryboardSlot", spec.slot)
+    instance:SetAttribute("StoryboardSourceAssetId", tostring(spec.sourceAssetId or manifestSourceId))
+    instance:SetAttribute("StoryboardAssetName", spec.name)
+    instance:SetAttribute("StoryAssetSourceTemplate", sourceName)
+    instance:SetAttribute("StoryAssetCategory", spec.category)
+    instance:SetAttribute("StoryAssetPlacementState", StoryAssetPlacements.ValidationState)
+    instance:SetAttribute("LiveStoryAssetPlacement", true)
+    instance:SetAttribute("NeedsPlayerAngleScreenshot", true)
+    instance:SetAttribute("NeedsStudioAssetInspection", true)
+    instance:SetAttribute("ZoneId", spec.zone)
+    instance:SetAttribute("FloatingAllowed", true)
+    instance:SetAttribute("GroundTopY", self:GetGroundTopYForZone(spec.zone))
+
+    if source then
+        instance:SetAttribute("CreatorStoreOnly", true)
+        instance:SetAttribute("SourceAssetId", manifestSourceId)
+        instance:SetAttribute("ImportedVisibleAsset", importedClaim or nil)
+        instance:SetAttribute("AssetManifestId", manifestId)
+    else
+        instance:SetAttribute("CreatorStoreOnly", nil)
+        instance:SetAttribute("SourceAssetId", nil)
+        instance:SetAttribute("ImportedVisibleAsset", nil)
+        instance:SetAttribute("AssetManifestId", nil)
+        instance:SetAttribute("AssetBackedStoryboardProxy", true)
+    end
+end
+
+function MapLayoutService:SanitizeStoryAssetClone(clone, spec, source)
+    local sourceAssetId = source and source:GetAttribute("SourceAssetId") or spec.sourceAssetId
+    local assetManifestId = source and source:GetAttribute("AssetManifestId") or nil
+    local manifestEntry = self:GetStoryManifestEntry(sourceAssetId or spec.sourceAssetId, assetManifestId)
+
+    self:ApplyStoryAssetMetadata(clone, spec, source, manifestEntry, sourceAssetId or spec.sourceAssetId)
+    if clone:IsA("Model") and not clone.PrimaryPart then
+        clone.PrimaryPart = firstBasePart(clone)
+    end
+
+    for _, descendant in ipairs(clone:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            descendant:Destroy()
+        elseif descendant:IsA("ModuleScript") then
+            descendant:SetAttribute("ImportedScriptAudited", true)
+            descendant:SetAttribute("Sandboxed", true)
+        elseif descendant:IsA("BasePart") then
+            descendant.Anchored = true
+            descendant.CanCollide = spec.canCollide == true
+            descendant.CanTouch = false
+            descendant.CanQuery = false
+            if isHelperPartName(descendant.Name) then
+                descendant.Transparency = 1
+            end
+            self:ApplyStoryAssetMetadata(descendant, spec, source, manifestEntry, sourceAssetId or spec.sourceAssetId)
+        end
+    end
+end
+
+function MapLayoutService:ConfigureStoryFallbackPart(part, spec, role)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.Transparency = 0
+    part:SetAttribute("ProceduralGameplayVisual", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartAllowed", true)
+    part:SetAttribute("ReleaseVisibleGeneratedPartReason", "Server-authored storyboard fallback while Creator Store template placement awaits player-angle review.")
+    part:SetAttribute("VisibleGameplayAffordance", true)
+    part:SetAttribute("Decorative", true)
+    part:SetAttribute("FallbackStoryPartRole", role)
+    self:ApplyStoryAssetMetadata(part, spec, nil, nil, nil)
+end
+
+function MapLayoutService:CreateFallbackStoryAsset(spec)
+    local model = Instance.new("Model")
+    model.Name = spec.name
+    self:ApplyStoryAssetMetadata(model, spec, nil, nil, nil)
+
+    local fallback = spec.fallback or {}
+    local size = fallback.size or Vector3.new(8, 4, 8)
+    local color = fallback.color or Color3.fromRGB(120, 120, 120)
+    local material = fallback.material or Enum.Material.SmoothPlastic
+    local position = self:CompactPosition(spec.position)
+    local yaw = math.rad(spec.yawDegrees or 0)
+
+    local function addPart(name, shape, partSize, offset, role)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Shape = shape or Enum.PartType.Block
+        part.Size = partSize
+        part.Color = color
+        part.Material = material
+        part.CFrame = CFrame.new(position) * CFrame.Angles(0, yaw, 0) * CFrame.new(offset or Vector3.new())
+        part.Parent = model
+        self:ConfigureStoryFallbackPart(part, spec, role)
+        if not model.PrimaryPart then
+            model.PrimaryPart = part
+        end
+        return part
+    end
+
+    local kind = fallback.kind or "Block"
+    if kind == "Nest" then
+        addPart("NestBowl", Enum.PartType.Cylinder, Vector3.new(size.X, math.max(1, size.Y * 0.25), size.Z), Vector3.new(0, 0, 0), "nest")
+        local eggA = addPart("EggA", Enum.PartType.Ball, Vector3.new(3, 4, 3), Vector3.new(-2.5, 2.2, -1), "egg")
+        eggA.Color = Color3.fromRGB(238, 226, 190)
+        local eggB = addPart("EggB", Enum.PartType.Ball, Vector3.new(2.6, 3.5, 2.6), Vector3.new(2, 2, 1.5), "egg")
+        eggB.Color = Color3.fromRGB(229, 216, 184)
+    elseif kind == "Plant" then
+        addPart("FoliageCore", Enum.PartType.Ball, Vector3.new(size.X, size.Y, size.Z), Vector3.new(0, size.Y * 0.25, 0), "foliage")
+        addPart("FrondLeft", Enum.PartType.Block, Vector3.new(size.X * 0.18, 0.35, size.Z * 1.25), Vector3.new(-size.X * 0.22, size.Y * 0.48, 0), "frond")
+        addPart("FrondRight", Enum.PartType.Block, Vector3.new(size.X * 0.18, 0.35, size.Z * 1.25), Vector3.new(size.X * 0.22, size.Y * 0.4, 0), "frond")
+    elseif kind == "Bones" then
+        local spine = addPart("BoneSpine", Enum.PartType.Cylinder, Vector3.new(0.7, size.X, 0.7), Vector3.new(0, 0.9, 0), "bone")
+        spine.CFrame = spine.CFrame * CFrame.Angles(0, 0, math.rad(90))
+        addPart("RibCage", Enum.PartType.Block, Vector3.new(size.X * 0.55, size.Y, size.Z), Vector3.new(0, 1.6, 0), "rib")
+    elseif kind == "Lily" then
+        addPart("LilyPad", Enum.PartType.Cylinder, Vector3.new(size.X, math.max(0.25, size.Y), size.Z), Vector3.new(0, 0, 0), "lily")
+    elseif kind == "Log" then
+        local log = addPart("FallenLog", Enum.PartType.Cylinder, Vector3.new(size.Y, size.X, size.Z), Vector3.new(0, size.Y * 0.35, 0), "log")
+        log.CFrame = log.CFrame * CFrame.Angles(0, 0, math.rad(90))
+    elseif kind == "Silhouette" then
+        addPart("ApexWakeBody", Enum.PartType.Block, size, Vector3.new(0, size.Y * 0.32, 0), "silhouette")
+    elseif kind == "Car" then
+        addPart("WreckedCarBody", Enum.PartType.Block, size, Vector3.new(0, size.Y * 0.45, 0), "car")
+        addPart("WreckedCarHood", Enum.PartType.Block, Vector3.new(size.X * 0.45, size.Y * 0.55, size.Z * 0.8), Vector3.new(size.X * 0.42, size.Y * 0.48, 0), "car")
+    elseif kind == "Sign" then
+        addPart("RoadSignPost", Enum.PartType.Cylinder, Vector3.new(0.45, size.Y, 0.45), Vector3.new(0, size.Y * 0.45, 0), "sign")
+        addPart("RoadSignFace", Enum.PartType.Block, Vector3.new(size.X, size.Y * 0.42, 0.35), Vector3.new(0, size.Y * 0.84, 0), "sign")
+    elseif kind == "Arch" then
+        addPart("ArchLeft", Enum.PartType.Block, Vector3.new(size.X * 0.22, size.Y, size.Z), Vector3.new(-size.X * 0.38, size.Y * 0.42, 0), "arch")
+        addPart("ArchRight", Enum.PartType.Block, Vector3.new(size.X * 0.22, size.Y, size.Z), Vector3.new(size.X * 0.38, size.Y * 0.42, 0), "arch")
+        addPart("ArchTop", Enum.PartType.Block, Vector3.new(size.X, size.Y * 0.24, size.Z), Vector3.new(0, size.Y * 0.9, 0), "arch")
+    else
+        addPart("StoryFallbackBody", Enum.PartType.Block, size, Vector3.new(0, size.Y * 0.45, 0), "landmark")
+    end
+
+    return model
+end
+
+function MapLayoutService:PositionStoryAsset(asset, spec)
+    local position = self:CompactPosition(spec.position)
+    local yaw = math.rad(spec.yawDegrees or 0)
+    local cframe = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+
+    if spec.scale and asset:IsA("Model") then
+        pcall(function()
+            asset:ScaleTo(spec.scale)
+        end)
+    elseif spec.scale and asset:IsA("BasePart") then
+        asset.Size = asset.Size * spec.scale
+    end
+
+    if asset:IsA("Model") then
+        if not asset.PrimaryPart then
+            asset.PrimaryPart = firstBasePart(asset)
+        end
+        asset:PivotTo(cframe)
+    elseif asset:IsA("BasePart") then
+        asset.CFrame = cframe
+    end
+end
+
+function MapLayoutService:EnsureStoryAssetPlacements(folders)
+    folders = folders or self:EnsureMapFolders()
+    local beatRoots = self:EnsureStoryBeatRoots(folders)
+    local placed = 0
+    local imported = 0
+    local fallback = 0
+
+    for _, spec in ipairs(StoryAssetPlacements.Placements) do
+        local targetFolder = self:GetStoryAssetTargetFolder(folders, spec)
+        local existing = targetFolder:FindFirstChild(spec.name)
+        if existing then existing:Destroy() end
+
+        local source = self:FindStoryAssetTemplate(spec)
+        local asset
+        if source then
+            asset = self:CloneStoryAssetSource(source)
+            asset.Name = spec.name
+            self:SanitizeStoryAssetClone(asset, spec, source)
+            imported = imported + 1
+        else
+            asset = self:CreateFallbackStoryAsset(spec)
+            fallback = fallback + 1
+        end
+
+        self:PositionStoryAsset(asset, spec)
+        asset.Parent = targetFolder
+        if not CollectionService:HasTag(asset, "StoryAssetPlacement") then
+            CollectionService:AddTag(asset, "StoryAssetPlacement")
+        end
+
+        local beatRoot = beatRoots[spec.beatRoot] or self:GetStoryBeatRoot(folders, spec.beatRoot, spec.beatId, spec.beatRoot)
+        local links = self:GetOrCreateFolder(beatRoot, "PlacedAssets")
+        local link = links:FindFirstChild(spec.name)
+        if not link then
+            link = Instance.new("ObjectValue")
+            link.Name = spec.name
+            link.Parent = links
+        end
+        link.Value = asset
+        link:SetAttribute("StoryboardSlot", spec.slot)
+        link:SetAttribute("TargetFolder", targetFolder:GetFullName())
+
+        placed = placed + 1
+    end
+
+    folders.Map:SetAttribute("StoryAssetPlacementsBuilt", true)
+    folders.Map:SetAttribute("StoryAssetPlacementCount", placed)
+    folders.Map:SetAttribute("StoryAssetImportedTemplateCount", imported)
+    folders.Map:SetAttribute("StoryAssetFallbackProxyCount", fallback)
+    return {
+        placed = placed,
+        imported = imported,
+        fallback = fallback,
+    }
+end
+
 local function tryRequireFishService()
     local services = game:GetService("ServerScriptService"):FindFirstChild("Services")
     local module = services and services:FindFirstChild("FishService")
@@ -1736,6 +2152,7 @@ function MapLayoutService:EnsureSpawnSafety()
     self:EnsureFoodSources()
     self:EnsureBiomeDressing(folders)
     self:EnsureSwampDeltaStoryboard(folders)
+    self:EnsureStoryAssetPlacements(folders)
     self:EnsureNPCSpawnMarkers(folders)
     self:EnsureTutorialCombatTarget(folders)
     self:EnsureCityDiscoveryTriggers(folders)

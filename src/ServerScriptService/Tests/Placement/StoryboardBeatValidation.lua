@@ -7,6 +7,7 @@ local CharacterVisualService = require(ServerScriptService.Services.CharacterVis
 local NPCService = require(ServerScriptService.Services.NPCService)
 local NPCSpawnService = require(ServerScriptService.Services.NPCSpawnService)
 local StagedMeshLibrary = require(ReplicatedStorage.Shared.StagedMeshLibrary)
+local StoryAssetPlacements = require(ReplicatedStorage.Shared.StoryAssetPlacements)
 
 local suite = { name = "StoryboardBeatValidation.server", category = "Placement", tests = {} }
 
@@ -314,6 +315,69 @@ table.insert(suite.tests, { name = "Beats 1-2 prey and predator NPCs use MeshPar
     StagedMeshLibrary.StagingFolderName = oldStagingFolderName
     NPCService.NPCs = oldRecords
     if not ok then error(err) end
+end })
+
+table.insert(suite.tests, { name = "inventory storyboard placements materialize in live map folders", run = function()
+    local folders = MapLayoutService:EnsureMapFolders()
+    local result = MapLayoutService:EnsureStoryAssetPlacements(folders)
+
+    Assert.equals(result.placed, #StoryAssetPlacements.Placements, "all storyboard inventory placements are built")
+    Assert.truthy(result.placed >= 14, "story inventory covers nursery, jungle, swamp, redstone, city, and mountain")
+    Assert.equals(folders.Map:GetAttribute("StoryAssetPlacementsBuilt"), true, "map records story placement pass")
+
+    local storyboards = folders.Map:FindFirstChild("Storyboards")
+    Assert.notNil(storyboards, "storyboards folder exists")
+    for _, rootSpec in ipairs(StoryAssetPlacements.BeatRoots) do
+        local root = storyboards:FindFirstChild(rootSpec.name)
+        Assert.notNil(root, "story root exists: " .. rootSpec.name)
+        Assert.equals(root:GetAttribute("StoryBeatId"), rootSpec.id, rootSpec.name .. " story id recorded")
+        Assert.equals(root:GetAttribute("ValidationState"), StoryAssetPlacements.ValidationState, rootSpec.name .. " remains pending player-angle review")
+        Assert.equals(root:GetAttribute("RequiredVerdict"), StoryAssetPlacements.RequiredVerdict, rootSpec.name .. " required review verdict recorded")
+    end
+
+    local requiredTargets = {
+        Beat0_NurseryEggNest_A = true,
+        Beat4_JungleRuins_A = true,
+        Beat5_LilyPad_A = true,
+        Beat6_RedstoneFossilBones_A = true,
+        Beat7_OldEdenRuin_A = true,
+        Beat8_MountainNestEggs_A = true,
+    }
+    local foundRequired = {}
+    local visibleChecked = 0
+
+    for _, spec in ipairs(StoryAssetPlacements.Placements) do
+        local beatRoot = storyboards:FindFirstChild(spec.beatRoot)
+        local links = beatRoot and beatRoot:FindFirstChild("PlacedAssets")
+        local link = links and links:FindFirstChild(spec.name)
+        Assert.notNil(link, "story link exists: " .. spec.name)
+        local placed = link and link.Value
+        Assert.notNil(placed, "linked placement exists: " .. spec.name)
+        Assert.equals(placed:GetAttribute("LiveStoryAssetPlacement"), true, spec.name .. " is live story placement")
+        Assert.equals(placed:GetAttribute("StoryAssetPlacementState"), StoryAssetPlacements.ValidationState, spec.name .. " state recorded")
+        Assert.equals(placed:GetAttribute("NeedsPlayerAngleScreenshot"), true, spec.name .. " still needs screenshot")
+        Assert.equals(placed:GetAttribute("ZoneId"), spec.zone, spec.name .. " zone recorded")
+        Assert.equals(placed:GetAttribute("StoryboardSlot"), spec.slot, spec.name .. " slot recorded")
+        if requiredTargets[spec.name] then
+            foundRequired[spec.name] = true
+        end
+
+        for _, descendant in ipairs(placed:GetDescendants()) do
+            if descendant:IsA("BasePart") and descendant.Transparency < 1 then
+                visibleChecked = visibleChecked + 1
+                Assert.truthy(
+                    descendant:GetAttribute("CreatorStoreOnly") == true
+                        or descendant:GetAttribute("ReleaseVisibleGeneratedPartAllowed") == true,
+                    descendant:GetFullName() .. " is imported or approved fallback"
+                )
+            end
+        end
+    end
+
+    for name in pairs(requiredTargets) do
+        Assert.equals(foundRequired[name], true, "required storyboard placement exists: " .. name)
+    end
+    Assert.truthy(visibleChecked > 0, "story placements expose visible geometry")
 end })
 
 TestRunner.registerSuite(suite)
