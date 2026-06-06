@@ -1116,3 +1116,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: use `eggBreakers6.rbxl` as the persisted baseline, then add real authenticated Creator Store import batches or validated headless geometry fragments; clean and union candidates with the G016 tools; rerun `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R073 — historical persisted release-ready union — 2026-06-06
+
+Tests run: `git rev-list --objects --all | grep '\.rbxl$'`; extracted `38` historical `.rbxl` blobs to `/tmp/g016-history-rbxl`; `lune run tools/g016_release_ready_inventory.luau` across all historical blobs and `eggBreakers6.rbxl`; `lune run tools/g016_merge_release_ready_candidates.luau eggBreakers6.rbxl eggBreakers7.rbxl` with the `9` donor blobs that contained missing release-ready ids; `lune run tools/g016_clean_place_candidate.luau eggBreakers7.rbxl /tmp/eggBreakers7-cleancheck.rbxl`; `lune run tools/g016_place_gate_audit.luau eggBreakers6.rbxl eggBreakers7.rbxl`; `lune run tools/g016_release_ready_inventory.luau eggBreakers7.rbxl`.
+
+Passed: historical Git blob mining found `295` unique release-ready source ids across committed `.rbxl` history, including `225` ids not present in `eggBreakers6.rbxl`. The merge cloned those `225` real visible release-ready roots into `ReplicatedStorage.ImportedAssetLibrary.G016CandidateUnion`, skipped `249` duplicate donor roots, and kept the cleaner idempotent (`0` validation artifacts and `0` imported scripts removed). The new best persisted candidate reports `gateActuallyImportedAssets=313`, `gateAuditedImportedAssets=313`, `gateTaggedImportedAssets=313`, `gatePlacedVisibleAssets=311`, `gateReleaseReadyVisibleAssets=295`, `gateScriptObjectsFound=0`, `gateExecutableScriptObjectsFound=0`, `importedRuntimeScripts=0`, and `tempArtifactCount=0`.
+
+Failed: no persisted `.rbxl` proves G016 complete. `eggBreakers7.rbxl` only proves `295/500` release-ready visible imports, leaving a `205` gap. It still has `storiesLivePassed=13/15`, missing `US14` and `US15`; `FreshAllCategoryTestRunnerPassed=false`; `RBXLPersistencePassed=false`; and `finalG016Pass=false`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: the historical persisted union recovered all currently known release-ready source ids from Git-tracked `.rbxl` history, but the final release oracle still needs 205 more real release-ready visible imported assets plus fresh QA/persistence proof.
+
+Root cause: the headless lane can recover and union real geometry that already exists in committed place history, but it cannot manufacture the remaining release-ready Creator Store geometry. The remaining gap requires authenticated Studio/Open Cloud insertion, a validated headless asset-delivery writer, or another real model source that the visible-geometry gate can audit.
+
+Patch applied: generated `eggBreakers7.rbxl` from `eggBreakers6.rbxl` plus historical donor blobs and updated G016 status docs to make `295/500` the current persisted baseline.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: use `eggBreakers7.rbxl` as the persisted baseline, then add 205 more real authenticated Creator Store imports or validated headless geometry fragments; clean and union candidates with the G016 tools; rerun `tools/g016_place_gate_audit.luau`.
