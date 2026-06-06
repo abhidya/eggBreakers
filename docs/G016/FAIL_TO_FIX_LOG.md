@@ -1011,3 +1011,24 @@ Next action: continue over-insert batches toward 250.
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: import/tag/place/audit Batch045 and move US14 from `233/500` toward 500 while keeping `scriptObjectsFound=0` and performance green.
+
+## Run G016-R068 — persisted `.rbxl` gate audit — 2026-06-06
+
+Tests run: `lune run tools/g016_place_gate_audit.luau eggBreakers.rbxl eggBreakers2.rbxl eggBreakers3.rbxl eggBreakers4.rbxl`; `rojo build default.project.json --output /tmp/eggBreakers-g013-baseline.rbxl`; `git diff --check`.
+
+Passed: baseline Rojo source build passed; git whitespace check passed; the new offline place-gate audit successfully parsed all persisted `.rbxl` candidates and produced compact G016 gate evidence without Studio. Best persisted candidate `eggBreakers4.rbxl` has `storiesLivePassed=13/15`, `liveE2E=true`, `mobileController=true`, `clientLiveControls=true`, `importedRuntimeScripts=0`, `visibleDinosaurs=198`, and `visibleCarnivores=80`.
+
+Failed: no persisted `.rbxl` proves G016 complete. `eggBreakers4.rbxl` only has `uniqueReleaseReadySourceIds=49`, leaving a `451` gap to the 500 release-ready asset gate. `US14` and `US15` proof are absent, `FreshAllCategoryTestRunnerPassed` is absent, and `RBXLPersistencePassed` is absent. The persisted place still contains validation/test leftovers such as `FreshSlopProofShared_*`, `AlreadyUpright*`, `UpsideDown*`, and `TestImported*` roots, so it must not be signed off as release scenery.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: current committed place files do not match the higher historical live-import log counts and cannot prove the release asset gate.
+
+Root cause: previous import progress appears to have lived in active Studio/live-place state or later docs, while the persisted `.rbxl` candidates available to this repo audit only prove 49 unique release-ready source ids at best.
+
+Patch applied: added `tools/g016_place_gate_audit.luau` and `docs/G016/PLACE_GATE_AUDIT.md` so future import/save batches can be validated directly against persisted binary place evidence.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `uniqueReleaseReadySourceIds>=500`, `importedRuntimeScripts=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: use a Studio/control lane or headless place writer to persist the missing release-ready import batches into a `.rbxl`, clean validation leftovers, prove save/reopen, then rerun `tools/g016_place_gate_audit.luau`.
