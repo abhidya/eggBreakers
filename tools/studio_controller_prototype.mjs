@@ -13,6 +13,7 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 const DEFAULT_STUDIO = "/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio";
 const DEFAULT_MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP";
 const DEFAULT_WORK_DIR = path.join(REPO_ROOT, ".omx/studio-controller-prototype");
+const ROJO_PLUGIN_DEFAULT_PORT = 34872;
 const DEFAULT_ROJO_PORT = 34879;
 
 function usage() {
@@ -28,6 +29,8 @@ Commands:
   isolate-desktop
                 Activate Studio and move it into a macOS full-screen Space
   mcp-probe     Probe built-in StudioMCP tools and connected Studio sessions
+  rojo-port-diagnostics
+                Inspect worker/default Rojo ports and plugin-default risk
   rojo-sync-probe
                 Write a temporary Rojo source sentinel and verify Studio sync
   startup-blockers
@@ -319,6 +322,113 @@ socket.on("error", () => process.exit(1));
     sleep(250);
   }
   return false;
+}
+
+function readRojoServerInfo(port) {
+  const result = runSync("curl", [
+    "--silent",
+    "--show-error",
+    "--max-time",
+    "2",
+    `http://127.0.0.1:${Number(port)}/api/rojo`,
+  ]);
+  let parsed = null;
+  let parseError = null;
+  if (result.stdout) {
+    try {
+      parsed = JSON.parse(result.stdout);
+    } catch (err) {
+      parseError = err.message;
+    }
+  }
+  return {
+    ok: Boolean(result.status === 0 && parsed && typeof parsed === "object" && typeof parsed.projectName === "string"),
+    port: Number(port),
+    url: `http://127.0.0.1:${Number(port)}/api/rojo`,
+    status: result.status,
+    durationMs: result.durationMs,
+    serverVersion: parsed?.serverVersion || null,
+    protocolVersion: parsed?.protocolVersion || null,
+    projectName: parsed?.projectName || null,
+    sessionId: parsed?.sessionId || null,
+    rootInstanceId: parsed?.rootInstanceId || null,
+    expectedPlaceIds: parsed?.expectedPlaceIds ?? null,
+    unexpectedPlaceIds: parsed?.unexpectedPlaceIds ?? null,
+    parseError,
+    stderr: result.stderr,
+    stdoutSample: parsed ? undefined : result.stdout.slice(0, 500),
+  };
+}
+
+function processInfoForPort(port) {
+  const result = runSync("lsof", [
+    "-nP",
+    `-iTCP:${Number(port)}`,
+    "-sTCP:LISTEN",
+    "-t",
+  ]);
+  const pids = [...new Set(
+    result.stdout
+      .split(/\r?\n/)
+      .map((line) => Number(line.trim()))
+      .filter((pid) => Number.isFinite(pid) && pid > 0)
+  )];
+  const processes = listProcesses()
+    .filter((entry) => pids.includes(entry.pid))
+    .map((entry) => ({
+      pid: entry.pid,
+      ppid: entry.ppid,
+      cpuPercent: entry.cpuPercent,
+      memPercent: entry.memPercent,
+      rssMb: Math.round(entry.rssKb / 102.4) / 10,
+      command: entry.command.slice(0, 300),
+    }));
+  return {
+    ok: pids.length > 0,
+    port: Number(port),
+    pids,
+    processes,
+    status: result.status,
+    stderr: result.stderr,
+  };
+}
+
+function collectRojoPortDiagnostics(workerPort, manifest = {}) {
+  const workerRojoPid = manifest.processes?.rojo?.pid || null;
+  const ports = [...new Set([ROJO_PLUGIN_DEFAULT_PORT, Number(workerPort)].filter(Boolean))];
+  const checks = ports.map((port) => ({
+    port,
+    server: readRojoServerInfo(port),
+    listener: processInfoForPort(port),
+  }));
+  const defaultCheck = checks.find((check) => check.port === ROJO_PLUGIN_DEFAULT_PORT) || null;
+  const workerCheck = checks.find((check) => check.port === Number(workerPort)) || null;
+  const defaultOwnedByWorker = Boolean(workerRojoPid && defaultCheck?.listener?.pids?.includes(workerRojoPid));
+  const workerOwnedByWorker = Boolean(workerRojoPid && workerCheck?.listener?.pids?.includes(workerRojoPid));
+  let acceptanceRisk = null;
+  if (!workerCheck?.server?.ok) {
+    acceptanceRisk = "worker_rojo_server_not_ready";
+  } else if (Number(workerPort) !== ROJO_PLUGIN_DEFAULT_PORT && defaultCheck?.server?.ok && !defaultOwnedByWorker) {
+    acceptanceRisk = "rojo_plugin_default_port_occupied_by_non_worker_server";
+  } else if (Number(workerPort) !== ROJO_PLUGIN_DEFAULT_PORT) {
+    acceptanceRisk = "worker_rojo_port_is_not_plugin_default";
+  } else if (!workerOwnedByWorker) {
+    acceptanceRisk = "default_rojo_port_not_owned_by_worker";
+  }
+  return {
+    schema: "studio-controller-rojo-port-diagnostics/v1",
+    generatedAt: nowIso(),
+    pluginDefaultPort: ROJO_PLUGIN_DEFAULT_PORT,
+    workerPort: Number(workerPort),
+    workerRojoPid,
+    workerServerReady: Boolean(workerCheck?.server?.ok),
+    pluginDefaultCanReachWorker: Number(workerPort) === ROJO_PLUGIN_DEFAULT_PORT && defaultOwnedByWorker,
+    acceptanceRisk,
+    checks,
+    recommendation: acceptanceRisk
+      ? "Drive the Rojo Studio plugin to the worker-owned port or run the worker on the default port in a clean state before claiming Rojo acceptance."
+      : "Rojo default-port ownership matches the worker; a Studio plugin Connect action can be treated as worker-owned if the sentinel also syncs.",
+  };
 }
 
 export class StudioControllerPrototype {
@@ -667,6 +777,34 @@ print("STUDIO_CONTROLLER_PROTOTYPE_STATE " .. ${stateExpression})
     return probe;
   }
 
+  rojoPortDiagnostics() {
+    mkdirp(this.workDir);
+    const manifest = this.manifest();
+    const report = collectRojoPortDiagnostics(manifest.rojoPort || this.options.rojoPort, manifest);
+    const reportPath = path.join(this.workDir, "rojo-port-diagnostics.json");
+    writeJson(reportPath, report);
+    this.saveManifest({
+      lastRojoPortDiagnosticsPath: reportPath,
+      lastRojoPortDiagnostics: {
+        workerPort: report.workerPort,
+        pluginDefaultPort: report.pluginDefaultPort,
+        workerServerReady: report.workerServerReady,
+        pluginDefaultCanReachWorker: report.pluginDefaultCanReachWorker,
+        acceptanceRisk: report.acceptanceRisk,
+        reportPath,
+      },
+      events: [{
+        at: nowIso(),
+        type: "rojo-port-diagnostics",
+        workerPort: report.workerPort,
+        pluginDefaultPort: report.pluginDefaultPort,
+        acceptanceRisk: report.acceptanceRisk,
+        reportPath,
+      }],
+    });
+    return { ok: true, reportPath, report };
+  }
+
   executeMarkedLuau(source, marker) {
     const tools = this.callMcp("tools/list", {});
     const toolNames = mcpToolNames(tools);
@@ -711,6 +849,7 @@ print("STUDIO_CONTROLLER_PROTOTYPE_STATE " .. ${stateExpression})
     let cleanupError = null;
     let observed = null;
     let removed = null;
+    const portDiagnostics = this.rojoPortDiagnostics();
 
     const makeProbeLuau = () => `
 local HttpService = game:GetService("HttpService")
@@ -794,9 +933,18 @@ return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
       schema: "studio-controller-rojo-sync-probe/v1",
       generatedAt: nowIso(),
       ok: Boolean(observed && removed && !writeError && !cleanupError),
+      likelyFailureReason: inferRojoSyncFailureReason({
+        observed,
+        removed,
+        writeError,
+        cleanupError,
+        diagnostics: portDiagnostics.report,
+      }),
       projectPath,
       expectedPlace,
       rojoPort: manifest.rojoPort || this.options.rojoPort,
+      rojoPortDiagnosticsPath: portDiagnostics.reportPath,
+      rojoPortDiagnostics: portDiagnostics.report,
       sourcePath,
       sentinelName,
       token,
@@ -1592,6 +1740,15 @@ function summarizeMcpCall(result) {
   };
 }
 
+function inferRojoSyncFailureReason({ observed, removed, writeError, cleanupError, diagnostics }) {
+  if (writeError) return "sentinel_source_write_failed";
+  if (cleanupError) return "sentinel_source_cleanup_failed";
+  if (observed && !removed) return "sentinel_delete_did_not_sync";
+  if (observed && removed) return null;
+  if (diagnostics?.acceptanceRisk) return diagnostics.acceptanceRisk;
+  return "studio_rojo_plugin_not_connected_to_worker_server";
+}
+
 function detectStartupBlockersFromText(text) {
   const normalized = text.replace(/\s+/g, " ").toLowerCase();
   const rojoPort = extractLocalhostPort(text);
@@ -1670,6 +1827,7 @@ function main() {
     "select-studio": () => controller.selectStudioTarget(),
     "isolate-desktop": () => controller.isolateStudioDesktop(),
     "mcp-probe": () => controller.mcpProbe(),
+    "rojo-port-diagnostics": () => controller.rojoPortDiagnostics(),
     "rojo-sync-probe": () => controller.rojoSyncProbe(),
     "startup-blockers": () => controller.startupBlockers(),
     profile: () => controller.profile(),

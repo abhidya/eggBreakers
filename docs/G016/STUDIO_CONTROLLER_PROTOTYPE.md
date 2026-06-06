@@ -47,6 +47,7 @@ node tools/studio_controller_prototype.mjs start-studio
 node tools/studio_controller_prototype.mjs select-studio
 node tools/studio_controller_prototype.mjs isolate-desktop
 node tools/studio_controller_prototype.mjs mcp-probe
+node tools/studio_controller_prototype.mjs rojo-port-diagnostics
 node tools/studio_controller_prototype.mjs rojo-sync-probe
 node tools/studio_controller_prototype.mjs profile
 node tools/studio_controller_prototype.mjs close-studio
@@ -87,6 +88,7 @@ land.
 - MCP tool-list latency;
 - MCP `list_roblox_studios` / `set_active_studio` target selection;
 - MCP `execute_luau` or `run_code` round-trip and reached `game.Name`;
+- Rojo default-port vs worker-port ownership before claiming plugin sync;
 - worker-owned Studio pid, CPU, memory RSS, and MCP process count;
 - macOS Accessibility/System Events window visibility.
 - macOS full-screen Space isolation before screenshot/OCR capture.
@@ -202,6 +204,25 @@ Live scratch run on `prototype-place.rbxl`:
   it, and never observed a worker-owned `localhost:34915` prompt. This proves
   the current controller can launch, target, clear UI, profile, capture, and
   clean up, but cannot yet honestly claim worker-owned Rojo acceptance.
+- Live capture test
+  `.omx/studio-controller-live-test-20260606T060708Z/session-report.json`
+  launched the scratch place in a full-screen macOS Space, clicked
+  Auto-Recovery `Ignore`, dismissed the stale `localhost:34872` Rojo prompt,
+  reached `targetMatch: true`, profiled Studio at roughly `2432 MB` max RSS,
+  captured one clean viewport image, reported `uiBlockerCount: 0`, removed the
+  temporary Rojo sentinel source file, and closed only manifest-owned Studio
+  pid `88244` plus Rojo pid `88242`. The aggregate remained `ok: false` only
+  because the strict Rojo sentinel never appeared in Studio.
+- `rojo-port-diagnostics` now records both the Rojo plugin default port
+  `34872` and the worker-owned port before `rojo-sync-probe` writes a sentinel.
+  Live run
+  `.omx/studio-controller-live-diagnostics-20260606T061307Z/rojo-sync-probe.json`
+  reported `likelyFailureReason:
+  rojo_plugin_default_port_occupied_by_non_worker_server`: worker Rojo on
+  `34879` was healthy and owned by pid `3656`, but default `34872` was already
+  served by pre-existing pid `9660`. This pins the remaining work to coded Rojo
+  plugin port control or a clean default-port lease, not Studio launch,
+  screenshot isolation, MCP targeting, or cleanup.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or
@@ -214,7 +235,8 @@ Known Rojo gate: Rojo's Studio plugin starts a session from the plugin UI
 shows the reminder can be stale and tied to the old default `34872` server. The
 worker must either control the Rojo plugin state directly or launch in a clean
 Studio/plugin state where the worker-owned port prompt appears and the sentinel
-sync probe passes.
+sync probe passes. A non-worker default server on `34872` is now a first-class
+diagnostic blocker because Rojo's plugin defaults to `localhost:34872`.
 
 ## Next Absorb Step
 

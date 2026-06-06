@@ -93,6 +93,22 @@ Studio was targeted correctly, but only the stale `localhost:34872` Rojo prompt
 appeared; the worker-owned `34915` server never synced the sentinel. This is the
 remaining acceptance gap before Rojo can be treated as connected.
 
+Follow-up live testing on
+`.omx/studio-controller-live-test-20260606T060708Z` proved the launch and
+visual path again: Studio opened in a full-screen macOS Space, Auto-Recovery was
+ignored, the stale `localhost:34872` prompt was dismissed, MCP reached
+`prototype-place.rbxl`, the capture report had `uiBlockerCount: 0`, and the
+manifest-owned Studio/Rojo children were closed. The only failed step was strict
+Rojo sentinel sync.
+
+`tools/studio_controller_prototype.mjs rojo-port-diagnostics` now explains that
+failure before and during the sentinel probe. Live diagnostic run
+`.omx/studio-controller-live-diagnostics-20260606T061307Z` found worker Rojo on
+`34879` healthy and owned by the worker, but Rojo's plugin default port `34872`
+was already occupied by pre-existing pid `9660`. The next worker layer therefore
+needs coded Rojo plugin host/port control or a clean default-port lease; it
+should not simply click any visible Rojo prompt.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,
@@ -171,7 +187,8 @@ The next script should own Studio lifecycle:
    exact copy;
 3. move Studio into a full-screen macOS Space before visual evidence capture;
 4. wait for a unique MCP session token or port;
-5. connect Rojo only when the prompt port matches the worker manifest;
+5. connect Rojo only when the prompt port/default-port diagnostic matches the
+   worker manifest;
 6. prove Rojo sync with a temporary source sentinel add/delete;
 7. fail or quarantine the capture pass if startup/UI blockers remain visible;
 8. run import/capture/playtest batches;
