@@ -41,6 +41,8 @@ one importable `StudioControllerPrototype` class and a small CLI:
 ```sh
 node tools/studio_controller_prototype.mjs research
 node tools/studio_controller_prototype.mjs env
+node tools/studio_controller_prototype.mjs build-rojo-worker-plugin
+node tools/studio_controller_prototype.mjs remove-rojo-worker-plugin
 node tools/studio_controller_prototype.mjs build-place
 node tools/studio_controller_prototype.mjs start-rojo
 node tools/studio_controller_prototype.mjs start-studio
@@ -260,6 +262,16 @@ Live scratch run on `prototype-place.rbxl`:
   This makes menu-driven panel opening testable, but not enough to claim a
   deterministic connect action; the next viable branch is clean default-port
   acceptance or a session plugin bridge.
+- Worker-specific Rojo plugin branch: `build-rojo-worker-plugin` copies a local
+  `rojo-rbx/rojo` checkout, patches `Config.defaultPort`, gives the plugin a
+  unique `Codex Worker <port>` label, injects edit-mode auto-connect, and builds
+  `CodexRojoWorker-<port>.rbxm`. Build smoke
+  `.omx/studio-controller-rojo-worker-plugin-build/rojo-worker-plugin-build.json`
+  produced a `377263` byte plugin for port `34941`. Install/remove smoke
+  `.omx/studio-controller-rojo-worker-plugin-install-smoke/manifest.json`
+  copied `CodexRojoWorker-34942.rbxm` into
+  `~/Documents/Roblox/Plugins`, then removed exactly that manifest-owned file;
+  the local Plugins folder returned to only `MCPStudioPlugin.rbxm`.
 - Port lease smoke
   `.omx/studio-controller-port-lease-smoke/manifest.json` proved the normal
   non-default worker path still works: worker pid `17324` owned `34931`, then

@@ -138,6 +138,14 @@ plugin menu item `Plugins > Rojo 7.6.1 > Rojo`; it did not expose a native
 `Rojo: Connect` plugin action. The probe is now bounded to the Plugins menu with
 a 15s timeout because broad native menu enumeration can hang.
 
+The next viable branch is a worker-specific Rojo plugin build. The prototype can
+now copy a local `rojo-rbx/rojo` checkout, patch the plugin default port and
+label, inject edit-mode auto-connect, and build `CodexRojoWorker-<port>.rbxm`.
+It can also install and remove only that manifest-owned local plugin path. Smoke
+evidence in `.omx/studio-controller-rojo-worker-plugin-build` and
+`.omx/studio-controller-rojo-worker-plugin-install-smoke` proves the artifact
+builds and the install side effect is reversible without launching Studio.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,

@@ -22,6 +22,10 @@ function usage() {
 Commands:
   research       Print researched controller options and source links
   env           Probe local Studio/Rojo/MCP availability
+  build-rojo-worker-plugin
+                Build a worker-specific Rojo plugin from local Rojo source
+  remove-rojo-worker-plugin
+                Remove only the worker plugin path recorded in the manifest
   build-place   Build a scratch .rbxl via rojo build
   start-rojo    Start a worker-owned rojo serve and write a manifest
   start-studio  Launch Studio for a place and write a manifest
@@ -47,9 +51,11 @@ Options:
   --work-dir <dir>          Prototype work dir (default: ${DEFAULT_WORK_DIR})
   --place <path>            Place file path for start-studio/profile
   --project <path>          Rojo project file (default: default.project.json)
+  --rojo-source <dir>       Local rojo-rbx/rojo checkout for worker plugin patching
   --rojo-port <port>        Rojo port (default: ${DEFAULT_ROJO_PORT})
   --use-rojo-default-port   Use Rojo plugin default port ${ROJO_PLUGIN_DEFAULT_PORT}; fails if another
                             process owns that port
+  --install-local-plugin    For build-rojo-worker-plugin: copy plugin to local Studio Plugins folder
   --keep-open               Demo leaves Studio/Rojo running
   --wait-ms <ms>            Wait after launch before MCP/profile (default: 12000)
   --profile-ms <ms>         Resource sample duration (default: 8000)
@@ -84,8 +90,10 @@ function parseArgs(argv) {
     if (arg === "--work-dir") args.workDir = path.resolve(argv[++index] || usage());
     else if (arg === "--place") args.place = path.resolve(argv[++index] || usage());
     else if (arg === "--project") args.project = argv[++index] || usage();
+    else if (arg === "--rojo-source") args.rojoSource = path.resolve(argv[++index] || usage());
     else if (arg === "--rojo-port") args.rojoPort = Number(argv[++index] || usage());
     else if (arg === "--use-rojo-default-port") args.rojoPort = ROJO_PLUGIN_DEFAULT_PORT;
+    else if (arg === "--install-local-plugin") args.installLocalPlugin = true;
     else if (arg === "--keep-open") args.keepOpen = true;
     else if (arg === "--wait-ms") args.waitMs = Number(argv[++index] || usage());
     else if (arg === "--profile-ms") args.profileMs = Number(argv[++index] || usage());
@@ -119,7 +127,9 @@ export function createStudioControllerOptions(overrides = {}) {
     workDir: DEFAULT_WORK_DIR,
     place: null,
     project: "default.project.json",
+    rojoSource: null,
     rojoPort: DEFAULT_ROJO_PORT,
+    installLocalPlugin: false,
     keepOpen: false,
     waitMs: 12000,
     profileMs: 8000,
@@ -158,6 +168,10 @@ function sleep(ms) {
 
 function mkdirp(dir) {
   fs.mkdirSync(dir, { recursive: true });
+}
+
+function localStudioPluginsDir() {
+  return path.join(process.env.HOME || "", "Documents/Roblox/Plugins");
 }
 
 function readJsonIfExists(filePath) {
@@ -464,6 +478,25 @@ function waitForWorkerRojoPort(workerPort, workerPid, timeoutMs = 10000) {
   return { ok: false, diagnostics };
 }
 
+function copyRojoSourceForWorker(sourceDir, targetDir) {
+  fs.rmSync(targetDir, { recursive: true, force: true });
+  fs.cpSync(sourceDir, targetDir, {
+    recursive: true,
+    filter(sourcePath) {
+      const rel = path.relative(sourceDir, sourcePath);
+      return !rel.startsWith(".git") && rel !== "target";
+    },
+  });
+}
+
+function patchTextFile(filePath, patcher) {
+  const before = fs.readFileSync(filePath, "utf8");
+  const after = patcher(before);
+  if (before === after) return false;
+  fs.writeFileSync(filePath, after);
+  return true;
+}
+
 export class StudioControllerPrototype {
   constructor(options) {
     this.options = options;
@@ -568,6 +601,144 @@ export class StudioControllerPrototype {
       projectExists: fs.existsSync(path.resolve(REPO_ROOT, this.options.project)),
       relevantProcesses: studios,
     };
+  }
+
+  buildRojoWorkerPlugin() {
+    mkdirp(this.workDir);
+    const sourceDir = this.options.rojoSource
+      || process.env.ROJO_SOURCE_DIR
+      || "/tmp/rojo-src-CK7OR7/rojo";
+    const projectPath = path.join(sourceDir, "plugin.project.json");
+    if (!fs.existsSync(projectPath)) {
+      throw new Error(`Rojo source checkout with plugin.project.json not found: ${sourceDir}`);
+    }
+
+    const workerSourceDir = path.join(this.workDir, "rojo-worker-plugin-src");
+    const outputPath = path.join(this.workDir, `CodexRojoWorker-${this.options.rojoPort}.rbxm`);
+    copyRojoSourceForWorker(sourceDir, workerSourceDir);
+
+    const configPath = path.join(workerSourceDir, "plugin/src/Config.lua");
+    const appPath = path.join(workerSourceDir, "plugin/src/App/init.lua");
+    const configPatched = patchTextFile(configPath, (text) => {
+      let next = text.replace(/defaultPort = "\d+",/, `defaultPort = "${this.options.rojoPort}",`);
+      next = next.replace(
+        /defaultHost = "localhost",\n/,
+        `defaultHost = "localhost",\n\tworkerAutoConnect = true,\n\tworkerPluginLabel = "Codex Worker ${this.options.rojoPort}",\n`
+      );
+      return next;
+    });
+    const appPatched = patchTextFile(appPath, (text) => {
+      let next = text.replace(
+        /self:setState\(\{\n\t\tappStatus = AppStatus\.NotConnected,\n\t\tguiEnabled = false,\n\t\tconfirmData = \{\},/,
+        `self:setState({\n\t\tappStatus = AppStatus.NotConnected,\n\t\tguiEnabled = false,\n\t\tconfirmData = {},`
+      );
+      next = next.replace(
+        /if self:isAutoConnectPlaytestServerAvailable\(\) then\n\t\tself:useRunningConnectionInfo\(\)\n\t\tself:startSession\(\)\n\tend/,
+        `if Config.workerAutoConnect and RunService:IsEdit() then\n\t\ttask.defer(function()\n\t\t\tif self.serveSession == nil then\n\t\t\t\tself:startSession()\n\t\t\tend\n\t\tend)\n\telseif self:isAutoConnectPlaytestServerAvailable() then\n\t\tself:useRunningConnectionInfo()\n\t\tself:startSession()\n\tend`
+      );
+      next = next.replace(
+        /local pluginName = "Rojo " \.\. Version\.display\(Config\.version\)/,
+        `local pluginName = "Rojo " .. Version.display(Config.version) .. " " .. Config.workerPluginLabel`
+      );
+      return next;
+    });
+
+    const build = runSync("rojo", ["build", path.join(workerSourceDir, "plugin.project.json"), "-o", outputPath], {
+      cwd: workerSourceDir,
+      maxBuffer: 128 * 1024 * 1024,
+    });
+    const ok = build.status === 0 && fs.existsSync(outputPath);
+    let installedPath = null;
+    let install = null;
+    if (ok && this.options.installLocalPlugin) {
+      const pluginsDir = localStudioPluginsDir();
+      mkdirp(pluginsDir);
+      installedPath = path.join(pluginsDir, path.basename(outputPath));
+      fs.copyFileSync(outputPath, installedPath);
+      install = {
+        ok: fs.existsSync(installedPath),
+        pluginsDir,
+        installedPath,
+      };
+    }
+
+    const report = {
+      schema: "studio-controller-rojo-worker-plugin-build/v1",
+      generatedAt: nowIso(),
+      ok,
+      sourceDir,
+      workerSourceDir,
+      outputPath,
+      outputBytes: ok ? fs.statSync(outputPath).size : 0,
+      rojoPort: this.options.rojoPort,
+      patched: {
+        configPatched,
+        appPatched,
+        defaultPort: String(this.options.rojoPort),
+        autoConnect: true,
+        pluginLabel: `Codex Worker ${this.options.rojoPort}`,
+      },
+      build: {
+        status: build.status,
+        signal: build.signal,
+        durationMs: build.durationMs,
+        stdout: build.stdout.slice(0, 4000),
+        stderr: build.stderr.slice(0, 4000),
+        error: build.error,
+      },
+      install,
+    };
+    const reportPath = path.join(this.workDir, "rojo-worker-plugin-build.json");
+    writeJson(reportPath, report);
+    this.saveManifest({
+      rojoWorkerPlugin: {
+        sourceDir,
+        workerSourceDir,
+        outputPath,
+        installedPath,
+        reportPath,
+        port: this.options.rojoPort,
+        autoConnect: true,
+      },
+      events: [{
+        at: nowIso(),
+        type: "build-rojo-worker-plugin",
+        ok,
+        outputPath,
+        installedPath,
+        port: this.options.rojoPort,
+        reportPath,
+      }],
+    });
+    return { ok, reportPath, outputPath, installedPath, install, buildStatus: build.status };
+  }
+
+  removeRojoWorkerPlugin() {
+    const pluginInfo = this.manifest().rojoWorkerPlugin || {};
+    const installedPath = pluginInfo.installedPath;
+    if (!installedPath) return { ok: true, skipped: "No installed worker plugin path in manifest" };
+    const base = path.basename(installedPath);
+    if (!/^CodexRojoWorker-\d+\.rbxm$/.test(base)) {
+      return { ok: false, skipped: "Refusing to remove plugin path without CodexRojoWorker-* basename", installedPath };
+    }
+    const existedBefore = fs.existsSync(installedPath);
+    if (existedBefore) fs.rmSync(installedPath, { force: true });
+    const existsAfter = fs.existsSync(installedPath);
+    this.saveManifest({
+      rojoWorkerPlugin: {
+        ...pluginInfo,
+        removedAt: nowIso(),
+        existsAfterRemove: existsAfter,
+      },
+      events: [{
+        at: nowIso(),
+        type: "remove-rojo-worker-plugin",
+        installedPath,
+        existedBefore,
+        existsAfter,
+      }],
+    });
+    return { ok: !existsAfter, installedPath, existedBefore, existsAfter };
   }
 
   buildPlace() {
@@ -2056,6 +2227,8 @@ function main() {
   const commandMap = {
     research: () => controller.research(),
     env: () => controller.env(),
+    "build-rojo-worker-plugin": () => controller.buildRojoWorkerPlugin(),
+    "remove-rojo-worker-plugin": () => controller.removeRojoWorkerPlugin(),
     "build-place": () => controller.buildPlace(),
     "start-rojo": () => controller.startRojo(),
     "start-studio": () => controller.startStudio(),
