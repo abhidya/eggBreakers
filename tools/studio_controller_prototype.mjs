@@ -28,6 +28,8 @@ Commands:
   isolate-desktop
                 Activate Studio and move it into a macOS full-screen Space
   mcp-probe     Probe built-in StudioMCP tools and connected Studio sessions
+  rojo-sync-probe
+                Write a temporary Rojo source sentinel and verify Studio sync
   startup-blockers
                 OCR/AX probe for startup popups such as Auto-Recovery and Rojo connect
   profile       Sample accessibility, latency, CPU, and memory
@@ -58,6 +60,8 @@ Options:
   --capture-plan <path>     For session: capture plan passed to the capture wrapper
   --capture-out <dir>       For session: capture output dir
   --skip-capture            For session: skip screenshot batch
+  --rojo-sync-timeout-ms <ms>
+                            For rojo-sync-probe: wait for temporary source sync (default: 10000)
 `);
   process.exit(2);
 }
@@ -90,6 +94,7 @@ function parseArgs(argv) {
     else if (arg === "--capture-plan") args.capturePlan = path.resolve(argv[++index] || usage());
     else if (arg === "--capture-out") args.captureOut = path.resolve(argv[++index] || usage());
     else if (arg === "--skip-capture") args.skipCapture = true;
+    else if (arg === "--rojo-sync-timeout-ms") args.rojoSyncTimeoutMs = Number(argv[++index] || usage());
     else if (arg === "--help" || arg === "-h") usage();
     else {
       console.error(`unknown option: ${arg}`);
@@ -123,6 +128,7 @@ export function createStudioControllerOptions(overrides = {}) {
     capturePlan: null,
     captureOut: null,
     skipCapture: false,
+    rojoSyncTimeoutMs: 10000,
     ...overrides,
   };
 }
@@ -130,6 +136,7 @@ export function createStudioControllerOptions(overrides = {}) {
 function validateStudioControllerOptions(args) {
   if (!Number.isFinite(args.rojoPort) || args.rojoPort < 1) throw new Error("--rojo-port must be a positive number");
   if (!Number.isFinite(args.startupPasses) || args.startupPasses < 1) throw new Error("--startup-passes must be a positive number");
+  if (!Number.isFinite(args.rojoSyncTimeoutMs) || args.rojoSyncTimeoutMs < 1000) throw new Error("--rojo-sync-timeout-ms must be at least 1000");
 }
 
 function nowIso() {
@@ -660,6 +667,164 @@ print("STUDIO_CONTROLLER_PROTOTYPE_STATE " .. ${stateExpression})
     return probe;
   }
 
+  executeMarkedLuau(source, marker) {
+    const tools = this.callMcp("tools/list", {});
+    const toolNames = mcpToolNames(tools);
+    const luauTool = toolNames.includes("execute_luau") ? "execute_luau" : "run_code";
+    const result = luauTool === "execute_luau"
+      ? this.callMcp("execute_luau", { code: source, datamodel_type: "Edit" })
+      : this.callMcp("run_code", {}, { commandText: source });
+    const text = mcpText(result);
+    const line = text.split(/\r?\n/).find((candidate) => candidate.includes(marker));
+    let payload = null;
+    if (line) {
+      try {
+        payload = JSON.parse(line.slice(line.indexOf(marker) + marker.length));
+      } catch {
+        payload = null;
+      }
+    }
+    return {
+      ok: result.ok,
+      luauTool,
+      result: summarizeMcpCall(result),
+      payload,
+      markerFound: Boolean(line),
+    };
+  }
+
+  rojoSyncProbe() {
+    mkdirp(this.workDir);
+    const manifest = this.manifest();
+    const expectedPlace = this.options.expectedPlace || manifest.expectedPlace || null;
+    const projectPath = path.resolve(REPO_ROOT, this.options.project);
+    const sentinelName = `StudioControllerRojoSentinel_${Date.now()}`;
+    const token = `${sentinelName}_${Math.random().toString(36).slice(2)}`;
+    const sourceDir = path.join(REPO_ROOT, "src/ReplicatedStorage/Shared");
+    const sourcePath = path.join(sourceDir, `${sentinelName}.lua`);
+    const marker = "STUDIO_CONTROLLER_ROJO_SYNC ";
+    const timeoutMs = this.options.rojoSyncTimeoutMs;
+    const pollEveryMs = 500;
+    const probes = [];
+    const startedAt = performance.now();
+    let writeError = null;
+    let cleanupError = null;
+    let observed = null;
+    let removed = null;
+
+    const makeProbeLuau = () => `
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local target = shared and shared:FindFirstChild(${JSON.stringify(sentinelName)}) or nil
+local source = nil
+if target and target:IsA("ModuleScript") then
+	source = target.Source
+end
+local payload = {
+	schema = "studio-controller-rojo-sync-probe/v1",
+	expectedPlace = ${JSON.stringify(expectedPlace)},
+	placeName = game.Name,
+	name = ${JSON.stringify(sentinelName)},
+	exists = target ~= nil,
+	className = target and target.ClassName or nil,
+	sourceHasToken = source ~= nil and string.find(source, ${JSON.stringify(token)}, 1, true) ~= nil,
+}
+return ${JSON.stringify(marker)} .. HttpService:JSONEncode(payload)
+`;
+
+    try {
+      mkdirp(sourceDir);
+      fs.writeFileSync(sourcePath, `-- PROTOTYPE TEMP Rojo sync sentinel. Deleted by studio_controller_prototype.\nreturn { token = ${JSON.stringify(token)} }\n`);
+    } catch (err) {
+      writeError = err.message;
+    }
+
+    if (!writeError) {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const probe = this.executeMarkedLuau(makeProbeLuau(), marker);
+        probes.push({
+          tMs: Math.round(performance.now() - startedAt),
+          ok: probe.ok,
+          markerFound: probe.markerFound,
+          payload: probe.payload,
+          luauTool: probe.luauTool,
+        });
+        if (
+          probe.payload
+          && probe.payload.placeName === path.basename(expectedPlace || probe.payload.placeName)
+          && probe.payload.exists
+          && probe.payload.sourceHasToken
+        ) {
+          observed = probe.payload;
+          break;
+        }
+        sleep(pollEveryMs);
+      }
+    }
+
+    try {
+      if (fs.existsSync(sourcePath)) fs.rmSync(sourcePath, { force: true });
+    } catch (err) {
+      cleanupError = err.message;
+    }
+
+    if (observed) {
+      const deadline = Date.now() + Math.min(timeoutMs, 5000);
+      while (Date.now() < deadline) {
+        const probe = this.executeMarkedLuau(makeProbeLuau(), marker);
+        probes.push({
+          tMs: Math.round(performance.now() - startedAt),
+          ok: probe.ok,
+          markerFound: probe.markerFound,
+          payload: probe.payload,
+          luauTool: probe.luauTool,
+          phase: "delete-check",
+        });
+        if (probe.payload && probe.payload.exists === false) {
+          removed = probe.payload;
+          break;
+        }
+        sleep(pollEveryMs);
+      }
+    }
+
+    const report = {
+      schema: "studio-controller-rojo-sync-probe/v1",
+      generatedAt: nowIso(),
+      ok: Boolean(observed && removed && !writeError && !cleanupError),
+      projectPath,
+      expectedPlace,
+      rojoPort: manifest.rojoPort || this.options.rojoPort,
+      sourcePath,
+      sentinelName,
+      token,
+      timeoutMs,
+      durationMs: Math.round(performance.now() - startedAt),
+      writeError,
+      cleanupError,
+      observed,
+      removed,
+      probeCount: probes.length,
+      probes,
+    };
+    const reportPath = path.join(this.workDir, "rojo-sync-probe.json");
+    writeJson(reportPath, report);
+    this.saveManifest({
+      lastRojoSyncProbePath: reportPath,
+      lastRojoSyncProbe: {
+        ok: report.ok,
+        observed: Boolean(observed),
+        removed: Boolean(removed),
+        sourcePath,
+        reportPath,
+      },
+      events: [{ at: nowIso(), type: "rojo-sync-probe", ok: report.ok, observed: Boolean(observed), removed: Boolean(removed), reportPath }],
+    });
+    return { ok: report.ok, reportPath, observed: Boolean(observed), removed: Boolean(removed), durationMs: report.durationMs, report };
+  }
+
   activateStudio() {
     const script = `
 tell application "System Events"
@@ -1162,6 +1327,7 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
         this.options.isolateDesktop ? "isolate-desktop" : null,
         "startup-blockers",
         "mcp-probe",
+        "rojo-sync-probe",
         "profile",
         this.options.skipCapture ? null : "capture-batch",
         this.options.keepOpen ? null : "close-studio",
@@ -1255,6 +1421,7 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
       }
       addStep("startup-blockers", () => this.startupBlockers());
       addStep("mcp-probe", () => this.mcpProbe());
+      addStep("rojo-sync-probe", () => this.rojoSyncProbe());
       addStep("profile", () => this.profile());
       if (!this.options.skipCapture) {
         addStep("capture-batch", () => this.captureBatch());
@@ -1503,6 +1670,7 @@ function main() {
     "select-studio": () => controller.selectStudioTarget(),
     "isolate-desktop": () => controller.isolateStudioDesktop(),
     "mcp-probe": () => controller.mcpProbe(),
+    "rojo-sync-probe": () => controller.rojoSyncProbe(),
     "startup-blockers": () => controller.startupBlockers(),
     profile: () => controller.profile(),
     "close-studio": () => controller.closeStudio(),

@@ -47,6 +47,7 @@ node tools/studio_controller_prototype.mjs start-studio
 node tools/studio_controller_prototype.mjs select-studio
 node tools/studio_controller_prototype.mjs isolate-desktop
 node tools/studio_controller_prototype.mjs mcp-probe
+node tools/studio_controller_prototype.mjs rojo-sync-probe
 node tools/studio_controller_prototype.mjs profile
 node tools/studio_controller_prototype.mjs close-studio
 node tools/studio_controller_prototype.mjs session --dry-run
@@ -191,12 +192,29 @@ Live scratch run on `prototype-place.rbxl`:
 - `tools/studio_mcp_call.js` now waits for its `StudioMCP --stdio` child to
   exit; one-shot `tools/list` smoke returned 26 tools without increasing the
   StudioMCP process count.
+- `rojo-sync-probe` now writes a temporary ModuleScript under
+  `src/ReplicatedStorage/Shared`, polls Studio through MCP for that exact token,
+  removes the file, and records whether both add and delete synced.
+- Live strict Rojo sync run on scratch `prototype-place.rbxl` did **not** pass:
+  `.omx/studio-controller-rojo-sync-live-20260606T015748/rojo-sync-probe.json`
+  reached the correct DataModel, but the sentinel stayed absent for all six
+  polls. Startup OCR only saw the stale `localhost:34872` Rojo prompt, dismissed
+  it, and never observed a worker-owned `localhost:34915` prompt. This proves
+  the current controller can launch, target, clear UI, profile, capture, and
+  clean up, but cannot yet honestly claim worker-owned Rojo acceptance.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or
 explicitly accepted as evidence blockers before asset-family screenshots count.
 The capture wrapper is the final authority because it audits the image that will
 be used as evidence, not just the desktop preflight screenshot.
+
+Known Rojo gate: Rojo's Studio plugin starts a session from the plugin UI
+`Connect` action or from plugin auto-reconnect settings. Current live evidence
+shows the reminder can be stale and tied to the old default `34872` server. The
+worker must either control the Rojo plugin state directly or launch in a clean
+Studio/plugin state where the worker-owned port prompt appears and the sentinel
+sync probe passes.
 
 ## Next Absorb Step
 
@@ -207,5 +225,6 @@ If the prototype is accepted, absorb it into a non-prototype
 - explicit `list_roblox_studios` / `set_active_studio` target selection;
 - Mac full-screen Space isolation as a first-class capture precondition;
 - a worker session plugin for Rojo connect and scripted save;
+- strict Rojo sentinel add/delete sync proof after any claimed Connect action;
 - screenshot batch integration with `studio_worker_capture_batch.mjs`;
 - hard fail when accessibility, MCP target, or resource budget checks fail.

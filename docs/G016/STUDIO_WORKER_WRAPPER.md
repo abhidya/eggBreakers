@@ -84,6 +84,15 @@ cleanup sequence. A live scratch session passed on
 image with `uiBlockerCount: 0`, found zero temp artifacts, and closed the
 manifest-owned Studio and Rojo pids.
 
+The controller now also has a strict `rojo-sync-probe`. It creates a temporary
+Rojo-mapped ModuleScript after Studio is open, polls the active DataModel for
+that exact token through MCP, removes the file, and expects the deletion to sync
+back out of Studio. The first live strict probe
+`.omx/studio-controller-rojo-sync-live-20260606T015748` failed honestly:
+Studio was targeted correctly, but only the stale `localhost:34872` Rojo prompt
+appeared; the worker-owned `34915` server never synced the sentinel. This is the
+remaining acceptance gap before Rojo can be treated as connected.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,
@@ -163,10 +172,11 @@ The next script should own Studio lifecycle:
 3. move Studio into a full-screen macOS Space before visual evidence capture;
 4. wait for a unique MCP session token or port;
 5. connect Rojo only when the prompt port matches the worker manifest;
-6. fail or quarantine the capture pass if startup/UI blockers remain visible;
-7. run import/capture/playtest batches;
-8. save, close, reopen, and audit;
-9. kill only the Studio pid recorded in the worker manifest.
+6. prove Rojo sync with a temporary source sentinel add/delete;
+7. fail or quarantine the capture pass if startup/UI blockers remain visible;
+8. run import/capture/playtest batches;
+9. save, close, reopen, and audit;
+10. kill only the Studio pid recorded in the worker manifest.
 
 The asset/search MCP remains the asset discovery and inventory brain. The
 Studio MCP path here is only the controlled render, edit, screenshot, and
