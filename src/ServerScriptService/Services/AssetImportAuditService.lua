@@ -228,8 +228,12 @@ function AssetImportAuditService:IsImportedCandidate(instance)
 end
 
 function AssetImportAuditService:IsVisibleImportedAsset(instance)
-    if instance:GetAttribute("ImportedVisibleAsset") == true then return true end
-    if not instance:IsA("Model") and not instance:IsA("Folder") then return false end
+    if instance:IsA("BasePart") then
+        return instance.Transparency < 1
+    end
+    if not instance:IsA("Model") and not instance:IsA("Folder") then
+        return false
+    end
     for _, descendant in ipairs(instance:GetDescendants()) do
         if descendant:IsA("BasePart") and descendant.Transparency < 1 then
             return true
@@ -487,14 +491,14 @@ function AssetImportAuditService:AuditAndRepair(options)
 
 			addUnique(importedSourceIds, sourceAssetId)
 			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
-			if visible or rootInfo.placed then addUnique(placedSourceIds, sourceAssetId) end
+			if visible then addUnique(placedSourceIds, sourceAssetId) end
             if instance:GetAttribute("ScriptsAudited") == true
                 or rawScriptReviewQueued
                 or (entry and entry.ScriptsAudited == true and not scriptsPresent)
             then
                 addUnique(auditedSourceIds, sourceAssetId)
             end
-            if tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded then
+            if tagged and visible and not scriptsPresent and not qualityExcluded then
                 addUnique(releaseReadySourceIds, sourceAssetId)
             end
 
@@ -504,11 +508,11 @@ function AssetImportAuditService:AuditAndRepair(options)
                 sourceAssetId = sourceAssetId,
                 assetManifestId = instance:GetAttribute("AssetManifestId"),
                 tagged = tagged,
-                placed = visible or rootInfo.placed,
+                placed = visible,
                 scriptsPresent = scriptsPresent,
                 rawScriptReviewQueued = rawScriptReviewQueued,
                 qualityExclusionKind = qualityExclusionKind,
-                releaseReady = tagged and (visible or rootInfo.placed) and not scriptsPresent and not qualityExcluded,
+                releaseReady = tagged and visible and not scriptsPresent and not qualityExcluded,
             })
         end
     end
@@ -585,9 +589,9 @@ function AssetImportAuditService:ToMarkdown(result)
         "",
         "## Release Rule",
         "",
-        "Release validation fails unless imported, audited, tagged, placed, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, debug fallback visuals, low-quality/simple generated assets, and explicit mesh/LQ exclusions do not count as release-ready.",
+        "Release validation fails unless imported, audited, tagged, visibly materialized, quality-accepted, and release-ready live assets independently reach the required unique SourceAssetId target. Manifest/catalog rows, duplicate SourceAssetIds, empty headless markers, debug fallback visuals, low-quality/simple generated assets, and explicit mesh/LQ exclusions do not count as release-ready.",
         "",
-        "MeshPart policy: a properly-tagged import (SourceAssetId + AssetManifestId + CreatorStoreOnly + ImportedVisibleAsset) containing MeshParts is release-ready by default — genuine high-quality Creator Store mesh packs count toward the release gate. Only explicitly flagged assets (MeshExcludedAsset=true, AssetQualityExclusionKind='mesh') or junk-pattern names (food ball, glowing ball, rectangle/ball tree, placeholder, simple-generated, debug) are mesh-excluded. Low-quality/debug exclusions and explicit mesh exclusions are quarantined on mutate. Required playable visuals are never quarantined; non-mesh quality exclusions on required playable visuals need an explicit policy note.",
+        "MeshPart policy: a properly-tagged import (SourceAssetId + AssetManifestId + CreatorStoreOnly + visible BasePart geometry) containing MeshParts is release-ready by default — genuine high-quality Creator Store mesh packs count toward the release gate. Only explicitly flagged assets (MeshExcludedAsset=true, AssetQualityExclusionKind='mesh') or junk-pattern names (food ball, glowing ball, rectangle/ball tree, placeholder, simple-generated, debug) are mesh-excluded. Low-quality/debug exclusions and explicit mesh exclusions are quarantined on mutate. Required playable visuals are never quarantined; non-mesh quality exclusions on required playable visuals need an explicit policy note.",
     }
     return table.concat(lines, "\n") .. "\n"
 end

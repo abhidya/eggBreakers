@@ -20,20 +20,23 @@ The tool reports two asset-count lanes:
 - `gate*` counts only the roots used by `AssetImportAuditService`:
   `ReplicatedStorage.ImportedAssetLibrary` and `Workspace.Map.ImportedAssets`.
   This is the release gate count.
+- `gateReleaseReadyVisibleAssets` requires real visible `BasePart` geometry.
+  `ImportedVisibleAsset=true` or placement under `Workspace.Map.ImportedAssets`
+  is not enough when a headless marker/model has no visible parts.
 - `broadWorld*` scans broader world/import-like placement evidence. It is useful
   for readability and persistence triage, but it is not the release gate count.
 
 | Place | Stories live passed | Gate release-ready ids | Gate gap to 500 | Broad world ids | Gate executable scripts | Fresh all-category proof | RBXL persistence proof | Final G016 |
 | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
 | `eggBreakers.rbxl` | 0/15 | 0 | 500 | 0 | 0 | false | false | FAIL |
-| `eggBreakers2.rbxl` | 13/15 | 24 | 476 | 20 | 0 | false | false | FAIL |
-| `eggBreakers3.rbxl` | 13/15 | 30 | 470 | 32 | 453 | false | false | FAIL |
-| `eggBreakers4.rbxl` | 13/15 | 35 | 465 | 49 | 0 | false | false | FAIL |
+| `eggBreakers2.rbxl` | 13/15 | 23 | 477 | 20 | 0 | false | false | FAIL |
+| `eggBreakers3.rbxl` | 13/15 | 29 | 471 | 32 | 453 | false | false | FAIL |
+| `eggBreakers4.rbxl` | 13/15 | 34 | 466 | 49 | 0 | false | false | FAIL |
 
 ## Current Blockers
 
 - US14 and US15 live proof are absent in every persisted `.rbxl`.
-- `eggBreakers4.rbxl` only proves 35 unique release-ready source ids under the
+- `eggBreakers4.rbxl` only proves 34 unique release-ready source ids under the
   production audit roots, not the required 500. Its 49 broad-world ids are
   supplemental placement/readability evidence and must not be used as the
   release gate number.

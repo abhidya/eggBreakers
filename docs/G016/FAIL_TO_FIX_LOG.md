@@ -1053,3 +1053,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: either persist the missing Studio import batches under `Workspace.Map.ImportedAssets` or deliberately widen `AssetImportAuditService` with test coverage, then clean validation leftovers, prove save/reopen, and rerun `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R070 — visible-geometry release gate hardening — 2026-06-06
+
+Tests run: `lune run tools/g016_place_gate_audit.luau eggBreakers.rbxl eggBreakers2.rbxl eggBreakers3.rbxl eggBreakers4.rbxl`; `rojo build default.project.json --output /tmp/eggBreakers-g013-visible-release-gate.rbxl`; `git diff --check`.
+
+Passed: `AssetImportAuditService` and the offline persisted-place audit now require actual visible `BasePart` geometry before a source id can count as placed-visible or release-ready. Empty headless folders/models, `ImportedVisibleAsset=true` attributes, and `Workspace.Map.ImportedAssets` placement alone can still appear as imported audit evidence, but they no longer inflate `placedVisibleAssets` or `releaseReadyVisibleAssets`. A regression test covers the empty-marker case.
+
+Failed: no persisted `.rbxl` proves G016 complete. The stricter production-gate count for `eggBreakers4.rbxl` is `gateReleaseReadyVisibleAssets=34`, leaving a `466` gap to the 500 release-ready asset gate. `US14` and `US15` proof are absent, `FreshAllCategoryTestRunnerPassed` is absent, and `RBXLPersistencePassed` is absent. Direct unauthenticated public asset delivery returned `401 Authentication required`, and this Codex lane exposes asset-search planning but no Studio-control MCP, so real geometry insertion/save/reopen proof remains blocked here.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: the previous persisted count still let one non-visible marker/source earn release-ready credit through root placement or the `ImportedVisibleAsset` attribute.
+
+Root cause: the audit was too trusting of metadata and service-root placement. That would make the proposed headless Roblox file generation lane unsafe, because a writer could satisfy US14 with empty stamped markers instead of real Creator Store model geometry.
+
+Patch applied: tightened `AssetImportAuditService:IsVisibleImportedAsset`, release-ready counting, imported record placement flags, and `tools/g016_place_gate_audit.luau` to require visible geometry; documented the stricter persisted-place count.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: authenticate a Studio/Open Cloud/asset-delivery lane or expose a Studio MCP writer/screenshot validator, then insert real Creator Store geometry, save/reopen the `.rbxl`, and rerun `tools/g016_place_gate_audit.luau`.

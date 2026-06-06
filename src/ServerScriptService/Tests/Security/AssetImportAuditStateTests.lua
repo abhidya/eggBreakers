@@ -74,7 +74,7 @@ local function withImportedFixture(callback)
     runtimeScript.Name = "UnsafeImportedRuntime"
     runtimeScript.Parent = fixture
 
-    local ok, result = pcall(callback, fixture, library)
+    local ok, result = pcall(callback, fixture, library, testMapAssets)
 
     -- Cleanup test fixtures
     library:Destroy()
@@ -126,6 +126,35 @@ table.insert(suite.tests, { name = "reviewed adapted stamped executable scripts 
         Assert.equals(runtimeScript.Parent, fixture, "reviewed adapted stamped runtime script remains with imported asset")
         Assert.equals(runtimeScript:GetAttribute("ImportedScriptPreserved"), true, "preserved runtime script is stamped")
         Assert.truthy(result.counts.releaseReadyVisibleAssets >= 1, "reviewed adapted stamped script does not block release-ready count")
+    end)
+end })
+
+table.insert(suite.tests, { name = "empty placed import markers never count as release-ready visible assets", run = function()
+    withImportedFixture(function(_, _, testMapAssets)
+        Assert.notNil(testMapAssets, "test requires Workspace.Map.ImportedAssets fixture")
+
+        local emptyMarker = Instance.new("Folder")
+        emptyMarker.Name = "HeadlessEmptyImportMarker"
+        emptyMarker:SetAttribute("AssetManifestId", AssetManifest.Entries[2].AssetId)
+        emptyMarker:SetAttribute("SourceAssetId", AssetManifest.Entries[2].SourceAssetId)
+        emptyMarker:SetAttribute("CreatorStoreOnly", true)
+        emptyMarker:SetAttribute("ImportedVisibleAsset", true)
+        emptyMarker.Parent = testMapAssets
+
+        local result = AssetImportAuditService:AuditAndRepair({ mutate = true })
+        Assert.equals(result.counts.actuallyImportedAssets, 2, "empty marker is imported evidence but not visible proof")
+        Assert.equals(result.counts.placedVisibleAssets, 1, "empty marker does not inflate placed-visible count")
+        Assert.equals(result.counts.releaseReadyVisibleAssets, 1, "empty marker does not inflate release-ready count")
+
+        local markerRecord = nil
+        for _, record in ipairs(result.importedRecords) do
+            if record.path:find("HeadlessEmptyImportMarker", 1, true) then
+                markerRecord = record
+                break
+            end
+        end
+        Assert.notNil(markerRecord, "empty marker appears in audit records")
+        Assert.falsy(markerRecord.releaseReady, "empty marker record is not release-ready")
     end)
 end })
 

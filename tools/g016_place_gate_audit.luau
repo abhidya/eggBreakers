@@ -101,8 +101,8 @@ local function isBasePart(instance)
 end
 
 local function isVisibleImportedAsset(instance)
-	if attr(instance, "ImportedVisibleAsset") == true then
-		return true
+	if isBasePart(instance) then
+		return instance.Transparency < 1
 	end
 	if not instance:IsA("Model") and not instance:IsA("Folder") then
 		return false
@@ -382,18 +382,18 @@ local function serviceEquivalentAudit(dataModel)
 			local tagged = sourceAssetId ~= nil
 				and attr(instance, "AssetManifestId") ~= nil
 				and attr(instance, "CreatorStoreOnly") == true
-			local visibleOrPlaced = isVisibleImportedAsset(instance) or rootInfo.placed
+			local visible = isVisibleImportedAsset(instance)
 			local scriptsPresent, rawScriptReviewQueued = hasBlockingScript(instance)
 			local excluded = qualityExclusionKind(instance) ~= nil
 
 			addUnique(importedSourceIds, sourceAssetId)
 			if tagged then addUnique(taggedSourceIds, sourceAssetId) end
-			if visibleOrPlaced then addUnique(placedSourceIds, sourceAssetId) end
+			if visible then addUnique(placedSourceIds, sourceAssetId) end
 			if excluded then addUnique(qualityExcludedSourceIds, sourceAssetId) end
 			if attr(instance, "ScriptsAudited") == true or rawScriptReviewQueued then
 				addUnique(auditedSourceIds, sourceAssetId)
 			end
-			if tagged and visibleOrPlaced and not scriptsPresent and not excluded then
+			if tagged and visible and not scriptsPresent and not excluded then
 				addUnique(releaseReadySourceIds, sourceAssetId)
 				if #releaseReadySamples < 20 and sourceAssetId then
 					table.insert(releaseReadySamples, `{sourceAssetId}:{fullName(instance)}`)
