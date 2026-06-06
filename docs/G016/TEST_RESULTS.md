@@ -16,7 +16,7 @@ Known latest evidence from owner: hatch completes but post-hatch game loop fails
 | L005 owner-failure live probes | FAIL | required proof attrs absent: hatch live proof, >=10 visible dinos, >=2 carnivores, NPC active transitions, trees/food/water, action motion, growth scale | run fresh Studio live probes after worker lanes merge |
 | Mobile/controller proof | BLOCKED | no fresh device/emulator/controller proof in this lane | live mobile/controller smoke |
 | RBXL save/reopen persistence | BLOCKED | no fresh save/reopen proof | save/reopen audit |
-| 500 asset gate | FAIL | latest evidence 34/500 release-ready visible imports | T006 |
+| 500 asset gate | FAIL | latest persisted evidence `eggBreakers5.rbxl` has 58/500 release-ready visible imports, gap 442 | T006 |
 
 ## T005 Harness Status
 

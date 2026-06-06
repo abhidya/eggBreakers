@@ -15,5 +15,5 @@
 | US11 | Nesting | PASS | PASS | FAIL | FAIL | PASS | FAIL | yes | FAIL | nest proof incomplete | nesting E2E |
 | US12 | Death/respawn persistence | PASS | PASS | FAIL | FAIL | PASS | PASS | yes | FAIL | health 0 no death | T003 health-0 death |
 | US13 | Client UI/mobile controls | FAIL | FAIL | FAIL | FAIL | PASS | PASS | yes | FAIL | buttons do nothing | T004/T002/T003 button E2E |
-| US14 | Asset materialization honesty | PASS | FAIL | FAIL | BLOCKED_BY_TOOL | PASS | FAIL | yes | FAIL | 34/500 assets | T006 asset gate |
+| US14 | Asset materialization honesty | PASS | FAIL | FAIL | BLOCKED_BY_TOOL | PASS | FAIL | yes | FAIL | 58/500 assets in cleaned persisted candidate | T006 asset gate |
 | US15 | Fresh full QA gate | FIXING | FIXING | FAIL | FAIL | FAIL | FAIL | yes | FAIL | G016FinalGateSuite added; live proof attrs absent | G016FinalGateSuite live proof requirements |

@@ -1074,3 +1074,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: authenticate a Studio/Open Cloud/asset-delivery lane or expose a Studio MCP writer/screenshot validator, then insert real Creator Store geometry, save/reopen the `.rbxl`, and rerun `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R071 — cleaned persisted backup promotion — 2026-06-06
+
+Tests run: `lune run tools/g016_clean_place_candidate.luau eggBreakers2_old.rbxl eggBreakers5.rbxl`; `lune run tools/g016_place_gate_audit.luau eggBreakers5.rbxl`.
+
+Passed: converted the ignored local Studio backup `eggBreakers2_old.rbxl` into tracked candidate `eggBreakers5.rbxl` without generating fake assets. The cleaner removed `13` validation-only artifacts (`AlreadyUpright*`, `UpsideDown*`, and `G016ProofBoneCarcass`) plus one imported `ModuleScript` (`Workspace.Map.ImportedAssets.NurseryGrove.G025_Imported_EggNest_01.ReplicatedStorage.Module3D`). The cleaned place now reports `gateImportedRootLocations=ReplicatedStorage/ImportedAssetLibrary,Workspace/Map/ImportedAssets`, `gateActuallyImportedAssets=80`, `gateAuditedImportedAssets=80`, `gateTaggedImportedAssets=80`, `gatePlacedVisibleAssets=78`, `gateReleaseReadyVisibleAssets=58`, `gateScriptObjectsFound=0`, `gateExecutableScriptObjectsFound=0`, `importedRuntimeScripts=0`, and `tempArtifactCount=0`.
+
+Failed: no persisted `.rbxl` proves G016 complete. `eggBreakers5.rbxl` is the new best persisted candidate, but it only proves `58/500` release-ready visible imports, leaving a `442` gap. It still has `storiesLivePassed=13/15`, missing `US14` and `US15`; `FreshAllCategoryTestRunnerPassed=false`; `RBXLPersistencePassed=false`; and `finalG016Pass=false`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: the best available persisted place moved forward from `34/500` to `58/500`, but the final release oracle still needs 442 more real release-ready visible imported assets plus fresh QA/persistence proof.
+
+Root cause: previous real Studio imports were partially preserved in a local ignored backup rather than the tracked release candidates. Headless cleanup can promote and scrub that evidence, but it cannot create the missing real Creator Store geometry without an authenticated asset-delivery/Studio insertion lane.
+
+Patch applied: added `tools/g016_clean_place_candidate.luau`, generated `eggBreakers5.rbxl`, and updated G016 status docs to make `58/500` the current persisted baseline.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: use `eggBreakers5.rbxl` as the persisted baseline, then add real authenticated Creator Store import batches or validated headless geometry fragments; clean with `tools/g016_clean_place_candidate.luau`; rerun `tools/g016_place_gate_audit.luau`.

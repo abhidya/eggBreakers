@@ -5,15 +5,19 @@ Observed: 2026-06-06
 Tool:
 
 ```sh
-lune run tools/g016_place_gate_audit.luau eggBreakers.rbxl eggBreakers2.rbxl eggBreakers3.rbxl eggBreakers4.rbxl
+lune run tools/g016_place_gate_audit.luau eggBreakers.rbxl eggBreakers2.rbxl eggBreakers3.rbxl eggBreakers4.rbxl eggBreakers5.rbxl
 ```
 
 ## Result
 
 The persisted `.rbxl` files do not prove G016 complete. The best persisted
-candidate is `eggBreakers4.rbxl`: it has core live proof folders for US01-US13,
-no imported runtime scripts detected by the offline parser, and 12 visible NPCs
-in the root samples, but it still fails the final G016 release gate.
+candidate is `eggBreakers5.rbxl`: it was generated from the ignored local
+`eggBreakers2_old.rbxl` Studio backup with
+`tools/g016_clean_place_candidate.luau`, preserving real imported geometry while
+removing validation-only leftovers and imported scripts. It has core live proof
+folders for US01-US13, no imported scripts detected by the offline parser, and
+no temporary validation artifacts, but it still fails the final G016 release
+gate.
 
 The tool reports two asset-count lanes:
 
@@ -32,19 +36,21 @@ The tool reports two asset-count lanes:
 | `eggBreakers2.rbxl` | 13/15 | 23 | 477 | 20 | 0 | false | false | FAIL |
 | `eggBreakers3.rbxl` | 13/15 | 29 | 471 | 32 | 453 | false | false | FAIL |
 | `eggBreakers4.rbxl` | 13/15 | 34 | 466 | 49 | 0 | false | false | FAIL |
+| `eggBreakers5.rbxl` | 13/15 | 58 | 442 | 42 | 0 | false | false | FAIL |
 
 ## Current Blockers
 
 - US14 and US15 live proof are absent in every persisted `.rbxl`.
-- `eggBreakers4.rbxl` only proves 34 unique release-ready source ids under the
-  production audit roots, not the required 500. Its 49 broad-world ids are
+- `eggBreakers5.rbxl` only proves 58 unique release-ready source ids under the
+  production audit roots, not the required 500. Its 42 broad-world ids are
   supplemental placement/readability evidence and must not be used as the
   release gate number.
 - `FreshAllCategoryTestRunnerPassed` is absent.
 - `RBXLPersistencePassed` is absent.
-- `eggBreakers4.rbxl` still contains validation/test leftovers such as
+- Earlier persisted candidates still contain validation/test leftovers such as
   `FreshSlopProofShared_*`, `AlreadyUpright*`, `UpsideDown*`, and
-  `TestImported*` roots. These must not count as release scenery.
+  `TestImported*` roots. `eggBreakers5.rbxl` removes those from its source
+  backup and keeps `tempArtifactCount=0`.
 
 ## Next Action
 
