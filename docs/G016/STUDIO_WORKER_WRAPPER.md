@@ -70,6 +70,11 @@ can build a scratch place, start worker-owned Rojo, launch Studio, move Studio
 into a full-screen macOS Space, classify startup blockers from OCR, and close
 only manifest-owned processes.
 
+The capture wrapper now imports `StudioControllerPrototype` and uses its shared
+MCP adapter instead of duplicating the MCP subprocess transport. This is the
+first absorption step toward one host-side `StudioWorkerController` surface for
+lifecycle, target selection, Rojo, capture, profiling, and cleanup.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,

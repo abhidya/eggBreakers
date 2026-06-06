@@ -36,7 +36,7 @@ Sources:
 ## Prototype Command
 
 `tools/studio_controller_prototype.mjs` is intentionally disposable. It exposes
-one `StudioControllerPrototype` class and a small CLI:
+one importable `StudioControllerPrototype` class and a small CLI:
 
 ```sh
 node tools/studio_controller_prototype.mjs research
@@ -67,6 +67,12 @@ The demo writes:
 - `.omx/studio-controller-prototype/demo-report.json`
 - `.omx/studio-controller-prototype/rojo.log`
 - `.omx/studio-controller-prototype/studio.log`
+
+Other prototype scripts should import this class instead of creating their own
+MCP transport. `studio_worker_capture_batch.mjs` now uses the same controller
+for `tools/list`, Luau execution, and screenshot calls, so MCP target selection,
+timeouts, command fallback, and future persistent-client work have one place to
+land.
 
 ## What It Measures
 
@@ -166,6 +172,9 @@ Live scratch run on `prototype-place.rbxl`:
 - `studio_worker_capture_batch.mjs` now OCR-audits the actual saved screenshot
   and reports `uiBlockers`; a visible stale Rojo prompt produced
   `uiBlockerCount: 1` with `kind: "rojo_connect"` and `port: 34872`.
+- `StudioControllerPrototype` is now import-safe and provides the shared MCP
+  adapter used by `studio_worker_capture_batch.mjs`; importing it does not run
+  the CLI.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or

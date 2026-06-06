@@ -3,8 +3,12 @@
 import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+
+import {
+  StudioControllerPrototype,
+  createStudioControllerOptions,
+} from "./studio_controller_prototype.mjs";
 
 const DEFAULT_OUT_DIR = ".omx/studio-worker-captures";
 const DEFAULT_TEMP_PREFIXES = [
@@ -123,45 +127,10 @@ function safeName(value) {
   return text.slice(0, 96) || "capture";
 }
 
-function studioCall(toolName, args, commandText) {
-  let argsValue = JSON.stringify(args || {});
-  let tempDir = null;
-  if (toolName === "run_code" && commandText) {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "studio-worker-"));
-    const commandPath = path.join(tempDir, "command.luau");
-    fs.writeFileSync(commandPath, commandText);
-    argsValue = `@${commandPath}`;
-  }
-
-  const result = spawnSync(process.execPath, ["tools/studio_mcp_call.js", toolName, argsValue], {
-    cwd: process.cwd(),
-    env: { ...process.env, STUDIO_MCP_TIMEOUT_MS: process.env.STUDIO_MCP_TIMEOUT_MS || "45000" },
-    encoding: "utf8",
-    maxBuffer: 96 * 1024 * 1024,
-  });
-
-  if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`${toolName} failed with status ${result.status}\n${result.stderr}\n${result.stdout}`);
-  }
-  return JSON.parse(result.stdout);
-}
-
-function createMcpAdapter() {
-  const toolsResult = studioCall("tools/list", {});
-  const names = mcpToolNames(toolsResult);
-  return {
-    toolsResult,
-    toolNames: names,
-    luauTool: names.includes("execute_luau") ? "execute_luau" : "run_code",
-    captureTool: names.includes("screen_capture") ? "screen_capture" : "capture_screenshot",
-  };
-}
-
-function mcpToolNames(result) {
-  const tools = result.tools || [];
-  return Array.isArray(tools) ? tools.map((tool) => tool.name) : [];
+function createController(args) {
+  return new StudioControllerPrototype(createStudioControllerOptions({
+    expectedPlace: args.expectedPlace,
+  }));
 }
 
 function extractText(toolResult) {
@@ -322,8 +291,8 @@ function markedLuauEmit(mode, marker, expression) {
 function runLuau(adapter, label, source) {
   if (!source) return null;
   const result = adapter.luauTool === "execute_luau"
-    ? studioCall("execute_luau", { code: source, datamodel_type: "Edit" })
-    : studioCall("run_code", {}, source);
+    ? adapter.controller.requireMcp("execute_luau", { code: source, datamodel_type: "Edit" })
+    : adapter.controller.requireMcp("run_code", {}, { commandText: source });
   if (result.isError) {
     throw new Error(`${label} returned isError=true\n${extractText(result)}`);
   }
@@ -498,10 +467,10 @@ function captureScreenshot(adapter, index, capture) {
       args.camera_position = vector(capture.camera.position, "camera.position");
       args.look_at_position = vector(capture.camera.lookAt, "camera.lookAt");
     }
-    return studioCall("screen_capture", args);
+    return adapter.controller.requireMcp("screen_capture", args);
   }
 
-  return studioCall("capture_screenshot", {});
+  return adapter.controller.requireMcp("capture_screenshot", {});
 }
 
 function main() {
@@ -510,7 +479,8 @@ function main() {
   const outDir = path.resolve(args.outDir);
   fs.mkdirSync(outDir, { recursive: true });
 
-  const adapter = createMcpAdapter();
+  const controller = createController(args);
+  const adapter = controller.createMcpAdapter();
   const luauMode = adapter.luauTool === "execute_luau" ? "return" : "print";
   const state = runMarkedJson(
     adapter,

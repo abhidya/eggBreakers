@@ -7,9 +7,9 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_STUDIO = "/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio";
 const DEFAULT_MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP";
 const DEFAULT_WORK_DIR = path.join(REPO_ROOT, ".omx/studio-controller-prototype");
@@ -59,25 +59,9 @@ Options:
 
 function parseArgs(argv) {
   const command = argv[0] || usage();
-  const args = {
+  const args = createStudioControllerOptions({
     command,
-    workDir: DEFAULT_WORK_DIR,
-    place: null,
-    project: "default.project.json",
-    rojoPort: DEFAULT_ROJO_PORT,
-    keepOpen: false,
-    waitMs: 12000,
-    profileMs: 8000,
-    studioId: null,
-    expectedPlace: null,
-    screenshot: null,
-    textFixture: null,
-    isolateDesktop: false,
-    startupPasses: 1,
-    dismissStartupBlockers: false,
-    connectRojo: false,
-    dismissStaleRojo: false,
-  };
+  });
 
   for (let index = 1; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -103,9 +87,36 @@ function parseArgs(argv) {
       usage();
     }
   }
+  validateStudioControllerOptions(args);
+  return args;
+}
+
+export function createStudioControllerOptions(overrides = {}) {
+  return {
+    command: "env",
+    workDir: DEFAULT_WORK_DIR,
+    place: null,
+    project: "default.project.json",
+    rojoPort: DEFAULT_ROJO_PORT,
+    keepOpen: false,
+    waitMs: 12000,
+    profileMs: 8000,
+    studioId: null,
+    expectedPlace: null,
+    screenshot: null,
+    textFixture: null,
+    isolateDesktop: false,
+    startupPasses: 1,
+    dismissStartupBlockers: false,
+    connectRojo: false,
+    dismissStaleRojo: false,
+    ...overrides,
+  };
+}
+
+function validateStudioControllerOptions(args) {
   if (!Number.isFinite(args.rojoPort) || args.rojoPort < 1) throw new Error("--rojo-port must be a positive number");
   if (!Number.isFinite(args.startupPasses) || args.startupPasses < 1) throw new Error("--startup-passes must be a positive number");
-  return args;
 }
 
 function nowIso() {
@@ -279,7 +290,7 @@ socket.on("error", () => process.exit(1));
   return false;
 }
 
-class StudioControllerPrototype {
+export class StudioControllerPrototype {
   constructor(options) {
     this.options = options;
     this.workDir = options.workDir;
@@ -448,14 +459,24 @@ class StudioControllerPrototype {
     return { ok: true, pid: child.pid, placePath, logPath, manifestPath: this.manifestPath, manifest: updated };
   }
 
-  callMcp(toolName, args = {}) {
+  callMcp(toolName, args = {}, options = {}) {
     const start = performance.now();
-    const result = spawnSync(process.execPath, ["tools/studio_mcp_call.js", toolName, JSON.stringify(args)], {
+    let argsValue = JSON.stringify(args || {});
+    let tempDir = null;
+    if (toolName === "run_code" && options.commandText) {
+      mkdirp(this.workDir);
+      tempDir = fs.mkdtempSync(path.join(this.workDir, "mcp-run-code-"));
+      const commandPath = path.join(tempDir, "command.luau");
+      fs.writeFileSync(commandPath, options.commandText);
+      argsValue = `@${commandPath}`;
+    }
+    const result = spawnSync(process.execPath, ["tools/studio_mcp_call.js", toolName, argsValue], {
       cwd: REPO_ROOT,
       env: { ...process.env, STUDIO_MCP_COMMAND: this.mcpPath, STUDIO_MCP_TIMEOUT_MS: process.env.STUDIO_MCP_TIMEOUT_MS || "45000" },
       encoding: "utf8",
       maxBuffer: 128 * 1024 * 1024,
     });
+    if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
     const durationMs = Math.round(performance.now() - start);
     let parsed = null;
     try {
@@ -473,6 +494,27 @@ class StudioControllerPrototype {
       stdout: parsed ? undefined : result.stdout,
       stderr: result.stderr,
       error: result.error ? result.error.message : null,
+    };
+  }
+
+  requireMcp(toolName, args = {}, options = {}) {
+    const result = this.callMcp(toolName, args, options);
+    if (!result.ok) {
+      throw new Error(`${toolName} failed with status ${result.status}\n${result.stderr}\n${result.stdout || ""}`);
+    }
+    return result.parsed;
+  }
+
+  createMcpAdapter() {
+    const toolsCall = this.callMcp("tools/list", {});
+    const names = mcpToolNames(toolsCall);
+    return {
+      controller: this,
+      toolsCall,
+      toolsResult: toolsCall.parsed,
+      toolNames: names,
+      luauTool: names.includes("execute_luau") ? "execute_luau" : "run_code",
+      captureTool: names.includes("screen_capture") ? "screen_capture" : "capture_screenshot",
     };
   }
 
@@ -1276,4 +1318,6 @@ function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
