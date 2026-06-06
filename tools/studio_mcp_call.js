@@ -22,8 +22,11 @@ if (toolName === "run_code" && argsJson.startsWith("@")) {
   }
 }
 
+const BUILT_IN_STUDIO_MCP = "/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP";
+const RUST_STUDIO_MCP = "/Users/abdulrehmanbhidya/Downloads/roblox-studio-rust-mcp-server/target/release/rbx-studio-mcp";
 const command = process.env.STUDIO_MCP_COMMAND
-  || "/Users/abdulrehmanbhidya/Downloads/roblox-studio-rust-mcp-server/target/release/rbx-studio-mcp";
+  || (fs.existsSync(BUILT_IN_STUDIO_MCP) ? BUILT_IN_STUDIO_MCP : RUST_STUDIO_MCP);
+const requestTimeoutMs = Number(process.env.STUDIO_MCP_TIMEOUT_MS || 45000);
 
 const child = spawn(command, ["--stdio"], {
   stdio: ["pipe", "pipe", "pipe"],
@@ -41,13 +44,13 @@ function request(method, params) {
   const id = nextId++;
   send({ jsonrpc: "2.0", id, method, params });
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (pending.has(id)) {
         pending.delete(id);
         reject(new Error(`timeout waiting for ${method}`));
       }
-    }, 30000);
+    }, Number.isFinite(requestTimeoutMs) && requestTimeoutMs > 0 ? requestTimeoutMs : 45000);
+    pending.set(id, { resolve, reject, timer });
   });
 }
 
@@ -68,8 +71,9 @@ function parseMessages() {
     }
 
     if (message.id != null && pending.has(message.id)) {
-      const { resolve, reject } = pending.get(message.id);
+      const { resolve, reject, timer } = pending.get(message.id);
       pending.delete(message.id);
+      clearTimeout(timer);
       if (message.error) reject(new Error(JSON.stringify(message.error)));
       else resolve(message.result);
     }

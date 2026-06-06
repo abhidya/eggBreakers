@@ -24,10 +24,11 @@ The practical design is:
 3. Move worker-owned Studio into a full-screen macOS Space before screenshot/OCR.
 4. Gate every MCP action on `game.Name`.
 5. Gate Rojo prompt clicks on the worker-owned `localhost:<port>`.
-6. Batch scripted camera moves and screenshot captures.
-7. Save screenshots plus a machine-readable report.
-8. Audit temporary validation names before ending the pass.
-9. Save/reopen and run the offline place gate before claiming release credit.
+6. Clear or record startup/UI blockers before asset-family screenshots.
+7. Batch scripted camera moves and screenshot captures.
+8. Save screenshots plus a machine-readable report.
+9. Audit temporary validation names before ending the pass.
+10. Save/reopen and run the offline place gate before claiming release credit.
 
 References:
 
@@ -37,18 +38,22 @@ References:
 
 ## Wrapper
 
-`tools/studio_worker_capture_batch.mjs` wraps the current StudioMCP tools into a
-single capture batch. It uses `run_code` to query the active DataModel and
-refuses to capture if the MCP command lands in the wrong place.
+`tools/studio_worker_capture_batch.mjs` wraps StudioMCP tools into a single
+capture batch. It supports the built-in Studio MCP tools
+(`execute_luau`/`screen_capture`) and the older Rust MCP names
+(`run_code`/`capture_screenshot`). It queries the active DataModel and refuses
+to capture if the MCP command lands in the wrong place.
 
 Current capabilities:
 
 - active-place gate with `game.Name`;
+- MCP adapter report naming the Luau and screenshot tools used;
 - local Studio process summary for stale-target diagnosis;
 - optional scripted camera pose per capture;
 - optional `beforeLuau` and `afterLuau` per capture for clean-spot setup and
   teardown;
-- sequential `capture_screenshot` calls written as JPEG/PNG files;
+- sequential `screen_capture` or `capture_screenshot` calls written as JPEG/PNG
+  files;
 - `capture-report.json` with hashes, byte counts, camera poses, Studio state,
   process summary, and temp artifact count;
 - temp-prefix audit for names such as `G016CleanSpot_`, `Preview_`, and
@@ -62,6 +67,11 @@ stale DataModel problem found in `STUDIO_BATCH_IMPORT_QUEUE.md`.
 can build a scratch place, start worker-owned Rojo, launch Studio, move Studio
 into a full-screen macOS Space, classify startup blockers from OCR, and close
 only manifest-owned processes.
+
+Important capture finding: built-in `screen_capture` captures the Studio
+viewport surface, but visible Studio overlays can still appear in the image. The
+controller's startup-blocker pass must run before the asset-family capture pass,
+and any remaining stale prompt is a blocker in the capture report.
 
 ## Commands
 
@@ -133,9 +143,10 @@ The next script should own Studio lifecycle:
 3. move Studio into a full-screen macOS Space before visual evidence capture;
 4. wait for a unique MCP session token or port;
 5. connect Rojo only when the prompt port matches the worker manifest;
-6. run import/capture/playtest batches;
-7. save, close, reopen, and audit;
-8. kill only the Studio pid recorded in the worker manifest.
+6. fail or quarantine the capture pass if startup/UI blockers remain visible;
+7. run import/capture/playtest batches;
+8. save, close, reopen, and audit;
+9. kill only the Studio pid recorded in the worker manifest.
 
 Until the MCP server/plugin can identify the polling DataModel, forced apply
 runs remain blocked when multiple Studio sessions are open.

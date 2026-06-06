@@ -24,6 +24,7 @@ Commands:
   build-place   Build a scratch .rbxl via rojo build
   start-rojo    Start a worker-owned rojo serve and write a manifest
   start-studio  Launch Studio for a place and write a manifest
+  select-studio Select the intended Studio instance via built-in MCP
   isolate-desktop
                 Activate Studio and move it into a macOS full-screen Space
   mcp-probe     Probe built-in StudioMCP tools and connected Studio sessions
@@ -42,6 +43,7 @@ Options:
   --keep-open               Demo leaves Studio/Rojo running
   --wait-ms <ms>            Wait after launch before MCP/profile (default: 12000)
   --profile-ms <ms>         Resource sample duration (default: 8000)
+  --studio-id <id>          Studio MCP id to select explicitly
   --expected-place <name>   Expected Studio game.Name / place basename
   --screenshot <path>       Existing screenshot for startup-blocker OCR test
   --text-fixture <path>     Existing text fixture for startup-blocker classifier test
@@ -64,6 +66,7 @@ function parseArgs(argv) {
     keepOpen: false,
     waitMs: 12000,
     profileMs: 8000,
+    studioId: null,
     expectedPlace: null,
     screenshot: null,
     textFixture: null,
@@ -81,6 +84,7 @@ function parseArgs(argv) {
     else if (arg === "--keep-open") args.keepOpen = true;
     else if (arg === "--wait-ms") args.waitMs = Number(argv[++index] || usage());
     else if (arg === "--profile-ms") args.profileMs = Number(argv[++index] || usage());
+    else if (arg === "--studio-id") args.studioId = argv[++index] || usage();
     else if (arg === "--expected-place") args.expectedPlace = argv[++index] || usage();
     else if (arg === "--screenshot") args.screenshot = path.resolve(argv[++index] || usage());
     else if (arg === "--text-fixture") args.textFixture = path.resolve(argv[++index] || usage());
@@ -365,7 +369,7 @@ class StudioControllerPrototype {
     const start = performance.now();
     const result = spawnSync(process.execPath, ["tools/studio_mcp_call.js", toolName, JSON.stringify(args)], {
       cwd: REPO_ROOT,
-      env: { ...process.env, STUDIO_MCP_COMMAND: this.mcpPath },
+      env: { ...process.env, STUDIO_MCP_COMMAND: this.mcpPath, STUDIO_MCP_TIMEOUT_MS: process.env.STUDIO_MCP_TIMEOUT_MS || "45000" },
       encoding: "utf8",
       maxBuffer: 128 * 1024 * 1024,
     });
@@ -389,46 +393,120 @@ class StudioControllerPrototype {
     };
   }
 
+  listStudioTargets() {
+    const listStudios = this.callMcp("list_roblox_studios", {});
+    return {
+      raw: listStudios,
+      studios: parseStudioList(listStudios),
+    };
+  }
+
+  selectStudioTarget() {
+    const manifest = this.manifest();
+    const expectedPlace = this.options.expectedPlace || manifest.expectedPlace || null;
+    const expectedBasename = expectedPlace ? path.basename(expectedPlace) : null;
+    const listed = this.listStudioTargets();
+    const studios = listed.studios;
+    let selected = null;
+    let reason = "";
+
+    if (this.options.studioId) {
+      selected = studios.find((studio) => studio.id === this.options.studioId) || null;
+      reason = "explicit-studio-id";
+    }
+    if (!selected && expectedBasename) {
+      selected = studios.find((studio) => studio.name === expectedBasename) || null;
+      reason = "expected-place-name";
+    }
+    if (!selected && studios.length === 1) {
+      selected = studios[0];
+      reason = "single-open-studio";
+    }
+    if (!selected && studios.find((studio) => studio.active)) {
+      selected = studios.find((studio) => studio.active);
+      reason = "already-active-fallback";
+    }
+
+    const setActive = selected?.id
+      ? this.callMcp("set_active_studio", { studio_id: selected.id })
+      : { ok: false, skipped: "no matching Studio instance", durationMs: 0 };
+    const verify = setActive.ok ? this.listStudioTargets() : null;
+    const selection = {
+      schema: "studio-controller-active-studio/v1",
+      generatedAt: nowIso(),
+      expectedPlace,
+      explicitStudioId: this.options.studioId,
+      selected,
+      reason,
+      listStudios: summarizeStudioList(listed.raw, studios),
+      setActive: summarizeMcpCall(setActive),
+      verify: verify && summarizeStudioList(verify.raw, verify.studios),
+      ok: Boolean(selected?.id && setActive.ok),
+    };
+    this.saveManifest({
+      activeStudio: selection,
+      events: [{ at: nowIso(), type: "select-studio", ok: selection.ok, selected: selected && { id: selected.id, name: selected.name }, reason }],
+    });
+    return selection;
+  }
+
   mcpProbe() {
     const tools = this.callMcp("tools/list", {});
     const toolNames = mcpToolNames(tools);
-    const listStudios = tools.ok && JSON.stringify(tools.parsed || {}).includes("list_roblox_studios")
-      ? this.callMcp("list_roblox_studios", {})
-      : { ok: false, skipped: "list_roblox_studios not present in selected MCP" };
+    const activeStudio = toolNames.includes("set_active_studio") && toolNames.includes("list_roblox_studios")
+      ? this.selectStudioTarget()
+      : { ok: false, skipped: "list_roblox_studios/set_active_studio not present in selected MCP" };
     const expectedPlace = this.options.expectedPlace || this.manifest().expectedPlace || null;
-    const code = `
-local HttpService = game:GetService("HttpService")
-print("STUDIO_CONTROLLER_PROTOTYPE_STATE " .. HttpService:JSONEncode({
+    const stateExpression = `HttpService:JSONEncode({
   placeName = game.Name,
   placeId = game.PlaceId,
   jobId = game.JobId,
   expectedPlace = ${JSON.stringify(expectedPlace)},
   workspaceName = workspace.Name,
   time = os.time(),
-}))
+})`;
+    const returnStateCode = `
+local HttpService = game:GetService("HttpService")
+return "STUDIO_CONTROLLER_PROTOTYPE_STATE " .. ${stateExpression}
+`;
+    const printStateCode = `
+local HttpService = game:GetService("HttpService")
+print("STUDIO_CONTROLLER_PROTOTYPE_STATE " .. ${stateExpression})
 `;
     const luauTool = toolNames.includes("execute_luau") ? "execute_luau" : "run_code";
+    const studioState = toolNames.includes("get_studio_state")
+      ? this.callMcp("get_studio_state", {})
+      : { ok: false, skipped: "get_studio_state not present in selected MCP" };
     const runCode = luauTool === "execute_luau"
-      ? this.callMcp("execute_luau", { code, datamodel_type: "Edit" })
-      : this.callMcp("run_code", { command: code });
+      ? this.callMcp("execute_luau", { code: returnStateCode, datamodel_type: "Edit" })
+      : this.callMcp("run_code", { command: printStateCode });
+    const runSummary = summarizeRunCode(runCode);
+    const targetMatch = Boolean(
+      runSummary.state?.placeName
+      && expectedPlace
+      && runSummary.state.placeName === path.basename(expectedPlace)
+    );
     const probe = {
       schema: "studio-controller-mcp-probe/v1",
       generatedAt: nowIso(),
       selectedMcpPath: this.mcpPath,
       expectedPlace,
       tools: summarizeMcpTools(tools),
-      listStudios,
+      activeStudio,
       luauTool,
-      runCode: summarizeRunCode(runCode),
+      studioState: summarizeMcpCall(studioState),
+      runCode: runSummary,
+      targetMatch,
       rawDurationsMs: {
         toolsList: tools.durationMs,
-        listStudios: listStudios.durationMs,
+        selectStudio: activeStudio.setActive?.durationMs || 0,
+        studioState: studioState.durationMs || 0,
         runCode: runCode.durationMs,
       },
     };
     this.saveManifest({
       lastMcpProbe: probe,
-      events: [{ at: nowIso(), type: "mcp-probe", ok: tools.ok && runCode.ok, expectedPlace }],
+      events: [{ at: nowIso(), type: "mcp-probe", ok: tools.ok && runCode.ok && activeStudio.ok, expectedPlace, targetMatch }],
     });
     return probe;
   }
@@ -850,6 +928,46 @@ function mcpToolNames(result) {
   return Array.isArray(tools) ? tools.map((tool) => tool.name) : [];
 }
 
+function mcpText(result) {
+  return (result.parsed?.content || [])
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function parseStudioList(result) {
+  const text = mcpText(result);
+  if (!text) return [];
+  try {
+    const payload = JSON.parse(text);
+    return Array.isArray(payload.studios) ? payload.studios.map(normalizeStudioTarget).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeStudioTarget(studio) {
+  if (!studio || typeof studio !== "object") return null;
+  return {
+    id: typeof studio.id === "string" ? studio.id : null,
+    name: typeof studio.name === "string" ? studio.name : null,
+    active: Boolean(studio.active),
+  };
+}
+
+function summarizeStudioList(result, studios = parseStudioList(result)) {
+  return {
+    ok: result.ok,
+    status: result.status,
+    durationMs: result.durationMs,
+    count: studios.length,
+    studios,
+    stderr: result.stderr,
+    error: result.error,
+    textSample: mcpText(result).slice(0, 1000),
+  };
+}
+
 function summarizeMcpTools(result) {
   const names = mcpToolNames(result);
   return {
@@ -860,6 +978,18 @@ function summarizeMcpTools(result) {
     names: names.slice(0, 80),
     stderr: result.stderr,
     error: result.error,
+  };
+}
+
+function summarizeMcpCall(result) {
+  return {
+    ok: result.ok,
+    status: result.status,
+    durationMs: result.durationMs,
+    stderr: result.stderr,
+    error: result.error,
+    text: mcpText(result).slice(0, 1000),
+    skipped: result.skipped,
   };
 }
 
@@ -907,10 +1037,7 @@ function extractLocalhostPort(text) {
 }
 
 function summarizeRunCode(result) {
-  const text = (result.parsed?.content || [])
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n");
+  const text = mcpText(result);
   const marker = "STUDIO_CONTROLLER_PROTOTYPE_STATE ";
   const line = text.split(/\r?\n/).find((candidate) => candidate.includes(marker));
   let state = null;
@@ -941,6 +1068,7 @@ function main() {
     "build-place": () => controller.buildPlace(),
     "start-rojo": () => controller.startRojo(),
     "start-studio": () => controller.startStudio(),
+    "select-studio": () => controller.selectStudioTarget(),
     "isolate-desktop": () => controller.isolateStudioDesktop(),
     "mcp-probe": () => controller.mcpProbe(),
     "startup-blockers": () => controller.startupBlockers(),

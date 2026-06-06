@@ -42,6 +42,7 @@ node tools/studio_controller_prototype.mjs env
 node tools/studio_controller_prototype.mjs build-place
 node tools/studio_controller_prototype.mjs start-rojo
 node tools/studio_controller_prototype.mjs start-studio
+node tools/studio_controller_prototype.mjs select-studio
 node tools/studio_controller_prototype.mjs isolate-desktop
 node tools/studio_controller_prototype.mjs mcp-probe
 node tools/studio_controller_prototype.mjs profile
@@ -70,8 +71,8 @@ The demo writes:
 - startup command latency;
 - Rojo port readiness;
 - MCP tool-list latency;
-- MCP `list_roblox_studios` availability;
-- MCP `run_code` round-trip and reached `game.Name`;
+- MCP `list_roblox_studios` / `set_active_studio` target selection;
+- MCP `execute_luau` or `run_code` round-trip and reached `game.Name`;
 - worker-owned Studio pid, CPU, memory RSS, and MCP process count;
 - macOS Accessibility/System Events window visibility.
 - macOS full-screen Space isolation before screenshot/OCR capture.
@@ -97,6 +98,26 @@ The Rojo connect prompt is also port-gated. The worker extracts
 worker-owned Rojo port in the manifest. A stale Rojo prompt from another server
 is reported as `rojo_connect_skipped`.
 
+## MCP Target Selection
+
+Before any Luau execution, the prototype now lists Studio instances and sets the
+active target explicitly:
+
+```sh
+node tools/studio_controller_prototype.mjs select-studio \
+  --expected-place prototype-place.rbxl
+```
+
+Selection priority is:
+
+1. `--studio-id`, when provided;
+2. exact expected place basename, such as `prototype-place.rbxl`;
+3. the only open Studio instance;
+4. an already-active Studio instance as a last fallback.
+
+`mcp-probe` uses the same path before calling `execute_luau`, then records
+`targetMatch` from the returned `game.Name`.
+
 ## Current Design Decision
 
 Do not click Studio UI as the main control path. The production worker should
@@ -116,6 +137,29 @@ MCP enablement itself is still a Studio setting according to the official docs:
 Assistant -> Manage MCP Servers -> Enable Studio as MCP server. The coded bot
 can verify and use MCP once enabled, but it should not depend on visual clicking
 to toggle that setting for every run.
+
+## Latest Prototype Evidence
+
+The built-in MCP path is now the default for `tools/studio_mcp_call.js`; the old
+Rust server remains available through `STUDIO_MCP_COMMAND`.
+
+Live scratch run on `prototype-place.rbxl`:
+
+- `list_roblox_studios` found one Studio id,
+  `4d224f07-1169-4567-9bb7-966820384d60`.
+- `set_active_studio` selected that id by expected place name.
+- `execute_luau` returned `game.Name == "prototype-place.rbxl"`.
+- `mcp-probe` recorded `targetMatch: true`.
+- clearing the JSON-RPC response timer dropped per-call latency from the
+  artificial timeout cliff (`~45s`) to roughly `160-235ms` for tool list,
+  Studio list, active selection, state, and Luau readback.
+- `studio_worker_capture_batch.mjs` used the built-in adapter
+  `execute_luau` / `screen_capture` and produced one viewport screenshot with
+  zero temp artifacts.
+
+Known capture gate: built-in `screen_capture` can still include Studio UI
+overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or
+explicitly accepted as evidence blockers before asset-family screenshots count.
 
 ## Next Absorb Step
 

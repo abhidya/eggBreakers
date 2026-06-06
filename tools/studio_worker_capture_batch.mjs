@@ -135,6 +135,7 @@ function studioCall(toolName, args, commandText) {
 
   const result = spawnSync(process.execPath, ["tools/studio_mcp_call.js", toolName, argsValue], {
     cwd: process.cwd(),
+    env: { ...process.env, STUDIO_MCP_TIMEOUT_MS: process.env.STUDIO_MCP_TIMEOUT_MS || "45000" },
     encoding: "utf8",
     maxBuffer: 96 * 1024 * 1024,
   });
@@ -147,20 +148,27 @@ function studioCall(toolName, args, commandText) {
   return JSON.parse(result.stdout);
 }
 
+function createMcpAdapter() {
+  const toolsResult = studioCall("tools/list", {});
+  const names = mcpToolNames(toolsResult);
+  return {
+    toolsResult,
+    toolNames: names,
+    luauTool: names.includes("execute_luau") ? "execute_luau" : "run_code",
+    captureTool: names.includes("screen_capture") ? "screen_capture" : "capture_screenshot",
+  };
+}
+
+function mcpToolNames(result) {
+  const tools = result.tools || [];
+  return Array.isArray(tools) ? tools.map((tool) => tool.name) : [];
+}
+
 function extractText(toolResult) {
   return (toolResult.content || [])
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n");
-}
-
-function extractMarkedJson(toolResult, marker) {
-  const text = extractText(toolResult);
-  const line = text.split(/\r?\n/).find((candidate) => candidate.includes(marker));
-  if (!line) {
-    throw new Error(`Studio output did not include ${marker}\n${text}`);
-  }
-  return JSON.parse(line.slice(line.indexOf(marker) + marker.length));
 }
 
 function listRobloxProcesses(expectedPlace) {
@@ -208,7 +216,8 @@ function listRobloxProcesses(expectedPlace) {
   };
 }
 
-function makeStateLuau(expectedPlace) {
+function makeStateLuau(expectedPlace, mode) {
+  const emit = markedLuauEmit(mode, "STUDIO_WORKER_STATE ", "HttpService:JSONEncode(payload)");
   return `
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
@@ -234,7 +243,7 @@ local payload = {
 	currentCameraCFrame = camera and tostring(camera.CFrame) or nil,
 	currentCameraFov = camera and camera.FieldOfView or nil,
 }
-print("STUDIO_WORKER_STATE " .. HttpService:JSONEncode(payload))
+${emit}
 `;
 }
 
@@ -276,7 +285,8 @@ function vector(value, label) {
   });
 }
 
-function makeTempAuditLuau(prefixes) {
+function makeTempAuditLuau(prefixes, mode) {
+  const emit = markedLuauEmit(mode, "STUDIO_WORKER_TEMP_AUDIT ", "HttpService:JSONEncode(payload)");
   return `
 local HttpService = game:GetService("HttpService")
 local prefixes = HttpService:JSONDecode([===[${JSON.stringify(prefixes)}]===])
@@ -293,22 +303,40 @@ for _, instance in ipairs(workspace:GetDescendants()) do
 		end
 	end
 end
-print("STUDIO_WORKER_TEMP_AUDIT " .. HttpService:JSONEncode({
+local payload = {
 	schema = "studio-worker-temp-audit/v1",
 	prefixes = prefixes,
 	count = #matches,
 	sample = { unpack(matches, 1, math.min(#matches, 25)) },
-}))
+}
+${emit}
 `;
 }
 
-function runLuau(label, source) {
+function markedLuauEmit(mode, marker, expression) {
+  return mode === "return"
+    ? `return ${JSON.stringify(marker)} .. ${expression}`
+    : `print(${JSON.stringify(marker)} .. ${expression})`;
+}
+
+function runLuau(adapter, label, source) {
   if (!source) return null;
-  const result = studioCall("run_code", {}, source);
+  const result = adapter.luauTool === "execute_luau"
+    ? studioCall("execute_luau", { code: source, datamodel_type: "Edit" })
+    : studioCall("run_code", {}, source);
   if (result.isError) {
     throw new Error(`${label} returned isError=true\n${extractText(result)}`);
   }
   return extractText(result);
+}
+
+function runMarkedJson(adapter, label, source, marker) {
+  const text = runLuau(adapter, label, source);
+  const line = text.split(/\r?\n/).find((candidate) => candidate.includes(marker));
+  if (!line) {
+    throw new Error(`Studio output did not include ${marker}\n${text}`);
+  }
+  return JSON.parse(line.slice(line.indexOf(marker) + marker.length));
 }
 
 function writeScreenshot(outDir, index, capture, toolResult) {
@@ -333,13 +361,35 @@ function writeScreenshot(outDir, index, capture, toolResult) {
   };
 }
 
+function captureScreenshot(adapter, index, capture) {
+  if (adapter.captureTool === "screen_capture") {
+    const args = {
+      capture_id: `${String(index + 1).padStart(3, "0")}_${safeName(capture.id)}`,
+    };
+    if (capture.camera) {
+      args.camera_position = vector(capture.camera.position, "camera.position");
+      args.look_at_position = vector(capture.camera.lookAt, "camera.lookAt");
+    }
+    return studioCall("screen_capture", args);
+  }
+
+  return studioCall("capture_screenshot", {});
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const plan = readPlan(args);
   const outDir = path.resolve(args.outDir);
   fs.mkdirSync(outDir, { recursive: true });
 
-  const state = extractMarkedJson(studioCall("run_code", {}, makeStateLuau(args.expectedPlace)), "STUDIO_WORKER_STATE ");
+  const adapter = createMcpAdapter();
+  const luauMode = adapter.luauTool === "execute_luau" ? "return" : "print";
+  const state = runMarkedJson(
+    adapter,
+    "state",
+    makeStateLuau(args.expectedPlace, luauMode),
+    "STUDIO_WORKER_STATE "
+  );
   const processes = listRobloxProcesses(args.expectedPlace);
   if (state.placeName !== args.expectedPlace) {
     throw new Error(`wrong Studio target: MCP reached ${state.placeName}, expected ${args.expectedPlace}`);
@@ -352,6 +402,11 @@ function main() {
     dryRun: args.dryRun,
     planPath: args.planPath ? path.resolve(args.planPath) : null,
     outputDirectory: outDir,
+    mcpAdapter: {
+      luauTool: adapter.luauTool,
+      captureTool: adapter.captureTool,
+      toolCount: adapter.toolNames.length,
+    },
     studioState: state,
     processSummary: processes,
     captures: [],
@@ -364,15 +419,17 @@ function main() {
   if (!args.dryRun) {
     for (const [index, capture] of plan.captures.entries()) {
       if (!capture.id) throw new Error(`capture at index ${index} is missing id`);
-      runLuau(`${capture.id} beforeLuau`, capture.beforeLuau);
-      runLuau(`${capture.id} camera`, makeCameraLuau(capture));
+      runLuau(adapter, `${capture.id} beforeLuau`, capture.beforeLuau);
+      if (adapter.captureTool !== "screen_capture") {
+        runLuau(adapter, `${capture.id} camera`, makeCameraLuau(capture));
+      }
       sleep(Number(capture.settleMs || 250));
-      const screenshot = studioCall("capture_screenshot", {});
+      const screenshot = captureScreenshot(adapter, index, capture);
       report.captures.push(writeScreenshot(outDir, index, capture, screenshot));
-      runLuau(`${capture.id} afterLuau`, capture.afterLuau);
+      runLuau(adapter, `${capture.id} afterLuau`, capture.afterLuau);
     }
     if (!args.keepCamera) {
-      runLuau("restore camera", `
+      runLuau(adapter, "restore camera", `
 local camera = workspace.CurrentCamera
 if camera then
 	camera.CameraType = Enum.CameraType.Custom
@@ -382,8 +439,10 @@ print("STUDIO_WORKER_CAMERA_RESTORED")
     }
   }
 
-  report.tempAudit = extractMarkedJson(
-    studioCall("run_code", {}, makeTempAuditLuau(plan.tempNamePrefixes || DEFAULT_TEMP_PREFIXES)),
+  report.tempAudit = runMarkedJson(
+    adapter,
+    "temp audit",
+    makeTempAuditLuau(plan.tempNamePrefixes || DEFAULT_TEMP_PREFIXES, luauMode),
     "STUDIO_WORKER_TEMP_AUDIT "
   );
 
