@@ -67,6 +67,21 @@ node tools/studio_controller_prototype.mjs session \
   --profile-ms 8000
 ```
 
+Default-port lease test:
+
+```sh
+node tools/studio_controller_prototype.mjs session \
+  --use-rojo-default-port \
+  --isolate-desktop \
+  --dismiss-startup-blockers \
+  --connect-rojo
+```
+
+This path is intentionally strict: `start-rojo` must prove the spawned worker
+child owns the requested port. If another process already owns Rojo's plugin
+default `34872`, the session records diagnostics and stops before launching
+Studio.
+
 The demo writes:
 
 - `.omx/studio-controller-prototype/manifest.json`
@@ -223,6 +238,22 @@ Live scratch run on `prototype-place.rbxl`:
   served by pre-existing pid `9660`. This pins the remaining work to coded Rojo
   plugin port control or a clean default-port lease, not Studio launch,
   screenshot isolation, MCP targeting, or cleanup.
+- `start-rojo` now verifies listener ownership instead of treating any open port
+  as success. `--use-rojo-default-port` can safely exercise Rojo's plugin
+  default path, but it fails before Studio launch when `34872` is already owned
+  by a non-worker process. This makes a clean default-port run testable without
+  killing or reusing a user's existing Rojo server.
+- Port lease smoke
+  `.omx/studio-controller-port-lease-smoke/manifest.json` proved the normal
+  non-default worker path still works: worker pid `17324` owned `34931`, then
+  `close-rojo` stopped it. Occupied-default smoke
+  `.omx/studio-controller-default-port-lease-fail/session-report.json` proved
+  `--use-rojo-default-port` stops before Studio when pre-existing pid `9660`
+  owns `34872`; the failed worker pid was not left running. Live regression
+  `.omx/studio-controller-live-lease-regression/session-report.json` then
+  proved the stricter ownership check still allows the regular session to
+  launch Studio, profile, and clean up, while preserving the same Rojo sync
+  failure reason.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or

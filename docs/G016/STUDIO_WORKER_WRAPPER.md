@@ -109,6 +109,24 @@ was already occupied by pre-existing pid `9660`. The next worker layer therefore
 needs coded Rojo plugin host/port control or a clean default-port lease; it
 should not simply click any visible Rojo prompt.
 
+The prototype now includes the safe lease half of that decision. `start-rojo`
+requires the spawned child pid to own the requested port, and
+`--use-rojo-default-port` selects Rojo's plugin default `34872` without taking
+over an existing server. If another process owns `34872`, the session records
+the port diagnostic and stops before opening Studio. That keeps the worker
+non-destructive while still giving us a direct live test path once the default
+port is clean.
+
+Lease verification:
+
+- `.omx/studio-controller-port-lease-smoke` started worker Rojo on `34931`,
+  proved the listener belonged to the worker pid, and closed it.
+- `.omx/studio-controller-default-port-lease-fail` tried the plugin default
+  `34872`, detected pre-existing pid `9660`, and stopped before Studio launch.
+- `.omx/studio-controller-live-lease-regression` proved the stricter
+  ownership check still supports the live launch/profile/cleanup path on the
+  non-default worker port.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,

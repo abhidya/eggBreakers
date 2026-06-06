@@ -46,6 +46,8 @@ Options:
   --place <path>            Place file path for start-studio/profile
   --project <path>          Rojo project file (default: default.project.json)
   --rojo-port <port>        Rojo port (default: ${DEFAULT_ROJO_PORT})
+  --use-rojo-default-port   Use Rojo plugin default port ${ROJO_PLUGIN_DEFAULT_PORT}; fails if another
+                            process owns that port
   --keep-open               Demo leaves Studio/Rojo running
   --wait-ms <ms>            Wait after launch before MCP/profile (default: 12000)
   --profile-ms <ms>         Resource sample duration (default: 8000)
@@ -81,6 +83,7 @@ function parseArgs(argv) {
     else if (arg === "--place") args.place = path.resolve(argv[++index] || usage());
     else if (arg === "--project") args.project = argv[++index] || usage();
     else if (arg === "--rojo-port") args.rojoPort = Number(argv[++index] || usage());
+    else if (arg === "--use-rojo-default-port") args.rojoPort = ROJO_PLUGIN_DEFAULT_PORT;
     else if (arg === "--keep-open") args.keepOpen = true;
     else if (arg === "--wait-ms") args.waitMs = Number(argv[++index] || usage());
     else if (arg === "--profile-ms") args.profileMs = Number(argv[++index] || usage());
@@ -431,6 +434,34 @@ function collectRojoPortDiagnostics(workerPort, manifest = {}) {
   };
 }
 
+function workerOwnsRojoPort(diagnostics, workerPort, workerPid) {
+  const workerCheck = diagnostics.checks.find((check) => check.port === Number(workerPort)) || null;
+  return Boolean(
+    workerPid
+    && workerCheck?.server?.ok
+    && workerCheck?.listener?.pids?.includes(workerPid)
+  );
+}
+
+function waitForWorkerRojoPort(workerPort, workerPid, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  let diagnostics = null;
+  while (Date.now() < deadline) {
+    diagnostics = collectRojoPortDiagnostics(workerPort, {
+      processes: { rojo: { pid: workerPid, workerOwned: true } },
+    });
+    if (workerOwnsRojoPort(diagnostics, workerPort, workerPid)) {
+      return { ok: true, diagnostics };
+    }
+    if (!isPidRunning(workerPid)) break;
+    sleep(250);
+  }
+  diagnostics ||= collectRojoPortDiagnostics(workerPort, {
+    processes: { rojo: { pid: workerPid, workerOwned: true } },
+  });
+  return { ok: false, diagnostics };
+}
+
 export class StudioControllerPrototype {
   constructor(options) {
     this.options = options;
@@ -564,15 +595,51 @@ export class StudioControllerPrototype {
       stdio: ["ignore", out, out],
     });
     child.unref();
-    const ready = waitForPort(this.options.rojoPort, "127.0.0.1", 10000);
+    waitForPort(this.options.rojoPort, "127.0.0.1", 10000);
+    const portLease = waitForWorkerRojoPort(this.options.rojoPort, child.pid, 10000);
+    const ready = portLease.ok;
+    if (!ready && isPidRunning(child.pid)) {
+      spawnSync("kill", [`-${child.pid}`], { encoding: "utf8" });
+      spawnSync("kill", [String(child.pid)], { encoding: "utf8" });
+      waitForPidExit(child.pid, 3000);
+    }
     const manifest = this.saveManifest({
       rojoPort: this.options.rojoPort,
       processes: {
-        rojo: { pid: child.pid, logPath, projectPath, startedAt: nowIso(), workerOwned: true },
+        rojo: {
+          pid: child.pid,
+          logPath,
+          projectPath,
+          startedAt: nowIso(),
+          workerOwned: true,
+          runningAfterStart: isPidRunning(child.pid),
+        },
       },
-      events: [{ at: nowIso(), type: "start-rojo", pid: child.pid, ready, port: this.options.rojoPort }],
+      lastRojoPortDiagnostics: {
+        workerPort: portLease.diagnostics.workerPort,
+        pluginDefaultPort: portLease.diagnostics.pluginDefaultPort,
+        workerServerReady: portLease.diagnostics.workerServerReady,
+        pluginDefaultCanReachWorker: portLease.diagnostics.pluginDefaultCanReachWorker,
+        acceptanceRisk: portLease.diagnostics.acceptanceRisk,
+      },
+      events: [{
+        at: nowIso(),
+        type: "start-rojo",
+        pid: child.pid,
+        ready,
+        port: this.options.rojoPort,
+        acceptanceRisk: portLease.diagnostics.acceptanceRisk,
+      }],
     });
-    return { ok: ready, pid: child.pid, port: this.options.rojoPort, logPath, manifestPath: this.manifestPath, manifest };
+    return {
+      ok: ready,
+      pid: child.pid,
+      port: this.options.rojoPort,
+      logPath,
+      manifestPath: this.manifestPath,
+      diagnostics: portLease.diagnostics,
+      manifest,
+    };
   }
 
   startStudio() {
@@ -1559,7 +1626,10 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
     try {
       addStep("env", () => this.env());
       addStep("build-place", () => this.buildPlace());
-      addStep("start-rojo", () => this.startRojo());
+      const rojo = addStep("start-rojo", () => this.startRojo());
+      if (rojo?.ok === false) {
+        throw new Error(`worker Rojo did not own port ${rojo.port}; ${rojo.diagnostics?.acceptanceRisk || "unknown_rojo_port_failure"}`);
+      }
       addStep("start-studio", () => this.startStudio());
       const preIsolationWaitMs = this.options.isolateDesktop ? Math.min(this.options.waitMs, 3000) : this.options.waitMs;
       sleep(preIsolationWaitMs);
@@ -1616,7 +1686,11 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
     const steps = [];
     steps.push({ name: "env", result: this.env() });
     steps.push({ name: "build-place", result: this.buildPlace() });
-    steps.push({ name: "start-rojo", result: this.startRojo() });
+    const rojo = this.startRojo();
+    steps.push({ name: "start-rojo", result: rojo });
+    if (rojo?.ok === false) {
+      throw new Error(`worker Rojo did not own port ${rojo.port}; ${rojo.diagnostics?.acceptanceRisk || "unknown_rojo_port_failure"}`);
+    }
     steps.push({ name: "start-studio", result: this.startStudio() });
     const preIsolationWaitMs = this.options.isolateDesktop ? Math.min(this.options.waitMs, 3000) : this.options.waitMs;
     sleep(preIsolationWaitMs);
