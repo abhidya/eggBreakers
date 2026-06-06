@@ -48,9 +48,11 @@ Options:
   --screenshot <path>       Existing screenshot for startup-blocker OCR test
   --text-fixture <path>     Existing text fixture for startup-blocker classifier test
   --isolate-desktop         Demo moves Studio into a full-screen Space before screenshots
+  --startup-passes <n>      Re-capture startup blockers after safe actions (default: 1)
   --dismiss-startup-blockers
                             Click safe dismissal for detected Auto-Recovery
   --connect-rojo            Click Rojo connect prompt when detected
+  --dismiss-stale-rojo      Click Dismiss for Rojo prompts whose port is not worker-owned
 `);
   process.exit(2);
 }
@@ -71,8 +73,10 @@ function parseArgs(argv) {
     screenshot: null,
     textFixture: null,
     isolateDesktop: false,
+    startupPasses: 1,
     dismissStartupBlockers: false,
     connectRojo: false,
+    dismissStaleRojo: false,
   };
 
   for (let index = 1; index < argv.length; index += 1) {
@@ -89,8 +93,10 @@ function parseArgs(argv) {
     else if (arg === "--screenshot") args.screenshot = path.resolve(argv[++index] || usage());
     else if (arg === "--text-fixture") args.textFixture = path.resolve(argv[++index] || usage());
     else if (arg === "--isolate-desktop") args.isolateDesktop = true;
+    else if (arg === "--startup-passes") args.startupPasses = Number(argv[++index] || usage());
     else if (arg === "--dismiss-startup-blockers") args.dismissStartupBlockers = true;
     else if (arg === "--connect-rojo") args.connectRojo = true;
+    else if (arg === "--dismiss-stale-rojo") args.dismissStaleRojo = true;
     else if (arg === "--help" || arg === "-h") usage();
     else {
       console.error(`unknown option: ${arg}`);
@@ -98,6 +104,7 @@ function parseArgs(argv) {
     }
   }
   if (!Number.isFinite(args.rojoPort) || args.rojoPort < 1) throw new Error("--rojo-port must be a positive number");
+  if (!Number.isFinite(args.startupPasses) || args.startupPasses < 1) throw new Error("--startup-passes must be a positive number");
   return args;
 }
 
@@ -148,6 +155,82 @@ function runSync(command, args, options = {}) {
     stdout: result.stdout || "",
     stderr: result.stderr || "",
     error: result.error ? result.error.message : null,
+  };
+}
+
+function runStartupOcr(screenshotPath, workDir) {
+  const startedAt = performance.now();
+  const ext = path.extname(screenshotPath) || ".png";
+  const fullInputPath = path.join(workDir, `startup-blockers-ocr-full${ext}`);
+  fs.copyFileSync(screenshotPath, fullInputPath);
+  const full = runSync("tesseract", [fullInputPath, "stdout"]);
+  const regions = [{
+    name: "full",
+    ok: full.status === 0,
+    durationMs: full.durationMs,
+    textSample: (full.stdout || "").slice(0, 1000),
+    stderr: full.stderr,
+  }];
+  const crop = cropLowerRightForOcr(fullInputPath, workDir);
+  let cropOcr = { status: 1, stdout: "", stderr: crop.stderr || "" };
+  if (crop.ok) {
+    cropOcr = runSync("tesseract", [crop.path, "stdout"]);
+    regions.push({
+      name: "lower_right",
+      ok: cropOcr.status === 0,
+      durationMs: cropOcr.durationMs,
+      textSample: (cropOcr.stdout || "").slice(0, 1000),
+      crop,
+      stderr: cropOcr.stderr,
+    });
+  } else {
+    regions.push({ name: "lower_right", ok: false, crop, stderr: crop.stderr });
+  }
+  return {
+    status: full.status === 0 || cropOcr.status === 0 ? 0 : 1,
+    durationMs: Math.round(performance.now() - startedAt),
+    stdout: [full.stdout || "", cropOcr.stdout || ""].filter(Boolean).join("\n"),
+    stderr: [full.stderr || "", cropOcr.stderr || "", crop.stderr || ""].filter(Boolean).join("\n"),
+    regions,
+  };
+}
+
+function cropLowerRightForOcr(imagePath, workDir) {
+  const size = imagePixelSize(imagePath);
+  if (!size.ok) return { ok: false, stderr: size.stderr || "missing image size" };
+  const cropWidth = Math.max(240, Math.round(size.width * 0.36));
+  const cropHeight = Math.max(160, Math.round(size.height * 0.24));
+  const offsetX = Math.max(0, size.width - cropWidth);
+  const offsetY = Math.max(0, size.height - cropHeight);
+  const cropPath = path.join(workDir, "startup-blockers-ocr-lower-right.png");
+  const result = runSync("sips", [
+    "--cropToHeightWidth", String(cropHeight), String(cropWidth),
+    "--cropOffset", String(offsetY), String(offsetX),
+    imagePath,
+    "--out", cropPath,
+  ]);
+  return {
+    ok: result.status === 0 && fs.existsSync(cropPath),
+    path: cropPath,
+    source: imagePath,
+    width: cropWidth,
+    height: cropHeight,
+    offsetX,
+    offsetY,
+    durationMs: result.durationMs,
+    stderr: result.stderr,
+  };
+}
+
+function imagePixelSize(imagePath) {
+  const result = runSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", imagePath]);
+  const width = Number((result.stdout.match(/pixelWidth:\s*(\d+)/) || [])[1]);
+  const height = Number((result.stdout.match(/pixelHeight:\s*(\d+)/) || [])[1]);
+  return {
+    ok: result.status === 0 && Number.isFinite(width) && Number.isFinite(height),
+    width,
+    height,
+    stderr: result.stderr,
   };
 }
 
@@ -596,11 +679,50 @@ end tell
   }
 
   startupBlockers() {
+    const maxPasses = this.options.textFixture || this.options.screenshot
+      ? 1
+      : Math.max(1, Math.floor(this.options.startupPasses));
+    const passes = [];
+    let finalPass = null;
+
+    for (let passIndex = 1; passIndex <= maxPasses; passIndex += 1) {
+      finalPass = this.startupBlockerPass(passIndex);
+      passes.push(finalPass);
+      const shouldRecapture = finalPass.actions.some((action) => action.recapture);
+      if (!shouldRecapture) break;
+      sleep(900);
+    }
+
+    const report = {
+      ...finalPass,
+      schema: "studio-controller-startup-blockers/v1",
+      generatedAt: nowIso(),
+      maxPasses,
+      passCount: passes.length,
+      passes,
+    };
+    const reportPath = path.join(this.workDir, "startup-blockers.json");
+    writeJson(reportPath, report);
+    this.saveManifest({
+      lastStartupBlockersPath: reportPath,
+      events: [{
+        at: nowIso(),
+        type: "startup-blockers",
+        blockerKinds: (finalPass.blockers || []).map((blocker) => blocker.kind),
+        actionLabels: (finalPass.actions || []).map((action) => action.label),
+        reportPath,
+      }],
+    });
+    return { ok: true, reportPath, blockerKinds: (finalPass.blockers || []).map((blocker) => blocker.kind), report };
+  }
+
+  startupBlockerPass(passIndex) {
     mkdirp(this.workDir);
-    const screenshotPath = this.options.screenshot || path.join(this.workDir, "startup-blockers-screen.png");
+    const screenshotPath = this.options.screenshot || path.join(this.workDir, `startup-blockers-screen-pass-${passIndex}.png`);
     let screenshot = { ok: false, path: null, reused: false };
     let ocr = { status: 0, durationMs: 0, stdout: "", stderr: "" };
     let activation = null;
+    const liveUiClickEnabled = !this.options.textFixture && !this.options.screenshot;
     if (this.options.textFixture) {
       ocr = {
         status: 0,
@@ -619,32 +741,76 @@ end tell
     }
     if (!this.options.textFixture) {
       if (screenshot.ok) {
-        const ocrInputPath = path.join(this.workDir, `startup-blockers-ocr-input${path.extname(screenshotPath) || ".png"}`);
-        fs.copyFileSync(screenshotPath, ocrInputPath);
-        ocr = runSync("tesseract", [ocrInputPath, "stdout"]);
+        ocr = runStartupOcr(screenshotPath, this.workDir);
       } else {
         ocr = { status: 1, stdout: "", stderr: "missing screenshot" };
       }
     }
     const ocrText = ocr.stdout || "";
     const blockers = detectStartupBlockersFromText(ocrText);
-    const ax = this.accessibilityWindowProbe();
+    const ax = liveUiClickEnabled
+      ? this.accessibilityProbe()
+      : { ok: true, skipped: "fixture/reused screenshot", durationMs: 0, stdout: "", stderr: "" };
     const actions = [];
     const expectedRojoPort = this.manifest().rojoPort || this.options.rojoPort;
+    let modalActionTaken = false;
 
     if (this.options.dismissStartupBlockers && blockers.some((blocker) => blocker.kind === "auto_recovery")) {
-      this.activateStudio();
-      sleep(150);
-      actions.push(this.clickScreenFraction("auto_recovery_ignore", 0.552, 0.714));
-      sleep(750);
-    }
-    const rojoConnect = blockers.find((blocker) => blocker.kind === "rojo_connect");
-    if (this.options.connectRojo && rojoConnect) {
-      if (rojoConnect.port === expectedRojoPort) {
+      if (liveUiClickEnabled) {
         this.activateStudio();
         sleep(150);
-        actions.push(this.clickScreenFraction("rojo_connect", 0.493, 0.987));
+        const axClick = this.clickAccessibilityButton("auto_recovery_ignore", "Auto-Recovery", "Ignore");
+        actions.push({
+          ...(axClick.ok ? axClick : this.clickScreenFraction("auto_recovery_ignore_fallback", 0.495, 0.64)),
+          recapture: true,
+        });
+        modalActionTaken = true;
         sleep(750);
+      } else {
+        actions.push({
+          label: "auto_recovery_ignore_skipped",
+          ok: false,
+          reason: "click disabled for fixture/reused screenshot",
+        });
+      }
+    }
+    const rojoConnect = blockers.find((blocker) => blocker.kind === "rojo_connect");
+    if (!modalActionTaken && this.options.connectRojo && rojoConnect) {
+      if (rojoConnect.port === expectedRojoPort) {
+        if (liveUiClickEnabled) {
+          this.activateStudio();
+          sleep(150);
+          actions.push({ ...this.clickScreenFraction("rojo_connect", 0.948, 0.907), recapture: true });
+          sleep(750);
+        } else {
+          actions.push({
+            label: "rojo_connect_skipped",
+            ok: false,
+            reason: "click disabled for fixture/reused screenshot",
+            detectedPort: rojoConnect.port,
+            expectedPort: expectedRojoPort,
+          });
+        }
+      } else if (this.options.dismissStaleRojo) {
+        if (liveUiClickEnabled) {
+          this.activateStudio();
+          sleep(150);
+          actions.push({
+            ...this.clickScreenFraction("rojo_stale_dismiss", 0.895, 0.907),
+            recapture: true,
+            detectedPort: rojoConnect.port,
+            expectedPort: expectedRojoPort,
+          });
+          sleep(750);
+        } else {
+          actions.push({
+            label: "rojo_stale_dismiss_skipped",
+            ok: false,
+            reason: "click disabled for fixture/reused screenshot",
+            detectedPort: rojoConnect.port,
+            expectedPort: expectedRojoPort,
+          });
+        }
       } else {
         actions.push({
           label: "rojo_connect_skipped",
@@ -656,8 +822,8 @@ end tell
       }
     }
 
-    const report = {
-      schema: "studio-controller-startup-blockers/v1",
+    return {
+      passIndex,
       generatedAt: nowIso(),
       activation,
       expectedRojoPort,
@@ -667,18 +833,12 @@ end tell
         durationMs: ocr.durationMs,
         textSample: ocrText.slice(0, 2000),
         stderr: ocr.stderr,
+        regions: ocr.regions || [],
       },
       blockers,
       accessibility: ax,
       actions,
     };
-    const reportPath = path.join(this.workDir, "startup-blockers.json");
-    writeJson(reportPath, report);
-    this.saveManifest({
-      lastStartupBlockersPath: reportPath,
-      events: [{ at: nowIso(), type: "startup-blockers", blockerKinds: blockers.map((blocker) => blocker.kind), reportPath }],
-    });
-    return { ok: true, reportPath, blockerKinds: blockers.map((blocker) => blocker.kind), report };
   }
 
   profile() {
@@ -784,6 +944,39 @@ end tell
     const result = runSync("osascript", ["-e", script]);
     return {
       ok: result.status === 0,
+      durationMs: result.durationMs,
+      stdout: result.stdout.trim(),
+      stderr: result.stderr.trim(),
+    };
+  }
+
+  clickAccessibilityButton(label, windowName, buttonName) {
+    const script = `
+tell application "System Events"
+  repeat with procName in {"RobloxStudio", "Roblox Studio"}
+    if exists process procName then
+      tell process procName
+        set frontmost to true
+        if exists window ${JSON.stringify(windowName)} then
+          tell window ${JSON.stringify(windowName)}
+            if exists button ${JSON.stringify(buttonName)} then
+              click button ${JSON.stringify(buttonName)}
+              return "clicked=" & ${JSON.stringify(windowName)} & ":" & ${JSON.stringify(buttonName)}
+            end if
+          end tell
+        end if
+      end tell
+    end if
+  end repeat
+  return "missing"
+end tell
+`;
+    const result = runSync("osascript", ["-e", script]);
+    return {
+      label,
+      windowName,
+      buttonName,
+      ok: result.status === 0 && result.stdout.includes("clicked="),
       durationMs: result.durationMs,
       stdout: result.stdout.trim(),
       stderr: result.stderr.trim(),

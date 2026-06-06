@@ -9,15 +9,17 @@ serving, screenshots, and profiling without relying on agentic UI clicking?
 
 The strongest pattern is a hybrid:
 
-1. `run-in-roblox` style coded worker for lifecycle: copy/build a place, write a
+1. Asset/search MCP remains the asset brain: finding, ranking, inventorying, and
+   reusing Creator Store assets.
+2. `run-in-roblox` style coded worker for lifecycle: copy/build a place, write a
    temporary plugin or session bridge, launch Studio, stream output, then close
    only the worker-owned process.
-2. Built-in Roblox Studio MCP for target selection and richer tool access:
+3. Built-in Roblox Studio MCP for target selection and richer tool access:
    `list_roblox_studios` and `set_active_studio` solve the stale DataModel
-   problem better than the older shared-port Rust MCP bridge.
-3. Rojo as a worker-owned subprocess: start `rojo serve` on a known port and
+   problem better than the older shared-port Rust Studio bridge.
+4. Rojo as a worker-owned subprocess: start `rojo serve` on a known port and
    make the Studio-side plugin/session bridge connect to that port.
-4. rbx-dom/Lune/Rojo build for file creation and mutation outside Studio.
+5. rbx-dom/Lune/Rojo build for file creation and mutation outside Studio.
    Studio remains the renderer/playtest verifier, not the primary serializer.
 
 Sources:
@@ -141,7 +143,9 @@ to toggle that setting for every run.
 ## Latest Prototype Evidence
 
 The built-in MCP path is now the default for `tools/studio_mcp_call.js`; the old
-Rust server remains available through `STUDIO_MCP_COMMAND`.
+Rust Studio MCP server remains available through `STUDIO_MCP_COMMAND`. This does
+not deprecate the asset/search MCP; asset search remains the upstream asset
+brain, while StudioMCP is the viewport/control worker.
 
 Live scratch run on `prototype-place.rbxl`:
 
@@ -156,10 +160,18 @@ Live scratch run on `prototype-place.rbxl`:
 - `studio_worker_capture_batch.mjs` used the built-in adapter
   `execute_luau` / `screen_capture` and produced one viewport screenshot with
   zero temp artifacts.
+- `startup-blockers --startup-passes 5 --dismiss-startup-blockers
+  --dismiss-stale-rojo` cleared Auto-Recovery in two passes using an
+  Accessibility click on the `Ignore` button.
+- `studio_worker_capture_batch.mjs` now OCR-audits the actual saved screenshot
+  and reports `uiBlockers`; a visible stale Rojo prompt produced
+  `uiBlockerCount: 1` with `kind: "rojo_connect"` and `port: 34872`.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or
 explicitly accepted as evidence blockers before asset-family screenshots count.
+The capture wrapper is the final authority because it audits the image that will
+be used as evidence, not just the desktop preflight screenshot.
 
 ## Next Absorb Step
 

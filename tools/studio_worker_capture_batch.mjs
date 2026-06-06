@@ -361,6 +361,134 @@ function writeScreenshot(outDir, index, capture, toolResult) {
   };
 }
 
+function auditCaptureUiBlockers(filePath, outDir, captureId) {
+  const auditDir = path.join(outDir, "ui-blocker-ocr");
+  fs.mkdirSync(auditDir, { recursive: true });
+  const startedAt = performance.now();
+  const fullText = runOcr(filePath);
+  const crop = cropLowerRight(filePath, auditDir, safeName(captureId));
+  const cropText = crop.ok ? runOcr(crop.path) : { ok: false, stdout: "", stderr: crop.stderr || "" };
+  const text = [fullText.stdout || "", cropText.stdout || ""].filter(Boolean).join("\n");
+  const blockers = detectUiBlockersFromText(text);
+  return {
+    schema: "studio-worker-capture-ui-blockers/v1",
+    ok: blockers.length === 0,
+    durationMs: Math.round(performance.now() - startedAt),
+    blockers,
+    ocr: {
+      full: summarizeOcr(fullText),
+      lowerRight: summarizeOcr(cropText),
+      crop,
+    },
+  };
+}
+
+function runOcr(imagePath) {
+  const result = spawnSync("tesseract", [imagePath, "stdout"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  return {
+    ok: result.status === 0,
+    status: result.status,
+    durationMs: null,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
+    error: result.error ? result.error.message : null,
+  };
+}
+
+function summarizeOcr(result) {
+  return {
+    ok: result.ok,
+    status: result.status,
+    textSample: (result.stdout || "").slice(0, 1000),
+    stderr: result.stderr,
+    error: result.error,
+  };
+}
+
+function cropLowerRight(imagePath, outDir, label) {
+  const size = imagePixelSize(imagePath);
+  if (!size.ok) return { ok: false, stderr: size.stderr || "missing image size" };
+  const cropWidth = Math.max(240, Math.round(size.width * 0.4));
+  const cropHeight = Math.max(160, Math.round(size.height * 0.28));
+  const offsetX = Math.max(0, size.width - cropWidth);
+  const offsetY = Math.max(0, size.height - cropHeight);
+  const cropPath = path.join(outDir, `${safeName(label)}_lower_right.jpg`);
+  const result = spawnSync("sips", [
+    "--cropToHeightWidth", String(cropHeight), String(cropWidth),
+    "--cropOffset", String(offsetY), String(offsetX),
+    imagePath,
+    "--out", cropPath,
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  return {
+    ok: result.status === 0 && fs.existsSync(cropPath),
+    path: cropPath,
+    width: cropWidth,
+    height: cropHeight,
+    offsetX,
+    offsetY,
+    stderr: result.stderr || "",
+  };
+}
+
+function imagePixelSize(imagePath) {
+  const result = spawnSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", imagePath], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  const width = Number((result.stdout.match(/pixelWidth:\s*(\d+)/) || [])[1]);
+  const height = Number((result.stdout.match(/pixelHeight:\s*(\d+)/) || [])[1]);
+  return {
+    ok: result.status === 0 && Number.isFinite(width) && Number.isFinite(height),
+    width,
+    height,
+    stderr: result.stderr || "",
+  };
+}
+
+function detectUiBlockersFromText(text) {
+  const normalized = text.replace(/\s+/g, " ").toLowerCase();
+  const blockers = [];
+  if (
+    normalized.includes("auto-recovered file was detected")
+    || normalized.includes("auto recovered file was detected")
+    || (
+      (normalized.includes("auto-recovery") || normalized.includes("auto recovery"))
+      && normalized.includes("open will open")
+      && normalized.includes("ignore will continue")
+      && normalized.includes("delete will confirm")
+    )
+  ) {
+    blockers.push({ kind: "auto_recovery", severity: "startup_blocker" });
+  }
+  if (
+    normalized.includes("would you like to connect")
+    && (normalized.includes("serving at localhost") || normalized.includes("project"))
+  ) {
+    blockers.push({
+      kind: "rojo_connect",
+      severity: "sync_blocker",
+      port: extractLocalhostPort(text),
+    });
+  }
+  return blockers;
+}
+
+function extractLocalhostPort(text) {
+  const match = text.match(/localhost\s*:\s*(\d{2,5})/i);
+  if (!match) return null;
+  const port = Number(match[1]);
+  return Number.isFinite(port) ? port : null;
+}
+
 function captureScreenshot(adapter, index, capture) {
   if (adapter.captureTool === "screen_capture") {
     const args = {
@@ -414,6 +542,7 @@ function main() {
     notes: [
       "Screenshots are Studio viewport evidence only; release credit still requires save/reopen and gate audit.",
     ],
+    uiBlockers: [],
   };
 
   if (!args.dryRun) {
@@ -425,7 +554,14 @@ function main() {
       }
       sleep(Number(capture.settleMs || 250));
       const screenshot = captureScreenshot(adapter, index, capture);
-      report.captures.push(writeScreenshot(outDir, index, capture, screenshot));
+      const screenshotRecord = writeScreenshot(outDir, index, capture, screenshot);
+      screenshotRecord.uiBlockers = auditCaptureUiBlockers(screenshotRecord.file, outDir, capture.id);
+      report.captures.push(screenshotRecord);
+      report.uiBlockers.push(...screenshotRecord.uiBlockers.blockers.map((blocker) => ({
+        captureId: capture.id,
+        file: screenshotRecord.file,
+        ...blocker,
+      })));
       runLuau(adapter, `${capture.id} afterLuau`, capture.afterLuau);
     }
     if (!args.keepCamera) {
@@ -449,10 +585,11 @@ print("STUDIO_WORKER_CAMERA_RESTORED")
   const reportPath = path.join(outDir, "capture-report.json");
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify({
-    ok: true,
+    ok: report.uiBlockers.length === 0,
     dryRun: args.dryRun,
     expectedPlace: args.expectedPlace,
     captureCount: report.captures.length,
+    uiBlockerCount: report.uiBlockers.length,
     tempArtifactCount: report.tempAudit.count,
     reportPath,
   }, null, 2));

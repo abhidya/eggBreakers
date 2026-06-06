@@ -48,6 +48,8 @@ Current capabilities:
 
 - active-place gate with `game.Name`;
 - MCP adapter report naming the Luau and screenshot tools used;
+- per-screenshot OCR audit for UI overlays such as Auto-Recovery and Rojo
+  connect prompts;
 - local Studio process summary for stale-target diagnosis;
 - optional scripted camera pose per capture;
 - optional `beforeLuau` and `afterLuau` per capture for clean-spot setup and
@@ -55,7 +57,7 @@ Current capabilities:
 - sequential `screen_capture` or `capture_screenshot` calls written as JPEG/PNG
   files;
 - `capture-report.json` with hashes, byte counts, camera poses, Studio state,
-  process summary, and temp artifact count;
+  process summary, screenshot UI blockers, and temp artifact count;
 - temp-prefix audit for names such as `G016CleanSpot_`, `Preview_`, and
   `StudioWorkerTemp_`.
 
@@ -71,7 +73,9 @@ only manifest-owned processes.
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,
-and any remaining stale prompt is a blocker in the capture report.
+and any remaining stale prompt is a blocker in the capture report. The wrapper's
+top-level `ok` field is false when `uiBlockerCount > 0`, even if the screenshot
+file was written successfully.
 
 ## Commands
 
@@ -148,5 +152,6 @@ The next script should own Studio lifecycle:
 8. save, close, reopen, and audit;
 9. kill only the Studio pid recorded in the worker manifest.
 
-Until the MCP server/plugin can identify the polling DataModel, forced apply
-runs remain blocked when multiple Studio sessions are open.
+The asset/search MCP remains the asset discovery and inventory brain. The
+Studio MCP path here is only the controlled render, edit, screenshot, and
+playtest surface.
