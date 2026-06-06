@@ -34,6 +34,7 @@ Commands:
   close-studio  Close only the worker-owned Studio pid from the manifest
   close-rojo    Close only the worker-owned Rojo pid from the manifest
   demo          Build place, start Rojo, launch Studio, probe/profile, close
+  session       One-owner build/Rojo/Studio/MCP/profile/capture/cleanup flow
 
 Options:
   --work-dir <dir>          Prototype work dir (default: ${DEFAULT_WORK_DIR})
@@ -53,6 +54,10 @@ Options:
                             Click safe dismissal for detected Auto-Recovery
   --connect-rojo            Click Rojo connect prompt when detected
   --dismiss-stale-rojo      Click Dismiss for Rojo prompts whose port is not worker-owned
+  --dry-run                 For session: emit the plan without launching Studio/Rojo
+  --capture-plan <path>     For session: capture plan passed to the capture wrapper
+  --capture-out <dir>       For session: capture output dir
+  --skip-capture            For session: skip screenshot batch
 `);
   process.exit(2);
 }
@@ -81,6 +86,10 @@ function parseArgs(argv) {
     else if (arg === "--dismiss-startup-blockers") args.dismissStartupBlockers = true;
     else if (arg === "--connect-rojo") args.connectRojo = true;
     else if (arg === "--dismiss-stale-rojo") args.dismissStaleRojo = true;
+    else if (arg === "--dry-run") args.dryRun = true;
+    else if (arg === "--capture-plan") args.capturePlan = path.resolve(argv[++index] || usage());
+    else if (arg === "--capture-out") args.captureOut = path.resolve(argv[++index] || usage());
+    else if (arg === "--skip-capture") args.skipCapture = true;
     else if (arg === "--help" || arg === "-h") usage();
     else {
       console.error(`unknown option: ${arg}`);
@@ -110,6 +119,10 @@ export function createStudioControllerOptions(overrides = {}) {
     dismissStartupBlockers: false,
     connectRojo: false,
     dismissStaleRojo: false,
+    dryRun: false,
+    capturePlan: null,
+    captureOut: null,
+    skipCapture: false,
     ...overrides,
   };
 }
@@ -269,8 +282,19 @@ function listProcesses() {
 
 function isPidRunning(pid) {
   if (!pid) return false;
-  const result = spawnSync("ps", ["-p", String(pid), "-o", "pid="], { encoding: "utf8" });
-  return result.status === 0;
+  const result = spawnSync("ps", ["-p", String(pid), "-o", "stat="], { encoding: "utf8" });
+  if (result.status !== 0) return false;
+  const stat = result.stdout.trim();
+  return Boolean(stat) && !stat.includes("Z");
+}
+
+function waitForPidExit(pid, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!isPidRunning(pid)) return true;
+    sleep(500);
+  }
+  return !isPidRunning(pid);
 }
 
 function waitForPort(port, host = "127.0.0.1", timeoutMs = 10000) {
@@ -1066,12 +1090,11 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
     if (before) {
       spawnSync("kill", [`-${pid}`], { encoding: "utf8" });
       spawnSync("kill", [String(pid)], { encoding: "utf8" });
-      const deadline = Date.now() + 12000;
-      while (Date.now() < deadline && isPidRunning(pid)) sleep(500);
+      waitForPidExit(pid, 30000);
       if (isPidRunning(pid)) {
         spawnSync("kill", ["-9", `-${pid}`], { encoding: "utf8" });
         spawnSync("kill", ["-9", String(pid)], { encoding: "utf8" });
-        sleep(500);
+        waitForPidExit(pid, 8000);
       }
     }
     const after = isPidRunning(pid);
@@ -1090,14 +1113,188 @@ for event_type in (kCGEventMouseMoved, kCGEventLeftMouseDown, kCGEventLeftMouseU
     if (before) {
       spawnSync("kill", [`-${rojo.pid}`], { encoding: "utf8" });
       spawnSync("kill", [String(rojo.pid)], { encoding: "utf8" });
+      waitForPidExit(rojo.pid, 10000);
+      if (isPidRunning(rojo.pid)) {
+        spawnSync("kill", ["-9", `-${rojo.pid}`], { encoding: "utf8" });
+        spawnSync("kill", ["-9", String(rojo.pid)], { encoding: "utf8" });
+        waitForPidExit(rojo.pid, 3000);
+      }
     }
-    sleep(500);
     const after = isPidRunning(rojo.pid);
     this.saveManifest({
       processes: { rojo: { ...rojo, closedAt: nowIso(), runningAfterClose: after } },
       events: [{ at: nowIso(), type: "close-rojo", pid: rojo.pid, before, after }],
     });
     return { ok: !after, pid: rojo.pid, runningBefore: before, runningAfter: after };
+  }
+
+  sessionPlan() {
+    const manifest = this.manifest();
+    const placePath = this.options.place || manifest.placePath || path.join(this.workDir, "prototype-place.rbxl");
+    const expectedPlace = this.options.expectedPlace || manifest.expectedPlace || path.basename(placePath);
+    const captureOut = this.options.captureOut || path.join(this.workDir, "capture-batch");
+    return {
+      schema: "studio-controller-session-plan/v1",
+      generatedAt: nowIso(),
+      workDir: this.workDir,
+      placePath,
+      expectedPlace,
+      rojoPort: this.options.rojoPort,
+      isolateDesktop: this.options.isolateDesktop,
+      startupPasses: this.options.startupPasses,
+      startupPolicies: {
+        dismissAutoRecovery: this.options.dismissStartupBlockers,
+        connectWorkerOwnedRojo: this.options.connectRojo,
+        dismissStaleRojo: this.options.dismissStaleRojo,
+      },
+      profileMs: this.options.profileMs,
+      capture: this.options.skipCapture ? null : {
+        outDir: captureOut,
+        planPath: this.options.capturePlan,
+        mode: this.options.capturePlan ? "plan" : "current-viewport",
+      },
+      cleanup: this.options.keepOpen ? "leave-worker-owned-processes-open" : "close-worker-owned-processes",
+      steps: [
+        "env",
+        "build-place",
+        "start-rojo",
+        "start-studio",
+        this.options.isolateDesktop ? "isolate-desktop" : null,
+        "startup-blockers",
+        "mcp-probe",
+        "profile",
+        this.options.skipCapture ? null : "capture-batch",
+        this.options.keepOpen ? null : "close-studio",
+        this.options.keepOpen ? null : "close-rojo",
+      ].filter(Boolean),
+    };
+  }
+
+  captureBatch() {
+    const manifest = this.manifest();
+    const placePath = this.options.place || manifest.placePath || null;
+    const expectedPlace = this.options.expectedPlace || manifest.expectedPlace || (placePath ? path.basename(placePath) : null);
+    if (!expectedPlace) throw new Error("capture-batch requires expectedPlace from --expected-place, manifest, or place path");
+    const outDir = this.options.captureOut || path.join(this.workDir, "capture-batch");
+    const args = [
+      "tools/studio_worker_capture_batch.mjs",
+      "--expected-place", expectedPlace,
+      "--out", outDir,
+    ];
+    if (this.options.capturePlan) {
+      args.push("--plan", this.options.capturePlan);
+    } else {
+      args.push("--capture-current");
+    }
+    const result = runSync(process.execPath, args, { maxBuffer: 128 * 1024 * 1024 });
+    let parsed = null;
+    try {
+      parsed = result.stdout ? JSON.parse(result.stdout) : null;
+    } catch {
+      parsed = null;
+    }
+    const report = {
+      ok: result.status === 0 && parsed?.ok !== false,
+      status: result.status,
+      durationMs: result.durationMs,
+      command: [process.execPath, ...args],
+      parsed,
+      stdout: parsed ? undefined : result.stdout,
+      stderr: result.stderr,
+      error: result.error,
+    };
+    this.saveManifest({
+      lastCaptureBatch: report,
+      events: [{ at: nowIso(), type: "capture-batch", ok: report.ok, outDir, reportPath: parsed?.reportPath || null }],
+    });
+    return report;
+  }
+
+  session() {
+    mkdirp(this.workDir);
+    const plan = this.sessionPlan();
+    const steps = [];
+    const reportPath = path.join(this.workDir, "session-report.json");
+
+    if (this.options.dryRun) {
+      const report = {
+        schema: "studio-controller-session-report/v1",
+        generatedAt: nowIso(),
+        dryRun: true,
+        plan,
+        steps,
+      };
+      writeJson(reportPath, report);
+      return { ok: true, dryRun: true, reportPath, plan };
+    }
+
+    const addStep = (name, fn) => {
+      const startedAt = performance.now();
+      try {
+        const result = fn();
+        steps.push({ name, ok: result?.ok !== false, durationMs: Math.round(performance.now() - startedAt), result });
+        return result;
+      } catch (err) {
+        const result = { ok: false, error: err.message };
+        steps.push({ name, ok: false, durationMs: Math.round(performance.now() - startedAt), result });
+        throw err;
+      }
+    };
+
+    let error = null;
+    try {
+      addStep("env", () => this.env());
+      addStep("build-place", () => this.buildPlace());
+      addStep("start-rojo", () => this.startRojo());
+      addStep("start-studio", () => this.startStudio());
+      const preIsolationWaitMs = this.options.isolateDesktop ? Math.min(this.options.waitMs, 3000) : this.options.waitMs;
+      sleep(preIsolationWaitMs);
+      if (this.options.isolateDesktop) {
+        addStep("isolate-desktop", () => this.isolateStudioDesktop());
+        sleep(Math.max(0, this.options.waitMs - preIsolationWaitMs));
+      }
+      addStep("startup-blockers", () => this.startupBlockers());
+      addStep("mcp-probe", () => this.mcpProbe());
+      addStep("profile", () => this.profile());
+      if (!this.options.skipCapture) {
+        addStep("capture-batch", () => this.captureBatch());
+      }
+    } catch (err) {
+      error = err;
+    } finally {
+      if (!this.options.keepOpen) {
+        try {
+          addStep("close-studio", () => this.closeStudio());
+        } catch {
+          // The failing close step is already recorded by addStep.
+        }
+        try {
+          addStep("close-rojo", () => this.closeRojo());
+        } catch {
+          // The failing close step is already recorded by addStep.
+        }
+      }
+    }
+
+    const report = {
+      schema: "studio-controller-session-report/v1",
+      generatedAt: nowIso(),
+      dryRun: false,
+      keepOpen: this.options.keepOpen,
+      plan,
+      ok: !error && steps.every((step) => step.ok !== false),
+      error: error ? error.message : null,
+      steps,
+      manifestPath: this.manifestPath,
+      profilePath: this.metricsPath,
+    };
+    writeJson(reportPath, report);
+    if (error) {
+      const wrapped = new Error(`session failed: ${error.message}`);
+      wrapped.reportPath = reportPath;
+      throw wrapped;
+    }
+    return { ok: report.ok, reportPath, manifestPath: this.manifestPath, steps: steps.map((step) => step.name) };
   }
 
   demo() {
@@ -1311,6 +1508,7 @@ function main() {
     "close-studio": () => controller.closeStudio(),
     "close-rojo": () => controller.closeRojo(),
     demo: () => controller.demo(),
+    session: () => controller.session(),
   };
   const action = commandMap[args.command];
   if (!action) usage();

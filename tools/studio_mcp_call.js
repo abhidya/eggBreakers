@@ -100,6 +100,25 @@ child.on("error", (err) => {
   process.exit(1);
 });
 
+function stopChild() {
+  return new Promise((resolve) => {
+    if (child.exitCode != null || child.signalCode != null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      resolve();
+    }, 2000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    child.stdin.end();
+    child.kill();
+  });
+}
+
 async function main() {
   await request("initialize", {
     protocolVersion: "2025-03-26",
@@ -116,12 +135,10 @@ async function main() {
   }
 
   console.log(JSON.stringify(result, null, 2));
-  child.stdin.end();
-  child.kill();
+  await stopChild();
 }
 
 main().catch((err) => {
   console.error(err.message);
-  child.kill();
-  process.exit(1);
+  stopChild().finally(() => process.exit(1));
 });

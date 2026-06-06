@@ -49,13 +49,18 @@ node tools/studio_controller_prototype.mjs isolate-desktop
 node tools/studio_controller_prototype.mjs mcp-probe
 node tools/studio_controller_prototype.mjs profile
 node tools/studio_controller_prototype.mjs close-studio
+node tools/studio_controller_prototype.mjs session --dry-run
 ```
 
 Full smoke:
 
 ```sh
-node tools/studio_controller_prototype.mjs demo \
+node tools/studio_controller_prototype.mjs session \
   --isolate-desktop \
+  --dismiss-startup-blockers \
+  --connect-rojo \
+  --dismiss-stale-rojo \
+  --startup-passes 5 \
   --wait-ms 12000 \
   --profile-ms 8000
 ```
@@ -175,6 +180,17 @@ Live scratch run on `prototype-place.rbxl`:
 - `StudioControllerPrototype` is now import-safe and provides the shared MCP
   adapter used by `studio_worker_capture_batch.mjs`; importing it does not run
   the CLI.
+- `session --dry-run` emits the whole build/Rojo/Studio/isolation/blocker/MCP/
+  profile/capture/cleanup plan without launching Studio.
+- Live `session` run on scratch `prototype-place.rbxl` passed end-to-end:
+  build, worker Rojo on `34913`, Studio launch, full-screen Space isolation,
+  Auto-Recovery ignore, stale Rojo dismiss, `targetMatch: true`, profile,
+  one `screen_capture`, `uiBlockerCount: 0`, `tempArtifactCount: 0`, and
+  manifest-owned Studio/Rojo cleanup. Evidence:
+  `.omx/studio-controller-live-smoke-20260606T014640/session-report.json`.
+- `tools/studio_mcp_call.js` now waits for its `StudioMCP --stdio` child to
+  exit; one-shot `tools/list` smoke returned 26 tools without increasing the
+  StudioMCP process count.
 
 Known capture gate: built-in `screen_capture` can still include Studio UI
 overlays such as Rojo connection prompts. Startup/UI blockers must be cleared or

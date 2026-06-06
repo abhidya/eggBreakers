@@ -75,6 +75,15 @@ MCP adapter instead of duplicating the MCP subprocess transport. This is the
 first absorption step toward one host-side `StudioWorkerController` surface for
 lifecycle, target selection, Rojo, capture, profiling, and cleanup.
 
+The controller now has a `session` command for the full one-owner prototype
+loop. `session --dry-run` prints the planned build, Rojo, Studio launch,
+desktop isolation, startup-blocker pass, MCP probe, profile, capture batch, and
+cleanup sequence. A live scratch session passed on
+`.omx/studio-controller-live-smoke-20260606T014640`: it reached the expected
+`prototype-place.rbxl` DataModel, cleared startup UI, captured one viewport
+image with `uiBlockerCount: 0`, found zero temp artifacts, and closed the
+manifest-owned Studio and Rojo pids.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,
@@ -114,10 +123,12 @@ node tools/studio_worker_capture_batch.mjs \
 Launch and isolate a scratch Studio worker:
 
 ```sh
-node tools/studio_controller_prototype.mjs demo \
+node tools/studio_controller_prototype.mjs session \
   --isolate-desktop \
   --dismiss-startup-blockers \
-  --connect-rojo
+  --connect-rojo \
+  --dismiss-stale-rojo \
+  --startup-passes 5
 ```
 
 ## Skill Gate Mapping
