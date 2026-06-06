@@ -1158,3 +1158,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: deliver/import the 205 queued ids as real model geometry through Studio/Open Cloud or a validated delivery writer, then clean, save, and rerun the full G016 place gate audit.
+
+## Run G016-R075 — StudioMCP preview inspection for first queued asset — 2026-06-06
+
+Tests run: `node tools/studio_mcp_call.js tools/list '{}'`; `node tools/studio_mcp_call.js run_code ...` active-place probe; `node tools/studio_mcp_call.js preview_asset '{"asset_id":70617428,"keep":false}'`; `node tools/studio_mcp_call.js capture_screenshot '{}'`; `node tools/studio_mcp_call.js run_code ...` cleanup and remaining-preview scan; asset-search MCP `record_inspection` and `get_inspection` for asset `70617428`.
+
+Passed: StudioMCP is reachable. The active Studio place probe reported `name="eggBreakers4.rbxl"`, `PlaceId=0`, `ReplicatedStorage.ImportedAssetLibrary=true`, and no `Workspace.Map.ImportedAssets` folder in that session. Previewing the first acquisition-queue asset `70617428` inserted `Preview_70617428` as a `Model` with `1` direct child, `2` total descendants, `1` visible `Part`, size `4 x 4 x 4` studs, and no scripts in the preview summary. Cleanup removed `1` preview model, and the follow-up scan reported `G016PreviewRemaining count=0`. Asset-search inspection memory now records `basePartCount=1`, `scriptCount=0`, `hasScripts=false`, `anchoredCapable=true`, `screenshotVerdict=not_reviewed`, and `visualRiskScore=4`.
+
+Failed: this does not increase the release-ready count. Screenshot capture failed with `Roblox Studio window not found`; the active place was an older `eggBreakers4.rbxl` session, not the latest `eggBreakers7.rbxl`; and no save/reopen proof was produced. The current persisted release baseline remains `eggBreakers7.rbxl` at `295/500`.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: Studio preview can inspect queued assets and improve asset-brain metadata, but it cannot satisfy US14 until the real model is imported into a persisted candidate and accepted by the offline place gate.
+
+Root cause: the current Studio MCP lane can preview assets but did not expose a save/reopen path for `PlaceId=0`, and screenshot capture could not see the Studio window in the current desktop state.
+
+Patch applied: added `docs/G016/STUDIO_PREVIEW_INSPECTIONS.md` and logged the preview/cleanup evidence while preserving the no-credit release policy.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: open or sync `eggBreakers7.rbxl` in Studio, run a screenshot-capable asset-family sweep/import batch, save/reopen or otherwise persist a new `.rbxl`, then rerun the full G016 place gate audit.
