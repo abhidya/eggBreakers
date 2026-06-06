@@ -31,6 +31,8 @@ Commands:
   mcp-probe     Probe built-in StudioMCP tools and connected Studio sessions
   rojo-port-diagnostics
                 Inspect worker/default Rojo ports and plugin-default risk
+  rojo-ui-probe
+                Inventory native Studio UI/menu surfaces for Rojo action hooks
   rojo-sync-probe
                 Write a temporary Rojo source sentinel and verify Studio sync
   startup-blockers
@@ -1384,7 +1386,11 @@ tell application "System Events"
       end tell
     end if
   end repeat
-  return reportLines as text
+  set oldDelimiters to AppleScript's text item delimiters
+  set AppleScript's text item delimiters to linefeed
+  set joinedReport to reportLines as text
+  set AppleScript's text item delimiters to oldDelimiters
+  return joinedReport
 end tell
 `;
     const result = runSync("osascript", ["-e", script]);
@@ -1393,6 +1399,161 @@ end tell
       durationMs: result.durationMs,
       stdout: result.stdout.trim(),
       stderr: result.stderr.trim(),
+    };
+  }
+
+  rojoUiProbe() {
+    mkdirp(this.workDir);
+    const activation = this.activateStudio();
+    sleep(400);
+    const manifest = this.manifest();
+    const expectedPort = manifest.rojoPort || this.options.rojoPort;
+    const script = `
+on safeText(theValue)
+  if theValue is missing value then return "<missing>"
+  try
+    return theValue as text
+  on error
+    return "<unreadable>"
+  end try
+end safeText
+
+tell application "System Events"
+  set reportLines to {}
+  repeat with procName in {"RobloxStudio", "Roblox Studio"}
+    if exists process procName then
+      tell process procName
+        set frontmost to true
+        set end of reportLines to "process=" & (procName as text) & "|frontmost=" & (frontmost as text)
+        try
+          repeat with mb in menu bars
+            repeat with mbi in menu bar items of mb
+              set mbiName to my safeText(name of mbi)
+              if mbiName is "Plugins" then
+                set end of reportLines to "menu_bar_item=" & mbiName
+                try
+                  repeat with mi in menu items of menu 1 of mbi
+                    set miName to my safeText(name of mi)
+                    set end of reportLines to "menu_item=" & mbiName & ">" & miName
+                    try
+                      repeat with smi in menu items of menu 1 of mi
+                        set smiName to my safeText(name of smi)
+                        set end of reportLines to "submenu_item=" & mbiName & ">" & miName & ">" & smiName
+                      end repeat
+                    end try
+                  end repeat
+                end try
+              end if
+            end repeat
+          end repeat
+        end try
+        try
+          repeat with w in windows
+            set windowName to my safeText(name of w)
+            set end of reportLines to "window=" & windowName & "|role=" & my safeText(role of w) & "|subrole=" & my safeText(subrole of w)
+            repeat with b in buttons of w
+              set end of reportLines to "window_button=" & windowName & ">" & my safeText(name of b)
+            end repeat
+            repeat with t in text fields of w
+              set fieldName to my safeText(name of t)
+              set fieldValue to "<unreadable>"
+              try
+                set fieldValue to my safeText(value of t)
+              end try
+              set end of reportLines to "window_text_field=" & windowName & ">" & fieldName & "|value=" & fieldValue
+            end repeat
+            repeat with s in static texts of w
+              set end of reportLines to "window_static_text=" & windowName & ">" & my safeText(value of s)
+            end repeat
+          end repeat
+        end try
+      end tell
+    end if
+  end repeat
+  set oldDelimiters to AppleScript's text item delimiters
+  set AppleScript's text item delimiters to linefeed
+  set joinedReport to reportLines as text
+  set AppleScript's text item delimiters to oldDelimiters
+  return joinedReport
+end tell
+`;
+    const probeTimeoutMs = 15000;
+    const result = runSync("osascript", ["-e", script], {
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: probeTimeoutMs,
+    });
+    const rawOutput = result.stdout || "";
+    const normalizedOutput = rawOutput.replace(
+      /(?=(?:process=|menu_bar_item=|menu_item=|submenu_item=|window=|window_button=|window_text_field=|window_static_text=))/g,
+      "\n"
+    );
+    const lines = normalizedOutput
+      .split(/\s*,\s*|\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const needleValues = [
+      "rojo",
+      "connect",
+      "disconnect",
+      "localhost",
+      String(expectedPort),
+      String(ROJO_PLUGIN_DEFAULT_PORT),
+    ];
+    const candidates = lines.filter((line) => {
+      const lower = line.toLowerCase();
+      return needleValues.some((needle) => lower.includes(needle.toLowerCase()));
+    });
+    const actionCandidates = candidates.filter((line) =>
+      /rojo:? connect|rojo:? connect\/disconnect|rojoconnect|rojoconnection/i.test(line)
+    );
+    const report = {
+      schema: "studio-controller-rojo-ui-probe/v1",
+      generatedAt: nowIso(),
+      expectedPort,
+      pluginDefaultPort: ROJO_PLUGIN_DEFAULT_PORT,
+      activation,
+      ok: result.status === 0,
+      timeoutMs: probeTimeoutMs,
+      durationMs: result.durationMs,
+      status: result.status,
+      signal: result.signal,
+      error: result.error,
+      candidateCount: candidates.length,
+      actionCandidateCount: actionCandidates.length,
+      candidates: candidates.slice(0, 250),
+      actionCandidates: actionCandidates.slice(0, 100),
+      lineCount: lines.length,
+      lineSample: lines.slice(0, 300),
+      stderr: result.stderr,
+      recommendation: actionCandidates.length > 0
+        ? "A deterministic PluginAction/menu trigger may be possible; gate it on Rojo port ownership and sentinel sync before use."
+        : "Native accessibility did not expose a Rojo PluginAction/menu item; use clean default-port lease or a Studio-side session plugin bridge.",
+    };
+    const reportPath = path.join(this.workDir, "rojo-ui-probe.json");
+    writeJson(reportPath, report);
+    this.saveManifest({
+      lastRojoUiProbePath: reportPath,
+      lastRojoUiProbe: {
+        ok: report.ok,
+        candidateCount: report.candidateCount,
+        actionCandidateCount: report.actionCandidateCount,
+        reportPath,
+      },
+      events: [{
+        at: nowIso(),
+        type: "rojo-ui-probe",
+        ok: report.ok,
+        candidateCount: report.candidateCount,
+        actionCandidateCount: report.actionCandidateCount,
+        reportPath,
+      }],
+    });
+    return {
+      ok: report.ok,
+      reportPath,
+      candidateCount: report.candidateCount,
+      actionCandidateCount: report.actionCandidateCount,
+      recommendation: report.recommendation,
     };
   }
 
@@ -1902,6 +2063,7 @@ function main() {
     "isolate-desktop": () => controller.isolateStudioDesktop(),
     "mcp-probe": () => controller.mcpProbe(),
     "rojo-port-diagnostics": () => controller.rojoPortDiagnostics(),
+    "rojo-ui-probe": () => controller.rojoUiProbe(),
     "rojo-sync-probe": () => controller.rojoSyncProbe(),
     "startup-blockers": () => controller.startupBlockers(),
     profile: () => controller.profile(),

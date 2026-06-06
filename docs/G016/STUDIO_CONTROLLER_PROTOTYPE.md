@@ -48,6 +48,7 @@ node tools/studio_controller_prototype.mjs select-studio
 node tools/studio_controller_prototype.mjs isolate-desktop
 node tools/studio_controller_prototype.mjs mcp-probe
 node tools/studio_controller_prototype.mjs rojo-port-diagnostics
+node tools/studio_controller_prototype.mjs rojo-ui-probe
 node tools/studio_controller_prototype.mjs rojo-sync-probe
 node tools/studio_controller_prototype.mjs profile
 node tools/studio_controller_prototype.mjs close-studio
@@ -243,6 +244,22 @@ Live scratch run on `prototype-place.rbxl`:
   default path, but it fails before Studio launch when `34872` is already owned
   by a non-worker process. This makes a clean default-port run testable without
   killing or reusing a user's existing Rojo server.
+- Rojo source review: `priorEndpoints` is ignored for local file places because
+  `ignorePlaceIds["0"] = true`, so pre-seeding prior sync metadata is not a
+  reliable path for scratch `.rbxl` workers. The current viable coded paths are
+  a clean default-port lease, a deterministic `Rojo: Connect` plugin-action
+  trigger if Studio exposes one, or a temporary Studio-side session plugin
+  bridge. `rojo-ui-probe` now inventories native Studio menus/windows for Rojo
+  action candidates before any guarded trigger is attempted.
+- Live `rojo-ui-probe` evidence:
+  `.omx/studio-controller-rojo-ui-live-fast/rojo-ui-probe.json` completed in
+  about `5.3s` and found the native plugin menu entry
+  `Plugins > Rojo 7.6.1 > Rojo`, but found zero `Rojo: Connect` /
+  `RojoConnect` action candidates. A broader menu scan could hang, so the probe
+  is now narrowed to the Plugins menu and bounded by a 15s AppleScript timeout.
+  This makes menu-driven panel opening testable, but not enough to claim a
+  deterministic connect action; the next viable branch is clean default-port
+  acceptance or a session plugin bridge.
 - Port lease smoke
   `.omx/studio-controller-port-lease-smoke/manifest.json` proved the normal
   non-default worker path still works: worker pid `17324` owned `34931`, then

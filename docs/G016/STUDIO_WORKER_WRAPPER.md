@@ -127,6 +127,17 @@ Lease verification:
   ownership check still supports the live launch/profile/cleanup path on the
   non-default worker port.
 
+Rojo source review closed one tempting dead end: the plugin stores
+`priorEndpoints`, but local file places have `PlaceId == 0`, and Rojo's
+`ignorePlaceIds` table skips `0`. Pre-seeding prior endpoint metadata therefore
+does not help scratch `.rbxl` workers. The controller now has
+`rojo-ui-probe` to inventory native Studio menu/window surfaces for
+`Rojo: Connect` plugin actions before a guarded coded trigger is attempted.
+Live probe `.omx/studio-controller-rojo-ui-live-fast` exposed only the native
+plugin menu item `Plugins > Rojo 7.6.1 > Rojo`; it did not expose a native
+`Rojo: Connect` plugin action. The probe is now bounded to the Plugins menu with
+a 15s timeout because broad native menu enumeration can hang.
+
 Important capture finding: built-in `screen_capture` captures the Studio
 viewport surface, but visible Studio overlays can still appear in the image. The
 controller's startup-blocker pass must run before the asset-family capture pass,
