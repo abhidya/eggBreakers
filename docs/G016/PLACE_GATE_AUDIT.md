@@ -56,7 +56,9 @@ The tool reports two asset-count lanes:
 
 ## Next Action
 
-Use `tools/g016_place_gate_audit.luau` after every place import/save batch.
+Use `docs/G016/ASSET_ACQUISITION_QUEUE.md` for the next 205 asset delivery
+targets, then run `tools/g016_place_gate_audit.luau` after every place
+import/save batch.
 Do not checkpoint G013 complete until the best persisted `.rbxl` reports:
 
 - `storiesLivePassed=15/15`

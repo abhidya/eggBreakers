@@ -1137,3 +1137,24 @@ Retest result: G016 remains honest FAIL until a persisted place reports `stories
 
 G016 CHECKPOINT — NOT DONE
 Next automatic action: use `eggBreakers7.rbxl` as the persisted baseline, then add 205 more real authenticated Creator Store imports or validated headless geometry fragments; clean and union candidates with the G016 tools; rerun `tools/g016_place_gate_audit.luau`.
+
+## Run G016-R074 — asset-brain acquisition queue for remaining 205 — 2026-06-06
+
+Tests run: `node tools/g016_plan_asset_acquisition_queue.mjs --current eggBreakers7.rbxl --out-json docs/G016/ASSET_ACQUISITION_QUEUE.json --out-md docs/G016/ASSET_ACQUISITION_QUEUE.md --limit 205`; `node --check tools/g016_plan_asset_acquisition_queue.mjs`; queue sanity probe for unique ids, alternate overlap, and release-credit status.
+
+Passed: generated a durable, de-duplicated `205` item acquisition queue from the merged RobloxAIDev eggBreakers asset brain and GroanTubeHero inspected registry while excluding the `295` source ids already counted by `eggBreakers7.rbxl`. The queue has `205` unique primary ids, `124` alternates, no primary/alternate overlap, and every entry is explicitly marked `not_release_credit_until_geometry_audits_pass`.
+
+Failed: the queue does not increase release-ready count by itself. Public unauthenticated direct delivery probe against `https://assetdelivery.roblox.com/v1/asset/?id=70617428` returned `401`, so queued ids still require authenticated Studio/Open Cloud delivery or another validated real-model source before they can be imported, script-cleaned, persisted, and audited.
+
+Top failing story: US14 Asset materialization honesty reaches 500 release-ready imports, followed by US15 fresh full QA gate.
+
+Failure: the next 205 target ids are now known, but G016 remains at `295/500` until actual model geometry for those ids is delivered and accepted by `tools/g016_place_gate_audit.luau`.
+
+Root cause: asset-brain metadata can prioritize acquisition, but it is not geometry. The release gate deliberately requires visible `BasePart` descendants in a persisted `.rbxl`.
+
+Patch applied: added `tools/g016_plan_asset_acquisition_queue.mjs`, generated `docs/G016/ASSET_ACQUISITION_QUEUE.json`, generated `docs/G016/ASSET_ACQUISITION_QUEUE.md`, and updated G016 status docs to point T006 at the queue.
+
+Retest result: G016 remains honest FAIL until a persisted place reports `storiesLivePassed=15/15`, `gateReleaseReadyVisibleAssets>=500`, `gateExecutableScriptObjectsFound=0`, `freshAllCategory=true`, `rbxlPersistence=true`, and `finalG016Pass=true`.
+
+G016 CHECKPOINT — NOT DONE
+Next automatic action: deliver/import the 205 queued ids as real model geometry through Studio/Open Cloud or a validated delivery writer, then clean, save, and rerun the full G016 place gate audit.
