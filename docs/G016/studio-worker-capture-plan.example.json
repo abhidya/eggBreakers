@@ -1,0 +1,26 @@
+{
+  "schema": "studio-worker-capture-plan/v1",
+  "expectedPlace": "eggBreakers7.rbxl",
+  "tempNamePrefixes": [
+    "G016CleanSpot_",
+    "StudioWorkerTemp_",
+    "Preview_"
+  ],
+  "captures": [
+    {
+      "id": "current-viewport-smoke",
+      "label": "Current Studio viewport without camera override",
+      "settleMs": 250
+    },
+    {
+      "id": "origin-player-height-front",
+      "label": "Example player-height view toward origin",
+      "camera": {
+        "position": [0, 6, -24],
+        "lookAt": [0, 4, 0],
+        "fov": 70
+      },
+      "settleMs": 500
+    }
+  ]
+}

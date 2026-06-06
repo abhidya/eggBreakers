@@ -1,0 +1,11 @@
+Auto-Recovery
+
+An auto-recovered file was detected!
+
+This means that Roblox Studio was not shut down properly and may not have saved your data!
+
+Do you want to load the auto-recovered file?
+
+Open will open the file.
+Ignore will continue and leave the files alone.
+Delete will confirm that you want to delete all auto-recovery files.
